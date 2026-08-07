@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Radio, Compass, Mic2, Swords, Search, MessageSquare, Bell, User, Terminal, LogOut } from "lucide-react";
+import { Radio, Compass, Mic2, Swords, Search, MessageSquare, Bell, User, Terminal, LogOut, Waves } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
 
 export default function LeftSidebar() {
@@ -11,15 +11,16 @@ export default function LeftSidebar() {
   const hasNotifs = false;
 
   const navItems = [
-    { href: "/", icon: Radio, label: "THE FREQUENCY", hasNotifDot: false },
-    { href: "/radar", icon: Compass, label: "THE RADAR", hasNotifDot: false },
-    { href: "/studio", icon: Mic2, label: "STUDIO", hasNotifDot: false },
-    { href: "/clash", icon: Swords, label: "THE STAGE", hasNotifDot: false },
-    { href: "/search", icon: Search, label: "SEARCH", hasNotifDot: false },
-    { href: "/whispers", icon: MessageSquare, label: "WHISPERS", hasNotifDot: false },
-    { href: "/notifications", icon: Bell, label: "NOTIFICATIONS", hasNotifDot: hasNotifs },
-    { href: "/profile", icon: User, label: "PROFILE", hasNotifDot: false },
-    { href: "/terminal", icon: Terminal, label: "THE TERMINAL", hasNotifDot: false },
+    { href: "/",             icon: Radio,         label: "THE FREQUENCY", hasNotifDot: false },
+    { href: "/waves",        icon: Waves,         label: "WAVES",         hasNotifDot: false },
+    { href: "/radar",        icon: Compass,       label: "THE RADAR",     hasNotifDot: false },
+    { href: "/studio",       icon: Mic2,          label: "STUDIO",        hasNotifDot: false },
+    { href: "/clash",        icon: Swords,        label: "THE STAGE",     hasNotifDot: false },
+    { href: "/search",       icon: Search,        label: "SEARCH",        hasNotifDot: false },
+    { href: "/whispers",     icon: MessageSquare, label: "WHISPERS",      hasNotifDot: false },
+    { href: "/notifications",icon: Bell,          label: "NOTIFICATIONS", hasNotifDot: hasNotifs },
+    { href: "/profile",      icon: User,          label: "PROFILE",       hasNotifDot: false },
+    { href: "/terminal",     icon: Terminal,      label: "THE TERMINAL",  hasNotifDot: false },
   ] as const;
 
   return (

@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: "export", // Required for Capacitor — produces static files in /out
   images: {
     // Allow Cloudinary images to be served via Next.js Image Optimization
     remotePatterns: [

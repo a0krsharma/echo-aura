@@ -11,6 +11,7 @@ import {
   collection,
   doc,
   addDoc,
+  deleteDoc,
   query,
   where,
   orderBy,
@@ -43,6 +44,23 @@ export interface PostItem {
   orbitOf?:        string;
   orbitOfHandle?:  string;
   createdAt:       Timestamp | null;
+}
+
+/** Inline voice comment on a post — stored in posts/{id}/reverbs subcollection */
+export interface PostReverbItem {
+  id:                string;
+  postId:            string;
+  uid:               string;
+  handle:            string;
+  audioUrl:          string;
+  caption:           string;
+  durationSec:       number;
+  pulseCount:        number;
+  pulsedBy:          string[];
+  reverbCount:       number;
+  reverbOfReverbId?: string;
+  reverbOfHandle?:   string;
+  createdAt:         Timestamp | null;
 }
 
 /**
@@ -202,5 +220,87 @@ export async function togglePulsePost(
     await updateDoc(ref, { pulseCount: increment(-1), pulsedBy: arrayRemove(uid) });
   } else {
     await updateDoc(ref, { pulseCount: increment(1),  pulsedBy: arrayUnion(uid)  });
+  }
+}
+
+/**
+ * deletePost — hard-deletes a post document.
+ */
+export async function deletePost(postId: string): Promise<void> {
+  const db = getFirebaseDb();
+  await deleteDoc(doc(db, "posts", postId));
+}
+
+/**
+ * subscribeToPostReverbs — real-time listener for inline voice comments on a post
+ */
+export function subscribeToPostReverbs(
+  postId: string,
+  callback: (reverbs: PostReverbItem[]) => void
+): () => void {
+  const db = getFirebaseDb();
+  const q = query(
+    collection(db, "posts", postId, "reverbs"),
+    orderBy("createdAt", "asc")
+  );
+  return onSnapshot(
+    q,
+    (snap) => callback(snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<PostReverbItem, "id">) }))),
+    () => callback([])
+  );
+}
+
+/**
+ * addPostReverb — add an inline voice comment (reverb) to a post
+ */
+export async function addPostReverb(
+  postId: string,
+  data: {
+    uid:               string;
+    handle:            string;
+    audioUrl:          string;
+    caption:           string;
+    durationSec:       number;
+    reverbOfReverbId?: string;
+    reverbOfHandle?:   string;
+  }
+): Promise<string> {
+  const db = getFirebaseDb();
+  const reverbsRef = collection(db, "posts", postId, "reverbs");
+  const docRef = await addDoc(reverbsRef, {
+    postId,
+    uid:              data.uid,
+    handle:           data.handle,
+    audioUrl:         data.audioUrl,
+    caption:          data.caption,
+    durationSec:      data.durationSec,
+    pulseCount:       0,
+    pulsedBy:         [],
+    reverbCount:      0,
+    reverbOfReverbId: data.reverbOfReverbId || null,
+    reverbOfHandle:   data.reverbOfHandle   || null,
+    createdAt:        serverTimestamp(),
+  });
+  try {
+    await updateDoc(doc(db, "posts", postId), { reverbCount: increment(1) });
+  } catch {}
+  return docRef.id;
+}
+
+/**
+ * togglePulsePostReverb — like / unlike an inline voice comment
+ */
+export async function togglePulsePostReverb(
+  postId: string,
+  reverbId: string,
+  uid: string,
+  currentlyPulsed: boolean
+): Promise<void> {
+  const db = getFirebaseDb();
+  const ref = doc(db, "posts", postId, "reverbs", reverbId);
+  if (currentlyPulsed) {
+    await updateDoc(ref, { pulseCount: increment(-1), pulsedBy: arrayRemove(uid) });
+  } else {
+    await updateDoc(ref, { pulseCount: increment(1), pulsedBy: arrayUnion(uid) });
   }
 }
