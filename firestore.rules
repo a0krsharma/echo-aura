@@ -1,0 +1,80 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── USERS ───────────────────────────────────────────────────────────
+    // Anyone can read a public profile.
+    // Only the owner can write their own document.
+    match /users/{userId} {
+      allow read:   if true;
+      allow create: if request.auth != null
+                    && request.auth.uid == userId;
+      allow update: if request.auth != null
+                    && request.auth.uid == userId;
+      allow delete: if false; // never delete user docs
+    }
+
+    // ── POSTS ───────────────────────────────────────────────────────────
+    // Public read access (The Frequency is open).
+    // Only authenticated users can create posts.
+    // authorUid in the document MUST match the actual Firebase UID.
+    match /posts/{postId} {
+      allow read:   if true;
+      allow create: if request.auth != null
+                    && request.resource.data.authorUid == request.auth.uid
+                    && request.resource.data.caption is string
+                    && request.resource.data.caption.size() > 0
+                    && request.resource.data.audioUrl is string;
+      allow update: if request.auth != null; // pulse / reverb count increments
+      allow delete: if request.auth != null
+                    && resource.data.authorUid == request.auth.uid;
+    }
+
+    // ── ECHOES ──────────────────────────────────────────────────────────
+    match /echoes/{echoId} {
+      allow read:   if true;
+      allow create: if request.auth != null
+                    && request.resource.data.uid == request.auth.uid;
+      allow update: if request.auth != null;
+      allow delete: if request.auth != null
+                    && resource.data.uid == request.auth.uid;
+
+      // Reverbs sub-collection
+      match /reverbs/{reverbId} {
+        allow read:   if true;
+        allow create: if request.auth != null;
+      }
+    }
+
+    // ── CLASHES / THE STAGE ─────────────────────────────────────────────
+    // Public read for live debates.
+    // Authenticated users can create debates and vote.
+    match /clashes/{clashId} {
+      allow read:   if true;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null; // votes, listener count
+      allow delete: if false;
+
+      // Vibe Chat messages sub-collection
+      match /messages/{messageId} {
+        allow read:   if true;
+        allow create: if request.auth != null
+                      && request.resource.data.uid == request.auth.uid;
+        allow update, delete: if false;
+      }
+    }
+
+    // ── NOTIFICATIONS ────────────────────────────────────────────────────
+    match /notifications/{notifId} {
+      allow read:   if request.auth != null
+                    && resource.data.toUid == request.auth.uid;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null
+                    && resource.data.toUid == request.auth.uid;
+      allow delete: if request.auth != null
+                    && resource.data.toUid == request.auth.uid;
+    }
+
+  }
+}

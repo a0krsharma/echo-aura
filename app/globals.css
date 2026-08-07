@@ -1,0 +1,316 @@
+/* ============================================================
+   ECHO — Global Design System v5
+   "Utilitarian Canvas" — Black. White. Voice. Alive.
+   ============================================================ */
+
+@import "tailwindcss";
+
+/* ── Font Token Registration ────────────────────────────────── */
+@theme inline {
+  --font-sans:  var(--font-geist-sans);
+  --font-mono:  var(--font-geist-mono);
+  --font-serif: var(--font-playfair), Georgia, "Times New Roman", serif;
+
+  /* Named animations → usable as animate-* utilities */
+  --animate-fade-up:        fadeUp 0.5s ease-out both;
+  --animate-fade-in:        fadeIn 0.4s ease-out both;
+  --animate-waveform:       waveform 0.85s ease-in-out infinite alternate;
+  --animate-blink:          blink 1.1s step-end infinite;
+  --animate-ticker:         ticker 22s linear infinite;
+  --animate-pulse-dot:      pulseDot 1.8s ease-in-out infinite;
+  --animate-shimmer:        shimmer 1.6s linear infinite;
+  --animate-slide-in:       slideIn 0.35s cubic-bezier(0.22,1,0.36,1) both;
+  --animate-slide-up:       slideUp 0.4s cubic-bezier(0.22,1,0.36,1) both;
+  --animate-ring-progress:  ringProgress 1s ease-out both;
+  --animate-float-in:       floatIn 0.6s cubic-bezier(0.22,1,0.36,1) both;
+  --animate-badge-pop:      badgePop 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+  --animate-notification:   notifPop 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+
+/* ── Keyframes ──────────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes waveform {
+  from { transform: scaleY(0.12); }
+  to   { transform: scaleY(1);    }
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+@keyframes ticker {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+@keyframes pulseDot {
+  0%, 100% { opacity: 1;   transform: scale(1);    }
+  50%       { opacity: 0.4; transform: scale(0.75); }
+}
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0;  }
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-16px); }
+  to   { opacity: 1; transform: translateX(0);     }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(32px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+@keyframes floatIn {
+  from { opacity: 0; transform: translateY(40px) scale(0.92); }
+  to   { opacity: 1; transform: translateY(0) scale(1);       }
+}
+@keyframes badgePop {
+  from { opacity: 0; transform: scale(0.5); }
+  to   { opacity: 1; transform: scale(1);   }
+}
+@keyframes notifPop {
+  0%   { opacity: 0; transform: translateX(20px); }
+  100% { opacity: 1; transform: translateX(0);    }
+}
+@keyframes ringProgress {
+  from { stroke-dashoffset: 283; }
+}
+@keyframes spinRing {
+  from { transform: rotate(-90deg); }
+  to   { transform: rotate(270deg); }
+}
+@keyframes breathe {
+  0%, 100% { opacity: 0.5; transform: scale(1);    }
+  50%       { opacity: 1;   transform: scale(1.04); }
+}
+@keyframes scanline {
+  0%   { transform: translateY(-100%); }
+  100% { transform: translateY(100%);  }
+}
+
+/* ── Canvas Base ────────────────────────────────────────────── */
+:root {
+  --bg:           #000000;
+  --fg:           #ffffff;
+  --muted:        #737373;   /* neutral-500 */
+  --dim:          #404040;   /* neutral-700 */
+  --border:       #1a1a1a;   /* neutral-900 */
+  --accent-fire:  #ff4500;
+  --accent-rise:  #9ae600;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  overscroll-behavior: none;
+}
+
+/* Mobile: body must NOT scroll — the snap container does. */
+body {
+  overflow: hidden;
+}
+/* Desktop: body scrolls normally */
+@media (min-width: 768px) {
+  body { overflow: auto; }
+}
+
+::selection {
+  background: #fff;
+  color: #000;
+}
+
+/* ── Scrollbar Erasure ──────────────────────────────────────── */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ── Waveform Bars ──────────────────────────────────────────── */
+.waveform-bar {
+  width: 2px;
+  border-radius: 9999px;
+  background: #fff;
+  transform-origin: bottom center;
+  animation: waveform 0.85s ease-in-out infinite alternate;
+}
+.waveform-bar-idle {
+  width: 2px;
+  border-radius: 9999px;
+  background: #262626;
+  transform-origin: bottom center;
+}
+.waveform-bar-muted {
+  width: 2px;
+  border-radius: 9999px;
+  background: #262626;
+  transform-origin: bottom center;
+}
+.waveform-bar-accent {
+  width: 2px;
+  border-radius: 9999px;
+  background: #737373;
+  transform-origin: bottom center;
+  animation: waveform 0.75s ease-in-out infinite alternate;
+}
+
+/* ── Live Dot ───────────────────────────────────────────────── */
+.live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff;
+  animation: pulseDot 1.8s ease-in-out infinite;
+  display: inline-block;
+}
+.live-dot-green {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #9ae600;
+  animation: pulseDot 1.8s ease-in-out infinite;
+  display: inline-block;
+}
+
+/* ── Shimmer Skeleton ───────────────────────────────────────── */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    #111 0px,
+    #222 40%,
+    #111 80px
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+/* ── Notification Dot ───────────────────────────────────────── */
+.notif-dot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1.5px solid #000;
+}
+
+/* ── Circular Ring Progress ─────────────────────────────────── */
+.ring-track {
+  fill: none;
+  stroke: #1a1a1a;
+  stroke-width: 3;
+}
+.ring-progress {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 3;
+  stroke-linecap: round;
+  transform-origin: center;
+  transform: rotate(-90deg);
+  transition: stroke-dashoffset 1s linear;
+}
+.ring-progress-danger {
+  stroke: #ff4500;
+}
+
+/* ── Tag Pills ──────────────────────────────────────────────── */
+.tag-pill {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border: 1px solid #262626;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  color: #737373;
+}
+.tag-pill:hover {
+  border-color: #737373;
+  color: #fff;
+}
+.tag-pill.active {
+  border-color: #fff;
+  color: #fff;
+  background: transparent;
+}
+
+/* ── Echo of the Day border glow ─────────────────────────────── */
+.echo-of-day {
+  position: relative;
+  border: 1px solid #333;
+}
+.echo-of-day::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border: 1px solid transparent;
+  background: linear-gradient(135deg, #444 0%, #111 50%, #333 100%) border-box;
+  -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: destination-out;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* ── Trending label badges ──────────────────────────────────── */
+.badge-fire {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border: 1px solid #ff4500;
+  color: #ff4500;
+  padding: 2px 6px;
+}
+.badge-rise {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border: 1px solid #9ae600;
+  color: #9ae600;
+  padding: 2px 6px;
+}
+
+/* ── Breathe animation (for active indicators) ──────────────── */
+.breathe {
+  animation: breathe 3s ease-in-out infinite;
+}
+
+/* ── FAB (Floating Action Button) ───────────────────────────── */
+.fab {
+  position: fixed;
+  bottom: calc(64px + 20px); /* above bottom nav */
+  right: 20px;
+  z-index: 60;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 1px solid #333;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.15s ease;
+  box-shadow: 0 0 0 1px #111, 0 8px 32px rgba(0,0,0,0.8);
+}
+.fab:hover {
+  border-color: #fff;
+  transform: scale(1.05);
+}
+.fab:active {
+  transform: scale(0.95);
+}
+
+/* Desktop: FAB hidden (use sidebar nav) */
+@media (min-width: 768px) {
+  .fab { display: none; }
+}
