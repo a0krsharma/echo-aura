@@ -53,7 +53,8 @@ function isCapacitorNative(): boolean {
   return Capacitor.isNativePlatform();
 }
 
-// ─── Detect mobile browser (use redirect, not popup, on mobile) ────────────────
+// ─── Detect mobile browser (not native app) ───────────────────────────────────
+// signInWithPopup is blocked on mobile browsers — use signInWithRedirect instead
 function isMobileBrowser(): boolean {
   if (typeof navigator === "undefined") return false;
   return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
@@ -88,21 +89,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     getFirebaseAnalytics().catch(() => {});
     const auth = getFirebaseAuth();
 
-    // Process redirect result FIRST (mobile browser returning from Google OAuth).
-    // Must run before onAuthStateChanged so the user doc is created before
-    // the auth state listener fires and triggers any route guards.
-    getRedirectResult(auth)
-      .then((result) => {
-        if (result?.user) {
-          console.log("[AuthProvider] Redirect sign-in OK:", result.user.email);
-        }
-      })
-      .catch((e: any) => {
-        const code = e?.code || "";
-        if (code && code !== "auth/no-current-user") {
-          console.warn("[AuthProvider] getRedirectResult error:", code, e?.message);
-        }
-      });
+    // Handle the return from signInWithRedirect (mobile browser)
+    // This runs ONCE when the page loads after Google redirect returns
+    getRedirectResult(auth).then(async (result) => {
+      if (result?.user) {
+        console.log("[AuthProvider] Redirect sign-in successful:", result.user.email);
+        // onAuthStateChanged below will handle setting user state
+      }
+    }).catch((e: any) => {
+      const code = e?.code || "";
+      if (code !== "auth/no-current-user" && code !== "auth/null-user") {
+        console.warn("[AuthProvider] getRedirectResult error:", e);
+        setError("GOOGLE SIGN-IN FAILED — TRY AGAIN.");
+      }
+    });
 
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
@@ -176,19 +176,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // ── MOBILE BROWSER: use redirect (popup freezes/blocks on Android Chrome) ──
+    // ── MOBILE BROWSER: Use redirect (popup is blocked on mobile browsers) ───
     if (isMobileBrowser()) {
       try {
         googleProvider.setCustomParameters({ prompt: "select_account" });
+        // This navigates away — page will reload and getRedirectResult() above catches the result
         await signInWithRedirect(auth, googleProvider);
-        // Page navigates away here — getRedirectResult() above catches the return
       } catch (e: any) {
-        setError(mapFirebaseError(e?.message || e?.code || "AUTH ERROR"));
+        const msg = e?.message || "";
+        setError(mapFirebaseError(msg || e?.code));
       }
       return;
     }
 
-    // ── DESKTOP BROWSER: popup works fine ─────────────────────────────────
+    // ── DESKTOP BROWSER: Firebase Popup ──────────────────────────────────────
     try {
       googleProvider.setCustomParameters({ prompt: "select_account" });
       await signInWithPopup(auth, googleProvider);
@@ -201,7 +202,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       if (code === "auth/popup-blocked") {
-        setError("POPUP BLOCKED — ALLOW POPUPS FOR THIS SITE.");
+        // Fallback: try redirect if popup was blocked
+        googleProvider.setCustomParameters({ prompt: "select_account" });
+        await signInWithRedirect(auth, googleProvider);
         return;
       }
       if (code === "auth/unauthorized-domain" || msg.includes("unauthorized-domain")) {

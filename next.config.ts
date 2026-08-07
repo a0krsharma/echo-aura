@@ -35,15 +35,6 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  // Rewrite Firebase Auth handler to avoid 3rd-party cookie & domain issues
-  async rewrites() {
-    return [
-      {
-        source: "/__/auth/:path*",
-        destination: "https://echo-aura.firebaseapp.com/__/auth/:path*",
-      },
-    ];
-  },
 };
 
 export default nextConfig;

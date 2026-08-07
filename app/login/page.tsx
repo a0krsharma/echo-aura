@@ -32,12 +32,12 @@ export default function LoginPage() {
 
   const displayError = localError ?? error;
 
-  // ── Auto-redirect when auth state resolves (handles mobile redirect return) ─
+  // ── Auto-redirect when user is authenticated ───────────────────────
   useEffect(() => {
-    if (!isLoading && user) {
+    if (user) {
       router.replace("/");
     }
-  }, [user, isLoading, router]);
+  }, [user, router]);
   // ── Google ──────────────────────────────────────────────────────
   async function handleGoogle() {
     setBusy(true);
