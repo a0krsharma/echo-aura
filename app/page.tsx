@@ -94,7 +94,7 @@ function Waveform({ playing }: { playing: boolean }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// AUDIO PLAYER — fully self-contained per post, zero shared state
+// AUDIO PLAYER — uses real <audio> DOM element for guaranteed hardware playback
 // ─────────────────────────────────────────────────────────────────────────────
 function AudioPlayer({
   audioUrl,
@@ -103,90 +103,29 @@ function AudioPlayer({
   audioUrl: string;
   fallbackDurationSec: number;
 }) {
-  const [playing, setPlaying]   = useState(false);
-  const [current, setCurrent]   = useState(0);
-  const [dur,     setDur]       = useState(Math.max(1, fallbackDurationSec));
-  const [ready,   setReady]     = useState(false);
-  const [error,   setError]     = useState(false);
-  const [loading, setLoading]   = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const [current, setCurrent] = useState(0);
+  const [dur,     setDur]     = useState(Math.max(1, fallbackDurationSec));
+  const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  // Create and wire the Audio element exactly once per URL
-  useEffect(() => {
-    if (!audioUrl) return;
-
-    const url = getPlayableUrl(audioUrl);
-    const a = new Audio();
-
-    // CRITICAL FIX: Do NOT set crossOrigin = "anonymous".
-    // Cloudinary audio files do not return CORS headers by default for HTML5 audio elements.
-    // Setting crossOrigin causes media loading errors / silent audio blocks.
-    a.preload = "auto";
-    audioRef.current = a;
-
-    a.addEventListener("loadedmetadata", () => {
-      if (isFinite(a.duration) && a.duration > 0) {
-        setDur(Math.ceil(a.duration));
-      }
-      setReady(true);
-      setLoading(false);
-    });
-
-    a.addEventListener("canplaythrough", () => {
-      setReady(true);
-      setLoading(false);
-    });
-
-    a.addEventListener("timeupdate", () => {
-      setCurrent(a.currentTime);
-    });
-
-    a.addEventListener("ended", () => {
-      setPlaying(false);
-      setCurrent(0);
-      a.currentTime = 0;
-    });
-
-    a.addEventListener("playing", () => {
-      setPlaying(true);
-      setLoading(false);
-    });
-
-    a.addEventListener("error", (e) => {
-      const err = a.error;
-      console.warn("[Audio] Failed to load:", url, "MediaError:", err?.code, err?.message);
-      setError(true);
-      setPlaying(false);
-      setLoading(false);
-    });
-
-    // Set src AFTER attaching all listeners
-    a.src = url;
-    a.load();
-
-    return () => {
-      a.pause();
-      a.src = "";
-      audioRef.current = null;
-    };
-  }, [audioUrl]);
 
   const toggle = async () => {
     const a = audioRef.current;
     if (!a || error) return;
-
     if (playing) {
       a.pause();
       setPlaying(false);
     } else {
+      a.volume = 1.0;
+      a.muted  = false;
       setLoading(true);
       try {
         await a.play();
-        setPlaying(true);
       } catch (err) {
-        console.warn("[Audio] play() rejected:", err);
-        setPlaying(false);
+        console.warn("[Audio] play() failed:", err);
+        setError(true);
       } finally {
         setLoading(false);
       }
@@ -196,7 +135,7 @@ function AudioPlayer({
   const seek = (e: React.MouseEvent<HTMLDivElement>) => {
     const a = audioRef.current;
     if (!a || !isFinite(a.duration)) return;
-    const rect = e.currentTarget.getBoundingClientRect();
+    const rect  = e.currentTarget.getBoundingClientRect();
     const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
     a.currentTime = ratio * a.duration;
     setCurrent(a.currentTime);
@@ -214,6 +153,25 @@ function AudioPlayer({
 
   return (
     <div className="border border-neutral-800 p-4 space-y-3">
+      {/* Real DOM audio element — key ensures remount on URL change */}
+      <audio
+        key={audioUrl}
+        ref={audioRef}
+        src={audioUrl}
+        preload="auto"
+        playsInline
+        onLoadedMetadata={(e) => {
+          const el = e.currentTarget;
+          if (isFinite(el.duration) && el.duration > 0) setDur(Math.ceil(el.duration));
+        }}
+        onTimeUpdate={(e) => setCurrent(e.currentTarget.currentTime)}
+        onPlaying={() => { setPlaying(true); setLoading(false); }}
+        onPause={() => setPlaying(false)}
+        onEnded={() => { setPlaying(false); setCurrent(0); }}
+        onError={() => { setError(true); setPlaying(false); setLoading(false); }}
+        style={{ display: "none" }}
+      />
+
       <div className="flex items-center gap-4">
         <button
           onClick={toggle}
