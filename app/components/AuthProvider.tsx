@@ -35,6 +35,8 @@ import { Capacitor } from "@capacitor/core";
 import {
   onAuthStateChanged,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signInWithCredential,
   GoogleAuthProvider,
   signInWithEmailAndPassword,
@@ -49,6 +51,12 @@ import { getOrCreateUserDoc, type EchoUser } from "@/lib/userDoc";
 function isCapacitorNative(): boolean {
   if (typeof window === "undefined") return false;
   return Capacitor.isNativePlatform();
+}
+
+// ─── Detect mobile browser (use redirect, not popup, on mobile) ────────────────
+function isMobileBrowser(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
 }
 
 // ─── Context shape ────────────────────────────────────────────────────────────
@@ -79,6 +87,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     getFirebaseAnalytics().catch(() => {});
     const auth = getFirebaseAuth();
+
+    // Process redirect result FIRST (mobile browser returning from Google OAuth).
+    // Must run before onAuthStateChanged so the user doc is created before
+    // the auth state listener fires and triggers any route guards.
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) {
+          console.log("[AuthProvider] Redirect sign-in OK:", result.user.email);
+        }
+      })
+      .catch((e: any) => {
+        const code = e?.code || "";
+        if (code && code !== "auth/no-current-user") {
+          console.warn("[AuthProvider] getRedirectResult error:", code, e?.message);
+        }
+      });
 
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
@@ -152,7 +176,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // ── WEB ONLY: Firebase Popup ───────────────────────────────────────────
+    // ── MOBILE BROWSER: use redirect (popup freezes/blocks on Android Chrome) ──
+    if (isMobileBrowser()) {
+      try {
+        googleProvider.setCustomParameters({ prompt: "select_account" });
+        await signInWithRedirect(auth, googleProvider);
+        // Page navigates away here — getRedirectResult() above catches the return
+      } catch (e: any) {
+        setError(mapFirebaseError(e?.message || e?.code || "AUTH ERROR"));
+      }
+      return;
+    }
+
+    // ── DESKTOP BROWSER: popup works fine ─────────────────────────────────
     try {
       googleProvider.setCustomParameters({ prompt: "select_account" });
       await signInWithPopup(auth, googleProvider);

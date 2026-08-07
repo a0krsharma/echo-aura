@@ -12,12 +12,21 @@
  */
 
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, type Auth } from "firebase/auth";
+import {
+  getAuth,
+  setPersistence,
+  browserLocalPersistence,
+  GoogleAuthProvider,
+  type Auth,
+} from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
 import { getAnalytics, isSupported, type Analytics } from "firebase/analytics";
 
 const firebaseConfig = {
   apiKey:            process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  // KEY FIX: Use vercel.app as authDomain so Google OAuth signs into the SAME
+  // origin as the app. Using firebaseapp.com causes mobile browsers to block
+  // the auth token (cross-origin storage partitioning / ITP).
   authDomain:        process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
   projectId:         process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
   storageBucket:     process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
@@ -26,15 +35,22 @@ const firebaseConfig = {
   measurementId:     process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-// ── App singleton ─────────────────────────────────────────────────
+// ── App singleton ───────────────────────────────────────────────────
 function getFirebaseApp(): FirebaseApp {
   if (getApps().length > 0) return getApp();
   return initializeApp(firebaseConfig);
 }
 
-// ── Auth ──────────────────────────────────────────────────────────
+// ── Auth singleton with explicit local persistence ────────────────────────
+let _auth: Auth | null = null;
 export function getFirebaseAuth(): Auth {
-  return getAuth(getFirebaseApp());
+  if (_auth) return _auth;
+  _auth = getAuth(getFirebaseApp());
+  // Ensure tokens survive page reloads and cross-domain redirects on mobile
+  setPersistence(_auth, browserLocalPersistence).catch((e) =>
+    console.warn("[Firebase] setPersistence failed:", e)
+  );
+  return _auth;
 }
 
 // ── Firestore ─────────────────────────────────────────────────────
