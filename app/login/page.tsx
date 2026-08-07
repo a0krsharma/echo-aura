@@ -3,13 +3,7 @@
 /**
  * app/login/page.tsx
  * ─────────────────────────────────────────────────────
- * Echo login screen — brutally minimalist.
- * Two authentication paths:
- *   1. Google OAuth popup
- *   2. Email / Password (sign-in + sign-up toggle)
- *
- * Design: pure black background, serif logotype, 1px-border
- * monospace buttons. No gradients. No drop shadows. No colour.
+ * Echo login — Google only, brutally minimalist.
  */
 
 import React, { useState, useEffect } from "react";
@@ -17,71 +11,34 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/components/AuthProvider";
 import { Loader2 } from "lucide-react";
 
-type Mode = "choose" | "email";
-
 export default function LoginPage() {
-  const { signInWithGoogle, signInWithEmail, signUpWithEmail, isLoading, error, user } = useAuth();
+  const { user, isLoading, error, signInWithGoogle, clearError } = useAuth();
   const router = useRouter();
+  const [busy, setBusy] = useState(false);
 
-  const [mode,       setMode]       = useState<Mode>("choose");
-  const [isSignUp,   setIsSignUp]   = useState(false);
-  const [email,      setEmail]      = useState("");
-  const [password,   setPassword]   = useState("");
-  const [busy,       setBusy]       = useState(false);
-  const [localError, setLocalError] = useState<string | null>(null);
-
-  const displayError = localError ?? error;
-
-  // ── Auto-redirect when user is authenticated ───────────────────────
+  // Redirect once authenticated
   useEffect(() => {
-    if (user) {
-      router.replace("/");
-    }
+    if (user) router.replace("/");
   }, [user, router]);
-  // ── Google ──────────────────────────────────────────────────────
+
   async function handleGoogle() {
+    clearError();
     setBusy(true);
-    setLocalError(null);
     try {
       await signInWithGoogle();
-      // For desktop popup: redirect immediately after sign-in resolves.
-      // For mobile redirect: signInWithRedirect navigates away — this line never runs.
-      // The useEffect above handles the redirect when the page reloads.
-      router.replace("/");
-    } catch {
-      // error already set in context
+      // Popup flow: user is set → useEffect above redirects.
+      // Redirect flow: page navigates away entirely (no code runs after this).
     } finally {
       setBusy(false);
     }
   }
 
-  // ── Email ───────────────────────────────────────────────────────
-  async function handleEmail(e: React.FormEvent) {
-    e.preventDefault();
-    setLocalError(null);
-    if (!email.trim() || !password.trim()) {
-      setLocalError("EMAIL AND PASSWORD REQUIRED.");
-      return;
-    }
-    setBusy(true);
-    try {
-      if (isSignUp) {
-        await signUpWithEmail(email, password);
-      } else {
-        await signInWithEmail(email, password);
-      }
-      router.replace("/");
-    } catch {
-      // error surfaced from context
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  if (isLoading && !busy) {
+  // Full-screen loader while Firebase resolves initial auth state
+  if (isLoading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <Loader2 className="w-5 h-5 text-neutral-600 animate-spin" />
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-4">
+        <span className="font-serif text-4xl italic text-white">Echo.</span>
+        <Loader2 className="w-4 h-4 text-neutral-700 animate-spin" />
       </div>
     );
   }
@@ -90,7 +47,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
 
       {/* ── Logotype ── */}
-      <header className="mb-16 text-center">
+      <header className="mb-16 text-center select-none">
         <h1 className="font-serif text-7xl italic text-white leading-none tracking-tight">
           Echo.
         </h1>
@@ -100,127 +57,35 @@ export default function LoginPage() {
       </header>
 
       {/* ── Auth panel ── */}
-      <div className="w-full max-w-xs">
+      <div className="w-full max-w-xs flex flex-col gap-4">
 
-        {mode === "choose" && (
-          <div className="flex flex-col gap-3">
-            {/* Google */}
-            <button
-              id="btn-google"
-              onClick={handleGoogle}
-              disabled={busy}
-              className="w-full flex items-center justify-center gap-3 border border-white text-white font-mono text-[11px] tracking-[0.2em] uppercase py-4 px-6 hover:bg-white hover:text-black transition-colors duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {busy ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <GoogleIcon />
-              )}
-              [ CONTINUE WITH GOOGLE ]
-            </button>
-
-            {/* Email */}
-            <button
-              id="btn-email"
-              onClick={() => setMode("email")}
-              disabled={busy}
-              className="w-full flex items-center justify-center border border-neutral-800 text-neutral-500 font-mono text-[11px] tracking-[0.2em] uppercase py-4 px-6 hover:border-white hover:text-white transition-colors duration-150 cursor-pointer disabled:opacity-40"
-            >
-              [ CONTINUE WITH EMAIL ]
-            </button>
-
-            <p className="font-serif italic text-neutral-700 text-xs text-center mt-4 leading-relaxed">
-              By continuing, you accept our terms and privacy policy.
+        {/* Error banner */}
+        {error && (
+          <div className="border border-neutral-800 px-4 py-3">
+            <p className="font-mono text-[10px] tracking-widest uppercase text-white leading-relaxed">
+              ✕ {error}
             </p>
           </div>
         )}
 
-        {mode === "email" && (
-          <form onSubmit={handleEmail} className="flex flex-col gap-4">
-            {/* Header */}
-            <div className="mb-4">
-              <p className="font-mono text-[10px] tracking-[0.3em] uppercase text-neutral-600">
-                {isSignUp ? "// CREATE ACCOUNT" : "// SIGN IN"}
-              </p>
-            </div>
+        {/* Google button */}
+        <button
+          id="btn-google-signin"
+          onClick={handleGoogle}
+          disabled={busy}
+          className="w-full flex items-center justify-center gap-3 border border-white text-white font-mono text-[11px] tracking-[0.2em] uppercase py-4 px-6 hover:bg-white hover:text-black transition-colors duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {busy ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <GoogleIcon />
+          )}
+          {busy ? "SIGNING IN…" : "[ CONTINUE WITH GOOGLE ]"}
+        </button>
 
-            {/* Email field */}
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="email"
-                className="font-mono text-[10px] tracking-widest uppercase text-neutral-600"
-              >
-                EMAIL
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                autoComplete="email"
-                placeholder="you@example.com"
-                className="bg-transparent border-b border-neutral-800 focus:border-white outline-none font-mono text-sm text-white py-2 tracking-widest placeholder:text-neutral-700 transition-colors"
-              />
-            </div>
-
-            {/* Password field */}
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="password"
-                className="font-mono text-[10px] tracking-widest uppercase text-neutral-600"
-              >
-                PASSWORD
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                autoComplete={isSignUp ? "new-password" : "current-password"}
-                placeholder="••••••••"
-                className="bg-transparent border-b border-neutral-800 focus:border-white outline-none font-mono text-sm text-white py-2 tracking-widest placeholder:text-neutral-700 transition-colors"
-              />
-            </div>
-
-            {/* Error */}
-            {displayError && (
-              <p className="font-mono text-[10px] tracking-widest uppercase text-white border border-neutral-800 px-3 py-2">
-                ✕ {displayError}
-              </p>
-            )}
-
-            {/* Submit */}
-            <button
-              id="btn-submit-email"
-              type="submit"
-              disabled={busy}
-              className="w-full border border-white text-white font-mono text-[11px] tracking-[0.2em] uppercase py-4 hover:bg-white hover:text-black transition-colors duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed mt-2 flex items-center justify-center gap-2"
-            >
-              {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              {isSignUp ? "[ CREATE ACCOUNT ]" : "[ SIGN IN ]"}
-            </button>
-
-            {/* Toggle sign-up / sign-in */}
-            <button
-              type="button"
-              onClick={() => { setIsSignUp(s => !s); setLocalError(null); }}
-              className="font-mono text-[10px] tracking-widest uppercase text-neutral-600 hover:text-white transition-colors cursor-pointer text-center"
-            >
-              {isSignUp
-                ? "ALREADY HAVE AN ACCOUNT — SIGN IN"
-                : "NEW TO ECHO — CREATE ACCOUNT"}
-            </button>
-
-            {/* Back */}
-            <button
-              type="button"
-              onClick={() => { setMode("choose"); setLocalError(null); }}
-              className="font-mono text-[10px] tracking-widest uppercase text-neutral-700 hover:text-neutral-500 transition-colors cursor-pointer text-center"
-            >
-              ← BACK
-            </button>
-          </form>
-        )}
+        <p className="font-serif italic text-neutral-700 text-[11px] text-center leading-relaxed mt-2">
+          By continuing, you accept our terms and privacy policy.
+        </p>
       </div>
 
       {/* ── Footer ── */}
@@ -233,7 +98,7 @@ export default function LoginPage() {
   );
 }
 
-// ── Google "G" icon (no colours, just shape) ──────────────────────
+// ── Google "G" icon ──────────────────────────────────────────────────
 function GoogleIcon() {
   return (
     <svg

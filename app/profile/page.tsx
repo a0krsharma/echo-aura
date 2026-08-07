@@ -18,7 +18,7 @@ import {
   Repeat2,
 } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
-import { uploadAudio } from "@/lib/cloudinary";
+import { uploadAudio, getPlayableUrl } from "@/lib/cloudinary";
 import { subscribeToUserPosts, subscribeToUserPulsedPosts, type PostItem } from "@/lib/posts";
 import { doc, updateDoc } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
@@ -34,7 +34,8 @@ function MiniPlayer({ audioUrl, durationSec }: { audioUrl: string; durationSec: 
 
   useEffect(() => {
     if (!audioUrl) return;
-    const a = new Audio(audioUrl);
+    const rawUrl = getPlayableUrl(audioUrl);
+    const a = new Audio(rawUrl);
     a.preload = "auto";
     audioRef.current = a;
 
@@ -45,7 +46,7 @@ function MiniPlayer({ audioUrl, durationSec }: { audioUrl: string; durationSec: 
     a.addEventListener("timeupdate", () => setCurrent(a.currentTime));
     a.addEventListener("ended", () => { setPlaying(false); setCurrent(0); a.currentTime = 0; });
     a.addEventListener("error", () => setReady(false));
-    a.src = audioUrl;
+    a.src = getPlayableUrl(audioUrl);
     a.load();
 
     return () => { a.pause(); a.src = ""; audioRef.current = null; };
@@ -225,14 +226,20 @@ export default function ProfilePage() {
 
   const handleToggleBioPlay = () => {
     if (!bioAudioUrl) return;
+    const playableUrl = getPlayableUrl(bioAudioUrl);
     if (!audioRef.current) {
-      const a = new Audio(bioAudioUrl);
+      const a = new Audio(playableUrl);
       a.volume = 1.0;
       a.muted = false;
       a.preload = "auto";
       a.onended = () => setIsPlayingBio(false);
       audioRef.current = a;
     } else {
+      // Update source if URL changed
+      if (audioRef.current.src !== playableUrl) {
+        audioRef.current.src = playableUrl;
+        audioRef.current.load();
+      }
       audioRef.current.volume = 1.0;
       audioRef.current.muted = false;
     }
