@@ -16,10 +16,10 @@
  *
  * THE FIX:
  *   1. Always upload to `video/upload` endpoint (Cloudinary's audio-aware path).
- *   2. Request explicit MP3 transcoding via eager transformation f_mp3.
- *   3. Store the EAGER URL (pre-transcoded MP3) — not the raw original URL.
- *   4. MP3 is universally supported: Android Chrome, iOS Safari, desktop all play it.
- *   5. MP3 files have full duration metadata at the START — no range-request issues.
+ *   2. After upload, build an on-the-fly MP3 delivery URL by injecting
+ *      f_mp3,q_auto:good into the URL (unsigned presets forbid `eager`).
+ *   3. Store the MP3 URL — universally supported on all browsers/devices.
+ *   4. MP3 files have full duration metadata at the START — no range-request issues.
  */
 
 export interface CloudinaryUploadResult {
@@ -40,9 +40,12 @@ function getCloudConfig() {
  * uploadAudio
  *
  * Uploads audio blob to Cloudinary and returns a universally playable MP3 URL.
- * Uses `video/upload` endpoint (Cloudinary's audio-aware path) with eager
- * transcoding to MP3 so the stored URL always points to an MP3 file that
- * works on all browsers and devices.
+ * Uses `video/upload` endpoint (Cloudinary's audio-aware path).
+ *
+ * NOTE: `eager` / `eager_async` are NOT allowed for unsigned upload presets.
+ * Instead we build the MP3 delivery URL ourselves after upload by injecting
+ * the `f_mp3,q_auto:good` transformation into the Cloudinary URL — this is
+ * equivalent to eager transcoding but requires no signed preset.
  */
 export async function uploadAudio(
   blob: Blob,
@@ -62,13 +65,11 @@ export async function uploadAudio(
 
   const fullFilename = `${filename}.${ext}`;
 
+  // Only allowed unsigned-upload params: upload_preset, public_id, folder,
+  // tags, context, etc.  Do NOT add eager / eager_async here.
   const formData = new FormData();
   formData.append("file", blob, fullFilename);
   formData.append("upload_preset", uploadPreset);
-  // Request eager MP3 transcoding — Cloudinary processes this server-side
-  // and returns the ready MP3 URL in the `eager` array
-  formData.append("eager", "f_mp3,q_auto:good");
-  formData.append("eager_async", "false"); // wait for transcoding to finish
 
   // Use video/upload endpoint — handles audio files correctly (auto/upload
   // sometimes misclassifies audio as image and strips metadata)
@@ -83,20 +84,32 @@ export async function uploadAudio(
 
   const data = await res.json();
 
-  // Prefer the eager MP3 URL (pre-transcoded, universally playable)
-  // Fall back to raw URL if eager is not available yet
-  const eagerMp3Url: string | undefined = data.eager?.[0]?.secure_url;
-  const rawUrl: string = data.secure_url || data.url || "";
+  const publicId: string = data.public_id || `audio-${Date.now()}`;
+  const rawUrl:   string = data.secure_url || data.url || "";
 
-  // If we got an eager MP3 URL, use it — otherwise use raw URL
-  const finalUrl = eagerMp3Url || rawUrl;
+  // Build an on-the-fly MP3 delivery URL by injecting the transformation into
+  // the Cloudinary URL.  Cloudinary transcodes lazily on first request and
+  // caches the result — same outcome as eager, no signed preset required.
+  //
+  // Pattern: /video/upload/<transformation>/<version>/<public_id>.<format>
+  // Result:  /video/upload/f_mp3,q_auto:good/<version>/<public_id>.mp3
+  const mp3Url = rawUrl
+    ? rawUrl
+        .replace(
+          /\/video\/upload\//,
+          "/video/upload/f_mp3,q_auto:good/"
+        )
+        .replace(/\.[^.]+$/, ".mp3")  // swap extension to .mp3
+    : rawUrl;
+
+  const finalUrl = mp3Url || rawUrl;
 
   return {
     secureUrl: finalUrl,
-    publicId:  data.public_id || `audio-${Date.now()}`,
-    duration:  data.duration  || undefined,
-    format:    eagerMp3Url ? "mp3" : (data.format || ext),
-    bytes:     data.bytes     || blob.size,
+    publicId,
+    duration:  data.duration || undefined,
+    format:    mp3Url ? "mp3" : (data.format || ext),
+    bytes:     data.bytes    || blob.size,
   };
 }
 
