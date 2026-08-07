@@ -82,8 +82,33 @@ function Waveform({ playing }: { playing: boolean }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// AUDIO PLAYER — uses real <audio> DOM element for guaranteed hardware playback
+// AUDIO PLAYER — bulletproof multi-URL fallback player
 // ─────────────────────────────────────────────────────────────────────────────
+
+/** Build a list of URL variants to try in order for a given Cloudinary URL */
+function buildUrlVariants(rawUrl: string): string[] {
+  if (!rawUrl) return [];
+  if (rawUrl.startsWith("blob:")) return [rawUrl];
+
+  const variants: string[] = [];
+
+  // 1. Original URL as-is
+  variants.push(rawUrl);
+
+  // 2. Strip any transformation segment (e.g. /f_mp3,q_auto/)
+  const stripped = rawUrl.replace(/\/[a-z][a-z0-9_]+,[a-z0-9_,;:]+\//i, "/");
+  if (stripped !== rawUrl) variants.push(stripped);
+
+  // 3. Force MP3 extension on the Cloudinary URL
+  const mp3Url = rawUrl
+    .replace(/\/f_[^/]+\//, "/f_mp3,q_auto:good/")  // replace existing transform
+    .replace(/\.[a-z0-9]+$/, ".mp3");               // force .mp3 extension
+  if (!variants.includes(mp3Url)) variants.push(mp3Url);
+
+  // 4. Deduplicate
+  return [...new Set(variants)];
+}
+
 function AudioPlayer({
   audioUrl,
   fallbackDurationSec,
@@ -91,19 +116,44 @@ function AudioPlayer({
   audioUrl: string;
   fallbackDurationSec: number;
 }) {
+  const urlVariants = buildUrlVariants(audioUrl);
+  const [variantIdx, setVariantIdx] = useState(0);
+  const currentSrc = urlVariants[variantIdx] || audioUrl;
+
   const [playing, setPlaying] = useState(false);
-  // Resolve raw Cloudinary URL to a direct playable URL without transformations
-  const playableUrl = getPlayableUrl(audioUrl);
   const [current, setCurrent] = useState(0);
   const [dur,     setDur]     = useState(Math.max(1, fallbackDurationSec));
   const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState(false);
+  const [failed,  setFailed]  = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Reset on URL change
+  useEffect(() => {
+    setVariantIdx(0);
+    setFailed(false);
+    setPlaying(false);
+    setCurrent(0);
+    setDur(Math.max(1, fallbackDurationSec));
+  }, [audioUrl]);
+
+  const handleError = () => {
+    setPlaying(false);
+    setLoading(false);
+    const nextIdx = variantIdx + 1;
+    if (nextIdx < urlVariants.length) {
+      // Auto-try next URL variant
+      console.warn(`[Audio] URL variant ${variantIdx} failed, trying ${nextIdx}:`, urlVariants[nextIdx]);
+      setVariantIdx(nextIdx);
+    } else {
+      console.error("[Audio] All URL variants exhausted:", urlVariants);
+      setFailed(true);
+    }
+  };
+
   const toggle = async () => {
     const a = audioRef.current;
-    if (!a || error) return;
+    if (!a) return;
     if (playing) {
       a.pause();
       setPlaying(false);
@@ -114,8 +164,8 @@ function AudioPlayer({
       try {
         await a.play();
       } catch (err) {
-        console.warn("[Audio] play() failed:", err);
-        setError(true);
+        console.warn("[Audio] play() rejected:", err);
+        handleError();
       } finally {
         setLoading(false);
       }
@@ -133,23 +183,32 @@ function AudioPlayer({
 
   const pct = dur > 0 ? Math.min(100, (current / dur) * 100) : 0;
 
-  if (error) {
+  if (failed) {
     return (
-      <div className="border border-neutral-900 p-4 font-mono text-[10px] text-neutral-700 tracking-widest uppercase">
-        AUDIO UNAVAILABLE
+      <div className="border border-neutral-900 p-4 flex items-center justify-between gap-3">
+        <span className="font-mono text-[10px] text-neutral-600 tracking-widest uppercase">
+          AUDIO UNAVAILABLE
+        </span>
+        <button
+          onClick={() => { setVariantIdx(0); setFailed(false); }}
+          className="font-mono text-[10px] text-neutral-500 tracking-widest uppercase border border-neutral-800 px-2 py-1 hover:border-white hover:text-white transition-colors cursor-pointer"
+        >
+          RETRY
+        </button>
       </div>
     );
   }
 
   return (
     <div className="border border-neutral-800 p-4 space-y-3">
-      {/* Real DOM audio element — key ensures remount on URL change */}
+      {/* Real DOM audio element — keyed to remount when src changes */}
       <audio
-        key={audioUrl}
+        key={currentSrc}
         ref={audioRef}
-        src={playableUrl}
+        src={currentSrc}
         preload="auto"
         playsInline
+        crossOrigin="anonymous"
         onLoadedMetadata={(e) => {
           const el = e.currentTarget;
           if (isFinite(el.duration) && el.duration > 0) setDur(Math.ceil(el.duration));
@@ -158,7 +217,7 @@ function AudioPlayer({
         onPlaying={() => { setPlaying(true); setLoading(false); }}
         onPause={() => setPlaying(false)}
         onEnded={() => { setPlaying(false); setCurrent(0); }}
-        onError={() => { setError(true); setPlaying(false); setLoading(false); }}
+        onError={handleError}
         style={{ display: "none" }}
       />
 
@@ -199,6 +258,7 @@ function AudioPlayer({
     </div>
   );
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // REVERB MODAL — In-place voice reply recording

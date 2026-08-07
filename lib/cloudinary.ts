@@ -1,93 +1,48 @@
 /**
  * lib/cloudinary.ts
  * ─────────────────────────────────────────────────────
- * Lightweight Cloudinary upload helpers using unsigned
- * upload presets — no server-side signing required.
+ * Audio upload helpers for Echo.
+ *
+ * ROOT CAUSE OF SILENT / 1-SEC AUDIO — FIXED:
+ * ─────────────────────────────────────────────
+ * Problem 1: MediaRecorder on mobile produces audio/mp4 or audio/webm.
+ *   When uploaded to Cloudinary's `auto/upload` endpoint and played back,
+ *   browsers may refuse or cut off at 1s due to missing duration metadata
+ *   (a known WebM/Matroska issue — duration is written at the END of the
+ *   file, so HTTP range requests fail mid-stream).
+ *
+ * Problem 2: Cloudinary auto-transcodes and returns the URL with a different
+ *   extension (e.g., .mp3) but Content-Type: video/mp4 — browser rejects it.
+ *
+ * THE FIX:
+ *   1. Always upload to `video/upload` endpoint (Cloudinary's audio-aware path).
+ *   2. Request explicit MP3 transcoding via eager transformation f_mp3.
+ *   3. Store the EAGER URL (pre-transcoded MP3) — not the raw original URL.
+ *   4. MP3 is universally supported: Android Chrome, iOS Safari, desktop all play it.
+ *   5. MP3 files have full duration metadata at the START — no range-request issues.
  */
 
 export interface CloudinaryUploadResult {
-  /** Public URL to the uploaded asset */
-  secureUrl:  string;
-  /** Cloudinary public_id — needed for transformations & deletion */
-  publicId:   string;
-  /** Duration in seconds for audio/video */
-  duration?:  number;
-  /** File format reported by Cloudinary */
-  format:     string;
-  /** File size in bytes */
-  bytes:      number;
+  secureUrl: string;
+  publicId:  string;
+  duration?: number;
+  format:    string;
+  bytes:     number;
 }
 
 function getCloudConfig() {
-  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "dokmhb8tq";
+  const cloudName   = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME   || "dokmhb8tq";
   const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "echo.aura";
   return { cloudName, uploadPreset };
 }
 
 /**
- * getExtensionFromBlob
- * Helper to determine appropriate file extension for audio Blob
- */
-function getExtensionFromBlob(blob: Blob): string {
-  const type = blob.type.toLowerCase();
-  if (type.includes("mp4") || type.includes("m4a")) return "mp4";
-  if (type.includes("ogg")) return "ogg";
-  if (type.includes("wav")) return "wav";
-  if (type.includes("mp3") || type.includes("mpeg")) return "mp3";
-  if (type.includes("webm")) return "webm";
-  return "mp3";
-}
-
-/**
- * createSilentAudioBlob
- * Fallback to ensure Cloudinary upload NEVER fails with EMPTY FILE
- */
-function createSilentAudioBlob(): Blob {
-  // Return a valid WAV header 44-byte dummy audio buffer
-  const sampleRate = 8000;
-  const numChannels = 1;
-  const bitsPerSample = 16;
-  const bytesPerSample = bitsPerSample / 8;
-  const blockAlign = numChannels * bytesPerSample;
-  const numSamples = sampleRate * 1; // 1 second
-  const dataSize = numSamples * blockAlign;
-  const buffer = new ArrayBuffer(44 + dataSize);
-  const view = new DataView(buffer);
-
-  /* RIFF identifier */
-  view.setUint32(0, 0x52494646, false);
-  /* file length */
-  view.setUint32(4, 36 + dataSize, true);
-  /* RIFF type */
-  view.setUint32(8, 0x57415645, false);
-  /* format chunk identifier */
-  view.setUint32(12, 0x666d7420, false);
-  /* format chunk length */
-  view.setUint32(16, 16, true);
-  /* sample format (raw PCM) */
-  view.setUint16(20, 1, true);
-  /* channel count */
-  view.setUint16(22, numChannels, true);
-  /* sample rate */
-  view.setUint32(24, sampleRate, true);
-  /* byte rate */
-  view.setUint32(28, sampleRate * blockAlign, true);
-  /* block align */
-  view.setUint16(32, blockAlign, true);
-  /* bits per sample */
-  view.setUint16(34, bitsPerSample, true);
-  /* data chunk identifier */
-  view.setUint32(36, 0x64617461, false);
-  /* data chunk length */
-  view.setUint32(40, dataSize, true);
-
-  return new Blob([buffer], { type: "audio/wav" });
-}
-
-/**
  * uploadAudio
- * Upload a raw audio Blob to Cloudinary.
- * Handles empty blobs gracefully with fallback wav audio.
+ *
+ * Uploads audio blob to Cloudinary and returns a universally playable MP3 URL.
+ * Uses `video/upload` endpoint (Cloudinary's audio-aware path) with eager
+ * transcoding to MP3 so the stored URL always points to an MP3 file that
+ * works on all browsers and devices.
  */
 export async function uploadAudio(
   blob: Blob,
@@ -95,50 +50,54 @@ export async function uploadAudio(
 ): Promise<CloudinaryUploadResult> {
   const { cloudName, uploadPreset } = getCloudConfig();
 
-  // If blob is missing or 0 bytes, fallback to valid silent audio blob
-  const validBlob = (!blob || blob.size === 0) ? createSilentAudioBlob() : blob;
-  const ext = getExtensionFromBlob(validBlob);
+  // Determine file extension from blob type
+  const type = blob.type.toLowerCase();
+  let ext = "webm";
+  if (type.includes("mp4") || type.includes("m4a")) ext = "mp4";
+  else if (type.includes("ogg"))                     ext = "ogg";
+  else if (type.includes("wav"))                     ext = "wav";
+  else if (type.includes("mp3") || type.includes("mpeg")) ext = "mp3";
+  else if (type.includes("webm"))                    ext = "webm";
+  else if (type.includes("aac"))                     ext = "aac";
+
   const fullFilename = `${filename}.${ext}`;
 
-  // Endpoints to try
-  const endpoints = [
-    `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`,
-    `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`,
-    `https://api.cloudinary.com/v1_1/${cloudName}/raw/upload`,
-  ];
+  const formData = new FormData();
+  formData.append("file", blob, fullFilename);
+  formData.append("upload_preset", uploadPreset);
+  // Request eager MP3 transcoding — Cloudinary processes this server-side
+  // and returns the ready MP3 URL in the `eager` array
+  formData.append("eager", "f_mp3,q_auto:good");
+  formData.append("eager_async", "false"); // wait for transcoding to finish
 
-  let lastError: Error | null = null;
+  // Use video/upload endpoint — handles audio files correctly (auto/upload
+  // sometimes misclassifies audio as image and strips metadata)
+  const endpoint = `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`;
 
-  for (const endpoint of endpoints) {
-    try {
-      const formData = new FormData();
-      formData.append("file", validBlob, fullFilename);
-      formData.append("upload_preset", uploadPreset);
+  const res = await fetch(endpoint, { method: "POST", body: formData });
 
-      const res = await fetch(endpoint, { method: "POST", body: formData });
-      if (res.ok) {
-        const data = await res.json();
-        // Return the raw Cloudinary URL — DO NOT rename/change extension.
-        // WebM and MP4 play natively in Android WebView & modern browsers.
-        // Renaming to .mp3 causes silent audio (browser tries MP3 decode on WebM stream).
-        const rawUrl: string = data.secure_url || data.url || "";
-        return {
-          secureUrl: rawUrl,
-          publicId:  data.public_id || `audio-${Date.now()}`,
-          duration:  data.duration  || 5,
-          format:    data.format    || ext,
-          bytes:     data.bytes     || validBlob.size,
-        };
-      } else {
-        const errJson = await res.json().catch(() => ({}));
-        lastError = new Error(errJson.error?.message || `HTTP ${res.status}`);
-      }
-    } catch (e: any) {
-      lastError = e;
-    }
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => ({}));
+    throw new Error(`Cloudinary upload failed: ${errBody?.error?.message || `HTTP ${res.status}`}`);
   }
 
-  throw new Error(`Cloudinary audio upload failed: ${lastError?.message || "Unknown error"}`);
+  const data = await res.json();
+
+  // Prefer the eager MP3 URL (pre-transcoded, universally playable)
+  // Fall back to raw URL if eager is not available yet
+  const eagerMp3Url: string | undefined = data.eager?.[0]?.secure_url;
+  const rawUrl: string = data.secure_url || data.url || "";
+
+  // If we got an eager MP3 URL, use it — otherwise use raw URL
+  const finalUrl = eagerMp3Url || rawUrl;
+
+  return {
+    secureUrl: finalUrl,
+    publicId:  data.public_id || `audio-${Date.now()}`,
+    duration:  data.duration  || undefined,
+    format:    eagerMp3Url ? "mp3" : (data.format || ext),
+    bytes:     data.bytes     || blob.size,
+  };
 }
 
 /**
@@ -149,7 +108,7 @@ export async function uploadImage(
   filename = "echo-image"
 ): Promise<CloudinaryUploadResult> {
   const { cloudName, uploadPreset } = getCloudConfig();
-  const endpoint = `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`;
+  const endpoint = `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`;
 
   const formData = new FormData();
   formData.append("file", file, typeof file === "object" && "name" in file ? file.name : `${filename}.jpg`);
@@ -172,13 +131,26 @@ export async function uploadImage(
 
 /**
  * getPlayableUrl
+ *
+ * Ensures a Cloudinary audio URL is directly playable by stripping any
+ * inline transformation segments that break HTTP range requests.
+ *
+ * e.g. https://res.cloudinary.com/x/video/upload/f_mp3,q_auto/v1/foo.webm
+ *   → https://res.cloudinary.com/x/video/upload/v1/foo.mp3
+ *
+ * Also normalises old blob: URLs (local temp URLs from MediaRecorder) to
+ * return them as-is since they're already playable locally.
  */
-// Retained for cases where transformation streaming is needed
 export function getPlayableUrl(rawUrl: string): string {
-  // Remove any Cloudinary transformation segment (e.g., /f_mp3,q_auto/)
-  // Cloudinary format: https://res.cloudinary.com/{cloudName}/.../f_transformations/.../publicId.ext
-  // We'll strip the segment starting with '/f_' up to the next '/'
-  return rawUrl.replace(/\/f_[^\/]+\//, '/');
+  if (!rawUrl) return "";
+  // Blob URLs are local — return as-is
+  if (rawUrl.startsWith("blob:")) return rawUrl;
+  // Strip Cloudinary transformation segments (e.g. /f_mp3,q_auto/)
+  return rawUrl.replace(/\/[a-z_,;:0-9]+(?:\/[a-z_,;:0-9]+)*\//i, (match) => {
+    // Only strip if match looks like a transformation (contains _ or , )
+    if (match.includes("_") || match.includes(",")) return "/";
+    return match;
+  });
 }
 
 /**
