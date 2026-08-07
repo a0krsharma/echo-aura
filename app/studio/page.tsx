@@ -228,13 +228,9 @@ export default function StudioPage() {
           </div>
         </div>
 
-        {/* Single Interaction Area: [ 🔴 HOLD TO YAP ] */}
+        {/* Single Interaction Area: [ 🔴 TAP TO RECORD ] */}
         <div className="w-full flex flex-col sm:flex-row items-center gap-4">
           <button
-            onMouseDown={handlePressStart}
-            onMouseUp={handlePressEnd}
-            onTouchStart={handlePressStart}
-            onTouchEnd={handlePressEnd}
             onClick={handleToggleClick}
             disabled={isUploading}
             className={`flex-1 w-full border font-mono text-xs tracking-[0.2em] uppercase py-5 px-6 transition-colors duration-150 cursor-pointer select-none text-center ${
@@ -243,7 +239,7 @@ export default function StudioPage() {
                 : "border-neutral-800 text-white hover:border-white hover:bg-neutral-950"
             }`}
           >
-            {isRecording ? "[ ⏹ RELEASE TO STOP ]" : "[ 🔴 HOLD TO YAP ]"}
+            {isRecording ? "[ ⏹ TAP TO STOP & PREVIEW ]" : "[ 🔴 TAP TO START RECORDING ]"}
           </button>
 
           {(audioBlob || elapsedMs > 0) && (

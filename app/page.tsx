@@ -50,14 +50,14 @@ function formatSecs(s: number): string {
   return `${m}:${sec}`;
 }
 
-/** Rewrite Cloudinary URL to always stream as MP3 for universal browser support */
+/** Rewrite Cloudinary URL to stream as MP3 while preserving version & public_id */
 function toMP3StreamUrl(url: string): string {
   if (!url) return "";
-  // Already transformed or non-cloudinary
   if (!url.includes("res.cloudinary.com")) return url;
-  // Remove existing transformation flags and inject f_mp3,q_auto
-  const base = url.replace(/\/video\/upload\/[^/]*\//, "/video/upload/");
-  return base.replace("/video/upload/", "/video/upload/f_mp3,q_auto/");
+  if (url.includes("/f_mp3") || url.includes("/f_auto")) return url;
+  return url
+    .replace("/video/upload/", "/video/upload/f_mp3,q_auto/")
+    .replace("/auto/upload/", "/auto/upload/f_mp3,q_auto/");
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

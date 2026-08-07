@@ -83,10 +83,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     try {
       await signInWithPopup(getFirebaseAuth(), googleProvider);
-      // onAuthStateChanged handles user state update
-    } catch (e: unknown) {
+    } catch (e: any) {
+      console.warn("[AuthProvider] Popup failed, trying redirect:", e);
+      if (
+        e?.code === "auth/popup-blocked" ||
+        e?.code === "auth/operation-not-supported-in-this-environment" ||
+        e?.code === "auth/popup-closed-by-user"
+      ) {
+        try {
+          const { signInWithRedirect } = await import("firebase/auth");
+          await signInWithRedirect(getFirebaseAuth(), googleProvider);
+          return;
+        } catch (redirErr: any) {
+          setError(mapFirebaseError(redirErr.message || "Google sign-in failed"));
+          throw redirErr;
+        }
+      }
       const msg = e instanceof Error ? e.message : "Google sign-in failed";
-      setError(msg);
+      setError(mapFirebaseError(msg));
       throw e;
     }
   }, []);

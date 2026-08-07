@@ -1,9 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // No `output: 'export'` — Vercel handles SSR/SSG automatically.
-  // Static export would break dynamic API routes and server components.
-
   images: {
     // Allow Cloudinary images to be served via Next.js Image Optimization
     remotePatterns: [
