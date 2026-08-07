@@ -6,10 +6,6 @@ const config: CapacitorConfig = {
   webDir: 'out',
 
   server: {
-    /**
-     * allowNavigation: domains the WebView can navigate to without leaving the app.
-     * Required for Firebase Auth popup flow, Cloudinary media, and Agora streams.
-     */
     allowNavigation: [
       '*.firebaseapp.com',
       '*.firebase.google.com',
@@ -22,46 +18,43 @@ const config: CapacitorConfig = {
       '*.edge.agora.io',
       '*.agoraio.cn',
     ],
-    // Do not allow cleartext (http) traffic
     cleartext: false,
   },
 
   android: {
-    /**
-     * allowMixedContent: false — enforce HTTPS for all subresources.
-     * webContentsDebuggingEnabled: false in production.
-     */
-    allowMixedContent:            false,
-    webContentsDebuggingEnabled:  false,
-
-    /**
-     * backgroundColor: match app theme so no white flash on resume.
-     */
-    backgroundColor: '#000000',
+    allowMixedContent:           false,
+    webContentsDebuggingEnabled: false,
+    backgroundColor:             '#000000',
   },
 
   ios: {
     backgroundColor: '#000000',
-    contentInset: 'automatic',
-    scrollEnabled: true,
+    contentInset:    'automatic',
+    scrollEnabled:   true,
   },
 
   plugins: {
     SplashScreen: {
-      launchShowDuration: 1200,
-      backgroundColor:    '#000000',
-      showSpinner:        false,
-      androidSplashResourceName: 'splash',
-      androidScaleType:  'CENTER_CROP',
+      launchShowDuration:         1200,
+      backgroundColor:            '#000000',
+      showSpinner:                false,
+      androidSplashResourceName:  'splash',
+      androidScaleType:           'CENTER_CROP',
     },
 
-    /**
-     * Keyboard: push content up on keyboard open, essential for DM / whisper input.
-     */
     Keyboard: {
-      resize: 'body',
+      resize:             'body' as any,
       resizeOnFullScreen: true,
     },
+
+    // Native Google Sign-In — shows device account picker on Android
+    GoogleAuth: {
+      scopes:             ['profile', 'email'],
+      // Web client ID from Firebase Console → Project Settings → Web app → OAuth client ID
+      clientId:           '29569599076-pgr9nrm95l4n9f6ot3s71qdk3l2e0qiu.apps.googleusercontent.com',
+      androidClientId:    '29569599076-pgr9nrm95l4n9f6ot3s71qdk3l2e0qiu.apps.googleusercontent.com',
+      forceCodeForRefreshToken: true,
+    } as any,
   },
 };
 
