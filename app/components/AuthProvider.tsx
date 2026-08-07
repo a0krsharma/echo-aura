@@ -101,54 +101,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     const auth = getFirebaseAuth();
 
-    // ── ANDROID: use native Google Sign-In SDK ──────────────────────────────
+    // ── ANDROID NATIVE OR WEB ────────────────────────────────────────────────
     if (isCapacitorNative()) {
       try {
-        // Dynamically import to avoid SSR / web bundle issues
         const { GoogleAuth } = await import("@codetrix-studio/capacitor-google-auth");
 
-        // Initialize if not already (safe to call multiple times)
         await GoogleAuth.initialize({
           clientId: "29569599076-pgr9nrm95l4n9f6ot3s71qdk3l2e0qiu.apps.googleusercontent.com",
           scopes: ["profile", "email"],
           grantOfflineAccess: true,
         });
 
-        // Opens native "Choose Account" bottom sheet — uses accounts on device
         const googleUser = await GoogleAuth.signIn();
-
         const idToken = googleUser?.authentication?.idToken;
-        if (!idToken) {
-          setError("GOOGLE SIGN-IN FAILED — NO TOKEN RETURNED.");
+        if (idToken) {
+          const credential = GoogleAuthProvider.credential(idToken);
+          await signInWithCredential(auth, credential);
           return;
         }
-
-        // Exchange native token for Firebase credential
-        const credential = GoogleAuthProvider.credential(idToken);
-        await signInWithCredential(auth, credential);
-        // onAuthStateChanged fires automatically
-
       } catch (e: any) {
-        const msg = e?.message || "";
-        if (msg.includes("cancel") || msg.includes("12501") || msg.includes("closed")) {
-          setError("SIGN-IN CANCELLED.");
-          return;
-        }
-        if (msg.includes("network") || msg.includes("7:")) {
-          setError("NO INTERNET CONNECTION.");
-          return;
-        }
-        if (msg.includes("12500") || msg.includes("developer_error")) {
-          setError("GOOGLE SIGN-IN NOT CONFIGURED. CHECK SHA-1 IN FIREBASE CONSOLE.");
-          return;
-        }
-        console.error("[Auth] Native Google Sign-In error:", e);
-        setError("GOOGLE SIGN-IN FAILED — TRY EMAIL INSTEAD.");
+        console.warn("[Auth] Native Google Auth failed, falling back to popup:", e);
       }
-      return;
     }
 
-    // ── WEB: use Firebase popup ──────────────────────────────────────────────
+    // ── WEB & FALLBACK: Firebase Popup ───────────────────────────────────────
     try {
       googleProvider.setCustomParameters({ prompt: "select_account" });
       await signInWithPopup(auth, googleProvider);

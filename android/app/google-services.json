@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "29569599076",
+    "project_id": "echo-aura",
+    "storage_bucket": "echo-aura.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:29569599076:android:5165da3b0d8267c09a0171",
+        "android_client_info": {
+          "package_name": "com.echo.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "29569599076-onl0fcgnr9er7icjt2v3tlr5702ve37s.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.echo.app",
+            "certificate_hash": "e7406374367542883703d1482bcc59709fbc7965"
+          }
+        },
+        {
+          "client_id": "29569599076-kco7vvdltgv52fjr92qbjq3a6og1321g.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB9AJZtEIGYJwMHjVoWr0OTvzyVumYY2b8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "29569599076-kco7vvdltgv52fjr92qbjq3a6og1321g.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

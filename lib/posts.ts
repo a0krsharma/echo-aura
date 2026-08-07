@@ -1,5 +1,10 @@
 /**
- * lib/posts.ts — FIXED: duplicate import removed
+ * lib/posts.ts
+ * ─────────────────────────────────────────────────────
+ * Firestore service for Posts.
+ *
+ * NOTE: Queries filtering by `authorUid` or `pulsedBy` sort client-side
+ * to avoid requiring composite Firestore indexes which fail silently if missing.
  */
 
 import {
@@ -121,6 +126,7 @@ export function subscribeToPosts(
 
 /**
  * subscribeToUserPosts — posts by a specific uid
+ * Uses simple where query + client-side sorting to avoid missing composite index errors.
  */
 export function subscribeToUserPosts(
   uid: string,
@@ -130,18 +136,29 @@ export function subscribeToUserPosts(
   const q = query(
     collection(db, "posts"),
     where("authorUid", "==", uid),
-    orderBy("createdAt", "desc"),
     limit(50)
   );
   return onSnapshot(
     q,
-    (snap) => callback(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<PostItem, "id">) }))),
-    () => callback([])
+    (snap) => {
+      const posts = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<PostItem, "id">) }));
+      posts.sort((a, b) => {
+        const timeA = a.createdAt?.seconds || 0;
+        const timeB = b.createdAt?.seconds || 0;
+        return timeB - timeA;
+      });
+      callback(posts);
+    },
+    (err) => {
+      console.warn("[Firestore] subscribeToUserPosts error:", err.message);
+      callback([]);
+    }
   );
 }
 
 /**
  * subscribeToUserPulsedPosts — posts the user has pulsed
+ * Uses simple where query + client-side sorting to avoid missing composite index errors.
  */
 export function subscribeToUserPulsedPosts(
   uid: string,
@@ -151,13 +168,23 @@ export function subscribeToUserPulsedPosts(
   const q = query(
     collection(db, "posts"),
     where("pulsedBy", "array-contains", uid),
-    orderBy("createdAt", "desc"),
     limit(50)
   );
   return onSnapshot(
     q,
-    (snap) => callback(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<PostItem, "id">) }))),
-    () => callback([])
+    (snap) => {
+      const posts = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<PostItem, "id">) }));
+      posts.sort((a, b) => {
+        const timeA = a.createdAt?.seconds || 0;
+        const timeB = b.createdAt?.seconds || 0;
+        return timeB - timeA;
+      });
+      callback(posts);
+    },
+    (err) => {
+      console.warn("[Firestore] subscribeToUserPulsedPosts error:", err.message);
+      callback([]);
+    }
   );
 }
 

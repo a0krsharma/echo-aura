@@ -119,11 +119,10 @@ function AudioPlayer({
     const url = getPlayableUrl(audioUrl);
     const a = new Audio();
 
-    // CRITICAL FIX: preload="auto" buffers the full file preventing 1-second stop.
-    // preload="metadata" only loads enough for duration — not enough for play.
+    // CRITICAL FIX: Do NOT set crossOrigin = "anonymous".
+    // Cloudinary audio files do not return CORS headers by default for HTML5 audio elements.
+    // Setting crossOrigin causes media loading errors / silent audio blocks.
     a.preload = "auto";
-    a.crossOrigin = "anonymous";
-
     audioRef.current = a;
 
     a.addEventListener("loadedmetadata", () => {
@@ -149,10 +148,6 @@ function AudioPlayer({
       a.currentTime = 0;
     });
 
-    a.addEventListener("waiting", () => {
-      // Buffering — don't stop playing state
-    });
-
     a.addEventListener("playing", () => {
       setPlaying(true);
       setLoading(false);
@@ -161,14 +156,6 @@ function AudioPlayer({
     a.addEventListener("error", (e) => {
       const err = a.error;
       console.warn("[Audio] Failed to load:", url, "MediaError:", err?.code, err?.message);
-      
-      // If crossOrigin fails, retry without it
-      if (a.crossOrigin === "anonymous" && a.error?.code === 4) {
-        a.crossOrigin = "";
-        a.src = url;
-        a.load();
-        return;
-      }
       setError(true);
       setPlaying(false);
       setLoading(false);
