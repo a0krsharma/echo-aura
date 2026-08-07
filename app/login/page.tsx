@@ -12,7 +12,7 @@
  * monospace buttons. No gradients. No drop shadows. No colour.
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/components/AuthProvider";
 import { Loader2 } from "lucide-react";
@@ -20,24 +20,33 @@ import { Loader2 } from "lucide-react";
 type Mode = "choose" | "email";
 
 export default function LoginPage() {
-  const { signInWithGoogle, signInWithEmail, signUpWithEmail, isLoading, error } = useAuth();
+  const { signInWithGoogle, signInWithEmail, signUpWithEmail, isLoading, error, user } = useAuth();
   const router = useRouter();
 
-  const [mode,        setMode]        = useState<Mode>("choose");
-  const [isSignUp,    setIsSignUp]    = useState(false);
-  const [email,       setEmail]       = useState("");
-  const [password,    setPassword]    = useState("");
-  const [busy,        setBusy]        = useState(false);
-  const [localError,  setLocalError]  = useState<string | null>(null);
+  const [mode,       setMode]       = useState<Mode>("choose");
+  const [isSignUp,   setIsSignUp]   = useState(false);
+  const [email,      setEmail]      = useState("");
+  const [password,   setPassword]   = useState("");
+  const [busy,       setBusy]       = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
 
   const displayError = localError ?? error;
 
+  // ── Auto-redirect when auth state resolves (handles mobile redirect return) ─
+  useEffect(() => {
+    if (!isLoading && user) {
+      router.replace("/");
+    }
+  }, [user, isLoading, router]);
   // ── Google ──────────────────────────────────────────────────────
   async function handleGoogle() {
     setBusy(true);
     setLocalError(null);
     try {
       await signInWithGoogle();
+      // For desktop popup: redirect immediately after sign-in resolves.
+      // For mobile redirect: signInWithRedirect navigates away — this line never runs.
+      // The useEffect above handles the redirect when the page reloads.
       router.replace("/");
     } catch {
       // error already set in context
