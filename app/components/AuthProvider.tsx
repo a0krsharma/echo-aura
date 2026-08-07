@@ -5,11 +5,20 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * Clean-room Google-only Firebase Auth provider.
  *
+ * WHY signInWithPopup everywhere (including mobile):
+ *  signInWithRedirect is BROKEN on modern Android Chrome / Samsung Internet
+ *  because storage partitioning (introduced in Chrome 115+) clears the
+ *  sessionStorage that Firebase uses to track redirect state, causing the
+ *  "Unable to process request due to missing initial state" error.
+ *
  * Strategy:
- *  - Desktop  → signInWithPopup
- *  - Mobile browser → signInWithRedirect (popup is blocked on mobile Safari/Chrome)
- *  - On every page load → getRedirectResult() picks up any pending redirect result
- *  - onAuthStateChanged keeps user state in sync at all times
+ *  1. Use signInWithPopup on ALL platforms — works on both desktop and mobile
+ *     when triggered by a direct user gesture (button tap/click).
+ *  2. Only fall back to signInWithRedirect if the popup is explicitly blocked
+ *     (auth/popup-blocked). This is rare on mobile because the popup IS
+ *     allowed when opened synchronously from a click handler.
+ *  3. getRedirectResult() still runs on boot to catch any rare redirect cases.
+ *  4. onAuthStateChanged is the single source of truth for user state.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -25,12 +34,6 @@ import {
 } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase";
 import { getOrCreateUserDoc, type EchoUser } from "@/lib/userDoc";
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-function isMobile(): boolean {
-  if (typeof navigator === "undefined") return false;
-  return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
-}
 
 // ─── Context ─────────────────────────────────────────────────────────────────
 interface AuthContextValue {
@@ -52,28 +55,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading,    setIsLoading]    = useState(true);
   const [error,        setError]        = useState<string | null>(null);
 
-  // ── Bootstrap: handle redirect result + listen to auth state ──────────────
+  // ── Bootstrap ─────────────────────────────────────────────────────────────
   useEffect(() => {
     const auth = getFirebaseAuth();
 
-    // Pick up any pending redirect sign-in result (mobile flow)
+    // Catch any lingering redirect result (fallback path only)
     getRedirectResult(auth)
       .then(async (result) => {
         if (result?.user) {
-          // onAuthStateChanged below will handle setting user state
           console.log("[Auth] Redirect sign-in OK:", result.user.email);
+          // onAuthStateChanged handles state update
         }
       })
       .catch((e: any) => {
         const code = String(e?.code ?? "");
-        // Suppress benign "no pending redirect" errors
         if (!code.includes("no-current-user") && !code.includes("null-user")) {
           console.error("[Auth] getRedirectResult error:", e);
-          setError("GOOGLE SIGN-IN FAILED. PLEASE TRY AGAIN.");
         }
       });
 
-    // Subscribe to auth state — this is the single source of truth
+    // Single source of truth for auth state
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
       if (fbUser) {
@@ -93,7 +94,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, []);
 
-  // ── Google Sign-In ──────────────────────────────────────────────────────────
+  // ── Google Sign-In ─────────────────────────────────────────────────────────
+  // Always try popup first — it works on mobile when called directly from a
+  // user click. Only fall back to redirect if the popup is actually blocked.
   const signInWithGoogle = useCallback(async () => {
     setError(null);
     const auth     = getFirebaseAuth();
@@ -102,30 +105,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     provider.addScope("email");
     provider.setCustomParameters({ prompt: "select_account" });
 
-    if (isMobile()) {
-      // Mobile browsers block popups — use redirect
-      try {
-        await signInWithRedirect(auth, provider);
-      } catch (e: any) {
-        setError(mapError(e?.code ?? e?.message ?? ""));
-      }
-      return;
-    }
-
-    // Desktop — use popup
     try {
       await signInWithPopup(auth, provider);
+      // onAuthStateChanged will fire and set the user
     } catch (e: any) {
       const code = String(e?.code ?? "");
+
       if (
         code === "auth/popup-closed-by-user" ||
         code === "auth/cancelled-popup-request"
       ) {
-        // User dismissed — not an error
-        return;
+        return; // User dismissed — silent
       }
+
       if (code === "auth/popup-blocked") {
-        // Popup was blocked — fallback to redirect
+        // Rare case: browser blocked the popup (e.g. aggressive ad blocker)
+        // Fall back to redirect as last resort
         try {
           await signInWithRedirect(auth, provider);
         } catch (re: any) {
@@ -133,6 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         return;
       }
+
       setError(mapError(code || e?.message || ""));
     }
   }, []);
