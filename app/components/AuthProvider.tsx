@@ -176,20 +176,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // ── MOBILE BROWSER: Use redirect (popup is blocked on mobile browsers) ───
-    if (isMobileBrowser()) {
-      try {
-        googleProvider.setCustomParameters({ prompt: "select_account" });
-        // This navigates away — page will reload and getRedirectResult() above catches the result
-        await signInWithRedirect(auth, googleProvider);
-      } catch (e: any) {
-        const msg = e?.message || "";
-        setError(mapFirebaseError(msg || e?.code));
-      }
-      return;
-    }
-
-    // ── DESKTOP BROWSER: Firebase Popup ──────────────────────────────────────
+    // ── WEB BROWSER: Try Firebase Popup first, fallback to Redirect if blocked ──
     try {
       googleProvider.setCustomParameters({ prompt: "select_account" });
       await signInWithPopup(auth, googleProvider);
@@ -203,8 +190,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       if (code === "auth/popup-blocked") {
         // Fallback: try redirect if popup was blocked
-        googleProvider.setCustomParameters({ prompt: "select_account" });
-        await signInWithRedirect(auth, googleProvider);
+        try {
+          googleProvider.setCustomParameters({ prompt: "select_account" });
+          await signInWithRedirect(auth, googleProvider);
+        } catch (re: any) {
+          setError(mapFirebaseError(re?.message || re?.code));
+        }
         return;
       }
       if (code === "auth/unauthorized-domain" || msg.includes("unauthorized-domain")) {
