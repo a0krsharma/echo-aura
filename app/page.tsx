@@ -56,18 +56,6 @@ function fmt(s: number): string {
   return `${m}:${sec}`;
 }
 
-/**
- * getPlayableUrl
- * Returns the best URL for audio playback.
- * IMPORTANT: Do NOT apply Cloudinary transformations — they cause streaming
- * issues (range requests fail, browser only buffers first chunk → 1s stop bug).
- * The raw Cloudinary URL is already a valid audio file (webm/mp4/ogg).
- */
-function getPlayableUrl(rawUrl: string): string {
-  if (!rawUrl) return "";
-  return rawUrl;
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // WAVEFORM
 // ─────────────────────────────────────────────────────────────────────────────
