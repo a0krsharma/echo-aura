@@ -183,7 +183,7 @@ export default function ProfilePage() {
         streamRef.current = null;
       };
 
-      recorder.start(250);
+      recorder.start();
       setBioState("recording");
     } catch {
       setBioState("idle");

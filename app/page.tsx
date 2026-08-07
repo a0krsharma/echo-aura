@@ -287,7 +287,7 @@ function ReverbModal({ post, onClose, currentUser }: {
         stream.getTracks().forEach(t => t.stop());
         setReverbState("preview");
       };
-      recorder.start(250);
+      recorder.start();
       setReverbState("recording");
     } catch (err: any) {
       setStatusMsg("MIC PERMISSION DENIED.");

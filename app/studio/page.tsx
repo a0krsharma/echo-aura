@@ -157,7 +157,7 @@ export default function StudioPage() {
         setStudioState("preview");
       };
 
-      recorder.start(250); // 250ms timeslice = chunked segments
+      recorder.start();
       setStudioState("recording");
     } catch (err: any) {
       console.error("Microphone error:", err);
