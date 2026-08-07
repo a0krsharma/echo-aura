@@ -1,19 +1,5 @@
 /**
- * lib/posts.ts
- * ─────────────────────────────────────────────────────
- * Firestore service for "posts" collection.
- *
- * Collection: "posts"
- * Schema:
- *   audioUrl     string   — Cloudinary secure URL
- *   caption      string   — Post text / thought
- *   authorUid    string   — Firebase UID of creator
- *   authorHandle string   — Handle e.g. @ANON_4X7K
- *   pulseCount   number   — Upvote counter (default 0)
- *   pulsedBy     string[] — UIDs of users who pulsed
- *   duration     string   — Formatted mm:ss
- *   durationSec  number   — Audio duration in seconds
- *   createdAt    Timestamp
+ * lib/posts.ts — FIXED: duplicate import removed
  */
 
 import {
@@ -21,6 +7,7 @@ import {
   doc,
   addDoc,
   query,
+  where,
   orderBy,
   limit,
   onSnapshot,
@@ -34,64 +21,90 @@ import {
 import { getFirebaseDb } from "@/lib/firebase";
 
 export interface PostItem {
-  id:           string;
-  audioUrl:     string;
-  caption:      string;
-  authorUid:    string;
-  authorHandle: string;
-  pulseCount:   number;
-  pulsedBy?:    string[];
-  duration?:    string;
-  durationSec?: number;
-  createdAt:    Timestamp | null;
+  id:              string;
+  audioUrl:        string;
+  caption:         string;
+  authorUid:       string;
+  authorHandle:    string;
+  pulseCount:      number;
+  pulsedBy?:       string[];
+  orbitedBy?:      string[];
+  orbitCount?:     number;
+  reverbCount?:    number;
+  duration?:       string;
+  durationSec?:    number;
+  reverbOf?:       string;
+  reverbOfHandle?: string;
+  orbitOf?:        string;
+  orbitOfHandle?:  string;
+  createdAt:       Timestamp | null;
 }
 
 /**
  * createPost
- * Save a new post document to the Firestore "posts" collection.
  */
 export async function createPost(data: {
-  audioUrl:     string;
-  caption:      string;
-  authorUid:    string;
-  authorHandle: string;
-  duration?:    string;
-  durationSec?: number;
+  audioUrl:         string;
+  caption:          string;
+  authorUid:        string;
+  authorHandle:     string;
+  duration?:        string;
+  durationSec?:     number;
+  reverbOf?:        string;
+  reverbOfHandle?:  string;
+  orbitOf?:         string;
+  orbitOfHandle?:   string;
 }): Promise<string> {
   const db = getFirebaseDb();
   const postsRef = collection(db, "posts");
   const docRef = await addDoc(postsRef, {
-    audioUrl:     data.audioUrl,
-    caption:      data.caption,
-    authorUid:    data.authorUid,
-    authorHandle: data.authorHandle,
-    pulseCount:   0,
-    pulsedBy:     [],
-    duration:     data.duration || "00:15",
-    durationSec:  data.durationSec || 15,
-    createdAt:    serverTimestamp(),
+    audioUrl:        data.audioUrl,
+    caption:         data.caption,
+    authorUid:       data.authorUid,
+    authorHandle:    data.authorHandle,
+    pulseCount:      0,
+    pulsedBy:        [],
+    orbitedBy:       [],
+    orbitCount:      0,
+    reverbCount:     0,
+    duration:        data.duration  || "00:15",
+    durationSec:     data.durationSec || 15,
+    reverbOf:        data.reverbOf        || null,
+    reverbOfHandle:  data.reverbOfHandle  || null,
+    orbitOf:         data.orbitOf         || null,
+    orbitOfHandle:   data.orbitOfHandle   || null,
+    createdAt:       serverTimestamp(),
   });
 
-  // Increment creator's aura score in `users` collection (+10 per post)
+  // Bump aura
   try {
-    const userRef = doc(db, "users", data.authorUid);
-    await updateDoc(userRef, {
-      auraScore: increment(10),
-    });
-  } catch (err) {
-    console.error("Failed to bump user auraScore:", err);
+    await updateDoc(doc(db, "users", data.authorUid), { auraScore: increment(10) });
+  } catch {}
+
+  // Increment parent reverbCount
+  if (data.reverbOf) {
+    try { await updateDoc(doc(db, "posts", data.reverbOf), { reverbCount: increment(1) }); } catch {}
+  }
+
+  // Increment parent orbitCount
+  if (data.orbitOf) {
+    try {
+      await updateDoc(doc(db, "posts", data.orbitOf), {
+        orbitCount: increment(1),
+        orbitedBy:  arrayUnion(data.authorUid),
+      });
+    } catch {}
   }
 
   return docRef.id;
 }
 
 /**
- * subscribeToPosts
- * Real-time listener for the "posts" collection ordered by createdAt descending.
+ * subscribeToPosts — all posts, newest first
  */
 export function subscribeToPosts(
   callback: (posts: PostItem[]) => void,
-  maxItems = 30
+  maxItems = 50
 ): () => void {
   const db = getFirebaseDb();
   const q = query(
@@ -99,40 +112,68 @@ export function subscribeToPosts(
     orderBy("createdAt", "desc"),
     limit(maxItems)
   );
-
   return onSnapshot(
     q,
-    (snapshot) => {
-      const posts: PostItem[] = snapshot.docs.map((d) => ({
-        id: d.id,
-        ...(d.data() as Omit<PostItem, "id">),
-      }));
-      callback(posts);
-    },
-    (err) => {
-      console.warn("[Firestore] Posts permission notice:", err.message);
-      callback([]);
-    }
+    (snap) => callback(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<PostItem, "id">) }))),
+    (err) => { console.warn("[Firestore] Posts:", err.message); callback([]); }
+  );
+}
+
+/**
+ * subscribeToUserPosts — posts by a specific uid
+ */
+export function subscribeToUserPosts(
+  uid: string,
+  callback: (posts: PostItem[]) => void
+): () => void {
+  const db = getFirebaseDb();
+  const q = query(
+    collection(db, "posts"),
+    where("authorUid", "==", uid),
+    orderBy("createdAt", "desc"),
+    limit(50)
+  );
+  return onSnapshot(
+    q,
+    (snap) => callback(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<PostItem, "id">) }))),
+    () => callback([])
+  );
+}
+
+/**
+ * subscribeToUserPulsedPosts — posts the user has pulsed
+ */
+export function subscribeToUserPulsedPosts(
+  uid: string,
+  callback: (posts: PostItem[]) => void
+): () => void {
+  const db = getFirebaseDb();
+  const q = query(
+    collection(db, "posts"),
+    where("pulsedBy", "array-contains", uid),
+    orderBy("createdAt", "desc"),
+    limit(50)
+  );
+  return onSnapshot(
+    q,
+    (snap) => callback(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<PostItem, "id">) }))),
+    () => callback([])
   );
 }
 
 /**
  * togglePulsePost
- * Upvote/pulse a post in the "posts" collection.
  */
-export async function togglePulsePost(postId: string, uid: string, currentlyPulsed: boolean) {
+export async function togglePulsePost(
+  postId: string,
+  uid: string,
+  currentlyPulsed: boolean
+) {
   const db = getFirebaseDb();
-  const postRef = doc(db, "posts", postId);
-
+  const ref = doc(db, "posts", postId);
   if (currentlyPulsed) {
-    await updateDoc(postRef, {
-      pulseCount: increment(-1),
-      pulsedBy: arrayRemove(uid),
-    });
+    await updateDoc(ref, { pulseCount: increment(-1), pulsedBy: arrayRemove(uid) });
   } else {
-    await updateDoc(postRef, {
-      pulseCount: increment(1),
-      pulsedBy: arrayUnion(uid),
-    });
+    await updateDoc(ref, { pulseCount: increment(1),  pulsedBy: arrayUnion(uid)  });
   }
 }

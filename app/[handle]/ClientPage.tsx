@@ -71,35 +71,44 @@ function Waveform({ playing }: { playing: boolean }) {
 function MiniPlayer({ audioUrl, duration, durationSec }: { audioUrl: string; duration: string; durationSec: number }) {
   const [playing, setPlaying] = useState(false);
   const [current, setCurrent] = useState(0);
-  const [dur, setDur] = useState(durationSec || 15);
+  const [dur, setDur] = useState(Math.max(1, durationSec || 15));
+  const [loading, setLoading] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  useEffect(() => () => { audioRef.current?.pause(); }, []);
-
-  const toggle = () => {
-    if (playing) {
-      audioRef.current?.pause();
-      setPlaying(false);
-      return;
-    }
+  // CRITICAL FIX: create Audio on mount, set preload=auto, do NOT inject
+  // Cloudinary transformations — they cause range-request streaming failures
+  // that stop playback after ~1 second.
+  useEffect(() => {
     if (!audioUrl) return;
-    if (!audioRef.current) {
-      const url = audioUrl.includes("res.cloudinary.com")
-        ? audioUrl.replace("/video/upload/", "/video/upload/f_mp3,q_auto/")
-        : audioUrl;
-      const a = new Audio(url);
-      audioRef.current = a;
-      a.onloadedmetadata = () => { if (isFinite(a.duration)) setDur(Math.ceil(a.duration)); };
-      a.ontimeupdate = () => setCurrent(a.currentTime);
-      a.onended = () => { setPlaying(false); setCurrent(0); };
+    const a = new Audio();
+    a.preload = "auto"; // buffer entire file upfront
+    audioRef.current = a;
+    a.addEventListener("loadedmetadata", () => {
+      if (isFinite(a.duration) && a.duration > 0) setDur(Math.ceil(a.duration));
+    });
+    a.addEventListener("timeupdate", () => setCurrent(a.currentTime));
+    a.addEventListener("ended",       () => { setPlaying(false); setCurrent(0); a.currentTime = 0; });
+    a.addEventListener("playing",     () => { setPlaying(true); setLoading(false); });
+    a.addEventListener("error",       () => { setPlaying(false); setLoading(false); });
+    a.src = audioUrl; // raw URL — no transformation injection
+    a.load();
+    return () => { a.pause(); a.src = ""; audioRef.current = null; };
+  }, [audioUrl]);
+
+  const toggle = async () => {
+    const a = audioRef.current;
+    if (!a) return;
+    if (playing) { a.pause(); setPlaying(false); }
+    else {
+      setLoading(true);
+      try { await a.play(); }
+      catch { setLoading(false); }
     }
-    setPlaying(true);
-    audioRef.current.play().catch(() => setPlaying(false));
   };
 
   const pct = dur > 0 ? Math.min(100, (current / dur) * 100) : 0;
   const fmt = (s: number) => {
-    const m = Math.floor(s / 60).toString().padStart(2,"0");
+    const m = Math.floor(s / 60).toString().padStart(2,"00");
     const sec = Math.floor(s % 60).toString().padStart(2,"0");
     return `${m}:${sec}`;
   };
@@ -107,14 +116,24 @@ function MiniPlayer({ audioUrl, duration, durationSec }: { audioUrl: string; dur
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-4">
-        <button onClick={toggle} className="font-mono text-xs tracking-widest uppercase text-white hover:opacity-50 transition-opacity cursor-pointer shrink-0">
-          {playing ? "◼ PAUSE" : "▶ PLAY"}
+        <button
+          onClick={toggle}
+          disabled={loading}
+          className="font-mono text-xs tracking-widest uppercase text-white hover:opacity-50 transition-opacity cursor-pointer shrink-0 disabled:opacity-40"
+        >
+          {loading ? "..." : playing ? "⏸ PAUSE" : "▶ PLAY"}
         </button>
         <div className="flex-1 overflow-hidden"><Waveform playing={playing} /></div>
-        <span className="font-mono text-xs text-neutral-600 tracking-widest shrink-0">{fmt(current)} / {fmt(dur)}</span>
+        <span className="font-mono text-xs text-neutral-600 tracking-widest shrink-0 tabular-nums">{fmt(current)} / {fmt(dur)}</span>
       </div>
-      <div className="w-full h-px bg-neutral-900 relative overflow-hidden">
-        <div className="absolute left-0 top-0 h-full bg-white transition-all duration-100" style={{ width: `${pct}%` }} />
+      <div className="w-full h-px bg-neutral-900 relative overflow-hidden cursor-pointer" onClick={(e) => {
+        const a = audioRef.current;
+        if (!a || !isFinite(a.duration)) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        a.currentTime = ((e.clientX - rect.left) / rect.width) * a.duration;
+        setCurrent(a.currentTime);
+      }}>
+        <div className="absolute left-0 top-0 h-full bg-white" style={{ width: `${pct}%` }} />
       </div>
     </div>
   );

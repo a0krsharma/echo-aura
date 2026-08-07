@@ -7,7 +7,8 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/AppTheme">
+        android:theme="@style/AppTheme"
+        android:usesCleartextTraffic="false">
 
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
@@ -15,11 +16,37 @@
             android:label="@string/title_activity_main"
             android:theme="@style/AppTheme.NoActionBarLaunch"
             android:launchMode="singleTask"
-            android:exported="true">
+            android:exported="true"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize">
 
+            <!-- App launcher intent -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!--
+                Firebase Auth deep-link handler.
+                When signInWithPopup/Redirect completes, Google redirects back
+                to com.echo.app:// which reopens this Activity.
+                autoVerify="true" registers this as a Digital Asset Link verified host.
+            -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="com.echo.app" />
+            </intent-filter>
+
+            <!--
+                HTTPS deep links: allows echo.fm/handle links to open in the app.
+            -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="echo.fm" />
             </intent-filter>
 
         </activity>
@@ -33,9 +60,32 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
+
     </application>
 
-    <!-- Permissions -->
-
+    <!-- Core -->
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Audio recording -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+    <!--
+        WAKE_LOCK: prevents CPU/screen sleeping during live audio streams (Agora RTC).
+        Without this, the Stage / live debate audio cuts out when the screen dims.
+    -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- Camera (optional: for future video/photo posts) -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- Vibration for notifications -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- Network state for connectivity checks -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Features declaration for Play Store filters -->
+    <uses-feature android:name="android.hardware.microphone" android:required="true" />
+
 </manifest>

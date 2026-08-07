@@ -110,13 +110,20 @@ html, body {
   overscroll-behavior: none;
 }
 
-/* Mobile: body must NOT scroll — the snap container does. */
+/* Both mobile and desktop scroll normally.
+   The bottom nav uses fixed positioning with a safe-area inset,
+   and page content uses pb-28 to avoid overlap. */
 body {
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
 }
-/* Desktop: body scrolls normally */
-@media (min-width: 768px) {
-  body { overflow: auto; }
+
+/* iOS safe area support */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
 }
 
 ::selection {

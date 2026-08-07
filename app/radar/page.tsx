@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Search, X, Play, Square, Swords, Users, Radio } from "lucide-react";
 import { collection, query, orderBy, limit, getDocs } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
-import { subscribeToEchoes, type EchoPost } from "@/lib/echoes";
+import { subscribeToPosts, type PostItem } from "@/lib/posts";
 import { EchoUser } from "@/lib/userDoc";
 
 interface LiveRoom {
@@ -140,7 +140,7 @@ export default function RadarPage() {
 
   // Firestore Real Data
   const [users, setUsers] = useState<EchoUser[]>([]);
-  const [echoes, setEchoes] = useState<EchoPost[]>([]);
+  const [echoes, setEchoes] = useState<PostItem[]>([]);
 
   const categories = ["ALL", "TRENDING", "RISING", "LIVE ROOMS"];
 
@@ -158,9 +158,9 @@ export default function RadarPage() {
     }
     fetchUsers();
 
-    const unsub = subscribeToEchoes((liveEchoes) => {
-      setEchoes(liveEchoes);
-    });
+    const unsub = subscribeToPosts((livePosts) => {
+      setEchoes(livePosts);
+    }, 30);
     return () => unsub();
   }, []);
 
@@ -177,7 +177,10 @@ export default function RadarPage() {
     : users;
 
   const filteredEchoes = searchQuery
-    ? echoes.filter((e) => e.title.toLowerCase().includes(searchQuery.toLowerCase()))
+    ? echoes.filter((e) =>
+        e.caption?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        e.authorHandle?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
     : echoes;
 
   return (
@@ -294,12 +297,12 @@ export default function RadarPage() {
                 {filteredEchoes.map((echo) => (
                   <div key={echo.id} className="border border-neutral-900 p-4 space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="font-mono text-xs text-neutral-500">{echo.handle}</span>
+                      <span className="font-mono text-xs text-neutral-500">{echo.authorHandle}</span>
                       <span className="font-mono text-[10px] text-neutral-600">{echo.duration}</span>
                     </div>
-                    <p className="font-serif italic text-white text-base leading-snug">"{echo.title}"</p>
+                    <p className="font-serif italic text-white text-base leading-snug">"{echo.caption}"</p>
                     <div className="flex justify-between items-center pt-2">
-                      <span className="font-mono text-xs text-neutral-600">{echo.pulses || 0} PULSES</span>
+                      <span className="font-mono text-xs text-neutral-600">{echo.pulseCount || 0} PULSES</span>
                     </div>
                   </div>
                 ))}

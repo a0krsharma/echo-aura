@@ -4,9 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   Mic2,
-  Settings,
   Flame,
-  Zap,
   Share2,
   X,
   Lock,
@@ -15,24 +13,92 @@ import {
   Copy,
   Check,
   Loader2,
-  ArrowUp
+  ArrowUp,
+  RefreshCw,
+  Repeat2,
 } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
 import { uploadAudio } from "@/lib/cloudinary";
-import { subscribeToEchoes, type EchoPost } from "@/lib/echoes";
+import { subscribeToUserPosts, subscribeToUserPulsedPosts, type PostItem } from "@/lib/posts";
 import { doc, updateDoc } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 
+// Simple in-profile audio player
+function MiniPlayer({ audioUrl, durationSec }: { audioUrl: string; durationSec: number }) {
+  const [playing, setPlaying] = useState(false);
+  const [current, setCurrent] = useState(0);
+  const [dur, setDur] = useState(durationSec || 15);
+  const [ready, setReady] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (!audioUrl) return;
+    const a = new Audio(audioUrl);
+    a.preload = "auto";
+    audioRef.current = a;
+
+    a.addEventListener("loadedmetadata", () => {
+      if (isFinite(a.duration) && a.duration > 0) setDur(Math.ceil(a.duration));
+      setReady(true);
+    });
+    a.addEventListener("timeupdate", () => setCurrent(a.currentTime));
+    a.addEventListener("ended", () => { setPlaying(false); setCurrent(0); a.currentTime = 0; });
+    a.addEventListener("error", () => setReady(false));
+    a.src = audioUrl;
+    a.load();
+
+    return () => { a.pause(); a.src = ""; audioRef.current = null; };
+  }, [audioUrl]);
+
+  const toggle = async () => {
+    const a = audioRef.current;
+    if (!a) return;
+    if (playing) { a.pause(); setPlaying(false); }
+    else {
+      setLoading(true);
+      try { await a.play(); setPlaying(true); } catch {}
+      finally { setLoading(false); }
+    }
+  };
+
+  const fmt = (s: number) => `${Math.floor(s / 60).toString().padStart(2, "0")}:${Math.floor(s % 60).toString().padStart(2, "0")}`;
+  const pct = dur > 0 ? Math.min(100, (current / dur) * 100) : 0;
+
+  return (
+    <div className="flex items-center gap-3 mt-2">
+      <button
+        onClick={toggle}
+        disabled={loading}
+        className="font-mono text-[10px] tracking-widest border border-neutral-700 px-3 py-1.5 text-white hover:bg-white hover:text-black transition-colors cursor-pointer disabled:opacity-40 shrink-0"
+      >
+        {loading ? "..." : playing ? "⏸" : "▶"}
+      </button>
+      <div className="flex-1 h-px bg-neutral-900 relative cursor-pointer" onClick={(e) => {
+        const a = audioRef.current;
+        if (!a || !isFinite(a.duration)) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        a.currentTime = ((e.clientX - rect.left) / rect.width) * a.duration;
+        setCurrent(a.currentTime);
+      }}>
+        <div className="h-full bg-neutral-600 absolute top-0 left-0 transition-none" style={{ width: `${pct}%` }} />
+      </div>
+      <span className="font-mono text-[10px] text-neutral-600 shrink-0 tabular-nums">{fmt(current)}/{fmt(dur)}</span>
+    </div>
+  );
+}
+
 export default function ProfilePage() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<"ECHOES" | "REVERBS" | "PULSED" | "DRAFTS">("ECHOES");
-  const [userEchoes, setUserEchoes] = useState<EchoPost[]>([]);
+  const [activeTab, setActiveTab] = useState<"ECHOES" | "REVERBS" | "ORBITS" | "PULSED">("ECHOES");
+  const [userPosts, setUserPosts] = useState<PostItem[]>([]);
+  const [pulsedPosts, setPulsedPosts] = useState<PostItem[]>([]);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
   // Voice Bio states
   const [bioState, setBioState] = useState<"idle" | "recording" | "preview" | "saved">("idle");
-  const [bioDuration, setBioDuration] = useState(30); // 30s or 60s max
+  const [bioDuration, setBioDuration] = useState(30);
   const [bioElapsed, setBioElapsed] = useState(0);
   const [bioBlob, setBioBlob] = useState<Blob | null>(null);
   const [bioAudioUrl, setBioAudioUrl] = useState<string | null>(null);
@@ -43,18 +109,27 @@ export default function ProfilePage() {
   const chunksRef = useRef<Blob[]>([]);
   const bioTimerRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
-  // Subscribe to real Firestore echoes for this user
+  // Subscribe to user's own posts from `posts` collection (NOT `echoes`)
   useEffect(() => {
     if (!user) return;
-    const unsub = subscribeToEchoes((allEchoes) => {
-      const myEchoes = allEchoes.filter((e) => e.uid === user.uid);
-      setUserEchoes(myEchoes);
+    const unsub = subscribeToUserPosts(user.uid, (posts) => {
+      setUserPosts(posts);
     });
     return () => unsub();
   }, [user]);
 
-  // Voice Bio recording timer
+  // Subscribe to pulsed posts
+  useEffect(() => {
+    if (!user) return;
+    const unsub = subscribeToUserPulsedPosts(user.uid, (posts) => {
+      setPulsedPosts(posts);
+    });
+    return () => unsub();
+  }, [user]);
+
+  // Voice Bio recording timer — auto-stop at max duration
   useEffect(() => {
     if (bioState === "recording") {
       bioTimerRef.current = setInterval(() => {
@@ -74,41 +149,53 @@ export default function ProfilePage() {
     };
   }, [bioState, bioDuration]);
 
-  // Handle Mic recording for Voice Bio
+  // Cleanup
+  useEffect(() => {
+    return () => {
+      streamRef.current?.getTracks().forEach(t => t.stop());
+      audioRef.current?.pause();
+    };
+  }, []);
+
   const startBioRecording = async () => {
     setBioElapsed(0);
     chunksRef.current = [];
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      streamRef.current = stream;
+      
+      let mimeType = "audio/webm";
+      if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) mimeType = "audio/webm;codecs=opus";
+      
+      const recorder = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = recorder;
 
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
-
       recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        const baseType = mimeType.split(";")[0];
+        const blob = new Blob(chunksRef.current, { type: baseType });
         setBioBlob(blob);
         setBioAudioUrl(URL.createObjectURL(blob));
         stream.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
       };
 
-      recorder.start();
+      recorder.start(250);
       setBioState("recording");
     } catch {
-      setBioState("recording");
+      setBioState("idle");
     }
   };
 
   const stopBioRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+    if (mediaRecorderRef.current?.state === "recording") {
       mediaRecorderRef.current.stop();
     }
     setBioState("preview");
   };
 
-  // Save Voice Bio to Cloudinary & Firestore User doc
   const saveVoiceBio = async () => {
     if (!user || !bioBlob) return;
     setIsSavingBio(true);
@@ -129,7 +216,8 @@ export default function ProfilePage() {
 
   const handleCopyLink = () => {
     const handle = user?.handle || "@ANON";
-    navigator.clipboard.writeText(`https://echo.fm/${handle.replace("@", "")}`);
+    const url = `${window.location.origin}/${handle.replace("@", "")}`;
+    navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -138,9 +226,9 @@ export default function ProfilePage() {
     if (!bioAudioUrl) return;
     if (!audioRef.current) {
       audioRef.current = new Audio(bioAudioUrl);
+      audioRef.current.preload = "auto";
       audioRef.current.onended = () => setIsPlayingBio(false);
     }
-
     if (isPlayingBio) {
       audioRef.current.pause();
       setIsPlayingBio(false);
@@ -150,8 +238,84 @@ export default function ProfilePage() {
     }
   };
 
-  const handle = user?.handle || "@ANON_0000";
+  const handle    = user?.handle    || "@ANON_0000";
   const auraScore = user?.auraScore || 0;
+
+  // Filtered tab data
+  const echoePosts  = userPosts.filter(p => !p.reverbOf && !p.orbitOf);
+  const reverbPosts = userPosts.filter(p => !!p.reverbOf);
+  const orbitPosts  = userPosts.filter(p => !!p.orbitOf);
+
+  const timeAgo = (createdAt: any): string => {
+    if (!createdAt?.seconds) return "";
+    const diff = Date.now() / 1000 - createdAt.seconds;
+    if (diff < 60)    return "JUST NOW";
+    if (diff < 3600)  return `${Math.floor(diff / 60)}M AGO`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}H AGO`;
+    return `${Math.floor(diff / 86400)}D AGO`;
+  };
+
+  const renderPostList = (posts: PostItem[], emptyLabel: string) => (
+    <div>
+      {posts.length === 0 ? (
+        <div className="py-16 text-center space-y-4">
+          <p className="font-serif italic text-neutral-500 text-lg">
+            No {emptyLabel.toLowerCase()} yet.
+          </p>
+          <Link
+            href="/studio"
+            className="inline-block px-4 py-2 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors"
+          >
+            [ 🎙 GO TO STUDIO ]
+          </Link>
+        </div>
+      ) : (
+        <div className="divide-y divide-neutral-900">
+          {posts.map((post) => (
+            <article key={post.id} className="py-6 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {post.reverbOf && <Repeat2 className="w-3 h-3 text-neutral-600" />}
+                  {post.orbitOf && <RefreshCw className="w-3 h-3 text-neutral-600" />}
+                  <span className="font-mono text-[10px] text-neutral-500 uppercase">
+                    {post.reverbOf ? `REVERB ON ${post.reverbOfHandle}` : post.orbitOf ? `ORBIT OF ${post.orbitOfHandle}` : "ECHO"}
+                  </span>
+                </div>
+                <span className="font-mono text-[10px] text-neutral-600">
+                  {timeAgo(post.createdAt)}
+                </span>
+              </div>
+
+              <p className="font-serif italic text-lg text-white leading-snug">
+                "{post.caption}"
+              </p>
+
+              {/* Mini audio player */}
+              {post.audioUrl && (
+                <MiniPlayer audioUrl={post.audioUrl} durationSec={post.durationSec || 15} />
+              )}
+
+              <div className="flex items-center justify-between pt-1">
+                <div className="flex items-center gap-2 font-mono text-xs text-neutral-500">
+                  <ArrowUp className="w-3.5 h-3.5" />
+                  <span>{post.pulseCount || 0} PULSES</span>
+                </div>
+                <div className="flex items-center gap-4 font-mono text-[10px] text-neutral-600 uppercase">
+                  {(post.reverbCount || 0) > 0 && (
+                    <span>{post.reverbCount} REVERBS</span>
+                  )}
+                  {(post.orbitCount || 0) > 0 && (
+                    <span>{post.orbitCount} ORBITS</span>
+                  )}
+                  <span>{post.duration || "0:00"}</span>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-black text-white pb-24 md:pb-8 flex flex-col font-sans">
@@ -194,6 +358,14 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
+
+          {/* Stats row */}
+          <div className="flex gap-6 font-mono text-xs text-neutral-600 uppercase tracking-widest">
+            <span>{echoePosts.length} ECHOES</span>
+            <span>{reverbPosts.length} REVERBS</span>
+            <span>{orbitPosts.length} ORBITS</span>
+            <span>{pulsedPosts.length} PULSED</span>
+          </div>
         </div>
 
         {/* Voice Bio Section */}
@@ -229,7 +401,6 @@ export default function ProfilePage() {
                   [60S]
                 </button>
               </div>
-
               <button
                 onClick={startBioRecording}
                 className="w-full sm:w-auto px-4 py-2 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors cursor-pointer flex items-center justify-center gap-2"
@@ -285,7 +456,7 @@ export default function ProfilePage() {
                   </button>
                 )}
                 <button
-                  onClick={() => setBioState("idle")}
+                  onClick={() => { setBioState("idle"); setBioBlob(null); if (bioAudioUrl) URL.revokeObjectURL(bioAudioUrl); setBioAudioUrl(null); setBioElapsed(0); setIsPlayingBio(false); audioRef.current = null; }}
                   className="px-4 py-2 border border-neutral-800 text-neutral-500 font-mono text-xs tracking-widest uppercase hover:border-neutral-600 hover:text-white transition-colors cursor-pointer"
                 >
                   RE-RECORD
@@ -296,75 +467,30 @@ export default function ProfilePage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-neutral-900 mb-6 font-mono text-xs tracking-widest">
-          {(["ECHOES", "REVERBS", "PULSED", "DRAFTS"] as const).map((tab) => (
+        <div className="flex border-b border-neutral-900 mb-6 font-mono text-xs tracking-widest overflow-x-auto no-scrollbar">
+          {(["ECHOES", "REVERBS", "ORBITS", "PULSED"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`pb-3 px-4 uppercase transition-colors cursor-pointer ${
+              className={`pb-3 px-4 uppercase whitespace-nowrap transition-colors cursor-pointer ${
                 activeTab === tab
                   ? "border-b-2 border-white text-white font-bold"
                   : "text-neutral-600 hover:text-white"
               }`}
             >
               {tab}
+              <span className="ml-1 text-neutral-700">
+                ({tab === "ECHOES" ? echoePosts.length : tab === "REVERBS" ? reverbPosts.length : tab === "ORBITS" ? orbitPosts.length : pulsedPosts.length})
+              </span>
             </button>
           ))}
         </div>
 
-        {/* Feed Tab Content */}
-        {activeTab === "ECHOES" && (
-          <div>
-            {userEchoes.length === 0 ? (
-              <div className="py-16 text-center space-y-4">
-                <p className="font-serif italic text-neutral-500 text-lg">
-                  You haven't dropped any voice echoes yet.
-                </p>
-                <Link
-                  href="/record"
-                  className="inline-block px-4 py-2 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors"
-                >
-                  [ 🎙 RECORD FIRST ECHO ]
-                </Link>
-              </div>
-            ) : (
-              <div className="divide-y divide-neutral-900">
-                {userEchoes.map((echo) => (
-                  <article key={echo.id} className="py-6 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs text-neutral-500 uppercase">
-                        {echo.vibeTag || "ECHO"}
-                      </span>
-                      <span className="font-mono text-[10px] text-neutral-600">
-                        {echo.duration}
-                      </span>
-                    </div>
-
-                    <h3 className="font-serif italic text-xl text-white">
-                      "{echo.title}"
-                    </h3>
-
-                    <div className="flex items-center justify-between pt-2">
-                      <div className="flex items-center space-x-2 font-mono text-xs text-neutral-500">
-                        <ArrowUp className="w-3.5 h-3.5" />
-                        <span>{echo.pulses || 0} PULSES</span>
-                      </div>
-                      <span className="font-mono text-xs text-neutral-600 uppercase">
-                        {echo.listeners || 0} LISTENS
-                      </span>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab !== "ECHOES" && (
-          <div className="py-16 text-center font-mono text-xs text-neutral-600 tracking-widest uppercase">
-            NO {activeTab} FOUND.
-          </div>
-        )}
+        {/* Tab Content */}
+        {activeTab === "ECHOES"  && renderPostList(echoePosts,  "echoes")}
+        {activeTab === "REVERBS" && renderPostList(reverbPosts, "reverbs")}
+        {activeTab === "ORBITS"  && renderPostList(orbitPosts,  "orbits")}
+        {activeTab === "PULSED"  && renderPostList(pulsedPosts, "pulsed posts")}
       </main>
 
       {/* Share Profile Modal */}
@@ -393,7 +519,7 @@ export default function ProfilePage() {
             </div>
 
             <div className="p-3 border border-neutral-900 flex items-center justify-between font-mono text-xs text-neutral-400">
-              <span className="truncate">echo.fm/{handle.replace("@", "")}</span>
+              <span className="truncate">{window?.location?.host || "echo.fm"}/{handle.replace("@", "")}</span>
               <button
                 onClick={handleCopyLink}
                 className="ml-2 text-white hover:underline cursor-pointer shrink-0"
@@ -401,6 +527,19 @@ export default function ProfilePage() {
                 {copied ? <Check className="w-4 h-4 text-white" /> : <Copy className="w-4 h-4" />}
               </button>
             </div>
+
+            {/* Native share if available */}
+            <button
+              onClick={async () => {
+                const shareUrl = `${window.location.origin}/${handle.replace("@", "")}`;
+                if (navigator.share) {
+                  try { await navigator.share({ title: `${handle} on Echo`, url: shareUrl }); } catch {}
+                }
+              }}
+              className="w-full border border-neutral-800 text-neutral-500 hover:border-white hover:text-white font-mono text-xs tracking-widest uppercase py-3 transition-colors cursor-pointer"
+            >
+              [ SHARE PROFILE ]
+            </button>
           </div>
         </div>
       )}
