@@ -171,11 +171,14 @@ export async function uploadImage(
 }
 
 /**
- * getAudioStreamUrl
+ * getPlayableUrl
  */
-export function getAudioStreamUrl(publicId: string): string {
-  const { cloudName } = getCloudConfig();
-  return `https://res.cloudinary.com/${cloudName}/video/upload/f_auto,q_auto/${publicId}`;
+// Retained for cases where transformation streaming is needed
+export function getPlayableUrl(rawUrl: string): string {
+  // Remove any Cloudinary transformation segment (e.g., /f_mp3,q_auto/)
+  // Cloudinary format: https://res.cloudinary.com/{cloudName}/.../f_transformations/.../publicId.ext
+  // We'll strip the segment starting with '/f_' up to the next '/'
+  return rawUrl.replace(/\/f_[^\/]+\//, '/');
 }
 
 /**

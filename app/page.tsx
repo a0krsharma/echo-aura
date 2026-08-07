@@ -22,7 +22,7 @@ import { ArrowUp, Flame, Mic2, Repeat2, Share2, RefreshCw, Loader2, Send, Trash2
 import { useAuth } from "@/app/components/AuthProvider";
 import { subscribeToPosts, togglePulsePost, createPost } from "@/lib/posts";
 import { useRouter } from "next/navigation";
-import { uploadAudio } from "@/lib/cloudinary";
+import { uploadAudio, getPlayableUrl } from "@/lib/cloudinary";
 import { createNotification } from "@/lib/notifications";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -104,6 +104,8 @@ function AudioPlayer({
   fallbackDurationSec: number;
 }) {
   const [playing, setPlaying] = useState(false);
+  // Resolve raw Cloudinary URL to a direct playable URL without transformations
+  const playableUrl = getPlayableUrl(audioUrl);
   const [current, setCurrent] = useState(0);
   const [dur,     setDur]     = useState(Math.max(1, fallbackDurationSec));
   const [loading, setLoading] = useState(false);
@@ -157,7 +159,7 @@ function AudioPlayer({
       <audio
         key={audioUrl}
         ref={audioRef}
-        src={audioUrl}
+        src={playableUrl}
         preload="auto"
         playsInline
         onLoadedMetadata={(e) => {
