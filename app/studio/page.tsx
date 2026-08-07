@@ -115,16 +115,18 @@ export default function StudioPage() {
       });
       streamRef.current = stream;
 
-      // Pick best supported mime type
+      // Pick best supported mime type for universal playback
       let mimeType = "audio/webm";
-      if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
-        mimeType = "audio/webm;codecs=opus";
-      } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
+      if (MediaRecorder.isTypeSupported("audio/mp4")) {
         mimeType = "audio/mp4";
+      } else if (MediaRecorder.isTypeSupported("audio/aac")) {
+        mimeType = "audio/aac";
+      } else if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+        mimeType = "audio/webm;codecs=opus";
       } else if (MediaRecorder.isTypeSupported("audio/webm")) {
         mimeType = "audio/webm";
       }
-      setRecordedMimeType(mimeType.split(";")[0]); // store base type for Blob
+      setRecordedMimeType(mimeType);
 
       const recorder = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = recorder;
@@ -138,8 +140,7 @@ export default function StudioPage() {
 
       // onstop fires AFTER all ondataavailable events have fired
       recorder.onstop = () => {
-        const baseType = mimeType.split(";")[0];
-        const finalBlob = new Blob(chunksRef.current, { type: baseType });
+        const finalBlob = new Blob(chunksRef.current, { type: mimeType });
 
         if (finalBlob.size < 100) {
           setStatusMessage("RECORDING TOO SHORT. TRY AGAIN.");
@@ -191,8 +192,14 @@ export default function StudioPage() {
     }
 
     if (!previewAudioRef.current) {
-      previewAudioRef.current = new Audio(previewUrl);
-      previewAudioRef.current.onended = () => setIsPreviewPlaying(false);
+      const a = new Audio(previewUrl);
+      a.volume = 1.0;
+      a.muted = false;
+      a.onended = () => setIsPreviewPlaying(false);
+      previewAudioRef.current = a;
+    } else {
+      previewAudioRef.current.volume = 1.0;
+      previewAudioRef.current.muted = false;
     }
 
     previewAudioRef.current

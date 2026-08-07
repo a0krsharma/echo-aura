@@ -118,11 +118,22 @@ export async function uploadAudio(
       const res = await fetch(endpoint, { method: "POST", body: formData });
       if (res.ok) {
         const data = await res.json();
+        let rawUrl = data.secure_url || data.url || "";
+        
+        // Ensure URL delivers standard MP3 format for 100% universal audio playback across devices
+        if (rawUrl && !rawUrl.endsWith(".mp3")) {
+          if (/\.[a-z0-9]+$/i.test(rawUrl)) {
+            rawUrl = rawUrl.replace(/\.[a-z0-9]+$/i, ".mp3");
+          } else {
+            rawUrl = `${rawUrl}.mp3`;
+          }
+        }
+
         return {
-          secureUrl: data.secure_url || data.url,
+          secureUrl: rawUrl,
           publicId:  data.public_id || `audio-${Date.now()}`,
           duration:  data.duration || 5,
-          format:    data.format || ext,
+          format:    "mp3",
           bytes:     data.bytes || validBlob.size,
         };
       } else {

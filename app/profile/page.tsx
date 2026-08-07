@@ -165,7 +165,9 @@ export default function ProfilePage() {
       streamRef.current = stream;
       
       let mimeType = "audio/webm";
-      if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) mimeType = "audio/webm;codecs=opus";
+      if (MediaRecorder.isTypeSupported("audio/mp4")) mimeType = "audio/mp4";
+      else if (MediaRecorder.isTypeSupported("audio/aac")) mimeType = "audio/aac";
+      else if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) mimeType = "audio/webm;codecs=opus";
       
       const recorder = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = recorder;
@@ -174,8 +176,7 @@ export default function ProfilePage() {
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
       recorder.onstop = () => {
-        const baseType = mimeType.split(";")[0];
-        const blob = new Blob(chunksRef.current, { type: baseType });
+        const blob = new Blob(chunksRef.current, { type: mimeType });
         setBioBlob(blob);
         setBioAudioUrl(URL.createObjectURL(blob));
         stream.getTracks().forEach((t) => t.stop());
@@ -225,9 +226,15 @@ export default function ProfilePage() {
   const handleToggleBioPlay = () => {
     if (!bioAudioUrl) return;
     if (!audioRef.current) {
-      audioRef.current = new Audio(bioAudioUrl);
-      audioRef.current.preload = "auto";
-      audioRef.current.onended = () => setIsPlayingBio(false);
+      const a = new Audio(bioAudioUrl);
+      a.volume = 1.0;
+      a.muted = false;
+      a.preload = "auto";
+      a.onended = () => setIsPlayingBio(false);
+      audioRef.current = a;
+    } else {
+      audioRef.current.volume = 1.0;
+      audioRef.current.muted = false;
     }
     if (isPlayingBio) {
       audioRef.current.pause();
