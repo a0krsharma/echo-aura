@@ -49,9 +49,10 @@ const config: CapacitorConfig = {
 
     // Native Google Sign-In — shows device account picker on Android
     GoogleAuth: {
-      scopes:             ['profile', 'email'],
-      clientId:           '29569599076-kco7vvdltgv52fjr92qbjq3a6og1321g.apps.googleusercontent.com',
-      androidClientId:    '29569599076-kco7vvdltgv52fjr92qbjq3a6og1321g.apps.googleusercontent.com',
+      scopes:                  ['profile', 'email'],
+      serverClientId:          '29569599076-kco7vvdltgv52fjr92qbjq3a6og1321g.apps.googleusercontent.com',
+      clientId:                '29569599076-kco7vvdltgv52fjr92qbjq3a6og1321g.apps.googleusercontent.com',
+      androidClientId:         '29569599076-kco7vvdltgv52fjr92qbjq3a6og1321g.apps.googleusercontent.com',
       forceCodeForRefreshToken: true,
     } as any,
   },

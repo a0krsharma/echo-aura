@@ -4,4 +4,6 @@
     <string name="title_activity_main">echo</string>
     <string name="package_name">com.echo.app</string>
     <string name="custom_url_scheme">com.echo.app</string>
+    <!-- Required by @codetrix-studio/capacitor-google-auth for native Android account picker -->
+    <string name="server_client_id">29569599076-kco7vvdltgv52fjr92qbjq3a6og1321g.apps.googleusercontent.com</string>
 </resources>
