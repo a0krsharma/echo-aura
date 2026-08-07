@@ -31,6 +31,7 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
+import { Capacitor } from "@capacitor/core";
 import {
   onAuthStateChanged,
   signInWithPopup,
@@ -47,7 +48,7 @@ import { getOrCreateUserDoc, type EchoUser } from "@/lib/userDoc";
 // ─── Detect Capacitor native ──────────────────────────────────────────────────
 function isCapacitorNative(): boolean {
   if (typeof window === "undefined") return false;
-  return !!(window as any).Capacitor?.isNativePlatform?.();
+  return Capacitor.isNativePlatform();
 }
 
 // ─── Context shape ────────────────────────────────────────────────────────────
@@ -64,6 +65,8 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+const GOOGLE_WEB_CLIENT_ID = "29569599076-kco7vvdltgv52fjr92qbjq3a6og1321g.apps.googleusercontent.com";
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -101,13 +104,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     const auth = getFirebaseAuth();
 
-    // ── ANDROID NATIVE OR WEB ────────────────────────────────────────────────
+    // ── ANDROID NATIVE: Native Google Account Picker ────────────────────────
     if (isCapacitorNative()) {
       try {
         const { GoogleAuth } = await import("@codetrix-studio/capacitor-google-auth");
 
         await GoogleAuth.initialize({
-          clientId: "29569599076-pgr9nrm95l4n9f6ot3s71qdk3l2e0qiu.apps.googleusercontent.com",
+          clientId: GOOGLE_WEB_CLIENT_ID,
           scopes: ["profile", "email"],
           grantOfflineAccess: true,
         });
@@ -120,7 +123,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
       } catch (e: any) {
-        console.warn("[Auth] Native Google Auth failed, falling back to popup:", e);
+        console.warn("[Auth] Native Google Auth error:", e);
+        const msg = e?.message || "";
+        if (msg.includes("cancel") || msg.includes("12501") || msg.includes("closed")) {
+          setError("SIGN-IN CANCELLED.");
+          return;
+        }
       }
     }
 

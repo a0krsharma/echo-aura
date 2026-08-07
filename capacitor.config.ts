@@ -50,9 +50,8 @@ const config: CapacitorConfig = {
     // Native Google Sign-In — shows device account picker on Android
     GoogleAuth: {
       scopes:             ['profile', 'email'],
-      // Web client ID from Firebase Console → Project Settings → Web app → OAuth client ID
-      clientId:           '29569599076-pgr9nrm95l4n9f6ot3s71qdk3l2e0qiu.apps.googleusercontent.com',
-      androidClientId:    '29569599076-pgr9nrm95l4n9f6ot3s71qdk3l2e0qiu.apps.googleusercontent.com',
+      clientId:           '29569599076-kco7vvdltgv52fjr92qbjq3a6og1321g.apps.googleusercontent.com',
+      androidClientId:    '29569599076-kco7vvdltgv52fjr92qbjq3a6og1321g.apps.googleusercontent.com',
       forceCodeForRefreshToken: true,
     } as any,
   },
