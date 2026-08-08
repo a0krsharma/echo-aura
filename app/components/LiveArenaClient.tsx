@@ -59,14 +59,33 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
 
   // ── AgoraRTC Join Channel ───────────────────────────────────────
-  // Using App ID-only authentication (null token) for development
+  const [token, setToken] = useState<string | null>(null);
+  
+  useEffect(() => {
+    async function fetchToken() {
+      if (!user) return;
+      try {
+        const response = await fetch(
+          `/api/agora/token?channel=${clashId}&uid=${user.uid}`
+        );
+        const data = await response.json();
+        if (data.token) {
+          setToken(data.token);
+        }
+      } catch (error) {
+        console.error("Failed to fetch Agora token:", error);
+      }
+    }
+    fetchToken();
+  }, [clashId, user]);
+
   useJoin(
     {
       appid: AGORA_APP_ID,
       channel: clashId,
-      token: null, // App ID-only authentication
+      token: token,
     },
-    true
+    !!token
   );
 
   // ── Local Audio Publishing (if Debater) ─────────────────────────
@@ -83,11 +102,38 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
   // ── Remote Audio Playback (Audience & Debaters) ──────────────────
   const remoteUsers = useRemoteUsers();
   const { audioTracks } = useRemoteAudioTracks(remoteUsers);
+  
+  // Audio level detection for speakers
+  const [speakingUsers, setSpeakingUsers] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     audioTracks.forEach((track) => {
       track.play();
+      
+      // Enable audio level monitoring
+      track.setVolume(100);
+      
+      // Monitor audio levels
+      const interval = setInterval(() => {
+        const volume = track.getVolume();
+        const uid = track.getUserId();
+        
+        if (volume > 10) { // Threshold for speaking detection
+          setSpeakingUsers(prev => new Set([...prev, String(uid)]));
+        } else {
+          setSpeakingUsers(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(String(uid));
+            return newSet;
+          });
+        }
+      }, 100);
+      
+      return () => {
+        clearInterval(interval);
+      };
     });
+    
     return () => {
       audioTracks.forEach((track) => {
         try {
@@ -216,18 +262,22 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
             <div className="flex items-center gap-3">
               <span className="text-neutral-600">[A]</span>
               <span className="text-white font-bold">{clash?.sideA?.handle || "@NOVA_11"}</span>
-              <span className="text-neutral-500 flex items-center gap-1" title="Audio Active">
-                <Volume2 className="w-3.5 h-3.5 text-white animate-pulse" />
-              </span>
+              {speakingUsers.size > 0 && (
+                <span className="flex items-center gap-1" title="Speaking">
+                  <Mic className="w-3.5 h-3.5 text-green-500 animate-pulse" />
+                </span>
+              )}
             </div>
 
             <div className="font-serif italic text-neutral-600 text-sm">VS</div>
 
             {/* Side B Debater */}
             <div className="flex items-center gap-3">
-              <span className="text-neutral-500 flex items-center gap-1" title="Audio Active">
-                <Volume2 className="w-3.5 h-3.5 text-white animate-pulse" />
-              </span>
+              {speakingUsers.size > 0 && (
+                <span className="flex items-center gap-1" title="Speaking">
+                  <Mic className="w-3.5 h-3.5 text-green-500 animate-pulse" />
+                </span>
+              )}
               <span className="text-white font-bold">{clash?.sideB?.handle || "@ECHO_9921"}</span>
               <span className="text-neutral-600">[B]</span>
             </div>

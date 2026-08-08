@@ -37,23 +37,43 @@ export async function GET(request: NextRequest) {
     const currentTimestamp = Math.floor(Date.now() / 1000);
     const privilegeExpiredTs = currentTimestamp + expirationTimeInSeconds;
 
-    // Convert string UID to number for Agora
-    const uidNumber = parseInt(uid.replace(/\D/g, '')) || Math.floor(Math.random() * 1000000);
-
-    // Generate RTC token for channel using agora-token package
-    const token = AgoraToken.RtcTokenBuilder.buildTokenWithUid(
-      appId,
-      appCertificate,
-      channel,
-      uidNumber,
-      AgoraToken.RtcRole.PUBLISHER,
-      currentTimestamp,
-      privilegeExpiredTs
-    );
+    // Try different token generation approaches
+    let token: string;
+    
+    try {
+      // Approach 1: Try with user account (string UID)
+      token = AgoraToken.RtcTokenBuilder.buildTokenWithUserAccount(
+        appId,
+        appCertificate,
+        channel,
+        uid,
+        AgoraToken.RtcRole.PUBLISHER,
+        currentTimestamp,
+        privilegeExpiredTs
+      );
+    } catch (error1) {
+      console.log("buildTokenWithUserAccount failed, trying buildTokenWithUid");
+      try {
+        // Approach 2: Try with numeric UID
+        const uidNumber = parseInt(uid.replace(/\D/g, '')) || Math.floor(Math.random() * 1000000);
+        token = AgoraToken.RtcTokenBuilder.buildTokenWithUid(
+          appId,
+          appCertificate,
+          channel,
+          uidNumber,
+          AgoraToken.RtcRole.PUBLISHER,
+          currentTimestamp,
+          privilegeExpiredTs
+        );
+      } catch (error2) {
+        console.error("All token generation methods failed:", error1, error2);
+        throw new Error("Failed to generate token with all available methods");
+      }
+    }
 
     return NextResponse.json({
       token,
-      uid: uidNumber,
+      uid,
       channel,
       appId,
       expiresInSeconds: expirationTimeInSeconds,
