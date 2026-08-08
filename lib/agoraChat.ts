@@ -23,7 +23,7 @@ export async function initializeChat(firebaseUid: string, handle: string): Promi
     return chatConnection;
   }
 
-  const APP_KEY = process.env.AGORA_CHAT_APP_KEY;
+  const APP_KEY = process.env.NEXT_PUBLIC_AGORA_CHAT_APP_KEY;
 
   if (!APP_KEY) {
     throw new Error("Agora Chat credentials not configured");
@@ -38,13 +38,13 @@ export async function initializeChat(firebaseUid: string, handle: string): Promi
     // Create connection using Firebase Auth UID as user ID
     const connection = new agoraChat.connection({
       appKey: APP_KEY,
-      https: true,
     });
 
     // Set user profile
     const user = {
       user: firebaseUid, // Use Firebase Auth UID as Chat username
       pwd: firebaseUid, // Use Firebase Auth UID as password for simplicity
+      nickname: handle || "@ANON",
     };
 
     // Open connection
