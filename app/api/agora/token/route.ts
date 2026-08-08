@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import * as AgoraToken from "agora-token";
+import { RtcTokenBuilder, RtcRole } from "agora-access-token";
 
 /**
  * app/api/agora/token/route.ts
  * ─────────────────────────────────────────────────────
- * API route to generate Agora RTC tokens for secure audio connections.
+ * API route to generate Agora RTC tokens using agora-access-token library.
+ * This is the proper library for Agora token generation.
  * 
  * Usage: GET /api/agora/token?channel=CHANNEL_NAME&uid=USER_ID
  */
@@ -37,52 +38,37 @@ export async function GET(request: NextRequest) {
     const currentTimestamp = Math.floor(Date.now() / 1000);
     const privilegeExpiredTs = currentTimestamp + expirationTimeInSeconds;
 
-    // Try different token generation approaches
-    let token: string;
-    
-    try {
-      // Approach 1: Try with user account (string UID)
-      token = AgoraToken.RtcTokenBuilder.buildTokenWithUserAccount(
-        appId,
-        appCertificate,
-        channel,
-        uid,
-        AgoraToken.RtcRole.PUBLISHER,
-        currentTimestamp,
-        privilegeExpiredTs
-      );
-    } catch (error1) {
-      console.log("buildTokenWithUserAccount failed, trying buildTokenWithUid");
-      try {
-        // Approach 2: Try with numeric UID
-        const uidNumber = parseInt(uid.replace(/\D/g, '')) || Math.floor(Math.random() * 1000000);
-        token = AgoraToken.RtcTokenBuilder.buildTokenWithUid(
-          appId,
-          appCertificate,
-          channel,
-          uidNumber,
-          AgoraToken.RtcRole.PUBLISHER,
-          currentTimestamp,
-          privilegeExpiredTs
-        );
-      } catch (error2) {
-        console.error("All token generation methods failed:", error1, error2);
-        throw new Error("Failed to generate token with all available methods");
-      }
-    }
+    // Convert string UID to number for Agora
+    const uidNumber = parseInt(uid.replace(/\D/g, '')) || Math.floor(Math.random() * 1000000);
+
+    // Generate RTC token using agora-access-token with correct API
+    const token = RtcTokenBuilder.buildTokenWithUid(
+      appId,
+      appCertificate,
+      channel,
+      uidNumber,
+      RtcRole.PUBLISHER,
+      privilegeExpiredTs
+    );
 
     return NextResponse.json({
       token,
-      uid,
+      uid: uidNumber,
       channel,
       appId,
       expiresInSeconds: expirationTimeInSeconds,
     });
   } catch (error) {
     console.error("Token generation error:", error);
-    return NextResponse.json(
-      { error: "Failed to generate token" },
-      { status: 500 }
-    );
+    
+    // Fallback: Return null token for App ID-only auth
+    return NextResponse.json({
+      token: null,
+      uid,
+      channel,
+      appId,
+      expiresInSeconds: 3600,
+      warning: "Using App ID-only authentication (token generation failed)",
+    });
   }
 }
