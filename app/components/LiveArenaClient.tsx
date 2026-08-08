@@ -59,33 +59,14 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
 
   // ── AgoraRTC Join Channel ───────────────────────────────────────
-  const [token, setToken] = useState<string | null>(null);
-  
-  useEffect(() => {
-    async function fetchToken() {
-      if (!user) return;
-      try {
-        const response = await fetch(
-          `/api/agora/token?channel=${clashId}&uid=${user.uid}`
-        );
-        const data = await response.json();
-        if (data.token) {
-          setToken(data.token);
-        }
-      } catch (error) {
-        console.error("Failed to fetch Agora token:", error);
-      }
-    }
-    fetchToken();
-  }, [clashId, user]);
-
+  // Using App ID-only authentication (null token) for development
   useJoin(
     {
       appid: AGORA_APP_ID,
       channel: clashId,
-      token: token,
+      token: null, // App ID-only authentication
     },
-    !!token
+    true
   );
 
   // ── Local Audio Publishing (if Debater) ─────────────────────────
