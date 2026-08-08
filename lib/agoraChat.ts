@@ -40,10 +40,10 @@ export async function initializeChat(firebaseUid: string, handle: string): Promi
       appKey: APP_KEY,
     });
 
-    // Set user profile
+    // Set user profile with agoraToken for authentication
     const user = {
       user: firebaseUid, // Use Firebase Auth UID as Chat username
-      pwd: firebaseUid, // Use Firebase Auth UID as password for simplicity
+      agoraToken: await fetchChatToken(firebaseUid), // Use generated token
       nickname: handle || "@ANON",
     };
 
@@ -55,6 +55,20 @@ export async function initializeChat(firebaseUid: string, handle: string): Promi
   } catch (error) {
     console.error("Failed to initialize Agora Chat:", error);
     throw error;
+  }
+}
+
+/**
+ * Fetch Chat token from API
+ */
+async function fetchChatToken(username: string): Promise<string> {
+  try {
+    const response = await fetch(`/api/agora/chat/token?username=${username}`);
+    const data = await response.json();
+    return data.token || "";
+  } catch (error) {
+    console.error("Failed to fetch chat token:", error);
+    return "";
   }
 }
 
