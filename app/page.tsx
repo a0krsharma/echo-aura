@@ -32,6 +32,14 @@ function fmt(s: number) {
   if (!s || isNaN(s) || !isFinite(s) || s < 0) s = 0;
   return `${Math.floor(s/60).toString().padStart(2,"0")}:${Math.floor(s%60).toString().padStart(2,"0")}`;
 }
+function timeAgo(c: any) {
+  if (!c?.seconds) return "";
+  const d = Date.now() / 1000 - c.seconds;
+  if (d < 60) return "JUST NOW";
+  if (d < 3600) return `${Math.floor(d / 60)}M AGO`;
+  if (d < 86400) return `${Math.floor(d / 3600)}H AGO`;
+  return `${Math.floor(d / 86400)}D AGO`;
+}
 
 // ─── Hashtag & Mention Parser ─────────────────────────────────────────────────
 function parseCaption(caption: string) {
@@ -496,6 +504,87 @@ function useSwipeGesture(onSwipeLeft?: () => void, onSwipeRight?: () => void) {
   return { onTouchStart, onTouchEnd };
 }
 
+// ─── Post Card Component (for proper hook usage) ───────────────────────────────
+function PostCard({ post, user, orbitedPosts, activePostId, deletingId, onPulse, onOrbit, onShare, onDelete, onReverbClick, onProfileClick, onActiveChange, setRef }: {
+  post: FeedPost; user: any; orbitedPosts: Set<string>; activePostId: string | null;
+  deletingId: string | null; onPulse: (p: FeedPost) => void; onOrbit: (p: FeedPost) => void;
+  onShare: (p: FeedPost) => void; onDelete: (id: string) => void; onReverbClick: (rid?: string, rh?: string) => void;
+  onProfileClick: (h: string) => void; onActiveChange: (id: string | null) => void; setRef: (id: string, el: HTMLElement | null) => void;
+}) {
+  const swipeHandlers = useSwipeGesture(
+    () => onPulse(post), // Swipe left = pulse
+    () => onShare(post)  // Swipe right = share
+  );
+
+  const isPulsed = user ? post.pulsedBy.includes(user.uid) : false;
+  const isOrbited = orbitedPosts.has(post.id) || (user ? (post.orbitedBy || []).includes(user.uid) : false);
+  const isOwn = user?.uid === post.authorUid;
+  const isDel = deletingId === post.id;
+
+  return (
+    <article
+      ref={el => setRef(post.id, el)}
+      data-post-id={post.id}
+      className="py-8 space-y-4 animate-fade-in"
+      onTouchStart={swipeHandlers.onTouchStart}
+      onTouchEnd={swipeHandlers.onTouchEnd}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <button onClick={() => onProfileClick(post.authorHandle)}
+          className="font-mono text-xs tracking-widest text-white hover:underline uppercase cursor-pointer">
+          {post.authorHandle}
+        </button>
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-[10px] tracking-widest text-neutral-700 uppercase">{timeAgo(post.createdAt)}</span>
+          {isOwn && (
+            <button onClick={() => onDelete(post.id)}
+              className={`flex items-center gap-1 font-mono text-[10px] tracking-widest uppercase transition-colors cursor-pointer ${isDel ? "text-white border border-white px-2 py-0.5 animate-pulse" : "text-neutral-700 hover:text-red-500"}`}>
+              <Trash2 className="w-3 h-3" />{isDel ? "CONFIRM?" : ""}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Caption */}
+      <h2 className="font-serif italic text-2xl md:text-3xl text-white leading-snug">
+        "{parseCaption(post.caption)}"
+      </h2>
+
+      {/* Player */}
+      <AudioPlayer audioUrl={post.audioUrl} fallbackDurationSec={post.durationSec || 15}
+        isActive={activePostId === post.id}
+        onPlayToggle={p => { if (p) onActiveChange(post.id); else if (activePostId === post.id) onActiveChange(null); }} />
+
+      {/* Actions */}
+      <div className="flex items-center justify-between pt-1">
+        <button onClick={() => onPulse(post)}
+          className={`flex items-center gap-2 font-mono text-xs tracking-widest uppercase cursor-pointer transition-colors ${isPulsed ? "text-white" : "text-neutral-500 hover:text-white"}`}>
+          <ArrowUp className={`w-3.5 h-3.5 ${isPulsed ? "fill-white" : ""}`} />
+          {formatNum(post.pulseCount)} PULSES
+        </button>
+        <div className="flex items-center gap-4">
+          {!isOwn && (
+            <button onClick={() => onOrbit(post)} disabled={isOrbited}
+              className={`flex items-center gap-1.5 font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer ${isOrbited ? "text-white" : "text-neutral-500 hover:text-white"}`}>
+              <RefreshCw className="w-3.5 h-3.5" />{isOrbited ? "ORBITED" : "ORBIT"}
+            </button>
+          )}
+          <button onClick={() => onShare(post)}
+            className="flex items-center gap-1.5 font-mono text-xs tracking-widest text-neutral-500 uppercase hover:text-white transition-colors cursor-pointer">
+            <Share2 className="w-3.5 h-3.5" />SHARE
+          </button>
+        </div>
+      </div>
+
+      {/* Inline reverb thread */}
+      <ReverbThread post={post} currentUser={user}
+        onReverbClick={onReverbClick}
+        onProfileClick={onProfileClick} />
+    </article>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function HomeFeedPage() {
   const { user }     = useAuth();
@@ -580,13 +669,6 @@ export default function HomeFeedPage() {
     }
   };
 
-  const timeAgo=(c:any)=>{
-    if(!c?.seconds)return"";
-    const d=Date.now()/1000-c.seconds;
-    if(d<60)return"JUST NOW";if(d<3600)return`${Math.floor(d/60)}M AGO`;
-    if(d<86400)return`${Math.floor(d/3600)}H AGO`;return`${Math.floor(d/86400)}D AGO`;
-  };
-
   return(
     <div className="min-h-screen bg-black text-white pb-28 md:pb-8 flex flex-col font-sans"
       onClick={()=>{userInteracted.current=true;}}>
@@ -614,78 +696,27 @@ export default function HomeFeedPage() {
           </div>
         ):(
           <div className="divide-y divide-neutral-900">
-            {posts.map(post=>{
-              const isPulsed =user?post.pulsedBy.includes(user.uid):false;
-              const isOrbited=orbitedPosts.has(post.id)||(user?(post.orbitedBy||[]).includes(user.uid):false);
-              const isOwn    =user?.uid===post.authorUid;
-              const isDel    =deletingId===post.id;
-              return(
-                <article key={post.id}
-                  ref={el=>setRef(post.id,el)}
-                  data-post-id={post.id}
-                  className="py-8 space-y-4 animate-fade-in"
-                  {...useSwipeGesture(
-                    () => handlePulse(post), // Swipe left = pulse
-                    () => handleShare(post)  // Swipe right = share
-                  )}>
-                  {/* Header */}
-                  <div className="flex items-center justify-between">
-                    <button onClick={()=>router.push(`/${post.authorHandle.replace(/^@/,"")}`)}
-                      className="font-mono text-xs tracking-widest text-white hover:underline uppercase cursor-pointer">
-                      {post.authorHandle}
-                    </button>
-                    <div className="flex items-center gap-3">
-                      <span className="font-mono text-[10px] tracking-widest text-neutral-700 uppercase">{timeAgo(post.createdAt)}</span>
-                      {isOwn&&(
-                        <button onClick={()=>handleDelete(post.id)}
-                          className={`flex items-center gap-1 font-mono text-[10px] tracking-widest uppercase transition-colors cursor-pointer ${isDel?"text-white border border-white px-2 py-0.5 animate-pulse":"text-neutral-700 hover:text-red-500"}`}>
-                          <Trash2 className="w-3 h-3"/>{isDel?"CONFIRM?":""}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Caption */}
-                  <h2 className="font-serif italic text-2xl md:text-3xl text-white leading-snug">
-                    "{parseCaption(post.caption)}"
-                  </h2>
-
-                  {/* Player */}
-                  <AudioPlayer audioUrl={post.audioUrl} fallbackDurationSec={post.durationSec||15}
-                    isActive={activePostId===post.id}
-                    onPlayToggle={p=>{if(p)setActiveId(post.id);else if(activePostId===post.id)setActiveId(null);}}/>
-
-                  {/* Actions */}
-                  <div className="flex items-center justify-between pt-1">
-                    <button onClick={()=>handlePulse(post)}
-                      className={`flex items-center gap-2 font-mono text-xs tracking-widest uppercase cursor-pointer transition-colors ${isPulsed?"text-white":"text-neutral-500 hover:text-white"}`}>
-                      <ArrowUp className={`w-3.5 h-3.5 ${isPulsed?"fill-white":""}`}/>
-                      {formatNum(post.pulseCount)} PULSES
-                    </button>
-                    <div className="flex items-center gap-4">
-                      {!isOwn&&(
-                        <button onClick={()=>handleOrbit(post)} disabled={isOrbited}
-                          className={`flex items-center gap-1.5 font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer ${isOrbited?"text-white":"text-neutral-500 hover:text-white"}`}>
-                          <RefreshCw className="w-3.5 h-3.5"/>{isOrbited?"ORBITED":"ORBIT"}
-                        </button>
-                      )}
-                      <button onClick={()=>handleShare(post)}
-                        className="flex items-center gap-1.5 font-mono text-xs tracking-widest text-neutral-500 uppercase hover:text-white transition-colors cursor-pointer">
-                        <Share2 className="w-3.5 h-3.5"/>SHARE
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Inline reverb thread */}
-                  <ReverbThread post={post} currentUser={user}
-                    onReverbClick={(rid,rh)=>{
-                      if(!user){router.push("/login");return;}
-                      setReverbModal({post,rid,rh});
-                    }}
-                    onProfileClick={h=>router.push(`/${h.replace(/^@/,"")}`)}/>
-                </article>
-              );
-            })}
+            {posts.map(post => (
+              <PostCard
+                key={post.id}
+                post={post}
+                user={user}
+                orbitedPosts={orbitedPosts}
+                activePostId={activePostId}
+                deletingId={deletingId}
+                onPulse={handlePulse}
+                onOrbit={handleOrbit}
+                onShare={handleShare}
+                onDelete={handleDelete}
+                onReverbClick={(rid, rh) => {
+                  if (!user) { router.push("/login"); return; }
+                  setReverbModal({ post, rid, rh });
+                }}
+                onProfileClick={h => router.push(`/${h.replace(/^@/, "")}`)}
+                onActiveChange={setActiveId}
+                setRef={setRef}
+              />
+            ))}
           </div>
         )}
       </main>
