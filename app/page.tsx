@@ -33,19 +33,127 @@ function fmt(s: number) {
   return `${Math.floor(s/60).toString().padStart(2,"0")}:${Math.floor(s%60).toString().padStart(2,"0")}`;
 }
 
-// ─── Waveform ─────────────────────────────────────────────────────────────────
+// ─── Hashtag & Mention Parser ─────────────────────────────────────────────────
+function parseCaption(caption: string) {
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  
+  // Regex for hashtags (#hashtag) and mentions (@handle)
+  const regex = /(#\w+)|(@\w+)/g;
+  let match;
+  
+  while ((match = regex.exec(caption)) !== null) {
+    // Add text before the match
+    if (match.index > lastIndex) {
+      parts.push(caption.slice(lastIndex, match.index));
+    }
+    
+    const [fullMatch] = match;
+    const isHashtag = fullMatch.startsWith('#');
+    const isMention = fullMatch.startsWith('@');
+    
+    if (isHashtag) {
+      parts.push(
+        <span key={match.index} className="text-neutral-400 hover:text-white cursor-pointer transition-colors">
+          {fullMatch}
+        </span>
+      );
+    } else if (isMention) {
+      parts.push(
+        <span key={match.index} className="text-white hover:underline cursor-pointer transition-colors">
+          {fullMatch}
+        </span>
+      );
+    }
+    
+    lastIndex = regex.lastIndex;
+  }
+  
+  // Add remaining text
+  if (lastIndex < caption.length) {
+    parts.push(caption.slice(lastIndex));
+  }
+  
+  return parts;
+}
+
+// ─── Advanced Waveform with Web Audio API ──────────────────────────────────
 const WAVE_H = [4,10,18,24,14,28,10,22,6,26,16,20,8,28,14,22,10,26,6,18,24,12,30,8,20];
-function Waveform({ playing, small }: { playing: boolean; small?: boolean }) {
-  const bars = small ? WAVE_H.slice(0,14) : WAVE_H;
+function Waveform({ playing, small, audioRef }: { playing: boolean; small?: boolean; audioRef?: React.RefObject<HTMLAudioElement | null> }) {
+  const [waveformData, setWaveformData] = useState<number[]>(WAVE_H);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!audioRef?.current || !playing) {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+      return;
+    }
+
+    const audio = audioRef.current;
+    
+    // Initialize Audio Context
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    
+    const audioContext = audioContextRef.current;
+    
+    // Create analyser
+    if (!analyserRef.current) {
+      analyserRef.current = audioContext.createAnalyser();
+      const source = audioContext.createMediaElementSource(audio);
+      source.connect(analyserRef.current);
+      analyserRef.current.connect(audioContext.destination);
+    }
+    
+    const analyser = analyserRef.current;
+    analyser.fftSize = 64;
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    const updateWaveform = () => {
+      analyser.getByteFrequencyData(dataArray);
+      
+      // Convert frequency data to waveform heights
+      const newWaveform = Array.from({ length: small ? 14 : 25 }, (_, i) => {
+        const dataIndex = Math.floor(i * (bufferLength / (small ? 14 : 25)));
+        const value = dataArray[dataIndex] || 0;
+        return Math.max(2, Math.floor((value / 255) * 30));
+      });
+      
+      setWaveformData(newWaveform);
+      animationFrameRef.current = requestAnimationFrame(updateWaveform);
+    };
+
+    updateWaveform();
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [playing, audioRef, small]);
+
+  const bars = small ? waveformData.slice(0, 14) : waveformData;
+
   return (
     <div className={`flex items-end gap-[2px] ${small ? "h-5" : "h-8"}`} aria-hidden>
-      {bars.map((h,i) => (
-        <div key={i} style={{
-          height: `${small ? Math.max(2, h*0.6) : h}px`, width:"2px",
-          backgroundColor:"white",
-          animationDelay: playing ? `${i*0.04}s` : undefined,
-          animationDuration: playing ? `${0.5+(i%5)*0.1}s` : undefined,
-        }} className={playing ? "waveform-bar" : "opacity-20"} />
+      {bars.map((h, i) => (
+        <div 
+          key={i} 
+          style={{
+            height: `${small ? Math.max(2, h * 0.6) : h}px`,
+            width: "2px",
+            backgroundColor: "white",
+            transition: "height 0.05s ease-out",
+          }} 
+          className={playing ? "waveform-bar" : "opacity-20"} 
+        />
       ))}
     </div>
   );
@@ -75,10 +183,11 @@ function AudioPlayer({ audioUrl, fallbackDurationSec, isActive, onPlayToggle, sm
   const [dur, setDur]         = useState(Math.max(1, fallbackDurationSec));
   const [loading, setLoading] = useState(false);
   const [failed, setFailed]   = useState(false);
+  const [speed, setSpeed]     = useState(1);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const src = variants[vi] || audioUrl;
 
-  useEffect(() => { setVi(0); setFailed(false); setPlaying(false); setCurrent(0); setDur(Math.max(1,fallbackDurationSec)); }, [audioUrl]);
+  useEffect(() => { setVi(0); setFailed(false); setPlaying(false); setCurrent(0); setDur(Math.max(1,fallbackDurationSec)); setSpeed(1); }, [audioUrl]);
 
   useEffect(() => {
     const a = audioRef.current; if (!a) return;
@@ -113,6 +222,15 @@ function AudioPlayer({ audioUrl, fallbackDurationSec, isActive, onPlayToggle, sm
     setCurrent(a.currentTime);
   };
 
+  const changeSpeed = () => {
+    const speeds = [0.5, 0.75, 1, 1.25, 1.5, 2];
+    const currentIndex = speeds.indexOf(speed);
+    const nextIndex = (currentIndex + 1) % speeds.length;
+    const newSpeed = speeds[nextIndex];
+    setSpeed(newSpeed);
+    if (audioRef.current) audioRef.current.playbackRate = newSpeed;
+  };
+
   if (failed) return (
     <div className="border border-neutral-900 p-3 flex items-center justify-between gap-3">
       <span className="font-mono text-[10px] text-neutral-600 tracking-widest uppercase">AUDIO UNAVAILABLE</span>
@@ -134,7 +252,12 @@ function AudioPlayer({ audioUrl, fallbackDurationSec, isActive, onPlayToggle, sm
           className={`font-mono text-xs tracking-widest uppercase border border-white px-3 py-1.5 text-white hover:bg-white hover:text-black transition-colors cursor-pointer shrink-0 disabled:opacity-50 ${small?"min-w-[80px]":"min-w-[100px]"} flex items-center justify-center gap-1.5`}>
           {loading?<><Loader2 className="w-3 h-3 animate-spin"/>LOADING</>:playing?"[ ⏸ PAUSE ]":"[ ▶ PLAY ]"}
         </button>
-        <div className="flex-1 overflow-hidden"><Waveform playing={playing} small={small}/></div>
+        <div className="flex-1 overflow-hidden"><Waveform playing={playing} small={small} audioRef={audioRef}/></div>
+        {!small && (
+          <button onClick={changeSpeed} className="font-mono text-[10px] text-neutral-500 hover:text-white tracking-widest uppercase transition-colors cursor-pointer">
+            {speed}x
+          </button>
+        )}
         <span className="font-mono text-[10px] text-neutral-500 tracking-widest shrink-0 tabular-nums">{fmt(current)}/{fmt(dur)}</span>
       </div>
       <div className="w-full h-[2px] bg-neutral-900 cursor-pointer overflow-hidden" onClick={seek}>
@@ -316,6 +439,63 @@ function ReverbThread({ post, currentUser, onReverbClick, onProfileClick }: {
   );
 }
 
+// ─── Skeleton Loading State ─────────────────────────────────────────────────
+function PostSkeleton() {
+  return (
+    <article className="py-8 space-y-4 animate-pulse">
+      <div className="flex items-center justify-between">
+        <div className="h-4 w-24 bg-neutral-900 rounded" />
+        <div className="h-3 w-16 bg-neutral-900 rounded" />
+      </div>
+      <div className="h-8 w-3/4 bg-neutral-900 rounded" />
+      <div className="border border-neutral-800 p-4 space-y-2">
+        <div className="flex items-center gap-3">
+          <div className="h-6 w-20 bg-neutral-900 rounded" />
+          <div className="flex-1 h-5 bg-neutral-900 rounded" />
+        </div>
+        <div className="w-full h-[2px] bg-neutral-900" />
+      </div>
+      <div className="flex items-center justify-between pt-1">
+        <div className="h-4 w-20 bg-neutral-900 rounded" />
+        <div className="flex gap-4">
+          <div className="h-4 w-16 bg-neutral-900 rounded" />
+          <div className="h-4 w-16 bg-neutral-900 rounded" />
+        </div>
+      </div>
+    </article>
+  );
+}
+
+// ─── Swipe Gesture Hook ───────────────────────────────────────────────────────
+function useSwipeGesture(onSwipeLeft?: () => void, onSwipeRight?: () => void) {
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.changedTouches[0].screenX;
+  };
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    touchEndX.current = e.changedTouches[0].screenX;
+    handleSwipe();
+  };
+
+  const handleSwipe = () => {
+    const swipeThreshold = 50;
+    const diff = touchStartX.current - touchEndX.current;
+    
+    if (Math.abs(diff) > swipeThreshold) {
+      if (diff > 0) {
+        onSwipeLeft?.();
+      } else {
+        onSwipeRight?.();
+      }
+    }
+  };
+
+  return { onTouchStart, onTouchEnd };
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function HomeFeedPage() {
   const { user }     = useAuth();
@@ -420,7 +600,9 @@ export default function HomeFeedPage() {
 
       <main className="max-w-xl mx-auto px-5 md:px-6 pt-8 w-full flex-1 flex flex-col">
         {loading?(
-          <div className="flex-1 flex items-center justify-center py-24 text-neutral-600 font-mono text-xs tracking-widest uppercase animate-pulse">CONNECTING TO FREQUENCY...</div>
+          <div className="divide-y divide-neutral-900">
+            {[1,2,3].map(i=><PostSkeleton key={i}/>)}
+          </div>
         ):posts.length===0?(
           <div className="flex-1 flex flex-col items-center justify-center py-24 text-center space-y-6 border border-neutral-900 p-8 my-8">
             <div className="w-12 h-12 border border-neutral-800 flex items-center justify-center"><Mic2 className="w-5 h-5 text-neutral-500"/></div>
@@ -441,7 +623,11 @@ export default function HomeFeedPage() {
                 <article key={post.id}
                   ref={el=>setRef(post.id,el)}
                   data-post-id={post.id}
-                  className="py-8 space-y-4">
+                  className="py-8 space-y-4 animate-fade-in"
+                  {...useSwipeGesture(
+                    () => handlePulse(post), // Swipe left = pulse
+                    () => handleShare(post)  // Swipe right = share
+                  )}>
                   {/* Header */}
                   <div className="flex items-center justify-between">
                     <button onClick={()=>router.push(`/${post.authorHandle.replace(/^@/,"")}`)}
@@ -460,7 +646,9 @@ export default function HomeFeedPage() {
                   </div>
 
                   {/* Caption */}
-                  <h2 className="font-serif italic text-2xl md:text-3xl text-white leading-snug">"{post.caption}"</h2>
+                  <h2 className="font-serif italic text-2xl md:text-3xl text-white leading-snug">
+                    "{parseCaption(post.caption)}"
+                  </h2>
 
                   {/* Player */}
                   <AudioPlayer audioUrl={post.audioUrl} fallbackDurationSec={post.durationSec||15}
