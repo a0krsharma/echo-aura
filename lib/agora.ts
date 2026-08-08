@@ -15,14 +15,30 @@ export interface AgoraRoomConfig {
 }
 
 /**
+ * fetchAgoraToken
+ * Fetches a secure token from the API route for a given channel and user.
+ */
+export async function fetchAgoraToken(channelName: string, uid: string): Promise<string | null> {
+  try {
+    const response = await fetch(`/api/agora/token?channel=${channelName}&uid=${uid}`);
+    const data = await response.json();
+    return data.token || null;
+  } catch (error) {
+    console.error("Failed to fetch Agora token:", error);
+    return null;
+  }
+}
+
+/**
  * getAgoraConfig
  * Returns the Agora App ID and channel details for initializing RTC client.
+ * Note: Token is now fetched dynamically via fetchAgoraToken for security.
  */
 export function getAgoraConfig(channelName: string, uid: string | number): AgoraRoomConfig {
   return {
     appId: AGORA_APP_ID,
     channelName,
-    token: null, // Testing / Testing Mode without token requirement
+    token: null, // Token fetched dynamically for security
     uid,
   };
 }

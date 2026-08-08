@@ -76,5 +76,29 @@ service cloud.firestore {
                     && resource.data.toUid == request.auth.uid;
     }
 
+    // ── WHISPERS (Private DMs) ─────────────────────────────────────────
+    // Only participants can read/write their own conversations
+    match /whispers/{conversationId} {
+      allow read:   if request.auth != null
+                    && request.auth.uid in resource.data.participants;
+      allow create: if request.auth != null
+                    && request.auth.uid in request.resource.data.participants;
+      allow update: if request.auth != null
+                    && request.auth.uid in resource.data.participants;
+      allow delete: if request.auth != null
+                    && request.auth.uid in resource.data.participants;
+
+      // Whisper messages sub-collection
+      match /messages/{messageId} {
+        allow read:   if request.auth != null
+                      && request.auth.uid in resource.data.readBy;
+        allow create: if request.auth != null
+                      && request.auth.uid in request.resource.data.participants;
+        allow update: if request.auth != null
+                      && request.auth.uid in resource.data.readBy;
+        allow delete: if false;
+      }
+    }
+
   }
 }

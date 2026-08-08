@@ -8,9 +8,12 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowUp, Volume2, Lock, Mic2, Users } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, ArrowUp, Volume2, Lock, Mic2, Users, MessageSquare } from "lucide-react";
 import { collection, query, where, getDocs, orderBy, limit, onSnapshot } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
+import { startOrGetConversation } from "@/lib/whispers";
+import { useAuth } from "@/app/components/AuthProvider";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -202,10 +205,13 @@ function PostItem({ post }: { post: UserPost }) {
 // ─────────────────────────────────────────────────────────────────────────────
 export default function HandlePage({ params }: { params: { handle: string } }) {
   const { handle } = params;
+  const { user } = useAuth();
+  const router = useRouter();
   const [userData, setUserData] = useState<FirestoreUser | null>(null);
   const [userPosts, setUserPosts] = useState<UserPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [orbiting, setOrbiting] = useState(false);
+  const [startingWhisper, setStartingWhisper] = useState(false);
 
   useEffect(() => {
     async function loadProfile() {
@@ -290,6 +296,26 @@ export default function HandlePage({ params }: { params: { handle: string } }) {
   const aura = profile.auraScore ?? 0;
   const badges = profile.badges ?? [];
 
+  const handleStartWhisper = async () => {
+    if (!user || profile.uid === "anon" || profile.uid === user.uid) return;
+    setStartingWhisper(true);
+    try {
+      const convId = await startOrGetConversation(
+        user.uid,
+        user.handle || "@ANON",
+        profile.uid,
+        profile.handle
+      );
+      router.push("/whispers");
+    } catch (err) {
+      console.error("Failed to start whisper:", err);
+    } finally {
+      setStartingWhisper(false);
+    }
+  };
+
+  const canStartWhisper = user && profile.uid !== "anon" && profile.uid !== user.uid;
+
   return (
     <div className="bg-black min-h-screen pb-28 md:pb-0 text-white">
       {/* Mobile top bar */}
@@ -311,17 +337,29 @@ export default function HandlePage({ params }: { params: { handle: string } }) {
               {badges.map(b => <BadgePill key={b} emoji={b} />)}
             </div>
           </div>
-          <button
-            onClick={() => setOrbiting(o => !o)}
-            className={`flex items-center gap-1.5 font-mono text-xs tracking-widest uppercase border px-3 py-2 transition-colors cursor-pointer shrink-0 ${
-              orbiting
-                ? "border-white text-white"
-                : "border-neutral-800 text-neutral-500 hover:border-white hover:text-white"
-            }`}
-          >
-            <Lock size={10} strokeWidth={1.5} />
-            {orbiting ? "ORBITING" : "LOCK IN"}
-          </button>
+          <div className="flex items-center gap-2">
+            {canStartWhisper && (
+              <button
+                onClick={handleStartWhisper}
+                disabled={startingWhisper}
+                className="flex items-center gap-1.5 font-mono text-xs tracking-widest uppercase border border-neutral-800 px-3 py-2 hover:border-white hover:text-white transition-colors cursor-pointer shrink-0 text-neutral-500 disabled:opacity-30"
+              >
+                <MessageSquare size={10} strokeWidth={1.5} />
+                {startingWhisper ? "STARTING..." : "WHISPER"}
+              </button>
+            )}
+            <button
+              onClick={() => setOrbiting(o => !o)}
+              className={`flex items-center gap-1.5 font-mono text-xs tracking-widest uppercase border px-3 py-2 transition-colors cursor-pointer shrink-0 ${
+                orbiting
+                  ? "border-white text-white"
+                  : "border-neutral-800 text-neutral-500 hover:border-white hover:text-white"
+              }`}
+            >
+              <Lock size={10} strokeWidth={1.5} />
+              {orbiting ? "ORBITING" : "LOCK IN"}
+            </button>
+          </div>
         </div>
 
         {/* Aura Score */}
