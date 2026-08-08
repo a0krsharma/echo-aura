@@ -13,6 +13,7 @@
     "@capacitor/core": "^8.5.0",
     "@codetrix-studio/capacitor-google-auth": "^3.4.0-rc.4",
     "agora-access-token": "^2.0.4",
+    "agora-chat": "^1.4.0",
     "agora-rtc-react": "^2.5.1",
     "agora-rtc-sdk-ng": "^4.24.7",
     "agora-token": "^2.0.5",

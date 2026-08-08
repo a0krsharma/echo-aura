@@ -8,6 +8,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import AppShell from "@/app/components/AppShell";
+import { ChatProvider } from "@/app/components/ChatProvider";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"], display: "swap" });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"], display: "swap" });
@@ -55,9 +56,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} h-full`}>
       <body className="bg-black text-white font-sans antialiased h-full">
-        <AppShell>
-          {children}
-        </AppShell>
+        <ChatProvider>
+          <AppShell>
+            {children}
+          </AppShell>
+        </ChatProvider>
       </body>
     </html>
   );

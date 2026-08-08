@@ -14,6 +14,7 @@ import { collection, query, where, getDocs, orderBy, limit, onSnapshot } from "f
 import { getFirebaseDb } from "@/lib/firebase";
 import { startOrGetConversation } from "@/lib/whispers";
 import { useAuth } from "@/app/components/AuthProvider";
+import { ChatWidget } from "@/app/components/ChatWidget";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -411,6 +412,9 @@ export default function HandlePage({ params }: { params: { handle: string } }) {
         }
 
       </div>
+      {canStartWhisper && (
+        <ChatWidget targetUid={profile.uid} targetHandle={displayHandle} />
+      )}
     </div>
   );
 }

@@ -34,6 +34,7 @@ import {
 } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase";
 import { getOrCreateUserDoc, type EchoUser } from "@/lib/userDoc";
+import { initializeChat, closeChat } from "@/lib/agoraChat";
 
 // ─── Context ─────────────────────────────────────────────────────────────────
 interface AuthContextValue {
@@ -81,12 +82,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const echoUser = await getOrCreateUserDoc(fbUser);
           setUser(echoUser);
+          
+          // Initialize Agora Chat with Firebase Auth UID
+          try {
+            await initializeChat(fbUser.uid, echoUser.handle || "@ANON");
+            console.log("[Auth] Agora Chat initialized successfully");
+          } catch (chatError) {
+            console.error("[Auth] Failed to initialize Agora Chat:", chatError);
+            // Don't block auth if Chat fails
+          }
         } catch (e) {
           console.error("[Auth] getOrCreateUserDoc failed:", e);
           setUser(null);
         }
       } else {
         setUser(null);
+        // Close Agora Chat connection when user signs out
+        await closeChat();
       }
       setIsLoading(false);
     });
