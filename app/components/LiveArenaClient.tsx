@@ -9,7 +9,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Swords, Mic, MicOff, Send, Volume2, Shield } from "lucide-react";
+import { Swords, Mic, MicOff, Send, Volume2, Shield, Flame, Heart, Laugh, ThumbsUp, Zap } from "lucide-react";
 import AgoraRTC, {
   AgoraRTCProvider,
   useRTCClient,
@@ -57,6 +57,31 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
   const [chatInput, setChatInput] = useState("");
   const [isSendingChat, setIsSendingChat] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
+
+  // Live Reactions state
+  const [reactions, setReactions] = useState<Array<{emoji: string; x: number; y: number; id: number}>>([]);
+  const reactionIdRef = useRef(0);
+
+  const REACTIONS = [
+    { emoji: '🔥', icon: Flame, label: 'FIRE' },
+    { emoji: '❤️', icon: Heart, label: 'LOVE' },
+    { emoji: '😂', icon: Laugh, label: 'LOL' },
+    { emoji: '👍', icon: ThumbsUp, label: 'AGREE' },
+    { emoji: '⚡', icon: Zap, label: 'ENERGY' },
+  ];
+
+  const sendReaction = (emoji: string) => {
+    const id = reactionIdRef.current++;
+    const x = Math.random() * 80 + 10; // 10-90% horizontal
+    const y = Math.random() * 60 + 20; // 20-80% vertical
+    
+    setReactions(prev => [...prev, { emoji, x, y, id }]);
+    
+    // Remove reaction after animation
+    setTimeout(() => {
+      setReactions(prev => prev.filter(r => r.id !== id));
+    }, 3000);
+  };
 
   // ── AgoraRTC Join Channel ───────────────────────────────────────
   const [token, setToken] = useState<string | null>(null);
@@ -246,9 +271,25 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
   const totalVotes = votesA + votesB;
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col justify-between p-4 md:p-8 font-sans selection:bg-neutral-800">
+    <div className="min-h-screen bg-black text-white flex flex-col justify-between p-4 md:p-8 font-sans selection:bg-neutral-800 relative overflow-hidden">
+      {/* ── Floating Reactions Layer ── */}
+      <div className="fixed inset-0 pointer-events-none z-50">
+        {reactions.map((reaction) => (
+          <div
+            key={reaction.id}
+            className="absolute text-4xl animate-float-up"
+            style={{
+              left: `${reaction.x}%`,
+              top: `${reaction.y}%`,
+            }}
+          >
+            {reaction.emoji}
+          </div>
+        ))}
+      </div>
+
       {/* ── Header Bar ── */}
-      <header className="flex items-center justify-between border-b border-neutral-900 pb-4 font-mono text-xs tracking-widest uppercase">
+      <header className="flex items-center justify-between border-b border-neutral-900 pb-4 font-mono text-xs tracking-widest uppercase relative z-10">
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1.5 text-white">
             <span className="w-2 h-2 rounded-full bg-white animate-ping" /> [ ● LIVE ]
@@ -266,50 +307,73 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
         </Link>
       </header>
 
-      {/* ── Main Arena Content ── */}
-      <main className="max-w-2xl mx-auto w-full flex-1 flex flex-col justify-center my-6 space-y-10">
-        {/* Debate Topic / Motion */}
-        <div className="text-center space-y-3">
-          <span className="font-mono text-[10px] tracking-[0.3em] uppercase text-neutral-600">
-            // THE STAGE · LIVE DEBATE MOTION
-          </span>
-          <h1 className="font-serif italic text-3xl md:text-5xl text-white leading-tight">
-            "{clash?.topic || clash?.title || "Is AI ruining software engineering, or are we just lazy?"}"
-          </h1>
-        </div>
-
-        {/* ── Debaters Active Box ── */}
-        <div className="border border-neutral-800 p-6 space-y-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-6 font-mono text-xs tracking-widest">
-            {/* Side A Debater */}
-            <div className="flex items-center gap-3">
-              <span className="text-neutral-600">[A]</span>
-              <span className="text-white font-bold">{clash?.sideA?.handle || "@NOVA_11"}</span>
-              {speakingUsers.size > 0 && (
-                <span className="flex items-center gap-1" title="Speaking">
-                  <Mic className="w-3.5 h-3.5 text-green-500 animate-pulse" />
-                </span>
-              )}
+      {/* ── Main Arena: Debate Topic + Tug-of-War ── */}
+      <main className="flex-1 flex flex-col justify-center items-center space-y-8 relative z-10">
+        {/* Speaker Profiles */}
+        <div className="w-full max-w-4xl grid grid-cols-2 gap-6 mb-4">
+          {/* Side A Speaker */}
+          <div className="border border-neutral-800 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 border border-neutral-700 flex items-center justify-center font-mono text-xs text-neutral-400">
+                  {clash?.sideA?.handle?.charAt(1) || "A"}
+                </div>
+                <div>
+                  <div className="font-mono text-xs text-white tracking-widest uppercase">{clash?.sideA?.handle || "SIDE A"}</div>
+                  <div className="font-mono text-[10px] text-neutral-600 uppercase">SPEAKER</div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="font-mono text-lg text-white">{votesA}</div>
+                <div className="font-mono text-[10px] text-neutral-600 uppercase">VOTES</div>
+              </div>
             </div>
-
-            <div className="font-serif italic text-neutral-600 text-sm">VS</div>
-
-            {/* Side B Debater */}
-            <div className="flex items-center gap-3">
-              {speakingUsers.size > 0 && (
-                <span className="flex items-center gap-1" title="Speaking">
-                  <Mic className="w-3.5 h-3.5 text-green-500 animate-pulse" />
-                </span>
-              )}
-              <span className="text-white font-bold">{clash?.sideB?.handle || "@ECHO_9921"}</span>
-              <span className="text-neutral-600">[B]</span>
+            <p className="font-serif italic text-sm text-neutral-400 leading-relaxed">
+              "{clash?.sideA?.position || "Position A"}"
+            </p>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+              <span className="font-mono text-[10px] text-neutral-600 uppercase">LIVE</span>
             </div>
           </div>
 
-          {/* Stances display */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-neutral-900 font-serif italic text-sm text-neutral-400">
-            <p>"{clash?.sideA?.position || "AI automates routine labor and elevates human creativity to higher abstractions."}"</p>
-            <p>"{clash?.sideB?.position || "Dependence on AI leads to fundamental skill atrophy and shallow engineering."}"</p>
+          {/* Side B Speaker */}
+          <div className="border border-neutral-800 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 border border-neutral-700 flex items-center justify-center font-mono text-xs text-neutral-400">
+                  {clash?.sideB?.handle?.charAt(1) || "B"}
+                </div>
+                <div>
+                  <div className="font-mono text-xs text-white tracking-widest uppercase">{clash?.sideB?.handle || "SIDE B"}</div>
+                  <div className="font-mono text-[10px] text-neutral-600 uppercase">SPEAKER</div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="font-mono text-lg text-white">{votesB}</div>
+                <div className="font-mono text-[10px] text-neutral-600 uppercase">VOTES</div>
+              </div>
+            </div>
+            <p className="font-serif italic text-sm text-neutral-400 leading-relaxed">
+              "{clash?.sideB?.position || "Position B"}"
+            </p>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+              <span className="font-mono text-[10px] text-neutral-600 uppercase">LIVE</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Debate Topic */}
+        <div className="text-center space-y-4 max-w-2xl">
+          <div className="font-mono text-[10px] tracking-widest uppercase text-neutral-600">
+            // DEBATE MOTION
+          </div>
+          <h1 className="font-serif italic text-2xl md:text-4xl text-white leading-tight">
+            "{clash?.topic || "Loading debate..."}"
+          </h1>
+          <div className="font-mono text-xs tracking-widest text-neutral-500 uppercase">
+            {clash?.title || "LIVE STAGE DEBATE"}
           </div>
         </div>
 
@@ -381,6 +445,28 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
               <Mic size={12} /> [ JOIN AS SPEAKER ]
             </button>
           )}
+        </div>
+
+        {/* ── Live Reactions Bar ── */}
+        <div className="border border-neutral-900 p-4 space-y-3">
+          <div className="font-mono text-[10px] tracking-widest uppercase text-neutral-600">
+            // LIVE REACTIONS
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            {REACTIONS.map((reaction) => {
+              const Icon = reaction.icon;
+              return (
+                <button
+                  key={reaction.emoji}
+                  onClick={() => sendReaction(reaction.emoji)}
+                  className="flex-1 flex flex-col items-center gap-1 p-2 border border-neutral-800 hover:border-white hover:bg-neutral-950 transition-all cursor-pointer group"
+                >
+                  <span className="text-2xl group-hover:scale-125 transition-transform">{reaction.emoji}</span>
+                  <span className="font-mono text-[8px] tracking-widest text-neutral-600 group-hover:text-white transition-colors">{reaction.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* ── Vibe Chat Stream ── */}
