@@ -60,24 +60,47 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
 
   // ── AgoraRTC Join Channel ───────────────────────────────────────
   const [token, setToken] = useState<string | null>(null);
+  const [tokenError, setTokenError] = useState<string | null>(null);
   
   useEffect(() => {
     async function fetchToken() {
       if (!user) return;
       try {
+        console.log("[Agora] Fetching token for channel:", clashId, "uid:", user.uid);
         const response = await fetch(
           `/api/agora/token?channel=${clashId}&uid=${user.uid}`
         );
         const data = await response.json();
+        console.log("[Agora] Token response:", data);
+        
         if (data.token) {
           setToken(data.token);
+          setTokenError(null);
+        } else if (data.warning) {
+          console.warn("[Agora] Using fallback:", data.warning);
+          setToken(data.token); // Will be null
+          setTokenError(data.warning);
+        } else {
+          setTokenError("Failed to generate token");
         }
       } catch (error) {
-        console.error("Failed to fetch Agora token:", error);
+        console.error("[Agora] Failed to fetch Agora token:", error);
+        setTokenError("Token fetch failed");
       }
     }
     fetchToken();
   }, [clashId, user]);
+
+  const client = useRTCClient();
+  
+  useEffect(() => {
+    if (client) {
+      console.log("[Agora] RTC Client created:", client);
+      client.on("connection-state-change", (currentState, prevState, reason) => {
+        console.log("[Agora] Connection state changed:", currentState, prevState, reason);
+      });
+    }
+  }, [client]);
 
   useJoin(
     {

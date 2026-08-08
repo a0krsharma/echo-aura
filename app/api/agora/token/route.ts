@@ -38,22 +38,34 @@ export async function GET(request: NextRequest) {
     const currentTimestamp = Math.floor(Date.now() / 1000);
     const privilegeExpiredTs = currentTimestamp + expirationTimeInSeconds;
 
-    // Convert string UID to number for Agora
-    const uidNumber = parseInt(uid.replace(/\D/g, '')) || Math.floor(Math.random() * 1000000);
-
-    // Generate RTC token using agora-access-token with correct API
-    const token = RtcTokenBuilder.buildTokenWithUid(
-      appId,
-      appCertificate,
-      channel,
-      uidNumber,
-      RtcRole.PUBLISHER,
-      privilegeExpiredTs
-    );
+    // Try buildTokenWithAccount first (works with string UIDs)
+    let token: string;
+    try {
+      token = RtcTokenBuilder.buildTokenWithAccount(
+        appId,
+        appCertificate,
+        channel,
+        uid,
+        RtcRole.PUBLISHER,
+        privilegeExpiredTs
+      );
+    } catch (accountError) {
+      console.log("buildTokenWithAccount failed, trying buildTokenWithUid");
+      // Fallback to buildTokenWithUid with numeric UID
+      const uidNumber = parseInt(uid.replace(/\D/g, '')) || Math.floor(Math.random() * 1000000);
+      token = RtcTokenBuilder.buildTokenWithUid(
+        appId,
+        appCertificate,
+        channel,
+        uidNumber,
+        RtcRole.PUBLISHER,
+        privilegeExpiredTs
+      );
+    }
 
     return NextResponse.json({
       token,
-      uid: uidNumber,
+      uid,
       channel,
       appId,
       expiresInSeconds: expirationTimeInSeconds,
