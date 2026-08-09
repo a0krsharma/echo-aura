@@ -204,13 +204,14 @@ export function subscribeToPublicRooms(callback: (rooms: Room[]) => void): () =>
   const roomsQuery = query(
     collection(db, ROOMS_COLLECTION),
     where("isPublic", "==", true),
-    where("isActive", "==", true),
-    orderBy("participantCount", "desc")
+    where("isActive", "==", true)
   );
 
   const unsubscribe = onSnapshot(roomsQuery, (querySnap) => {
     console.log("[subscribeToPublicRooms] Query snapshot received, docs count:", querySnap.docs.length);
     const rooms = querySnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Room[];
+    // Sort by participantCount on client side to avoid index requirement
+    rooms.sort((a, b) => b.participantCount - a.participantCount);
     console.log("[subscribeToPublicRooms] Public rooms updated:", rooms);
     callback(rooms);
   }, (error) => {
