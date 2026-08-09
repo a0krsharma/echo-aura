@@ -10,8 +10,10 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Mic, MicOff, Users, Radio, Send, X, Volume2, Hand, Lock } from "lucide-react";
+import AgoraRTC from "agora-rtc-sdk-ng";
 
 import { useAuth } from "@/app/components/AuthProvider";
+import { AGORA_APP_ID } from "@/lib/agora";
 import { getRoom, subscribeToRoom, subscribeToRoomParticipants, removeParticipant, type Room, type RoomParticipant } from "@/lib/rooms";
 
 interface RoomClientProps {
@@ -26,13 +28,94 @@ function RoomContent({ roomId }: RoomClientProps) {
   const [room, setRoom] = useState<Room | null>(null);
   const [participants, setParticipants] = useState<RoomParticipant[]>([]);
   const [isSpeaker, setIsSpeaker] = useState(false);
-  const [micMuted, setMicMuted] = useState(false);
   const [hasRequestedToSpeak, setHasRequestedToSpeak] = useState(false);
   
   // Chat state
   const [chatMessages, setChatMessages] = useState<Array<{handle: string; text: string; time: string}>>([]);
   const [chatInput, setChatInput] = useState("");
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
+
+  // Agora setup (raw SDK)
+  const [token, setToken] = useState<string | null>(null);
+  const [micMuted, setMicMuted] = useState(false);
+  const clientRef = useRef<any>(null);
+  const localTrackRef = useRef<any>(null);
+
+  // Initialize Agora client and join channel
+  useEffect(() => {
+    if (!user || !room?.agoraChannel) return;
+
+    let mounted = true;
+
+    async function setupAgora() {
+      try {
+        if (!room?.agoraChannel || !user?.uid) return;
+        
+        console.log("[Room] Setting up Agora for channel:", room.agoraChannel);
+        
+        // Create client
+        const client = AgoraRTC.createClient({ codec: "vp8", mode: "rtc" });
+        clientRef.current = client;
+
+        // Fetch token
+        const response = await fetch(
+          `/api/agora/token?channel=${room.agoraChannel}&uid=${user.uid}`
+        );
+        const data = await response.json();
+        const agoraToken = data.token || null;
+
+        // Join channel
+        await client.join(AGORA_APP_ID, room.agoraChannel, agoraToken || undefined, user.uid);
+        console.log("[Room] Joined Agora channel");
+
+        // Create and publish local audio track
+        const localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+        localTrackRef.current = localAudioTrack;
+        
+        await client.publish([localAudioTrack]);
+        console.log("[Room] Published local audio track");
+
+        // Subscribe to remote users
+        client.on("user-published", async (remoteUser: any, mediaType: string) => {
+          if (mediaType === "audio") {
+            await client.subscribe(remoteUser, mediaType);
+            console.log("[Room] Subscribed to remote user:", remoteUser.uid);
+          }
+        });
+
+        client.on("user-unpublished", (remoteUser: any) => {
+          console.log("[Room] Remote user unpublished:", remoteUser.uid);
+        });
+
+      } catch (error) {
+        console.error("[Room] Agora setup error:", error);
+      }
+    }
+
+    setupAgora();
+
+    return () => {
+      mounted = false;
+      // Cleanup
+      if (localTrackRef.current) {
+        localTrackRef.current.close();
+      }
+      if (clientRef.current) {
+        clientRef.current.leave();
+      }
+    };
+  }, [user, room?.agoraChannel]);
+
+  // Mute/unmute local track
+  useEffect(() => {
+    if (localTrackRef.current) {
+      if (micMuted) {
+        localTrackRef.current.setMuted(true);
+      } else {
+        localTrackRef.current.setMuted(false);
+      }
+    }
+  }, [micMuted]);
 
   // Fetch room details
   useEffect(() => {
