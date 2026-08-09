@@ -32,6 +32,7 @@ import {
   Terminal,
   LogOut,
   Mic2,
+  Waves,
 } from "lucide-react";
 
 // ─── Inner shell (needs AuthProvider above it) ───────────────────
@@ -75,6 +76,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
     { label: "THE RADAR", href: "/radar", icon: Compass },
     { label: "THE STAGE", href: "/clash", icon: Swords },
     { label: "LIVE ROOMS", href: "/rooms", icon: Users },
+    { label: "WAVES", href: "/waves", icon: Waves },
     { label: "SEARCH", href: "/search", icon: Search },
     { label: "STUDIO", href: "/studio", icon: Mic2 },
     { label: "WHISPERS", href: "/whispers", icon: MessageSquare },
