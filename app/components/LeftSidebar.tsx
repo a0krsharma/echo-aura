@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Radio, Compass, Mic2, Swords, Search, MessageSquare, Bell, User, Terminal, LogOut, Waves } from "lucide-react";
+import { Radio, Compass, Mic2, Swords, Search, MessageSquare, Bell, User, Terminal, LogOut, Waves, Users } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
 
 export default function LeftSidebar() {
@@ -13,6 +13,7 @@ export default function LeftSidebar() {
   const navItems = [
     { href: "/",             icon: Radio,         label: "THE FREQUENCY", hasNotifDot: false },
     { href: "/waves",        icon: Waves,         label: "WAVES",         hasNotifDot: false },
+    { href: "/rooms",        icon: Users,         label: "LIVE ROOMS",    hasNotifDot: false },
     { href: "/radar",        icon: Compass,       label: "THE RADAR",     hasNotifDot: false },
     { href: "/studio",       icon: Mic2,          label: "STUDIO",        hasNotifDot: false },
     { href: "/clash",        icon: Swords,        label: "THE STAGE",     hasNotifDot: false },

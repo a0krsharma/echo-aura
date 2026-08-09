@@ -19,6 +19,7 @@ import {
   onSnapshot,
   serverTimestamp,
   Timestamp,
+  increment,
 } from "firebase/firestore";
 import { getFirebaseDb } from "./firebase";
 
@@ -253,8 +254,3 @@ export async function endRoom(roomId: string): Promise<void> {
   });
 }
 
-// ── Helper: Increment field ─────────────────────────────────────────────
-function increment(value: number): any {
-  // Firestore increment helper
-  return { __type: "FieldValue", increment: value };
-}
