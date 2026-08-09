@@ -85,7 +85,16 @@ export async function createRoom(roomData: {
     agoraChannel,
   };
 
+  console.log("[createRoom] Attempting to save room to Firestore:", newRoom);
   await setDoc(roomRef, newRoom);
+  console.log("[createRoom] Room saved successfully to Firestore with ID:", roomId);
+
+  // Verify the room was saved
+  const roomCheck = await getDoc(roomRef);
+  console.log("[createRoom] Room verification check:", roomCheck.exists() ? "EXISTS" : "DOES NOT EXIST");
+  if (roomCheck.exists()) {
+    console.log("[createRoom] Room data:", roomCheck.data());
+  }
 
   // Add host as first participant (try-catch to handle permission issues)
   try {
@@ -94,8 +103,9 @@ export async function createRoom(roomData: {
       handle: roomData.hostHandle,
       isSpeaker: true,
     });
+    console.log("[createRoom] Host added as participant");
   } catch (error) {
-    console.error("Error adding host as participant:", error);
+    console.error("[createRoom] Error adding host as participant:", error);
     // Continue anyway - room was created successfully
   }
 
@@ -190,6 +200,7 @@ export function subscribeToRoom(roomId: string, callback: (room: Room | null) =>
 // ── Subscribe to public rooms (real-time) ──────────────────────────────
 export function subscribeToPublicRooms(callback: (rooms: Room[]) => void): () => void {
   const db = getFirebaseDb();
+  console.log("[subscribeToPublicRooms] Setting up query for public rooms");
   const roomsQuery = query(
     collection(db, ROOMS_COLLECTION),
     where("isPublic", "==", true),
@@ -198,11 +209,12 @@ export function subscribeToPublicRooms(callback: (rooms: Room[]) => void): () =>
   );
 
   const unsubscribe = onSnapshot(roomsQuery, (querySnap) => {
+    console.log("[subscribeToPublicRooms] Query snapshot received, docs count:", querySnap.docs.length);
     const rooms = querySnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Room[];
-    console.log("Public rooms updated:", rooms);
+    console.log("[subscribeToPublicRooms] Public rooms updated:", rooms);
     callback(rooms);
   }, (error) => {
-    console.error("Error subscribing to public rooms:", error);
+    console.error("[subscribeToPublicRooms] Error subscribing to public rooms:", error);
   });
 
   return unsubscribe;

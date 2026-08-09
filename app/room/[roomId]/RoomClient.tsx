@@ -98,10 +98,18 @@ function RoomContent({ roomId }: RoomClientProps) {
       mounted = false;
       // Cleanup
       if (localTrackRef.current) {
-        localTrackRef.current.close();
+        try {
+          localTrackRef.current.close();
+        } catch (e) {
+          console.log("[Room] Error closing local track:", e);
+        }
       }
       if (clientRef.current) {
-        clientRef.current.leave();
+        try {
+          clientRef.current.leave();
+        } catch (e) {
+          console.log("[Room] Error leaving Agora channel:", e);
+        }
       }
     };
   }, [user, room?.agoraChannel]);
