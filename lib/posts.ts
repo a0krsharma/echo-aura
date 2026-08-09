@@ -22,6 +22,7 @@ import {
   arrayUnion,
   arrayRemove,
   serverTimestamp,
+  getDocs,
   type Timestamp,
 } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
@@ -224,10 +225,19 @@ export async function togglePulsePost(
 }
 
 /**
- * deletePost — hard-deletes a post document.
+ * deletePost — delete a post and all its reverbs
  */
 export async function deletePost(postId: string): Promise<void> {
   const db = getFirebaseDb();
+  
+  // Delete all reverbs first
+  const reverbsRef = collection(db, "posts", postId, "reverbs");
+  const reverbsSnap = await getDocs(reverbsRef);
+  for (const doc of reverbsSnap.docs) {
+    await deleteDoc(doc.ref);
+  }
+  
+  // Delete the post
   await deleteDoc(doc(db, "posts", postId));
 }
 
@@ -297,10 +307,9 @@ export async function togglePulsePostReverb(
   currentlyPulsed: boolean
 ): Promise<void> {
   const db = getFirebaseDb();
-  const ref = doc(db, "posts", postId, "reverbs", reverbId);
-  if (currentlyPulsed) {
-    await updateDoc(ref, { pulseCount: increment(-1), pulsedBy: arrayRemove(uid) });
-  } else {
-    await updateDoc(ref, { pulseCount: increment(1), pulsedBy: arrayUnion(uid) });
-  }
+  const reverbRef = doc(db, "posts", postId, "reverbs", reverbId);
+  await updateDoc(reverbRef, {
+    pulseCount: increment(currentlyPulsed ? -1 : 1),
+    pulsedBy: currentlyPulsed ? arrayRemove(uid) : arrayUnion(uid),
+  });
 }

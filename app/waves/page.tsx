@@ -7,10 +7,10 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { ArrowUp, Repeat2, Share2, Volume2, VolumeX, Mic2, Loader2, ChevronUp, ChevronDown, Zap } from "lucide-react";
+import { ArrowUp, Repeat2, Share2, Volume2, VolumeX, Mic2, Loader2, ChevronUp, ChevronDown, Zap, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { subscribeToPosts, togglePulsePost } from "@/lib/posts";
+import { subscribeToPosts, togglePulsePost, deletePost } from "@/lib/posts";
 import { useAuth } from "@/app/components/AuthProvider";
 import { createNotification } from "@/lib/notifications";
 
@@ -103,10 +103,10 @@ const ACCENTS = [
 ];
 
 // ── Wave Card ─────────────────────────────────────────────────────────────────
-function WaveCard({ post, index, active, muted, onPulse, onReverb, onShare, onProfile, isPulsed }: {
+function WaveCard({ post, index, active, muted, onPulse, onReverb, onShare, onProfile, onDelete, isPulsed, isOwner }: {
   post: WavePost; index: number; active: boolean; muted: boolean;
-  onPulse: ()=>void; onReverb: ()=>void; onShare: ()=>void; onProfile: ()=>void;
-  isPulsed: boolean;
+  onPulse: ()=>void; onReverb: ()=>void; onShare: ()=>void; onProfile: ()=>void; onDelete: ()=>void;
+  isPulsed: boolean; isOwner: boolean;
 }) {
   const { bg, wave, tag } = ACCENTS[index % ACCENTS.length];
   const { playing, pct, loading, failed, toggle } = useWaveAudio(post.audioUrl, post.durationSec, active, muted);
@@ -185,6 +185,16 @@ function WaveCard({ post, index, active, muted, onPulse, onReverb, onShare, onPr
           </div>
           <span className="font-mono text-[9px] text-white/80 tracking-widest">SHARE</span>
         </button>
+
+        {/* Delete (owner only) */}
+        {isOwner && (
+          <button onClick={onDelete} className="flex flex-col items-center gap-1 cursor-pointer group pointer-events-auto">
+            <div className="w-11 h-11 rounded-full flex items-center justify-center border border-red-500/30 group-hover:border-red-500 bg-black/40 backdrop-blur-sm transition-all">
+              <Trash2 className="w-5 h-5 text-red-500" />
+            </div>
+            <span className="font-mono text-[9px] text-red-500/80 tracking-widest">DELETE</span>
+          </button>
+        )}
       </div>
     </div>
   );
@@ -250,6 +260,16 @@ export default function WavesPage() {
     else { try { await navigator.clipboard.writeText(`${d.text} ${d.url}`); } catch {} }
   };
 
+  const handleDelete = async (post: WavePost) => {
+    if (!user || user.uid !== post.authorUid) return;
+    if (!confirm("Delete this wave?")) return;
+    try {
+      await deletePost(post.id);
+    } catch (error) {
+      console.error("Error deleting wave:", error);
+    }
+  };
+
   const scrollTo = (dir: number) => {
     const c = containerRef.current; if (!c) return;
     c.scrollBy({ top: dir * window.innerHeight, behavior: "smooth" });
@@ -290,10 +310,12 @@ export default function WavesPage() {
               active={activeIdx === i}
               muted={muted}
               isPulsed={user ? post.pulsedBy.includes(user.uid) : false}
+              isOwner={user?.uid === post.authorUid}
               onPulse={() => handlePulse(post)}
               onReverb={() => router.push("/")}
               onShare={() => handleShare(post)}
               onProfile={() => router.push(`/${post.authorHandle.replace(/^@/,"")}`)}
+              onDelete={() => handleDelete(post)}
             />
           </div>
         ))}

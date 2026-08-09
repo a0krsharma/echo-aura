@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Swords, X, Users, Radio } from "lucide-react";
-import { subscribeToClashes, createClash, voteOnClash, type ClashItem } from "@/lib/clashes";
+import { Swords, X, Users, Radio, Trash2, Share2 } from "lucide-react";
+import { subscribeToClashes, createClash, voteOnClash, deleteClash, type ClashItem } from "@/lib/clashes";
+import { useAuth } from "@/app/components/AuthProvider";
 
 function fmt(n: number): string { return n >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(n); }
 
@@ -125,6 +126,7 @@ function ChallengeModal({ onClose }: { onClose: () => void }) {
 }
 
 export default function StagePage() {
+  const { user } = useAuth();
   const [clashes, setClashes] = useState<ClashItem[]>([]);
   const [showChallenge, setShowChallenge] = useState(false);
   const [votedClashes, setVotedClashes] = useState<Record<string, "A" | "B">>({});
@@ -144,6 +146,25 @@ export default function StagePage() {
       await voteOnClash(clashId, side);
     } catch (e) {
       console.error("Vote failed:", e);
+    }
+  };
+
+  const handleDeleteClash = async (clashId: string) => {
+    if (!confirm("Delete this debate?")) return;
+    try {
+      await deleteClash(clashId);
+    } catch (error) {
+      console.error("Error deleting clash:", error);
+    }
+  };
+
+  const handleShareClash = async (clashId: string) => {
+    const shareUrl = `${window.location.origin}/stage/${clashId}`;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      alert("Debate link copied to clipboard!");
+    } catch (error) {
+      console.error("Error copying link:", error);
     }
   };
 
@@ -248,7 +269,25 @@ export default function StagePage() {
                       <div className="w-full h-1 bg-neutral-900 relative">
                         <div className="h-full bg-white transition-all duration-500" style={{ width: `${pctA}%` }} />
                       </div>
-                      <div className="flex justify-end">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleShareClash(c.id)}
+                            className="font-mono text-[10px] text-neutral-500 hover:text-white transition-colors cursor-pointer"
+                            title="Share debate"
+                          >
+                            <Share2 size={12} />
+                          </button>
+                          {user && c.sideA?.handle === user.handle && (
+                            <button
+                              onClick={() => handleDeleteClash(c.id)}
+                              className="font-mono text-[10px] text-neutral-500 hover:text-red-500 transition-colors cursor-pointer"
+                              title="Delete debate"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          )}
+                        </div>
                         <Link
                           href={`/stage/${c.id}`}
                           className="font-mono text-xs text-white border border-white px-3 py-1.5 hover:bg-white hover:text-black uppercase transition-colors"

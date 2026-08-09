@@ -15,6 +15,7 @@ import {
   updateDoc,
   increment,
   serverTimestamp,
+  deleteDoc,
   type Timestamp,
 } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
@@ -88,4 +89,13 @@ export async function voteOnClash(clashId: string, side: "A" | "B") {
   } else {
     await updateDoc(ref, { "sideB.votes": increment(1) });
   }
+}
+
+/**
+ * deleteClash
+ * Delete a clash/debate.
+ */
+export async function deleteClash(clashId: string): Promise<void> {
+  const db = getFirebaseDb();
+  await deleteDoc(doc(db, "clashes", clashId));
 }

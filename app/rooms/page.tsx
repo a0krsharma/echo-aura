@@ -8,9 +8,9 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Mic2, Volume2, Users, Lock, Radio, Swords, Plus, X } from "lucide-react";
+import { Mic2, Volume2, Users, Lock, Radio, Swords, Plus, X, Trash2, Share2 } from "lucide-react";
 import { subscribeToClashes, type ClashItem } from "@/lib/clashes";
-import { subscribeToPublicRooms, type Room, addParticipant } from "@/lib/rooms";
+import { subscribeToPublicRooms, type Room, addParticipant, deleteRoom } from "@/lib/rooms";
 import { useAuth } from "@/app/components/AuthProvider";
 
 function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate: (roomId: string) => void }) {
@@ -215,6 +215,26 @@ export default function RoomsPage() {
     }
   };
 
+  const handleDeleteRoom = async (roomId: string) => {
+    if (!user) return;
+    if (!confirm("Are you sure you want to delete this room?")) return;
+    try {
+      await deleteRoom(roomId);
+    } catch (error) {
+      console.error("Error deleting room:", error);
+    }
+  };
+
+  const handleShareRoom = async (roomId: string) => {
+    const shareUrl = `${window.location.origin}/room/${roomId}`;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      alert("Room link copied to clipboard!");
+    } catch (error) {
+      console.error("Error copying link:", error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black text-white pb-24 md:pb-8 flex flex-col font-sans">
       {showCreateModal && <CreateRoomModal onClose={() => setShowCreateModal(false)} onCreate={() => {}} />}
@@ -277,13 +297,33 @@ export default function RoomsPage() {
                       <span className="font-mono text-[10px] text-neutral-600">{room.hostHandle}</span>
                       <span className="font-mono text-[10px] text-neutral-700">HOST</span>
                     </div>
-                    <Link
-                      href={`/room/${room.id}`}
-                      onClick={() => handleJoinRoom(room.id)}
-                      className="font-mono text-xs border border-white px-3 py-1.5 text-white hover:bg-white hover:text-black uppercase transition-colors inline-block"
-                    >
-                      [ 🎧 JOIN ROOM ]
-                    </Link>
+                    <div className="flex items-center gap-2">
+                      {user && room.hostUid === user.uid && (
+                        <>
+                          <button
+                            onClick={() => handleShareRoom(room.id)}
+                            className="font-mono text-[10px] text-neutral-500 hover:text-white transition-colors cursor-pointer"
+                            title="Share room"
+                          >
+                            <Share2 size={12} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteRoom(room.id)}
+                            className="font-mono text-[10px] text-neutral-500 hover:text-red-500 transition-colors cursor-pointer"
+                            title="Delete room"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </>
+                      )}
+                      <Link
+                        href={`/room/${room.id}`}
+                        onClick={() => handleJoinRoom(room.id)}
+                        className="font-mono text-xs border border-white px-3 py-1.5 text-white hover:bg-white hover:text-black uppercase transition-colors inline-block"
+                      >
+                        [ 🎧 JOIN ROOM ]
+                      </Link>
+                    </div>
                   </div>
                 </div>
               ))}

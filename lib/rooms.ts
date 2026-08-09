@@ -207,6 +207,34 @@ export async function removeParticipant(roomId: string, uid: string): Promise<vo
   });
 }
 
+// ── Delete room ────────────────────────────────────────────────────────
+export async function deleteRoom(roomId: string): Promise<void> {
+  const db = getFirebaseDb();
+  
+  // Delete the room
+  await deleteDoc(doc(db, ROOMS_COLLECTION, roomId));
+  
+  // Delete all participants
+  const participantsQuery = query(
+    collection(db, PARTICIPANTS_COLLECTION),
+    where("roomId", "==", roomId)
+  );
+  const participantsSnap = await getDocs(participantsQuery);
+  for (const doc of participantsSnap.docs) {
+    await deleteDoc(doc.ref);
+  }
+  
+  // Delete all chat messages
+  const messagesQuery = query(
+    collection(db, "room_messages"),
+    where("roomId", "==", roomId)
+  );
+  const messagesSnap = await getDocs(messagesQuery);
+  for (const doc of messagesSnap.docs) {
+    await deleteDoc(doc.ref);
+  }
+}
+
 // ── Get room by ID ─────────────────────────────────────────────────────
 export async function getRoom(roomId: string): Promise<Room | null> {
   const db = getFirebaseDb();
@@ -296,24 +324,6 @@ export async function updateRoom(roomId: string, updates: Partial<Room>): Promis
     ...updates,
     updatedAt: serverTimestamp(),
   });
-}
-
-// ── Delete room ────────────────────────────────────────────────────────
-export async function deleteRoom(roomId: string): Promise<void> {
-  const db = getFirebaseDb();
-  const roomRef = doc(db, ROOMS_COLLECTION, roomId);
-  await deleteDoc(roomRef);
-
-  // Delete all participants
-  const participantsQuery = query(
-    collection(db, PARTICIPANTS_COLLECTION),
-    where("roomId", "==", roomId)
-  );
-  const participantsSnap = await getDocs(participantsQuery);
-  
-  for (const doc of participantsSnap.docs) {
-    await deleteDoc(doc.ref);
-  }
 }
 
 // ── End room (mark as inactive) ────────────────────────────────────────
