@@ -25,11 +25,24 @@ export async function GET(request: NextRequest) {
   const appId = process.env.NEXT_PUBLIC_AGORA_APP_ID;
   const appCertificate = process.env.AGORA_APP_CERTIFICATE;
 
-  if (!appId || !appCertificate || appCertificate === "YOUR_AGORA_CERTIFICATE_HERE") {
+  if (!appId) {
     return NextResponse.json(
-      { error: "Agora App Certificate not configured" },
+      { error: "Agora App ID not configured" },
       { status: 500 }
     );
+  }
+
+  // If certificate is not configured, use App ID-only authentication
+  if (!appCertificate || appCertificate === "YOUR_AGORA_CERTIFICATE_HERE") {
+    console.log("Agora App Certificate not configured, using App ID-only authentication");
+    return NextResponse.json({
+      token: null,
+      uid,
+      channel,
+      appId,
+      expiresInSeconds: 3600,
+      warning: "Using App ID-only authentication (no certificate configured)",
+    });
   }
 
   try {
