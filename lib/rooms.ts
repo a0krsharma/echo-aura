@@ -162,8 +162,7 @@ export function subscribeToRoomChat(roomId: string, callback: (messages: Array<{
   const db = getFirebaseDb();
   const messagesQuery = query(
     collection(db, "room_messages"),
-    where("roomId", "==", roomId),
-    orderBy("timestamp", "asc")
+    where("roomId", "==", roomId)
   );
 
   const unsubscribe = onSnapshot(messagesQuery, (querySnap) => {
@@ -175,6 +174,12 @@ export function subscribeToRoomChat(roomId: string, callback: (messages: Array<{
         text: data.text,
         time: data.timestamp ? new Date(data.timestamp.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
+    });
+    // Sort by timestamp on client side
+    messages.sort((a, b) => {
+      const timeA = new Date(`1970-01-01T${a.time}`);
+      const timeB = new Date(`1970-01-01T${b.time}`);
+      return timeA.getTime() - timeB.getTime();
     });
     callback(messages);
   }, (error) => {

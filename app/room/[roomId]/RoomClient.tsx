@@ -54,6 +54,16 @@ function RoomContent({ roomId }: RoomClientProps) {
         
         console.log("[Room] Setting up Agora for channel:", room.agoraChannel);
         
+        // Request microphone permission first
+        try {
+          await navigator.mediaDevices.getUserMedia({ audio: true });
+          console.log("[Room] Microphone permission granted");
+        } catch (permError) {
+          console.error("[Room] Microphone permission denied:", permError);
+          alert("Microphone permission is required for audio in rooms. Please allow microphone access and refresh.");
+          return;
+        }
+        
         // Create client
         const client = AgoraRTC.createClient({ codec: "vp8", mode: "rtc" });
         clientRef.current = client;
