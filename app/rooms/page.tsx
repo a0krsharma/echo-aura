@@ -32,6 +32,17 @@ function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate:
     if (!canCreate || !user) return;
     setLoading(true);
     try {
+      console.log("Creating room with data:", {
+        name: name.trim(),
+        description: description.trim(),
+        hostUid: user.uid,
+        hostHandle: user.handle || "@ANON",
+        maxParticipants,
+        isPublic,
+        category,
+        tags: tags.split(",").map(t => t.trim()).filter(t => t),
+      });
+
       const response = await fetch("/api/rooms", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -48,12 +59,24 @@ function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate:
       });
 
       const data = await response.json();
+      console.log("API response:", data);
+
+      if (!response.ok) {
+        console.error("API error:", data.error);
+        alert(`Error: ${data.error || "Failed to create room"}`);
+        return;
+      }
+
       if (data.success) {
         onCreate(data.roomId);
         router.push(`/room/${data.roomId}`);
+      } else {
+        console.error("Creation failed:", data.error);
+        alert(`Error: ${data.error || "Failed to create room"}`);
       }
     } catch (error) {
       console.error("Error creating room:", error);
+      alert("Error: Failed to create room. Check console for details.");
     } finally {
       setLoading(false);
     }
