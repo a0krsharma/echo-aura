@@ -121,5 +121,32 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // ── ROOM REACTIONS ────────────────────────────────────────────────
+    // Room emoji reactions
+    match /room_reactions/{reactionId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update, delete: if false;
+    }
+
+    // ── USER BOOKMARKS ────────────────────────────────────────────────
+    // User room bookmarks
+    match /user_bookmarks/{bookmarkId} {
+      allow read: if request.auth != null
+                    && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if request.auth != null
+                          && resource.data.userId == request.auth.uid;
+    }
+
+    // ── FOLLOWS ──────────────────────────────────────────────────────
+    // User follow relationships
+    match /follows/{followId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null;
+    }
+
   }
 }

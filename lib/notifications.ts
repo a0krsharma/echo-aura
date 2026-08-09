@@ -32,11 +32,13 @@ import { getFirebaseDb } from "@/lib/firebase";
 
 export interface EchoNotification {
   id:          string;
-  type:        "pulse" | "reverb" | "orbiter" | "stage" | "whisper";
+  type:        "pulse" | "reverb" | "orbiter" | "stage" | "whisper" | "raise_hand";
   fromUid:     string;
   fromHandle:  string;
   postId?:     string;
   postCaption?: string;
+  roomId?:     string;
+  roomName?:   string;
   text:        string;
   read:        boolean;
   createdAt:   Timestamp | null;
@@ -54,6 +56,8 @@ export async function createNotification(
     fromHandle:   string;
     postId?:      string;
     postCaption?: string;
+    roomId?:      string;
+    roomName?:    string;
     text:         string;
   }
 ): Promise<void> {

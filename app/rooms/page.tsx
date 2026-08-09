@@ -10,7 +10,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Mic2, Volume2, Users, Lock, Radio, Swords, Plus, X, Trash2, Share2 } from "lucide-react";
 import { subscribeToClashes, type ClashItem } from "@/lib/clashes";
-import { subscribeToPublicRooms, getTrendingRooms, getRoomsByCategory, type Room, addParticipant, deleteRoom } from "@/lib/rooms";
+import { getRoom, subscribeToPublicRooms, addParticipant, deleteRoom, getTrendingRooms, getRoomsByCategory, type Room } from "@/lib/rooms";
 import { useAuth } from "@/app/components/AuthProvider";
 
 function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate: (roomId: string) => void }) {
@@ -25,6 +25,7 @@ function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate:
   const [loading, setLoading] = useState(false);
   const [scheduleMode, setScheduleMode] = useState(false);
   const [scheduledFor, setScheduledFor] = useState("");
+  const [openMic, setOpenMic] = useState(false);
 
   const CATEGORIES = ["GENERAL", "TECH", "MUSIC", "DEBATE", "CASUAL", "PROFESSIONAL"];
 
@@ -58,6 +59,7 @@ function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate:
           category,
           tags: tags.split(",").map(t => t.trim()).filter(t => t),
           scheduledFor: scheduleMode && scheduledFor ? new Date(scheduledFor).toISOString() : null,
+          openMic,
         }),
       });
 
@@ -170,6 +172,37 @@ function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate:
         <div className="flex items-center gap-3 pt-2">
           <button
             onClick={() => setScheduleMode(!scheduleMode)}
+            className={`font-mono text-[10px] uppercase px-3 py-1.5 border transition-colors ${
+              scheduleMode ? "border-white text-white" : "border-neutral-800 text-neutral-500"
+            }`}
+          >
+            {scheduleMode ? "SCHEDULED" : "LIVE NOW"}
+          </button>
+          <button
+            onClick={() => setOpenMic(!openMic)}
+            className={`font-mono text-[10px] uppercase px-3 py-1.5 border transition-colors ${
+              openMic ? "border-white text-white" : "border-neutral-800 text-neutral-500"
+            }`}
+          >
+            {openMic ? "OPEN MIC" : "RAISE HAND"}
+          </button>
+        </div>
+
+        {scheduleMode && (
+          <div>
+            <label className="font-mono text-[10px] tracking-widest text-neutral-600 block mb-1">SCHEDULED FOR</label>
+            <input
+              type="datetime-local"
+              value={scheduledFor}
+              onChange={e => setScheduledFor(e.target.value)}
+              className="w-full bg-transparent border border-neutral-800 p-2 font-mono text-xs text-white"
+            />
+          </div>
+        )}
+
+        <div className="flex items-center gap-3 pt-2">
+          <button
+            onClick={() => setScheduleMode(!scheduleMode)}
             className={`flex items-center gap-2 font-mono text-[10px] tracking-widest uppercase transition-colors ${
               scheduleMode ? "text-white" : "text-neutral-600 hover:text-white"
             }`}
@@ -190,16 +223,19 @@ function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate:
           </div>
         )}
 
-        <div className="flex items-center gap-4 pt-2">
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-neutral-900">
           <button
-            disabled={!canCreate || loading}
-            onClick={handleCreate}
-            className="flex items-center gap-2 font-mono text-xs tracking-widest uppercase text-black bg-white px-5 py-3 hover:opacity-80 transition-opacity cursor-pointer disabled:opacity-30"
+            onClick={onClose}
+            className="font-mono text-xs tracking-widest uppercase text-neutral-500 hover:text-white transition-colors cursor-pointer"
           >
-            <Radio size={12} strokeWidth={2} /> [ CREATE ROOM ]
-          </button>
-          <button onClick={onClose} className="font-mono text-xs tracking-widest uppercase text-neutral-600 hover:text-white transition-colors cursor-pointer">
             CANCEL
+          </button>
+          <button
+            onClick={handleCreate}
+            disabled={!canCreate || loading}
+            className="font-mono text-xs tracking-widest uppercase border border-white px-4 py-2 text-white hover:bg-white hover:text-black transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            {loading ? "CREATING..." : "CREATE"}
           </button>
         </div>
       </div>
@@ -250,11 +286,15 @@ export default function RoomsPage() {
   const handleJoinRoom = async (roomId: string) => {
     if (!user) return;
     try {
+      // Check if user is the host
+      const roomData = await getRoom(roomId);
+      const isHost = roomData?.hostUid === user.uid;
+      
       await addParticipant(roomId, {
         uid: user.uid,
         handle: user.handle || "@ANON",
         isSpeaker: false,
-      });
+      }, isHost);
       router.push(`/room/${roomId}`);
     } catch (error) {
       console.error("Error joining room:", error);

@@ -31,6 +31,7 @@ export interface Room {
   hostUid: string;
   hostHandle: string;
   participantCount: number;
+  speakerCount: number;
   maxParticipants: number;
   isPublic: boolean;
   category: string;
@@ -39,7 +40,8 @@ export interface Room {
   updatedAt: Timestamp;
   isActive: boolean;
   agoraChannel: string;
-  scheduledFor?: Timestamp | null;
+  scheduledFor: Timestamp | null;
+  openMic: boolean;
 }
 
 export interface RoomParticipant {
@@ -66,6 +68,7 @@ export async function createRoom(roomData: {
   category: string;
   tags: string[];
   scheduledFor?: Timestamp | null;
+  openMic?: boolean;
 }): Promise<string> {
   const db = getFirebaseDb();
   const roomRef = doc(collection(db, ROOMS_COLLECTION));
@@ -81,6 +84,7 @@ export async function createRoom(roomData: {
     hostUid: roomData.hostUid,
     hostHandle: roomData.hostHandle,
     participantCount: 1, // Host counts as first participant
+    speakerCount: 1, // Host is first speaker
     maxParticipants: roomData.maxParticipants,
     isPublic: roomData.isPublic,
     category: roomData.category,
@@ -90,6 +94,7 @@ export async function createRoom(roomData: {
     isActive: !roomData.scheduledFor, // Inactive if scheduled for future
     agoraChannel,
     scheduledFor: roomData.scheduledFor || null,
+    openMic: roomData.openMic || false, // Default to raise hand mode
   };
 
   console.log("[createRoom] Attempting to save room to Firestore:", newRoom);
@@ -119,30 +124,41 @@ export async function createRoom(roomData: {
   return roomId;
 }
 
-// ── Add participant to room ─────────────────────────────────────────────
-export async function addParticipant(roomId: string, participant: {
-  uid: string;
-  handle: string;
-  isSpeaker?: boolean;
-}): Promise<void> {
+// ── Add participant to room ───────────────────────────────────────────────
+export async function addParticipant(roomId: string, participant: Omit<RoomParticipant, "joinedAt">, isHost: boolean = false): Promise<void> {
   const db = getFirebaseDb();
-  const participantRef = doc(
-    collection(db, PARTICIPANTS_COLLECTION),
-    `${roomId}_${participant.uid}`
-  );
-
-  await setDoc(participantRef, {
+  const participantRef = doc(collection(db, PARTICIPANTS_COLLECTION));
+  
+  const newParticipant: RoomParticipant = {
     ...participant,
-    joinedAt: serverTimestamp(),
-    isSpeaker: participant.isSpeaker || false,
+    isSpeaker: isHost, // Host automatically becomes speaker
+    joinedAt: serverTimestamp() as Timestamp,
+  };
+  
+  await setDoc(participantRef, {
+    ...newParticipant,
+    roomId,
   });
-
-  // Update room participant count
+  
+  // Update room participant count (don't increment for host since they're already counted in room creation)
   const roomRef = doc(db, ROOMS_COLLECTION, roomId);
-  await updateDoc(roomRef, {
-    participantCount: increment(1),
+  const updates: any = {
     updatedAt: serverTimestamp(),
-  });
+  };
+  
+  if (!isHost) {
+    updates.participantCount = increment(1);
+  }
+  
+  // Speaker count is already set to 1 in room creation for host
+  // Only increment for non-host speakers
+  if (!isHost && participant.isSpeaker) {
+    updates.speakerCount = increment(1);
+  }
+  
+  if (Object.keys(updates).length > 1) { // Only update if there are changes beyond updatedAt
+    await updateDoc(roomRef, updates);
+  }
 }
 
 // ── Send chat message to room ───────────────────────────────────────────
@@ -204,14 +220,25 @@ export async function removeParticipant(roomId: string, uid: string): Promise<vo
     `${roomId}_${uid}`
   );
 
+  // Check if participant was a speaker before removing
+  const participantSnap = await getDoc(participantRef);
+  const wasSpeaker = participantSnap.exists() && participantSnap.data().isSpeaker;
+
   await deleteDoc(participantRef);
 
   // Update room participant count
   const roomRef = doc(db, ROOMS_COLLECTION, roomId);
-  await updateDoc(roomRef, {
+  const updates: any = {
     participantCount: increment(-1),
     updatedAt: serverTimestamp(),
-  });
+  };
+  
+  // Also decrement speaker count if they were a speaker
+  if (wasSpeaker) {
+    updates.speakerCount = increment(-1);
+  }
+  
+  await updateDoc(roomRef, updates);
 }
 
 // ── Delete room ────────────────────────────────────────────────────────
@@ -268,7 +295,7 @@ export async function lowerHand(roomId: string, uid: string): Promise<void> {
   });
 }
 
-// ── Promote participant to speaker ────────────────────────────────────────
+// ── Promote listener to speaker ─────────────────────────────────────────────
 export async function promoteToSpeaker(roomId: string, uid: string): Promise<void> {
   const db = getFirebaseDb();
   const participantRef = doc(
@@ -279,6 +306,12 @@ export async function promoteToSpeaker(roomId: string, uid: string): Promise<voi
     isSpeaker: true,
     raisedHand: false,
     raisedHandAt: null,
+  });
+  
+  // Update room speaker count
+  const roomRef = doc(db, ROOMS_COLLECTION, roomId);
+  await updateDoc(roomRef, {
+    speakerCount: increment(1),
   });
 }
 
@@ -292,6 +325,12 @@ export async function demoteFromSpeaker(roomId: string, uid: string): Promise<vo
   await updateDoc(participantRef, {
     isSpeaker: false,
     isMuted: false,
+  });
+  
+  // Update room speaker count
+  const roomRef = doc(db, ROOMS_COLLECTION, roomId);
+  await updateDoc(roomRef, {
+    speakerCount: increment(-1),
   });
 }
 
@@ -443,6 +482,16 @@ export async function getUserBookmarkedRooms(userId: string): Promise<Room[]> {
   
   const roomsSnap = await getDocs(roomsQuery);
   return roomsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Room));
+}
+
+// ── Update room open mic mode ───────────────────────────────────────────
+export async function updateRoomOpenMic(roomId: string, openMic: boolean): Promise<void> {
+  const db = getFirebaseDb();
+  const roomRef = doc(db, ROOMS_COLLECTION, roomId);
+  await updateDoc(roomRef, {
+    openMic,
+    updatedAt: serverTimestamp(),
+  });
 }
 
 // ── Get all public rooms ────────────────────────────────────────────────

@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     console.log("API received room creation request:", body);
-    const { name, description, hostUid, hostHandle, maxParticipants, isPublic, category, tags, scheduledFor } = body;
+    const { name, description, hostUid, hostHandle, maxParticipants, isPublic, category, tags, scheduledFor, openMic } = body;
 
     // Validation
     if (!name || !hostUid || !hostHandle) {
@@ -52,6 +52,7 @@ export async function POST(request: NextRequest) {
       category: category || "GENERAL",
       tags: tags || [],
       scheduledFor: scheduledFor ? Timestamp.fromDate(new Date(scheduledFor)) : null,
+      openMic: openMic || false,
     });
 
     console.log("Room created successfully:", roomId);

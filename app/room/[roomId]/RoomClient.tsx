@@ -14,10 +14,11 @@ import AgoraRTC from "agora-rtc-sdk-ng";
 
 import { useAuth } from "@/app/components/AuthProvider";
 import { AGORA_APP_ID } from "@/lib/agora";
-import { getRoom, subscribeToRoom, subscribeToRoomParticipants, removeParticipant, sendRoomChatMessage, subscribeToRoomChat, raiseHand, lowerHand, promoteToSpeaker, demoteFromSpeaker, muteParticipant, unmuteParticipant, sendRoomReaction, subscribeToRoomReactions, bookmarkRoom, removeRoomBookmark, type Room, type RoomParticipant } from "@/lib/rooms";
+import { getRoom, subscribeToRoom, subscribeToRoomParticipants, removeParticipant, sendRoomChatMessage, subscribeToRoomChat, raiseHand, lowerHand, promoteToSpeaker, demoteFromSpeaker, muteParticipant, unmuteParticipant, sendRoomReaction, subscribeToRoomReactions, bookmarkRoom, removeRoomBookmark, updateRoomOpenMic, type Room, type RoomParticipant } from "@/lib/rooms";
 import { collection, query, where, getDocs, orderBy, limit, doc, getDoc } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 import { followUser, unfollowUser, isFollowing } from "@/lib/follows";
+import { createNotification } from "@/lib/notifications";
 
 interface RoomClientProps {
   roomId: string;
@@ -49,6 +50,8 @@ function RoomContent({ roomId }: RoomClientProps) {
   const [isOrbiting, setIsOrbiting] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
+  const [pendingRequests, setPendingRequests] = useState(0);
+  const [previousPendingRequests, setPreviousPendingRequests] = useState(0);
 
   // Agora setup (raw SDK)
   const [token, setToken] = useState<string | null>(null);
@@ -177,6 +180,27 @@ function RoomContent({ roomId }: RoomClientProps) {
       // Check if current user is a speaker
       const currentUser = participantsData.find(p => p.uid === user?.uid);
       setIsSpeaker(currentUser?.isSpeaker || false);
+      // Count pending raise hand requests for host
+      if (user && room?.hostUid === user.uid) {
+        const raisedHands = participantsData.filter(p => p.raisedHand && p.uid !== user.uid);
+        setPendingRequests(raisedHands.length);
+        
+        // Send notification when new requests come in
+        if (raisedHands.length > previousPendingRequests && room) {
+          const newRequests = raisedHands.length - previousPendingRequests;
+          raisedHands.slice(-newRequests).forEach(participant => {
+            createNotification(user.uid, {
+              type: "raise_hand",
+              fromUid: participant.uid,
+              fromHandle: participant.handle,
+              roomId: roomId,
+              roomName: room.name,
+              text: `${participant.handle} raised hand in "${room.name}"`,
+            });
+          });
+        }
+        setPreviousPendingRequests(raisedHands.length);
+      }
       // Check if current user has raised hand
       setHasRequestedToSpeak(currentUser?.raisedHand || false);
     });
@@ -364,6 +388,17 @@ function RoomContent({ roomId }: RoomClientProps) {
     }
   };
 
+  // Handle open mic toggle
+  const handleToggleOpenMic = async () => {
+    if (!user || !room || user.uid !== room.hostUid) return;
+    try {
+      const newOpenMic = !room.openMic;
+      await updateRoomOpenMic(roomId, newOpenMic);
+    } catch (error) {
+      console.error("Error toggling open mic:", error);
+    }
+  };
+
   // Send chat message
   const handleSendChat = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -413,6 +448,22 @@ function RoomContent({ roomId }: RoomClientProps) {
           <span className="text-neutral-500 flex items-center gap-1">
             <Users size={12} /> {participants.length}/{room.maxParticipants}
           </span>
+          {user && user.uid === room?.hostUid && pendingRequests > 0 && (
+            <span className="flex items-center gap-1 text-yellow-500 font-mono text-[10px] uppercase animate-pulse">
+              <Hand size={10} /> {pendingRequests} REQUEST{pendingRequests > 1 ? "S" : ""}
+            </span>
+          )}
+          {user && user.uid === room?.hostUid && (
+            <button
+              onClick={handleToggleOpenMic}
+              className={`font-mono text-[10px] uppercase px-2 py-1 border transition-colors cursor-pointer ${
+                room.openMic ? "border-white text-white" : "border-neutral-800 text-neutral-500"
+              }`}
+              title={room.openMic ? "Switch to raise hand mode" : "Switch to open mic mode"}
+            >
+              {room.openMic ? "OPEN MIC" : "RAISE HAND"}
+            </button>
+          )}
           {user && (
             <button
               onClick={handleBookmarkRoom}
@@ -490,11 +541,15 @@ function RoomContent({ roomId }: RoomClientProps) {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setProfileModal({ uid: participant.uid, handle: participant.handle })}
-                    className="w-8 h-8 border border-neutral-700 flex items-center justify-center font-mono text-xs text-neutral-400 relative hover:border-white hover:text-white transition-colors cursor-pointer"
+                    className={`w-8 h-8 border flex items-center justify-center font-mono text-xs relative hover:border-white hover:text-white transition-colors cursor-pointer ${
+                      speakingUsers.has(participant.uid) 
+                        ? "border-green-500 text-green-400 bg-green-500/10" 
+                        : "border-neutral-700 text-neutral-400"
+                    }`}
                   >
                     {participant.handle.charAt(1)}
                     {speakingUsers.has(participant.uid) && (
-                      <div className="absolute inset-0 bg-green-500/20 animate-pulse" />
+                      <div className="absolute inset-0 bg-green-500/30 animate-pulse" />
                     )}
                     {participant.raisedHand && (
                       <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center animate-bounce">
@@ -502,10 +557,20 @@ function RoomContent({ roomId }: RoomClientProps) {
                       </div>
                     )}
                   </button>
-                  <div>
-                    <div className="font-mono text-xs text-white">{participant.handle}</div>
-                    <div className="font-mono text-[10px] text-neutral-600 uppercase">
-                      {participant.isSpeaker ? "SPEAKER" : "LISTENER"}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-1.5">
+                      {speakingUsers.has(participant.uid) && (
+                        <Mic size={10} className="text-green-500 animate-pulse" />
+                      )}
+                      <div className="font-mono text-xs text-white">{participant.handle}</div>
+                    </div>
+                    <div className="font-mono text-[10px] text-neutral-600 uppercase flex items-center gap-1">
+                      {speakingUsers.has(participant.uid) && (
+                        <span className="text-green-500">NOW SPEAKING</span>
+                      )}
+                      {!speakingUsers.has(participant.uid) && (
+                        <span>{participant.isSpeaker ? "SPEAKER" : "LISTENER"}</span>
+                      )}
                     </div>
                   </div>
                 </div>
