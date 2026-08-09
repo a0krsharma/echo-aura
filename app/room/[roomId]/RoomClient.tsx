@@ -533,7 +533,7 @@ function RoomContent({ roomId }: RoomClientProps) {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {participants.map((participant) => (
               <div
-                key={participant.uid}
+                key={participant.id || participant.uid}
                 className={`border p-3 space-y-2 animate-fade-in ${
                   participant.isSpeaker ? "border-white" : "border-neutral-900"
                 }`}

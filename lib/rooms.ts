@@ -45,6 +45,7 @@ export interface Room {
 }
 
 export interface RoomParticipant {
+  id?: string; // Document ID for unique React keys
   uid: string;
   handle: string;
   joinedAt: Timestamp;
@@ -127,7 +128,7 @@ export async function createRoom(roomData: {
 // ── Add participant to room ───────────────────────────────────────────────
 export async function addParticipant(roomId: string, participant: Omit<RoomParticipant, "joinedAt">, isHost: boolean = false): Promise<void> {
   const db = getFirebaseDb();
-  const participantRef = doc(collection(db, PARTICIPANTS_COLLECTION));
+  const participantRef = doc(collection(db, PARTICIPANTS_COLLECTION), `${roomId}_${participant.uid}`);
   
   const newParticipant: RoomParticipant = {
     ...participant,
@@ -557,7 +558,10 @@ export function subscribeToRoomParticipants(roomId: string, callback: (participa
   );
 
   const unsubscribe = onSnapshot(participantsQuery, (querySnap) => {
-    const participants = querySnap.docs.map(doc => doc.data() as RoomParticipant);
+    const participants = querySnap.docs.map(doc => ({
+      ...doc.data() as RoomParticipant,
+      id: doc.id, // Include document ID for unique React keys
+    }));
     callback(participants);
   });
 
