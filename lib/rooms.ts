@@ -130,6 +130,10 @@ export async function addParticipant(roomId: string, participant: Omit<RoomParti
   const db = getFirebaseDb();
   const participantRef = doc(collection(db, PARTICIPANTS_COLLECTION), `${roomId}_${participant.uid}`);
   
+  // Check if participant already exists
+  const existingSnap = await getDoc(participantRef);
+  const isRejoining = existingSnap.exists();
+  
   const newParticipant: RoomParticipant = {
     ...participant,
     isSpeaker: isHost, // Host automatically becomes speaker
@@ -142,18 +146,19 @@ export async function addParticipant(roomId: string, participant: Omit<RoomParti
   });
   
   // Update room participant count (don't increment for host since they're already counted in room creation)
+  // Also don't increment if user is rejoining (they're already counted)
   const roomRef = doc(db, ROOMS_COLLECTION, roomId);
   const updates: any = {
     updatedAt: serverTimestamp(),
   };
   
-  if (!isHost) {
+  if (!isHost && !isRejoining) {
     updates.participantCount = increment(1);
   }
   
   // Speaker count is already set to 1 in room creation for host
-  // Only increment for non-host speakers
-  if (!isHost && participant.isSpeaker) {
+  // Only increment for non-host speakers who are not rejoining
+  if (!isHost && participant.isSpeaker && !isRejoining) {
     updates.speakerCount = increment(1);
   }
   
@@ -558,10 +563,12 @@ export function subscribeToRoomParticipants(roomId: string, callback: (participa
   );
 
   const unsubscribe = onSnapshot(participantsQuery, (querySnap) => {
-    const participants = querySnap.docs.map(doc => ({
-      ...doc.data() as RoomParticipant,
-      id: doc.id, // Include document ID for unique React keys
-    }));
+    const participants = querySnap.docs
+      .filter(doc => doc.id.startsWith(`${roomId}_`)) // Only include documents with expected ID pattern
+      .map(doc => ({
+        ...doc.data() as RoomParticipant,
+        id: doc.id, // Include document ID for unique React keys
+      }));
     callback(participants);
   });
 
