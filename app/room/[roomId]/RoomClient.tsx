@@ -14,7 +14,7 @@ import AgoraRTC from "agora-rtc-sdk-ng";
 
 import { useAuth } from "@/app/components/AuthProvider";
 import { AGORA_APP_ID } from "@/lib/agora";
-import { getRoom, subscribeToRoom, subscribeToRoomParticipants, removeParticipant, sendRoomChatMessage, subscribeToRoomChat, type Room, type RoomParticipant } from "@/lib/rooms";
+import { getRoom, subscribeToRoom, subscribeToRoomParticipants, removeParticipant, sendRoomChatMessage, subscribeToRoomChat, raiseHand, lowerHand, promoteToSpeaker, demoteFromSpeaker, muteParticipant, unmuteParticipant, type Room, type RoomParticipant } from "@/lib/rooms";
 
 interface RoomClientProps {
   roomId: string;
@@ -162,6 +162,8 @@ function RoomContent({ roomId }: RoomClientProps) {
       // Check if current user is a speaker
       const currentUser = participantsData.find(p => p.uid === user?.uid);
       setIsSpeaker(currentUser?.isSpeaker || false);
+      // Check if current user has raised hand
+      setHasRequestedToSpeak(currentUser?.raisedHand || false);
     });
 
     // Subscribe to real-time chat
@@ -189,14 +191,61 @@ function RoomContent({ roomId }: RoomClientProps) {
   };
 
   // Request to speak
-  const handleRequestToSpeak = () => {
-    setHasRequestedToSpeak(true);
-    // In a real implementation, this would send a request to the host
-    // For now, we'll auto-approve after 2 seconds for demo
-    setTimeout(() => {
+  const handleRequestToSpeak = async () => {
+    if (!user) return;
+    try {
+      await raiseHand(roomId, user.uid);
+      setHasRequestedToSpeak(true);
+    } catch (error) {
+      console.error("Error raising hand:", error);
+    }
+  };
+
+  // Cancel request to speak
+  const handleCancelRequest = async () => {
+    if (!user) return;
+    try {
+      await lowerHand(roomId, user.uid);
       setHasRequestedToSpeak(false);
-      setIsSpeaker(true);
-    }, 2000);
+    } catch (error) {
+      console.error("Error lowering hand:", error);
+    }
+  };
+
+  // Moderator: Promote to speaker
+  const handlePromoteSpeaker = async (uid: string) => {
+    try {
+      await promoteToSpeaker(roomId, uid);
+    } catch (error) {
+      console.error("Error promoting speaker:", error);
+    }
+  };
+
+  // Moderator: Demote from speaker
+  const handleDemoteSpeaker = async (uid: string) => {
+    try {
+      await demoteFromSpeaker(roomId, uid);
+    } catch (error) {
+      console.error("Error demoting speaker:", error);
+    }
+  };
+
+  // Moderator: Mute participant
+  const handleMute = async (uid: string) => {
+    try {
+      await muteParticipant(roomId, uid);
+    } catch (error) {
+      console.error("Error muting participant:", error);
+    }
+  };
+
+  // Moderator: Unmute participant
+  const handleUnmute = async (uid: string) => {
+    try {
+      await unmuteParticipant(roomId, uid);
+    } catch (error) {
+      console.error("Error unmuting participant:", error);
+    }
   };
 
   // Send chat message
@@ -319,6 +368,11 @@ function RoomContent({ roomId }: RoomClientProps) {
                     {speakingUsers.has(participant.uid) && (
                       <div className="absolute inset-0 bg-white/20 animate-pulse" />
                     )}
+                    {participant.raisedHand && (
+                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
+                        <Hand size={8} className="text-black" />
+                      </div>
+                    )}
                   </div>
                   <div>
                     <div className="font-mono text-xs text-white">{participant.handle}</div>
@@ -327,6 +381,35 @@ function RoomContent({ roomId }: RoomClientProps) {
                     </div>
                   </div>
                 </div>
+                {/* Moderator controls for host */}
+                {user && user.uid === room?.hostUid && participant.uid !== user.uid && (
+                  <div className="flex items-center gap-1 pt-2 border-t border-neutral-900">
+                    {participant.raisedHand ? (
+                      <button
+                        onClick={() => handlePromoteSpeaker(participant.uid)}
+                        className="font-mono text-[8px] text-green-500 hover:text-green-400 uppercase cursor-pointer"
+                      >
+                        [ACCEPT]
+                      </button>
+                    ) : null}
+                    {participant.isSpeaker ? (
+                      <button
+                        onClick={() => handleDemoteSpeaker(participant.uid)}
+                        className="font-mono text-[8px] text-red-500 hover:text-red-400 uppercase cursor-pointer"
+                      >
+                        [DEMOTE]
+                      </button>
+                    ) : null}
+                    {participant.isSpeaker && (
+                      <button
+                        onClick={() => participant.isMuted ? handleUnmute(participant.uid) : handleMute(participant.uid)}
+                        className="font-mono text-[8px] text-neutral-500 hover:text-white uppercase cursor-pointer"
+                      >
+                        [{participant.isMuted ? "UNMUTE" : "MUTE"}]
+                      </button>
+                    )}
+                  </div>
+                )}
                 {participant.isSpeaker && (
                   <div className="flex items-center gap-1">
                     <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
@@ -370,14 +453,23 @@ function RoomContent({ roomId }: RoomClientProps) {
           ) : (
             <div className="flex items-center justify-between">
               <span className="font-mono text-xs text-neutral-600 uppercase">LISTENING MODE</span>
-              <button
-                onClick={handleRequestToSpeak}
-                disabled={hasRequestedToSpeak}
-                className="px-4 py-2 border border-white text-white hover:bg-white hover:text-black font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-2"
-              >
-                <Hand size={12} />
-                {hasRequestedToSpeak ? "[ REQUESTED ]" : "[ REQUEST TO SPEAK ]"}
-              </button>
+              {hasRequestedToSpeak ? (
+                <button
+                  onClick={handleCancelRequest}
+                  className="px-4 py-2 border border-yellow-500 text-yellow-500 hover:bg-yellow-500 hover:text-black font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center gap-2"
+                >
+                  <Hand size={12} />
+                  [ CANCEL REQUEST ]
+                </button>
+              ) : (
+                <button
+                  onClick={handleRequestToSpeak}
+                  className="px-4 py-2 border border-white text-white hover:bg-white hover:text-black font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center gap-2"
+                >
+                  <Hand size={12} />
+                  [ REQUEST TO SPEAK ]
+                </button>
+              )}
             </div>
           )}
         </div>

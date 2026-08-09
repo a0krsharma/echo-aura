@@ -45,6 +45,9 @@ export interface RoomParticipant {
   handle: string;
   joinedAt: Timestamp;
   isSpeaker: boolean;
+  raisedHand?: boolean;
+  raisedHandAt?: Timestamp;
+  isMuted?: boolean;
 }
 
 const ROOMS_COLLECTION = "rooms";
@@ -233,6 +236,83 @@ export async function deleteRoom(roomId: string): Promise<void> {
   for (const doc of messagesSnap.docs) {
     await deleteDoc(doc.ref);
   }
+}
+
+// ── Raise hand to request speaking ───────────────────────────────────────
+export async function raiseHand(roomId: string, uid: string): Promise<void> {
+  const db = getFirebaseDb();
+  const participantRef = doc(
+    collection(db, PARTICIPANTS_COLLECTION),
+    `${roomId}_${uid}`
+  );
+  await updateDoc(participantRef, {
+    raisedHand: true,
+    raisedHandAt: serverTimestamp(),
+  });
+}
+
+// ── Lower hand to cancel speaking request ─────────────────────────────────
+export async function lowerHand(roomId: string, uid: string): Promise<void> {
+  const db = getFirebaseDb();
+  const participantRef = doc(
+    collection(db, PARTICIPANTS_COLLECTION),
+    `${roomId}_${uid}`
+  );
+  await updateDoc(participantRef, {
+    raisedHand: false,
+    raisedHandAt: null,
+  });
+}
+
+// ── Promote participant to speaker ────────────────────────────────────────
+export async function promoteToSpeaker(roomId: string, uid: string): Promise<void> {
+  const db = getFirebaseDb();
+  const participantRef = doc(
+    collection(db, PARTICIPANTS_COLLECTION),
+    `${roomId}_${uid}`
+  );
+  await updateDoc(participantRef, {
+    isSpeaker: true,
+    raisedHand: false,
+    raisedHandAt: null,
+  });
+}
+
+// ── Demote speaker to listener ────────────────────────────────────────────
+export async function demoteFromSpeaker(roomId: string, uid: string): Promise<void> {
+  const db = getFirebaseDb();
+  const participantRef = doc(
+    collection(db, PARTICIPANTS_COLLECTION),
+    `${roomId}_${uid}`
+  );
+  await updateDoc(participantRef, {
+    isSpeaker: false,
+    isMuted: false,
+  });
+}
+
+// ── Mute speaker ─────────────────────────────────────────────────────────
+export async function muteParticipant(roomId: string, uid: string): Promise<void> {
+  const db = getFirebaseDb();
+  const participantRef = doc(
+    collection(db, PARTICIPANTS_COLLECTION),
+    `${roomId}_${uid}`
+  );
+  await updateDoc(participantRef, {
+    isMuted: true,
+  });
+}
+
+// ── Unmute speaker ───────────────────────────────────────────────────────
+export async function unmuteParticipant(roomId: string, uid: string): Promise<void> {
+  const db = getFirebaseDb();
+  const participantRef = doc(
+    collection(db, PARTICIPANTS_COLLECTION),
+    `${roomId}_${uid}`
+  );
+  await updateDoc(participantRef, {
+    isMuted: false,
+  });
 }
 
 // ── Get room by ID ─────────────────────────────────────────────────────
