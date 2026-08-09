@@ -87,12 +87,17 @@ export async function createRoom(roomData: {
 
   await setDoc(roomRef, newRoom);
 
-  // Add host as first participant
-  await addParticipant(roomId, {
-    uid: roomData.hostUid,
-    handle: roomData.hostHandle,
-    isSpeaker: true,
-  });
+  // Add host as first participant (try-catch to handle permission issues)
+  try {
+    await addParticipant(roomId, {
+      uid: roomData.hostUid,
+      handle: roomData.hostHandle,
+      isSpeaker: true,
+    });
+  } catch (error) {
+    console.error("Error adding host as participant:", error);
+    // Continue anyway - room was created successfully
+  }
 
   return roomId;
 }
