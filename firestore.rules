@@ -100,5 +100,30 @@ service cloud.firestore {
       }
     }
 
+    // ── ROOMS ────────────────────────────────────────────────────────────
+    // Public read for room discovery
+    // Authenticated users can create rooms
+    match /rooms/{roomId} {
+      allow read:   if true;
+      allow create: if request.auth != null
+                    && request.resource.data.hostUid == request.auth.uid;
+      allow update: if request.auth != null
+                    && (resource.data.hostUid == request.auth.uid || request.resource.data.hostUid == request.auth.uid);
+      allow delete: if request.auth != null
+                    && resource.data.hostUid == request.auth.uid;
+    }
+
+    // ── ROOM PARTICIPANTS ───────────────────────────────────────────────
+    // Room participants sub-collection
+    match /room_participants/{participantId} {
+      allow read:   if true;
+      allow create: if request.auth != null
+                    && request.resource.data.uid == request.auth.uid;
+      allow update: if request.auth != null
+                    && request.resource.data.uid == request.auth.uid;
+      allow delete: if request.auth != null
+                    && request.resource.data.uid == request.auth.uid;
+    }
+
   }
 }
