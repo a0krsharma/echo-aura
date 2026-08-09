@@ -263,11 +263,23 @@ export default function RoomsPage() {
       setRooms(list);
     });
     
-    // Load trending rooms
+    return () => {
+      unsubClashes();
+      unsubRooms();
+    };
+  }, []);
+
+  // Load trending rooms when category changes
+  useEffect(() => {
     const loadTrending = async () => {
       setLoadingTrending(true);
       try {
-        const trending = await getTrendingRooms(5);
+        let trending;
+        if (selectedCategory === "ALL") {
+          trending = await getTrendingRooms(10);
+        } else {
+          trending = await getRoomsByCategory(selectedCategory, 10);
+        }
         setTrendingRooms(trending);
       } catch (error) {
         console.error("Error loading trending rooms:", error);
@@ -276,12 +288,7 @@ export default function RoomsPage() {
       }
     };
     loadTrending();
-    
-    return () => {
-      unsubClashes();
-      unsubRooms();
-    };
-  }, []);
+  }, [selectedCategory]);
 
   const handleJoinRoom = async (roomId: string) => {
     if (!user) return;

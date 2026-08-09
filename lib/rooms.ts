@@ -7,22 +7,24 @@
 
 import {
   collection,
+  addDoc,
   doc,
-  getDoc,
-  getDocs,
-  setDoc,
-  updateDoc,
-  deleteDoc,
   query,
   where,
-  orderBy,
   onSnapshot,
+  updateDoc,
+  setDoc,
+  deleteDoc,
+  getDoc,
+  getDocs,
+  writeBatch,
   serverTimestamp,
-  Timestamp,
   increment,
-  addDoc,
+  orderBy,
+  type Timestamp,
 } from "firebase/firestore";
-import { getFirebaseDb } from "./firebase";
+import { getFirebaseDb } from "@/lib/firebase";
+import { createNotification } from "@/lib/notifications";
 
 export interface Room {
   id: string;
@@ -145,6 +147,22 @@ export async function addParticipant(roomId: string, participant: Omit<RoomParti
     roomId,
   });
   
+  // Get room info for notification
+  const roomSnap = await getDoc(doc(db, ROOMS_COLLECTION, roomId));
+  const roomData = roomSnap.data();
+  
+  // Send notification to host when user joins (not rejoining)
+  if (!isHost && !isRejoining && roomData) {
+    createNotification(roomData.hostUid, {
+      type: "room_join",
+      fromUid: participant.uid,
+      fromHandle: participant.handle,
+      roomId: roomId,
+      roomName: roomData.name,
+      text: `${participant.handle} joined your room "${roomData.name}"`,
+    });
+  }
+  
   // Update room participant count (don't increment for host since they're already counted in room creation)
   // Also don't increment if user is rejoining (they're already counted)
   const roomRef = doc(db, ROOMS_COLLECTION, roomId);
@@ -184,6 +202,9 @@ export async function sendRoomChatMessage(roomId: string, message: {
     text: message.text,
     timestamp: serverTimestamp(),
   });
+  
+  // TODO: Add mention detection and notifications
+  // This requires a user lookup by handle function which doesn't exist yet
 }
 
 // ── Subscribe to room chat messages (real-time) ────────────────────────
@@ -229,8 +250,25 @@ export async function removeParticipant(roomId: string, uid: string): Promise<vo
   // Check if participant was a speaker before removing
   const participantSnap = await getDoc(participantRef);
   const wasSpeaker = participantSnap.exists() && participantSnap.data().isSpeaker;
+  const participantData = participantSnap.data();
 
   await deleteDoc(participantRef);
+
+  // Get room info for notification
+  const roomSnap = await getDoc(doc(db, ROOMS_COLLECTION, roomId));
+  const roomData = roomSnap.data();
+
+  // Send notification to host when user leaves
+  if (participantData && roomData && uid !== roomData.hostUid) {
+    createNotification(roomData.hostUid, {
+      type: "room_leave",
+      fromUid: uid,
+      fromHandle: participantData.handle,
+      roomId: roomId,
+      roomName: roomData.name,
+      text: `${participantData.handle} left your room "${roomData.name}"`,
+    });
+  }
 
   // Update room participant count
   const roomRef = doc(db, ROOMS_COLLECTION, roomId);
@@ -308,11 +346,32 @@ export async function promoteToSpeaker(roomId: string, uid: string): Promise<voi
     collection(db, PARTICIPANTS_COLLECTION),
     `${roomId}_${uid}`
   );
+  
+  // Get participant data for notification
+  const participantSnap = await getDoc(participantRef);
+  const participantData = participantSnap.data();
+  
   await updateDoc(participantRef, {
     isSpeaker: true,
     raisedHand: false,
     raisedHandAt: null,
   });
+  
+  // Get room info for notification
+  const roomSnap = await getDoc(doc(db, ROOMS_COLLECTION, roomId));
+  const roomData = roomSnap.data();
+  
+  // Send notification to promoted user
+  if (participantData && roomData) {
+    createNotification(uid, {
+      type: "room_promote",
+      fromUid: roomData.hostUid,
+      fromHandle: roomData.hostHandle,
+      roomId: roomId,
+      roomName: roomData.name,
+      text: `You were promoted to speaker in "${roomData.name}"`,
+    });
+  }
   
   // Update room speaker count
   const roomRef = doc(db, ROOMS_COLLECTION, roomId);
@@ -328,10 +387,31 @@ export async function demoteFromSpeaker(roomId: string, uid: string): Promise<vo
     collection(db, PARTICIPANTS_COLLECTION),
     `${roomId}_${uid}`
   );
+  
+  // Get participant data for notification
+  const participantSnap = await getDoc(participantRef);
+  const participantData = participantSnap.data();
+  
   await updateDoc(participantRef, {
     isSpeaker: false,
     isMuted: false,
   });
+  
+  // Get room info for notification
+  const roomSnap = await getDoc(doc(db, ROOMS_COLLECTION, roomId));
+  const roomData = roomSnap.data();
+  
+  // Send notification to demoted user
+  if (participantData && roomData) {
+    createNotification(uid, {
+      type: "room_demote",
+      fromUid: roomData.hostUid,
+      fromHandle: roomData.hostHandle,
+      roomId: roomId,
+      roomName: roomData.name,
+      text: `You were demoted from speaker in "${roomData.name}"`,
+    });
+  }
   
   // Update room speaker count
   const roomRef = doc(db, ROOMS_COLLECTION, roomId);
@@ -453,11 +533,34 @@ export async function getRoomsByCategory(category: string, limit: number = 10): 
 export async function bookmarkRoom(userId: string, roomId: string): Promise<void> {
   const db = getFirebaseDb();
   const bookmarkRef = doc(db, "user_bookmarks", `${userId}_${roomId}`);
+  
+  // Get room info for notification
+  const roomSnap = await getDoc(doc(db, ROOMS_COLLECTION, roomId));
+  const roomData = roomSnap.data();
+  
   await setDoc(bookmarkRef, {
     userId,
     roomId,
     bookmarkedAt: serverTimestamp(),
   });
+  
+  // Send notification to room host when someone bookmarks their room
+  if (roomData && userId !== roomData.hostUid) {
+    // Get user handle for the bookmarking user
+    const userSnap = await getDoc(doc(db, "users", userId));
+    const userData = userSnap.data();
+    
+    if (userData) {
+      createNotification(roomData.hostUid, {
+        type: "bookmark",
+        fromUid: userId,
+        fromHandle: userData.handle,
+        roomId: roomId,
+        roomName: roomData.name,
+        text: `${userData.handle} bookmarked your room "${roomData.name}"`,
+      });
+    }
+  }
 }
 
 // ── Remove room bookmark ───────────────────────────────────────────────

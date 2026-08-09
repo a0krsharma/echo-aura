@@ -29,6 +29,13 @@ service cloud.firestore {
       allow update: if request.auth != null; // pulse / reverb count increments
       allow delete: if request.auth != null
                     && resource.data.authorUid == request.auth.uid;
+
+      // Reverbs sub-collection (voice comments)
+      match /reverbs/{reverbId} {
+        allow read:   if true;
+        allow create: if request.auth != null;
+        allow update, delete: if false;
+      }
     }
 
     // ── ECHOES ──────────────────────────────────────────────────────────
