@@ -14,7 +14,7 @@ import AgoraRTC from "agora-rtc-sdk-ng";
 
 import { useAuth } from "@/app/components/AuthProvider";
 import { AGORA_APP_ID } from "@/lib/agora";
-import { getRoom, subscribeToRoom, subscribeToRoomParticipants, removeParticipant, type Room, type RoomParticipant } from "@/lib/rooms";
+import { getRoom, subscribeToRoom, subscribeToRoomParticipants, removeParticipant, sendRoomChatMessage, subscribeToRoomChat, type Room, type RoomParticipant } from "@/lib/rooms";
 
 interface RoomClientProps {
   roomId: string;
@@ -38,6 +38,7 @@ function RoomContent({ roomId }: RoomClientProps) {
   // Agora setup (raw SDK)
   const [token, setToken] = useState<string | null>(null);
   const [micMuted, setMicMuted] = useState(false);
+  const [speakingUsers, setSpeakingUsers] = useState<Set<string>>(new Set());
   const clientRef = useRef<any>(null);
   const localTrackRef = useRef<any>(null);
 
@@ -80,11 +81,26 @@ function RoomContent({ roomId }: RoomClientProps) {
           if (mediaType === "audio") {
             await client.subscribe(remoteUser, mediaType);
             console.log("[Room] Subscribed to remote user:", remoteUser.uid);
+            // Play the remote audio track
+            remoteUser.audioTrack.play();
+            console.log("[Room] Playing remote audio for:", remoteUser.uid);
+            
+            // Track speaking users
+            remoteUser.audioTrack.on("volume-indicator", (volume: number) => {
+              if (volume > 5 && mounted) {
+                setSpeakingUsers(prev => new Set([...prev, remoteUser.uid]));
+              }
+            });
           }
         });
 
         client.on("user-unpublished", (remoteUser: any) => {
           console.log("[Room] Remote user unpublished:", remoteUser.uid);
+          setSpeakingUsers(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(remoteUser.uid);
+            return newSet;
+          });
         });
 
       } catch (error) {
@@ -138,9 +154,15 @@ function RoomContent({ roomId }: RoomClientProps) {
       setIsSpeaker(currentUser?.isSpeaker || false);
     });
 
+    // Subscribe to real-time chat
+    const unsubChat = subscribeToRoomChat(roomId, (messages) => {
+      setChatMessages(messages);
+    });
+
     return () => {
       unsubRoom();
       unsubParticipants();
+      unsubChat();
     };
   }, [roomId, user?.uid]);
 
@@ -168,25 +190,27 @@ function RoomContent({ roomId }: RoomClientProps) {
   };
 
   // Send chat message
-  const handleSendChat = (e: React.FormEvent) => {
+  const handleSendChat = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatInput.trim() || !user) return;
 
-    const newMessage = {
-      handle: user.handle || "@ANON",
-      text: chatInput.trim(),
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
-
-    setChatMessages(prev => [...prev, newMessage]);
-    setChatInput("");
-    
-    // Auto-scroll to bottom
-    setTimeout(() => {
-      if (chatScrollRef.current) {
-        chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
-      }
-    }, 100);
+    try {
+      await sendRoomChatMessage(roomId, {
+        uid: user.uid,
+        handle: user.handle || "@ANON",
+        text: chatInput.trim(),
+      });
+      setChatInput("");
+      
+      // Auto-scroll to bottom
+      setTimeout(() => {
+        if (chatScrollRef.current) {
+          chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+        }
+      }, 100);
+    } catch (error) {
+      console.error("Error sending chat message:", error);
+    }
   };
 
   if (!room) {
@@ -280,8 +304,11 @@ function RoomContent({ roomId }: RoomClientProps) {
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 border border-neutral-700 flex items-center justify-center font-mono text-xs text-neutral-400">
+                  <div className="w-8 h-8 border border-neutral-700 flex items-center justify-center font-mono text-xs text-neutral-400 relative">
                     {participant.handle.charAt(1)}
+                    {speakingUsers.has(participant.uid) && (
+                      <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                    )}
                   </div>
                   <div>
                     <div className="font-mono text-xs text-white">{participant.handle}</div>

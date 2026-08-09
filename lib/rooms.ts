@@ -138,6 +138,52 @@ export async function addParticipant(roomId: string, participant: {
   });
 }
 
+// ── Send chat message to room ───────────────────────────────────────────
+export async function sendRoomChatMessage(roomId: string, message: {
+  uid: string;
+  handle: string;
+  text: string;
+}): Promise<void> {
+  const db = getFirebaseDb();
+  const messagesRef = collection(db, "room_messages");
+  const messageRef = doc(messagesRef);
+  
+  await setDoc(messageRef, {
+    roomId,
+    uid: message.uid,
+    handle: message.handle,
+    text: message.text,
+    timestamp: serverTimestamp(),
+  });
+}
+
+// ── Subscribe to room chat messages (real-time) ────────────────────────
+export function subscribeToRoomChat(roomId: string, callback: (messages: Array<{uid: string; handle: string; text: string; time: string}>) => void): () => void {
+  const db = getFirebaseDb();
+  const messagesQuery = query(
+    collection(db, "room_messages"),
+    where("roomId", "==", roomId),
+    orderBy("timestamp", "asc")
+  );
+
+  const unsubscribe = onSnapshot(messagesQuery, (querySnap) => {
+    const messages = querySnap.docs.map(doc => {
+      const data = doc.data();
+      return {
+        uid: data.uid,
+        handle: data.handle,
+        text: data.text,
+        time: data.timestamp ? new Date(data.timestamp.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+    });
+    callback(messages);
+  }, (error) => {
+    console.error("[subscribeToRoomChat] Error:", error);
+  });
+
+  return unsubscribe;
+}
+
 // ── Remove participant from room ────────────────────────────────────────
 export async function removeParticipant(roomId: string, uid: string): Promise<void> {
   const db = getFirebaseDb();
