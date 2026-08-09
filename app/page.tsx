@@ -16,6 +16,7 @@ import {
 import { useRouter } from "next/navigation";
 import { uploadAudio } from "@/lib/cloudinary";
 import { createNotification } from "@/lib/notifications";
+import { followUser, unfollowUser, isFollowing } from "@/lib/follows";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface FeedPost {
@@ -505,11 +506,12 @@ function useSwipeGesture(onSwipeLeft?: () => void, onSwipeRight?: () => void) {
 }
 
 // ─── Post Card Component (for proper hook usage) ───────────────────────────────
-function PostCard({ post, user, orbitedPosts, activePostId, deletingId, onPulse, onOrbit, onShare, onDelete, onReverbClick, onProfileClick, onActiveChange, setRef }: {
+function PostCard({ post, user, orbitedPosts, activePostId, deletingId, onPulse, onOrbit, onShare, onDelete, onReverbClick, onProfileClick, onActiveChange, setRef, onFollow, onUnfollow, following }: {
   post: FeedPost; user: any; orbitedPosts: Set<string>; activePostId: string | null;
   deletingId: string | null; onPulse: (p: FeedPost) => void; onOrbit: (p: FeedPost) => void;
   onShare: (p: FeedPost) => void; onDelete: (id: string) => void; onReverbClick: (rid?: string, rh?: string) => void;
   onProfileClick: (h: string) => void; onActiveChange: (id: string | null) => void; setRef: (id: string, el: HTMLElement | null) => void;
+  onFollow: (uid: string, handle: string) => void; onUnfollow: (uid: string) => void; following: Set<string>;
 }) {
   const swipeHandlers = useSwipeGesture(
     () => onPulse(post), // Swipe left = pulse
@@ -531,10 +533,24 @@ function PostCard({ post, user, orbitedPosts, activePostId, deletingId, onPulse,
     >
       {/* Header */}
       <div className="flex items-center justify-between">
-        <button onClick={() => onProfileClick(post.authorHandle)}
-          className="font-mono text-xs tracking-widest text-white hover:underline uppercase cursor-pointer">
-          {post.authorHandle}
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => onProfileClick(post.authorHandle)}
+            className="font-mono text-xs tracking-widest text-white hover:underline uppercase cursor-pointer">
+            {post.authorHandle}
+          </button>
+          {!isOwn && user && (
+            <button
+              onClick={() => following.has(post.authorUid) ? onUnfollow(post.authorUid) : onFollow(post.authorUid, post.authorHandle)}
+              className={`font-mono text-[10px] tracking-widest uppercase px-2 py-0.5 border transition-colors cursor-pointer ${
+                following.has(post.authorUid)
+                  ? "border-neutral-700 text-neutral-500 hover:border-white hover:text-white"
+                  : "border-white text-white hover:bg-white hover:text-black"
+              }`}
+            >
+              {following.has(post.authorUid) ? "ORBITING" : "ORBIT"}
+            </button>
+          )}
+        </div>
         <div className="flex items-center gap-3">
           <span className="font-mono text-[10px] tracking-widest text-neutral-700 uppercase">{timeAgo(post.createdAt)}</span>
           {isOwn && (
@@ -595,6 +611,7 @@ export default function HomeFeedPage() {
   const [activePostId, setActiveId] = useState<string|null>(null);
   const [deletingId, setDeletingId] = useState<string|null>(null);
   const [reverbModal, setReverbModal] = useState<{post:FeedPost;rid?:string;rh?:string}|null>(null);
+  const [following, setFollowing]  = useState<Set<string>>(new Set());
   const userInteracted = useRef(false);
   const articleRefs    = useRef<Map<string,HTMLElement>>(new Map());
   const observerRef    = useRef<IntersectionObserver|null>(null);
@@ -669,6 +686,22 @@ export default function HomeFeedPage() {
     }
   };
 
+  const handleFollow=async(uid:string, handle:string)=>{
+    if(!user)return;
+    try{
+      await followUser(user.uid, user.handle||"@ANON", uid, handle);
+      setFollowing(prev=>new Set([...prev, uid]));
+    }catch(e){console.error(e);}
+  };
+
+  const handleUnfollow=async(uid:string)=>{
+    if(!user)return;
+    try{
+      await unfollowUser(user.uid, uid);
+      setFollowing(prev=>{const next=new Set(prev);next.delete(uid);return next;});
+    }catch(e){console.error(e);}
+  };
+
   return(
     <div className="min-h-screen bg-black text-white pb-28 md:pb-8 flex flex-col font-sans"
       onClick={()=>{userInteracted.current=true;}}>
@@ -714,6 +747,9 @@ export default function HomeFeedPage() {
                 }}
                 onProfileClick={h => router.push(`/${h.replace(/^@/, "")}`)}
                 onActiveChange={setActiveId}
+                onFollow={handleFollow}
+                onUnfollow={handleUnfollow}
+                following={following}
                 setRef={setRef}
               />
             ))}

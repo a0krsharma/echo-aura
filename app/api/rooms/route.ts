@@ -8,12 +8,13 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createRoom, getPublicRooms } from "@/lib/rooms";
+import { Timestamp } from "firebase/firestore";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     console.log("API received room creation request:", body);
-    const { name, description, hostUid, hostHandle, maxParticipants, isPublic, category, tags } = body;
+    const { name, description, hostUid, hostHandle, maxParticipants, isPublic, category, tags, scheduledFor } = body;
 
     // Validation
     if (!name || !hostUid || !hostHandle) {
@@ -50,6 +51,7 @@ export async function POST(request: NextRequest) {
       isPublic: isPublic !== false,
       category: category || "GENERAL",
       tags: tags || [],
+      scheduledFor: scheduledFor ? Timestamp.fromDate(new Date(scheduledFor)) : null,
     });
 
     console.log("Room created successfully:", roomId);

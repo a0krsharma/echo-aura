@@ -20,6 +20,7 @@ import {
   serverTimestamp,
   Timestamp,
   increment,
+  addDoc,
 } from "firebase/firestore";
 import { getFirebaseDb } from "./firebase";
 
@@ -38,6 +39,7 @@ export interface Room {
   updatedAt: Timestamp;
   isActive: boolean;
   agoraChannel: string;
+  scheduledFor?: Timestamp | null;
 }
 
 export interface RoomParticipant {
@@ -63,6 +65,7 @@ export async function createRoom(roomData: {
   isPublic: boolean;
   category: string;
   tags: string[];
+  scheduledFor?: Timestamp | null;
 }): Promise<string> {
   const db = getFirebaseDb();
   const roomRef = doc(collection(db, ROOMS_COLLECTION));
@@ -84,8 +87,9 @@ export async function createRoom(roomData: {
     tags: roomData.tags,
     createdAt: serverTimestamp() as Timestamp,
     updatedAt: serverTimestamp() as Timestamp,
-    isActive: true,
+    isActive: !roomData.scheduledFor, // Inactive if scheduled for future
     agoraChannel,
+    scheduledFor: roomData.scheduledFor || null,
   };
 
   console.log("[createRoom] Attempting to save room to Firestore:", newRoom);
@@ -315,6 +319,47 @@ export async function unmuteParticipant(roomId: string, uid: string): Promise<vo
   });
 }
 
+// ── Send reaction to room ────────────────────────────────────────────────
+export async function sendRoomReaction(roomId: string, reaction: {
+  uid: string;
+  handle: string;
+  emoji: string;
+}): Promise<void> {
+  const db = getFirebaseDb();
+  const reactionsRef = collection(db, "room_reactions");
+  await addDoc(reactionsRef, {
+    roomId,
+    ...reaction,
+    timestamp: serverTimestamp(),
+  });
+}
+
+// ── Subscribe to room reactions ───────────────────────────────────────────
+export function subscribeToRoomReactions(roomId: string, callback: (reactions: Array<{uid: string; handle: string; emoji: string; timestamp: any}>) => void): () => void {
+  const db = getFirebaseDb();
+  const reactionsQuery = query(
+    collection(db, "room_reactions"),
+    where("roomId", "==", roomId)
+  );
+
+  const unsubscribe = onSnapshot(reactionsQuery, (querySnap) => {
+    const reactions = querySnap.docs.map(doc => {
+      const data = doc.data();
+      return {
+        uid: data.uid,
+        handle: data.handle,
+        emoji: data.emoji,
+        timestamp: data.timestamp,
+      };
+    });
+    callback(reactions);
+  }, (error) => {
+    console.error("[subscribeToRoomReactions] Error:", error);
+  });
+
+  return unsubscribe;
+}
+
 // ── Get room by ID ─────────────────────────────────────────────────────
 export async function getRoom(roomId: string): Promise<Room | null> {
   const db = getFirebaseDb();
@@ -324,6 +369,80 @@ export async function getRoom(roomId: string): Promise<Room | null> {
   if (!roomSnap.exists()) return null;
 
   return { id: roomSnap.id, ...roomSnap.data() } as Room;
+}
+
+// ── Get trending rooms (sorted by participant count) ─────────────────────
+export async function getTrendingRooms(limit: number = 10): Promise<Room[]> {
+  const db = getFirebaseDb();
+  const q = query(
+    collection(db, ROOMS_COLLECTION),
+    where("isActive", "==", true),
+    where("isPublic", "==", true)
+  );
+  
+  const snap = await getDocs(q);
+  const rooms = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Room));
+  
+  // Sort by participant count (descending)
+  return rooms.sort((a, b) => b.participantCount - a.participantCount).slice(0, limit);
+}
+
+// ── Get rooms by category ────────────────────────────────────────────────
+export async function getRoomsByCategory(category: string, limit: number = 10): Promise<Room[]> {
+  const db = getFirebaseDb();
+  const q = query(
+    collection(db, ROOMS_COLLECTION),
+    where("isActive", "==", true),
+    where("isPublic", "==", true),
+    where("category", "==", category)
+  );
+  
+  const snap = await getDocs(q);
+  const rooms = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Room));
+  
+  // Sort by participant count (descending)
+  return rooms.sort((a, b) => b.participantCount - a.participantCount).slice(0, limit);
+}
+
+// ── Bookmark room for user ───────────────────────────────────────────────
+export async function bookmarkRoom(userId: string, roomId: string): Promise<void> {
+  const db = getFirebaseDb();
+  const bookmarkRef = doc(db, "user_bookmarks", `${userId}_${roomId}`);
+  await setDoc(bookmarkRef, {
+    userId,
+    roomId,
+    bookmarkedAt: serverTimestamp(),
+  });
+}
+
+// ── Remove room bookmark ───────────────────────────────────────────────
+export async function removeRoomBookmark(userId: string, roomId: string): Promise<void> {
+  const db = getFirebaseDb();
+  const bookmarkRef = doc(db, "user_bookmarks", `${userId}_${roomId}`);
+  await deleteDoc(bookmarkRef);
+}
+
+// ── Get user's bookmarked rooms ───────────────────────────────────────────
+export async function getUserBookmarkedRooms(userId: string): Promise<Room[]> {
+  const db = getFirebaseDb();
+  const bookmarksQuery = query(
+    collection(db, "user_bookmarks"),
+    where("userId", "==", userId)
+  );
+  
+  const bookmarksSnap = await getDocs(bookmarksQuery);
+  const roomIds = bookmarksSnap.docs.map(doc => doc.data().roomId);
+  
+  if (roomIds.length === 0) return [];
+  
+  // Get room details
+  const roomsQuery = query(
+    collection(db, ROOMS_COLLECTION),
+    where("__name__", "in", roomIds.slice(0, 10)) // Firestore limit for 'in' queries
+  );
+  
+  const roomsSnap = await getDocs(roomsQuery);
+  return roomsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Room));
 }
 
 // ── Get all public rooms ────────────────────────────────────────────────

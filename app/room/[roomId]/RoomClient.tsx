@@ -14,7 +14,10 @@ import AgoraRTC from "agora-rtc-sdk-ng";
 
 import { useAuth } from "@/app/components/AuthProvider";
 import { AGORA_APP_ID } from "@/lib/agora";
-import { getRoom, subscribeToRoom, subscribeToRoomParticipants, removeParticipant, sendRoomChatMessage, subscribeToRoomChat, raiseHand, lowerHand, promoteToSpeaker, demoteFromSpeaker, muteParticipant, unmuteParticipant, type Room, type RoomParticipant } from "@/lib/rooms";
+import { getRoom, subscribeToRoom, subscribeToRoomParticipants, removeParticipant, sendRoomChatMessage, subscribeToRoomChat, raiseHand, lowerHand, promoteToSpeaker, demoteFromSpeaker, muteParticipant, unmuteParticipant, sendRoomReaction, subscribeToRoomReactions, bookmarkRoom, removeRoomBookmark, type Room, type RoomParticipant } from "@/lib/rooms";
+import { collection, query, where, getDocs, orderBy, limit, doc, getDoc } from "firebase/firestore";
+import { getFirebaseDb } from "@/lib/firebase";
+import { followUser, unfollowUser, isFollowing } from "@/lib/follows";
 
 interface RoomClientProps {
   roomId: string;
@@ -34,6 +37,18 @@ function RoomContent({ roomId }: RoomClientProps) {
   const [chatMessages, setChatMessages] = useState<Array<{handle: string; text: string; time: string}>>([]);
   const [chatInput, setChatInput] = useState("");
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
+
+  // Reactions state
+  const [reactions, setReactions] = useState<Array<{uid: string; handle: string; emoji: string; timestamp: any}>>([]);
+  const REACTIONS = ["👏", "❤️", "🔥", "😂", "👍"];
+
+  // Profile modal state
+  const [profileModal, setProfileModal] = useState<{uid: string; handle: string} | null>(null);
+  const [profileData, setProfileData] = useState<any>(null);
+  const [profilePosts, setProfilePosts] = useState<any[]>([]);
+  const [isOrbiting, setIsOrbiting] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [isBookmarked, setIsBookmarked] = useState(false);
 
   // Agora setup (raw SDK)
   const [token, setToken] = useState<string | null>(null);
@@ -171,10 +186,20 @@ function RoomContent({ roomId }: RoomClientProps) {
       setChatMessages(messages);
     });
 
+    // Subscribe to reactions
+    const unsubReactions = subscribeToRoomReactions(roomId, (reactionData) => {
+      setReactions(reactionData);
+      // Auto-remove reactions after 3 seconds
+      setTimeout(() => {
+        setReactions(prev => prev.filter(r => r.timestamp !== reactionData[reactionData.length - 1]?.timestamp));
+      }, 3000);
+    });
+
     return () => {
       unsubRoom();
       unsubParticipants();
       unsubChat();
+      unsubReactions();
     };
   }, [roomId, user?.uid]);
 
@@ -248,6 +273,97 @@ function RoomContent({ roomId }: RoomClientProps) {
     }
   };
 
+  // Send reaction
+  const handleSendReaction = async (emoji: string) => {
+    if (!user) return;
+    try {
+      await sendRoomReaction(roomId, {
+        uid: user.uid,
+        handle: user.handle || "@ANON",
+        emoji,
+      });
+    } catch (error) {
+      console.error("Error sending reaction:", error);
+    }
+  };
+
+  // Load profile data
+  useEffect(() => {
+    if (!profileModal) {
+      setProfileData(null);
+      setProfilePosts([]);
+      setIsOrbiting(false);
+      return;
+    }
+
+    const loadProfile = async () => {
+      setLoadingProfile(true);
+      try {
+        const db = getFirebaseDb();
+        
+        // Load user data
+        const userDoc = await getDoc(doc(db, "users", profileModal.uid));
+        if (userDoc.exists()) {
+          setProfileData({ uid: userDoc.id, ...userDoc.data() });
+        }
+
+        // Load user posts
+        const postsQuery = query(
+          collection(db, "posts"),
+          where("authorUid", "==", profileModal.uid),
+          orderBy("createdAt", "desc"),
+          limit(5)
+        );
+        const postsSnap = await getDocs(postsQuery);
+        setProfilePosts(postsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+
+        // Check if current user is orbiting
+        if (user) {
+          const following = await isFollowing(user.uid, profileModal.uid);
+          setIsOrbiting(following);
+        }
+      } catch (error) {
+        console.error("Error loading profile:", error);
+      } finally {
+        setLoadingProfile(false);
+      }
+    };
+
+    loadProfile();
+  }, [profileModal, user]);
+
+  // Handle orbit/unorbit
+  const handleOrbitUser = async () => {
+    if (!user || !profileModal) return;
+    try {
+      if (isOrbiting) {
+        await unfollowUser(user.uid, profileModal.uid);
+        setIsOrbiting(false);
+      } else {
+        await followUser(user.uid, user.handle || "@ANON", profileModal.uid, profileModal.handle);
+        setIsOrbiting(true);
+      }
+    } catch (error) {
+      console.error("Error orbiting user:", error);
+    }
+  };
+
+  // Handle room bookmark
+  const handleBookmarkRoom = async () => {
+    if (!user) return;
+    try {
+      if (isBookmarked) {
+        await removeRoomBookmark(user.uid, roomId);
+        setIsBookmarked(false);
+      } else {
+        await bookmarkRoom(user.uid, roomId);
+        setIsBookmarked(true);
+      }
+    } catch (error) {
+      console.error("Error bookmarking room:", error);
+    }
+  };
+
   // Send chat message
   const handleSendChat = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -297,6 +413,15 @@ function RoomContent({ roomId }: RoomClientProps) {
           <span className="text-neutral-500 flex items-center gap-1">
             <Users size={12} /> {participants.length}/{room.maxParticipants}
           </span>
+          {user && (
+            <button
+              onClick={handleBookmarkRoom}
+              className="text-neutral-500 hover:text-yellow-500 transition-colors cursor-pointer"
+              title={isBookmarked ? "Remove bookmark" : "Bookmark room"}
+            >
+              {isBookmarked ? "★" : "☆"}
+            </button>
+          )}
           <button
             onClick={handleLeave}
             className="text-neutral-500 hover:text-white transition-colors cursor-pointer"
@@ -358,22 +483,25 @@ function RoomContent({ roomId }: RoomClientProps) {
             {participants.map((participant) => (
               <div
                 key={participant.uid}
-                className={`border p-3 space-y-2 ${
+                className={`border p-3 space-y-2 animate-fade-in ${
                   participant.isSpeaker ? "border-white" : "border-neutral-900"
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 border border-neutral-700 flex items-center justify-center font-mono text-xs text-neutral-400 relative">
+                  <button
+                    onClick={() => setProfileModal({ uid: participant.uid, handle: participant.handle })}
+                    className="w-8 h-8 border border-neutral-700 flex items-center justify-center font-mono text-xs text-neutral-400 relative hover:border-white hover:text-white transition-colors cursor-pointer"
+                  >
                     {participant.handle.charAt(1)}
                     {speakingUsers.has(participant.uid) && (
-                      <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                      <div className="absolute inset-0 bg-green-500/20 animate-pulse" />
                     )}
                     {participant.raisedHand && (
-                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
+                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center animate-bounce">
                         <Hand size={8} className="text-black" />
                       </div>
                     )}
-                  </div>
+                  </button>
                   <div>
                     <div className="font-mono text-xs text-white">{participant.handle}</div>
                     <div className="font-mono text-[10px] text-neutral-600 uppercase">
@@ -383,11 +511,11 @@ function RoomContent({ roomId }: RoomClientProps) {
                 </div>
                 {/* Moderator controls for host */}
                 {user && user.uid === room?.hostUid && participant.uid !== user.uid && (
-                  <div className="flex items-center gap-1 pt-2 border-t border-neutral-900">
+                  <div className="flex items-center gap-1 pt-2 border-t border-neutral-900 animate-slide-up">
                     {participant.raisedHand ? (
                       <button
                         onClick={() => handlePromoteSpeaker(participant.uid)}
-                        className="font-mono text-[8px] text-green-500 hover:text-green-400 uppercase cursor-pointer"
+                        className="font-mono text-[8px] text-green-500 hover:text-green-400 uppercase cursor-pointer transition-colors"
                       >
                         [ACCEPT]
                       </button>
@@ -395,7 +523,7 @@ function RoomContent({ roomId }: RoomClientProps) {
                     {participant.isSpeaker ? (
                       <button
                         onClick={() => handleDemoteSpeaker(participant.uid)}
-                        className="font-mono text-[8px] text-red-500 hover:text-red-400 uppercase cursor-pointer"
+                        className="font-mono text-[8px] text-red-500 hover:text-red-400 uppercase cursor-pointer transition-colors"
                       >
                         [DEMOTE]
                       </button>
@@ -403,7 +531,9 @@ function RoomContent({ roomId }: RoomClientProps) {
                     {participant.isSpeaker && (
                       <button
                         onClick={() => participant.isMuted ? handleUnmute(participant.uid) : handleMute(participant.uid)}
-                        className="font-mono text-[8px] text-neutral-500 hover:text-white uppercase cursor-pointer"
+                        className={`font-mono text-[8px] uppercase cursor-pointer transition-colors ${
+                          participant.isMuted ? "text-red-500 hover:text-red-400" : "text-neutral-500 hover:text-white"
+                        }`}
                       >
                         [{participant.isMuted ? "UNMUTE" : "MUTE"}]
                       </button>
@@ -482,8 +612,27 @@ function RoomContent({ roomId }: RoomClientProps) {
           
           <div
             ref={chatScrollRef}
-            className="h-48 overflow-y-auto no-scrollbar space-y-2 font-mono text-xs tracking-widest select-text border border-neutral-900 p-3"
+            className="h-48 overflow-y-auto no-scrollbar space-y-2 font-mono text-xs tracking-widest select-text border border-neutral-900 p-3 relative"
           >
+            {/* Floating reactions overlay */}
+            {reactions.length > 0 && (
+              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                {reactions.slice(-5).map((r, i) => (
+                  <div
+                    key={i}
+                    className="absolute text-4xl animate-bounce"
+                    style={{
+                      left: `${20 + i * 15}%`,
+                      top: `${20 + (i % 3) * 20}%`,
+                      animationDelay: `${i * 0.1}s`,
+                    }}
+                  >
+                    {r.emoji}
+                  </div>
+                ))}
+              </div>
+            )}
+            
             {chatMessages.length === 0 ? (
               <div className="text-neutral-700 italic font-serif py-4 text-center">
                 No messages yet. Start the conversation.
@@ -497,6 +646,19 @@ function RoomContent({ roomId }: RoomClientProps) {
                 </div>
               ))
             )}
+          </div>
+
+          {/* Reactions bar */}
+          <div className="flex items-center gap-2 pt-2 border-t border-neutral-900">
+            {REACTIONS.map((emoji) => (
+              <button
+                key={emoji}
+                onClick={() => handleSendReaction(emoji)}
+                className="px-3 py-1 border border-neutral-800 hover:border-white text-neutral-500 hover:text-white font-mono text-[10px] uppercase transition-colors cursor-pointer"
+              >
+                {emoji}
+              </button>
+            ))}
           </div>
 
           <form onSubmit={handleSendChat} className="flex gap-2 pt-2 border-t border-neutral-900">
@@ -517,6 +679,116 @@ function RoomContent({ roomId }: RoomClientProps) {
           </form>
         </div>
       </main>
+
+      {/* Profile Modal */}
+      {profileModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-md bg-black border border-neutral-700 p-6 md:p-8 animate-slide-up space-y-4">
+            <div className="flex items-start justify-between">
+              <div className="space-y-2">
+                <p className="font-mono text-xs tracking-widest text-neutral-500 mb-1">// PARTICIPANT PROFILE</p>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-serif italic text-xl text-white">{profileModal.handle}</h2>
+                  {profileData?.verified && (
+                    <span className="text-yellow-500 text-sm">✓</span>
+                  )}
+                </div>
+              </div>
+              <button onClick={() => setProfileModal(null)} className="text-neutral-600 hover:text-white transition-colors cursor-pointer">
+                <X size={18} />
+              </button>
+            </div>
+
+            {loadingProfile ? (
+              <div className="py-8 text-center">
+                <p className="font-mono text-xs text-neutral-500 tracking-widest uppercase animate-pulse">LOADING PROFILE...</p>
+              </div>
+            ) : profileData ? (
+              <div className="space-y-4">
+                {/* Bio */}
+                {profileData.bio && (
+                  <div>
+                    <p className="font-mono text-[10px] tracking-widest text-neutral-600 block mb-1">BIO</p>
+                    <p className="font-serif italic text-neutral-300 text-sm">{profileData.bio}</p>
+                  </div>
+                )}
+
+                {/* Stats */}
+                <div className="grid grid-cols-3 gap-3 border border-neutral-900 p-3">
+                  <div className="text-center">
+                    <p className="font-mono text-lg text-white">{profilePosts.length}</p>
+                    <p className="font-mono text-[10px] text-neutral-600 uppercase">ECHOES</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="font-mono text-lg text-white">{profileData.auraScore || 0}</p>
+                    <p className="font-mono text-[10px] text-neutral-600 uppercase">AURA</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="font-mono text-lg text-white">{profileData.badges?.length || 0}</p>
+                    <p className="font-mono text-[10px] text-neutral-600 uppercase">BADGES</p>
+                  </div>
+                </div>
+
+                {/* Badges */}
+                {profileData.badges && profileData.badges.length > 0 && (
+                  <div>
+                    <p className="font-mono text-[10px] tracking-widest text-neutral-600 block mb-2">BADGES</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {profileData.badges.map((badge: string, i: number) => (
+                        <span key={i} className="px-2 py-1 border border-neutral-800 font-mono text-xs text-neutral-400">
+                          {badge}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Recent Echoes */}
+                {profilePosts.length > 0 && (
+                  <div>
+                    <p className="font-mono text-[10px] tracking-widest text-neutral-600 block mb-2">RECENT ECHOES</p>
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {profilePosts.map((post) => (
+                        <div key={post.id} className="border border-neutral-900 p-2">
+                          <p className="font-serif italic text-neutral-300 text-sm truncate">"{post.caption}"</p>
+                          <p className="font-mono text-[10px] text-neutral-600 mt-1">{post.pulseCount || 0} PULSES</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Orbit Button */}
+                {user && user.uid !== profileModal.uid && (
+                  <button
+                    onClick={handleOrbitUser}
+                    className={`w-full font-mono text-xs tracking-widest uppercase px-4 py-3 transition-colors cursor-pointer ${
+                      isOrbiting
+                        ? "border border-neutral-700 text-neutral-500 hover:border-white hover:text-white"
+                        : "border border-white text-white hover:bg-white hover:text-black"
+                    }`}
+                  >
+                    {isOrbiting ? "UNORBIT" : "ORBIT"}
+                  </button>
+                )}
+
+                {/* View Full Profile */}
+                <Link
+                  href={`/${profileModal.handle.replace(/^@/, "")}`}
+                  onClick={() => setProfileModal(null)}
+                  className="block text-center font-mono text-xs tracking-widest uppercase text-neutral-500 hover:text-white transition-colors cursor-pointer"
+                >
+                  VIEW FULL PROFILE →
+                </Link>
+              </div>
+            ) : (
+              <div className="py-8 text-center">
+                <p className="font-mono text-xs text-neutral-500 tracking-widest uppercase">PROFILE NOT FOUND</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

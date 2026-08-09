@@ -10,7 +10,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Mic2, Volume2, Users, Lock, Radio, Swords, Plus, X, Trash2, Share2 } from "lucide-react";
 import { subscribeToClashes, type ClashItem } from "@/lib/clashes";
-import { subscribeToPublicRooms, type Room, addParticipant, deleteRoom } from "@/lib/rooms";
+import { subscribeToPublicRooms, getTrendingRooms, getRoomsByCategory, type Room, addParticipant, deleteRoom } from "@/lib/rooms";
 import { useAuth } from "@/app/components/AuthProvider";
 
 function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate: (roomId: string) => void }) {
@@ -23,6 +23,8 @@ function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate:
   const [isPublic, setIsPublic] = useState(true);
   const [tags, setTags] = useState("");
   const [loading, setLoading] = useState(false);
+  const [scheduleMode, setScheduleMode] = useState(false);
+  const [scheduledFor, setScheduledFor] = useState("");
 
   const CATEGORIES = ["GENERAL", "TECH", "MUSIC", "DEBATE", "CASUAL", "PROFESSIONAL"];
 
@@ -55,6 +57,7 @@ function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate:
           isPublic,
           category,
           tags: tags.split(",").map(t => t.trim()).filter(t => t),
+          scheduledFor: scheduleMode && scheduledFor ? new Date(scheduledFor).toISOString() : null,
         }),
       });
 
@@ -164,6 +167,29 @@ function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate:
           />
         </div>
 
+        <div className="flex items-center gap-3 pt-2">
+          <button
+            onClick={() => setScheduleMode(!scheduleMode)}
+            className={`flex items-center gap-2 font-mono text-[10px] tracking-widest uppercase transition-colors ${
+              scheduleMode ? "text-white" : "text-neutral-600 hover:text-white"
+            }`}
+          >
+            <Radio size={12} /> {scheduleMode ? "SCHEDULED MODE" : "SCHEDULE FOR LATER"}
+          </button>
+        </div>
+
+        {scheduleMode && (
+          <div>
+            <label className="font-mono text-[10px] tracking-widest text-neutral-600 block mb-1">SCHEDULED DATE & TIME</label>
+            <input
+              type="datetime-local"
+              value={scheduledFor}
+              onChange={e => setScheduledFor(e.target.value)}
+              className="w-full bg-transparent border border-neutral-800 p-2 font-mono text-xs text-white focus:outline-none focus:border-white"
+            />
+          </div>
+        )}
+
         <div className="flex items-center gap-4 pt-2">
           <button
             disabled={!canCreate || loading}
@@ -184,17 +210,37 @@ function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate:
 export default function RoomsPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const [liveClashes, setLiveClashes] = useState<ClashItem[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
+  const [clashes, setClashes] = useState<ClashItem[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [trendingRooms, setTrendingRooms] = useState<Room[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
+  const [loadingTrending, setLoadingTrending] = useState(true);
+
+  const CATEGORIES = ["ALL", "GENERAL", "TECH", "MUSIC", "DEBATE", "CASUAL", "PROFESSIONAL"];
 
   useEffect(() => {
     const unsubClashes = subscribeToClashes((list) => {
-      setLiveClashes(list);
+      setClashes(list);
     });
     const unsubRooms = subscribeToPublicRooms((list) => {
       setRooms(list);
     });
+    
+    // Load trending rooms
+    const loadTrending = async () => {
+      setLoadingTrending(true);
+      try {
+        const trending = await getTrendingRooms(5);
+        setTrendingRooms(trending);
+      } catch (error) {
+        console.error("Error loading trending rooms:", error);
+      } finally {
+        setLoadingTrending(false);
+      }
+    };
+    loadTrending();
+    
     return () => {
       unsubClashes();
       unsubRooms();
@@ -261,6 +307,76 @@ export default function RoomsPage() {
             CREATE
           </button>
         </div>
+
+        {/* Trending Rooms Section */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="font-mono text-xs tracking-widest text-white">// 🔥 TRENDING ROOMS</p>
+            <div className="flex items-center gap-2">
+              {CATEGORIES.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`font-mono text-[10px] tracking-widest uppercase px-2 py-1 border transition-colors cursor-pointer ${
+                    selectedCategory === cat
+                      ? "border-white text-white"
+                      : "border-neutral-800 text-neutral-500 hover:border-white hover:text-white"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+          {loadingTrending ? (
+            <div className="border border-neutral-900 p-6 text-center">
+              <p className="font-mono text-xs text-neutral-500 tracking-widest uppercase animate-pulse">LOADING TRENDING ROOMS...</p>
+            </div>
+          ) : trendingRooms.length === 0 ? (
+            <div className="border border-neutral-900 p-6 text-center">
+              <p className="font-mono text-xs text-neutral-500 tracking-widest uppercase">NO TRENDING ROOMS</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-neutral-900 border border-neutral-900">
+              {trendingRooms.map((room) => (
+                <div key={room.id} className="p-4 space-y-3">
+                  <div className="flex items-center justify-between font-mono text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="text-orange-500">🔥</span>
+                      <span className="text-white font-bold">{room.name}</span>
+                      {!room.isPublic && <Lock size={12} className="text-neutral-600" />}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-neutral-500">{room.participantCount} LISTENERS</span>
+                      <span className="px-2 py-0.5 border border-neutral-800 text-neutral-600 text-[10px] uppercase">{room.category}</span>
+                    </div>
+                  </div>
+                  {room.description && (
+                    <p className="font-serif italic text-neutral-300 text-sm">{room.description}</p>
+                  )}
+                  <div className="flex items-center gap-2 pt-2">
+                    <button
+                      onClick={() => handleJoinRoom(room.id)}
+                      className="flex-1 font-mono text-xs border border-white px-3 py-1.5 text-white hover:bg-white hover:text-black uppercase transition-colors cursor-pointer"
+                    >
+                      [ 🎧 JOIN ]
+                    </button>
+                    {user && room.hostUid === user.uid && (
+                      <>
+                        <button onClick={() => handleShareRoom(room.id)} title="Share room">
+                          <Share2 size={12} />
+                        </button>
+                        <button onClick={() => handleDeleteRoom(room.id)} title="Delete room">
+                          <Trash2 size={12} />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
         {/* Live Rooms Section */}
         <section className="space-y-4">
@@ -334,7 +450,7 @@ export default function RoomsPage() {
         {/* Stage Debates Section */}
         <section className="space-y-4">
           <p className="font-mono text-xs tracking-widest text-white">// STAGE DEBATES</p>
-          {liveClashes.length === 0 ? (
+          {clashes.length === 0 ? (
             <div className="border border-neutral-900 p-6 text-center space-y-3">
               <Swords className="w-6 h-6 text-neutral-700 mx-auto" />
               <p className="font-mono text-xs text-neutral-500 tracking-widest uppercase">
@@ -349,7 +465,7 @@ export default function RoomsPage() {
             </div>
           ) : (
             <div className="divide-y divide-neutral-900 border border-neutral-900">
-              {liveClashes.map((c) => (
+              {clashes.map((c: ClashItem) => (
                 <div key={c.id} className="p-4 space-y-3">
                   <div className="flex items-center justify-between font-mono text-xs">
                     <div className="flex items-center gap-2">
