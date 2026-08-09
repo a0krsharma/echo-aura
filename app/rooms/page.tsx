@@ -183,6 +183,7 @@ function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate:
 
 export default function RoomsPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [liveClashes, setLiveClashes] = useState<ClashItem[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -208,6 +209,7 @@ export default function RoomsPage() {
         handle: user.handle || "@ANON",
         isSpeaker: false,
       });
+      router.push(`/room/${roomId}`);
     } catch (error) {
       console.error("Error joining room:", error);
     }

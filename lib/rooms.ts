@@ -199,7 +199,10 @@ export function subscribeToPublicRooms(callback: (rooms: Room[]) => void): () =>
 
   const unsubscribe = onSnapshot(roomsQuery, (querySnap) => {
     const rooms = querySnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Room[];
+    console.log("Public rooms updated:", rooms);
     callback(rooms);
+  }, (error) => {
+    console.error("Error subscribing to public rooms:", error);
   });
 
   return unsubscribe;
