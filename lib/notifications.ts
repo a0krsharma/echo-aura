@@ -32,7 +32,7 @@ import { getFirebaseDb } from "@/lib/firebase";
 
 export interface EchoNotification {
   id:          string;
-  type:        "pulse" | "reverb" | "orbiter" | "stage" | "whisper" | "raise_hand";
+  type:        "pulse" | "reverb" | "orbiter" | "stage" | "whisper" | "raise_hand" | "room_join" | "room_leave" | "room_promote" | "room_demote" | "mention" | "bookmark";
   fromUid:     string;
   fromHandle:  string;
   postId?:     string;
@@ -42,6 +42,8 @@ export interface EchoNotification {
   text:        string;
   read:        boolean;
   createdAt:   Timestamp | null;
+  grouped?:    boolean;
+  groupCount?: number;
 }
 
 /**

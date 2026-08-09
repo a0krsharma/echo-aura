@@ -17,6 +17,8 @@ import { AuthProvider, useAuth } from "@/app/components/AuthProvider";
 import BottomNav from "@/app/components/BottomNav";
 import LeftSidebar from "@/app/components/LeftSidebar";
 import { RightSidebar } from "@/app/components/RightSidebar";
+import { ToastContainer } from "@/app/components/Toast";
+import { subscribeToNotifications, markNotificationRead, type EchoNotification } from "@/lib/notifications";
 import {
   Loader2,
   Menu,
@@ -41,6 +43,8 @@ function ShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [toastNotifications, setToastNotifications] = useState<EchoNotification[]>([]);
+  const [shownToastIds, setShownToastIds] = useState<Set<string>>(new Set());
 
   const isPublicRoute = pathname === "/login";
 
@@ -48,6 +52,46 @@ function ShellContent({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setDrawerOpen(false);
   }, [pathname]);
+
+  // Subscribe to notifications for toasts
+  useEffect(() => {
+    if (!user) return;
+
+    const unsub = subscribeToNotifications(user.uid, (notifications) => {
+      // Show toasts for new unread notifications
+      const newUnread = notifications.filter(n => !n.read && !shownToastIds.has(n.id));
+      
+      if (newUnread.length > 0) {
+        // Add new toasts (limit to 3 at a time)
+        setToastNotifications(prev => {
+          const newToasts = newUnread.slice(0, 3);
+          const combined = [...newToasts, ...prev].slice(0, 3);
+          return combined;
+        });
+        
+        // Mark as shown to avoid duplicate toasts
+        setShownToastIds(prev => {
+          const newIds = new Set(prev);
+          newUnread.forEach(n => newIds.add(n.id));
+          return newIds;
+        });
+
+        // Auto-dismiss after showing
+        newUnread.forEach(n => {
+          setTimeout(() => {
+            setToastNotifications(prev => prev.filter(t => t.id !== n.id));
+          }, 5000);
+        });
+      }
+    });
+
+    return () => unsub();
+  }, [user, shownToastIds]);
+
+  const handleDismissToast = (id: string) => {
+    setToastNotifications(prev => prev.filter(t => t.id !== id));
+    markNotificationRead(user?.uid || "", id);
+  };
 
   // Guard: redirect unauthenticated users to /login
   useEffect(() => {
@@ -191,6 +235,12 @@ function ShellContent({ children }: { children: React.ReactNode }) {
 
       {/* BOTTOM NAV — mobile only */}
       <BottomNav />
+
+      {/* TOAST NOTIFICATIONS */}
+      <ToastContainer
+        notifications={toastNotifications}
+        onDismiss={handleDismissToast}
+      />
     </>
   );
 }

@@ -7,7 +7,7 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { Bell, CheckCheck, ArrowUp, Repeat2, RefreshCw, Swords, Mic2, Loader2 } from "lucide-react";
+import { Bell, CheckCheck, ArrowUp, Repeat2, RefreshCw, Swords, Mic2, Loader2, Hand, Users, LogOut, Mic, MicOff, AtSign, Star } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
 import {
   subscribeToNotifications,
@@ -20,21 +20,35 @@ import Link from "next/link";
 // ─── Notification icon by type ────────────────────────────────────────────────
 function NotifIcon({ type }: { type: EchoNotification["type"] }) {
   const cls = "w-3.5 h-3.5";
-  if (type === "pulse")   return <ArrowUp    className={cls} />;
-  if (type === "reverb")  return <Repeat2    className={cls} />;
-  if (type === "orbiter") return <RefreshCw  className={cls} />;
-  if (type === "stage")   return <Swords     className={cls} />;
-  if (type === "whisper") return <Mic2       className={cls} />;
+  if (type === "pulse")       return <ArrowUp    className={cls} />;
+  if (type === "reverb")      return <Repeat2    className={cls} />;
+  if (type === "orbiter")     return <RefreshCw  className={cls} />;
+  if (type === "stage")       return <Swords     className={cls} />;
+  if (type === "whisper")     return <Mic2       className={cls} />;
+  if (type === "raise_hand")  return <Hand       className={cls} />;
+  if (type === "room_join")   return <Users      className={cls} />;
+  if (type === "room_leave")  return <LogOut     className={cls} />;
+  if (type === "room_promote")return <Mic        className={cls} />;
+  if (type === "room_demote")return <MicOff     className={cls} />;
+  if (type === "mention")     return <AtSign     className={cls} />;
+  if (type === "bookmark")    return <Star       className={cls} />;
   return <Bell className={cls} />;
 }
 
 // ─── Label ───────────────────────────────────────────────────────────────────
 function typeLabel(type: EchoNotification["type"]): string {
-  if (type === "pulse")   return "PULSED YOUR ECHO";
-  if (type === "reverb")  return "REVERBED YOUR ECHO";
-  if (type === "orbiter") return "ORBITED YOUR ECHO";
-  if (type === "stage")   return "CHALLENGED YOU TO THE STAGE";
-  if (type === "whisper") return "SENT YOU A WHISPER";
+  if (type === "pulse")        return "PULSED YOUR ECHO";
+  if (type === "reverb")       return "REVERBED YOUR ECHO";
+  if (type === "orbiter")      return "ORBITED YOUR ECHO";
+  if (type === "stage")        return "CHALLENGED YOU TO THE STAGE";
+  if (type === "whisper")      return "SENT YOU A WHISPER";
+  if (type === "raise_hand")   return "RAISED HAND IN YOUR ROOM";
+  if (type === "room_join")    return "JOINED YOUR ROOM";
+  if (type === "room_leave")   return "LEFT YOUR ROOM";
+  if (type === "room_promote") return "PROMOTED TO SPEAKER";
+  if (type === "room_demote") return "DEMOTED FROM SPEAKER";
+  if (type === "mention")      return "MENTIONED YOU";
+  if (type === "bookmark")     return "BOOKMARKED YOUR ROOM";
   return "INTERACTED WITH YOU";
 }
 

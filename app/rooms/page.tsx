@@ -19,7 +19,7 @@ function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate:
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("GENERAL");
-  const [maxParticipants, setMaxParticipants] = useState(50);
+  const [maxParticipants, setMaxParticipants] = useState(100);
   const [isPublic, setIsPublic] = useState(true);
   const [tags, setTags] = useState("");
   const [loading, setLoading] = useState(false);
@@ -140,7 +140,7 @@ function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate:
             <input
               type="number"
               value={maxParticipants}
-              onChange={e => setMaxParticipants(parseInt(e.target.value) || 50)}
+              onChange={e => setMaxParticipants(parseInt(e.target.value) || 100)}
               min="2"
               max="100"
               className="w-full bg-transparent border border-neutral-800 p-2 font-mono text-xs text-white"
