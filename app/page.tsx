@@ -760,7 +760,7 @@ export default function HomeFeedPage() {
     if(!user){router.push("/login");return;}
     if(orbitedPosts.has(post.id))return;
     setOrbited(prev=>new Set([...prev,post.id]));
-    await createPost({audioUrl:post.audioUrl,caption:`ORBIT: "${post.caption.slice(0,60)}${post.caption.length>60?"…":""}" — ${post.authorHandle}`,authorUid:user.uid,authorHandle:user.handle||"@ANON",duration:post.duration,durationSec:post.durationSec,orbitOf:post.id,orbitOfHandle:post.authorHandle} as any);
+    await createPost({audioUrl:post.audioUrl,caption:`[ ORBIT ] "${post.caption.slice(0,60)}${post.caption.length>60?"…":""}" — ${post.authorHandle}`,authorUid:user.uid,authorHandle:user.handle||"@ANON",duration:post.duration,durationSec:post.durationSec,orbitOf:post.id,orbitOfHandle:post.authorHandle} as any);
     await createNotification(post.authorUid,{type:"orbiter",fromUid:user.uid,fromHandle:user.handle||"@ANON",postId:post.id,postCaption:post.caption,text:`${user.handle} orbited your echo.`});
   };
 
