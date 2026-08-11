@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Radio, Waves, Mic2, Bell, MessageSquare, Users } from "lucide-react";
+import { Radio, Waves, Mic2, Bell, MessageSquare, Users, Compass } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
 import { subscribeToUnreadCount } from "@/lib/notifications";
 
@@ -27,6 +27,7 @@ export default function BottomNav() {
     { href: "/rooms",        icon: Users,          label: "ROOMS"  },
     { href: "/studio",       icon: Mic2,           label: "STUDIO", isCenter: true },
     { href: "/whispers",     icon: MessageSquare,  label: "WIRE"   },
+    { href: "/radar",        icon: Compass,        label: "RADAR"  },
   ];
 
   return (
