@@ -37,6 +37,7 @@ function RoomContent({ roomId }: RoomClientProps) {
   // Chat state
   const [chatMessages, setChatMessages] = useState<Array<{handle: string; text: string; time: string}>>([]);
   const [chatInput, setChatInput] = useState("");
+  const [showChat, setShowChat] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
 
   // Reactions state
@@ -663,119 +664,150 @@ function RoomContent({ roomId }: RoomClientProps) {
                 </button>
                 <span className="font-mono text-xs text-neutral-600 uppercase">YOU ARE SPEAKING</span>
               </div>
-              <button
-                onClick={() => setIsSpeaker(false)}
-                className="px-4 py-2 border border-neutral-800 text-neutral-500 hover:text-white font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer"
-              >
-                [ STOP SPEAKING ]
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowChat(!showChat)}
+                  className="px-4 py-2 border border-neutral-800 text-neutral-500 hover:text-white font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer"
+                >
+                  [ 💬 CHAT ({chatMessages.length}) ]
+                </button>
+                <button
+                  onClick={() => setIsSpeaker(false)}
+                  className="px-4 py-2 border border-neutral-800 text-neutral-500 hover:text-white font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer"
+                >
+                  [ STOP SPEAKING ]
+                </button>
+              </div>
             </div>
           ) : (
             <div className="flex items-center justify-between">
               <span className="font-mono text-xs text-neutral-600 uppercase">LISTENING MODE</span>
-              {room.openMic ? (
+              <div className="flex items-center gap-2">
                 <button
-                  onClick={handleRequestToSpeak}
-                  className="px-4 py-2 border border-white text-white hover:bg-white hover:text-black font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center gap-2"
+                  onClick={() => setShowChat(!showChat)}
+                  className="px-4 py-2 border border-neutral-800 text-neutral-500 hover:text-white font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer"
                 >
-                  <Mic size={12} />
-                  [ JOIN AS SPEAKER ]
+                  [ 💬 CHAT ({chatMessages.length}) ]
                 </button>
-              ) : hasRequestedToSpeak ? (
-                <button
-                  onClick={handleCancelRequest}
-                  className="px-4 py-2 border border-yellow-500 text-yellow-500 hover:bg-yellow-500 hover:text-black font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center gap-2"
-                >
-                  <Hand size={12} />
-                  [ CANCEL REQUEST ]
-                </button>
-              ) : (
-                <button
-                  onClick={handleRequestToSpeak}
-                  className="px-4 py-2 border border-white text-white hover:bg-white hover:text-black font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center gap-2"
-                >
-                  <Hand size={12} />
-                  [ REQUEST TO SPEAK ]
-                </button>
-              )}
+                {room.openMic ? (
+                  <button
+                    onClick={handleRequestToSpeak}
+                    className="px-4 py-2 border border-white text-white hover:bg-white hover:text-black font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center gap-2"
+                  >
+                    <Mic size={12} />
+                    [ JOIN AS SPEAKER ]
+                  </button>
+                ) : hasRequestedToSpeak ? (
+                  <button
+                    onClick={handleCancelRequest}
+                    className="px-4 py-2 border border-yellow-500 text-yellow-500 hover:bg-yellow-500 hover:text-black font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center gap-2"
+                  >
+                    <Hand size={12} />
+                    [ CANCEL REQUEST ]
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleRequestToSpeak}
+                    className="px-4 py-2 border border-white text-white hover:bg-white hover:text-black font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center gap-2"
+                  >
+                    <Hand size={12} />
+                    [ REQUEST TO SPEAK ]
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>
 
-        {/* Chat */}
-        <div className="border border-neutral-800 p-4 space-y-4">
-          <div className="font-mono text-[10px] tracking-widest text-neutral-700 uppercase">
-            // ROOM CHAT
-          </div>
-          
-          <div
-            ref={chatScrollRef}
-            className="h-48 overflow-y-auto no-scrollbar space-y-2 font-mono text-xs tracking-widest select-text border border-neutral-900 p-3 relative"
-          >
-            {/* Floating reactions overlay */}
-            {reactions.length > 0 && (
-              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                {reactions.slice(-5).map((r, i) => (
-                  <div
-                    key={i}
-                    className="absolute text-4xl animate-bounce"
-                    style={{
-                      left: `${20 + i * 15}%`,
-                      top: `${20 + (i % 3) * 20}%`,
-                      animationDelay: `${i * 0.1}s`,
-                    }}
-                  >
-                    {r.emoji}
+        {/* Chat Bottom Sheet */}
+        {showChat && (
+          <div className="fixed inset-0 z-50 flex flex-col bg-black border-t border-neutral-800 animate-slide-up">
+            {/* Chat Header */}
+            <div className="flex items-center justify-between p-4 border-b border-neutral-900">
+              <div className="font-mono text-xs tracking-widest text-neutral-700 uppercase">
+                // ROOM CHAT ({chatMessages.length})
+              </div>
+              <button
+                onClick={() => setShowChat(false)}
+                className="text-neutral-500 hover:text-white transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Chat Messages */}
+            <div
+              ref={chatScrollRef}
+              className="flex-1 overflow-y-auto p-4 space-y-3 font-mono text-xs tracking-widest select-text"
+            >
+              {/* Floating reactions overlay */}
+              {reactions.length > 0 && (
+                <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-10">
+                  {reactions.slice(-5).map((r, i) => (
+                    <div
+                      key={i}
+                      className="absolute text-4xl animate-bounce"
+                      style={{
+                        left: `${20 + i * 15}%`,
+                        top: `${20 + (i % 3) * 20}%`,
+                        animationDelay: `${i * 0.1}s`,
+                      }}
+                    >
+                      {r.emoji}
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {chatMessages.length === 0 ? (
+                <div className="text-neutral-700 font-mono py-8 text-center">
+                  NO MESSAGES YET. START THE CONVERSATION.
+                </div>
+              ) : (
+                chatMessages.map((msg, i) => (
+                  <div key={i} className="text-neutral-300 leading-relaxed">
+                    <span className="text-neutral-700">{msg.time} </span>
+                    <span className="text-white">{msg.handle}: </span>
+                    <span className="text-neutral-400 font-mono">{msg.text}</span>
                   </div>
+                ))
+              )}
+            </div>
+
+            {/* Chat Input */}
+            <div className="p-4 border-t border-neutral-900 space-y-3">
+              {/* Reactions bar */}
+              <div className="flex items-center gap-2">
+                {REACTIONS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    onClick={() => handleSendReaction(emoji)}
+                    className="px-3 py-1 border border-neutral-800 hover:border-white text-neutral-500 hover:text-white font-mono text-[10px] uppercase transition-colors cursor-pointer"
+                  >
+                    {emoji}
+                  </button>
                 ))}
               </div>
-            )}
-            
-            {chatMessages.length === 0 ? (
-              <div className="text-neutral-700 font-mono py-4 text-center">
-                NO MESSAGES YET. START THE CONVERSATION.
-              </div>
-            ) : (
-              chatMessages.map((msg, i) => (
-                <div key={i} className="text-neutral-300 leading-relaxed">
-                  <span className="text-neutral-700">{msg.time} </span>
-                  <span className="text-white">{msg.handle}: </span>
-                  <span className="text-neutral-400 font-mono">{msg.text}</span>
-                </div>
-              ))
-            )}
-          </div>
 
-          {/* Reactions bar */}
-          <div className="flex items-center gap-2 pt-2 border-t border-neutral-900">
-            {REACTIONS.map((emoji) => (
-              <button
-                key={emoji}
-                onClick={() => handleSendReaction(emoji)}
-                className="px-3 py-1 border border-neutral-800 hover:border-white text-neutral-500 hover:text-white font-mono text-[10px] uppercase transition-colors cursor-pointer"
-              >
-                {emoji}
-              </button>
-            ))}
+              <form onSubmit={handleSendChat} className="flex gap-2">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  placeholder="SAY SOMETHING..."
+                  className="flex-1 bg-transparent border border-neutral-800 px-3 py-2 font-mono text-xs text-white placeholder-neutral-700 focus:outline-none focus:border-white transition-colors"
+                />
+                <button
+                  type="submit"
+                  disabled={!chatInput.trim()}
+                  className="px-4 py-2 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors cursor-pointer disabled:opacity-30 flex items-center gap-2"
+                >
+                  <Send size={12} /> SEND
+                </button>
+              </form>
+            </div>
           </div>
-
-          <form onSubmit={handleSendChat} className="flex gap-2 pt-2 border-t border-neutral-900">
-            <input
-              type="text"
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              placeholder="SAY SOMETHING..."
-              className="flex-1 bg-transparent border border-neutral-800 px-3 py-2 font-mono text-xs text-white placeholder-neutral-700 focus:outline-none focus:border-white transition-colors"
-            />
-            <button
-              type="submit"
-              disabled={!chatInput.trim()}
-              className="px-4 py-2 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors cursor-pointer disabled:opacity-30 flex items-center gap-2"
-            >
-              <Send size={12} /> SEND
-            </button>
-          </form>
-        </div>
+        )}
       </main>
 
       {/* Profile Modal */}
