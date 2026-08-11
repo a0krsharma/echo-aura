@@ -483,15 +483,12 @@ function RoomContent({ roomId }: RoomClientProps) {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col p-4 md:p-8 max-w-4xl mx-auto w-full gap-6">
-        {/* Room Info */}
-        <div className="border border-neutral-800 p-6 space-y-4">
+      <main className="flex-1 flex flex-col p-4 md:p-8 max-w-5xl mx-auto w-full gap-6">
+        {/* Room Info - Compact Header */}
+        <div className="border border-neutral-800 p-4 space-y-3">
           <div className="flex items-start justify-between gap-4">
-            <div className="space-y-2">
-              <div className="font-mono text-[10px] tracking-widest text-neutral-700 uppercase">
-                // ROOM
-              </div>
-              <h1 className="font-mono text-2xl tracking-widest text-white uppercase">
+            <div className="space-y-1">
+              <h1 className="font-mono text-xl tracking-widest text-white uppercase">
                 "{room.name}"
               </h1>
               {room.description && (
@@ -499,162 +496,150 @@ function RoomContent({ roomId }: RoomClientProps) {
                   {room.description}
                 </p>
               )}
-              <div className="flex items-center gap-3 text-neutral-600 font-mono text-xs">
+              <div className="flex items-center gap-2 text-neutral-600 font-mono text-xs">
                 <span>{room.category}</span>
                 <span>•</span>
-                <span>HOSTED BY {room.hostHandle}</span>
+                <span>{room.hostHandle}</span>
+                {!room.isPublic && <Lock size={12} className="text-neutral-600" />}
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {!room.isPublic && <Lock size={16} className="text-neutral-600" />}
               <span className="px-2 py-1 border border-neutral-800 font-mono text-[10px] text-neutral-600 uppercase">
                 {room.isPublic ? "PUBLIC" : "PRIVATE"}
               </span>
+              {user && (
+                <button
+                  onClick={handleBookmarkRoom}
+                  className="text-neutral-500 hover:text-yellow-500 transition-colors cursor-pointer"
+                  title={isBookmarked ? "Remove bookmark" : "Bookmark room"}
+                >
+                  {isBookmarked ? "★" : "☆"}
+                </button>
+              )}
             </div>
           </div>
-
-          {/* Tags */}
-          {room.tags && room.tags.length > 0 && (
-            <div className="flex items-center gap-2 flex-wrap">
-              {room.tags.map((tag, i) => (
-                <span key={i} className="px-2 py-1 border border-neutral-900 font-mono text-[10px] text-neutral-600 uppercase">
-                  #{tag}
-                </span>
-              ))}
-            </div>
-          )}
         </div>
 
-        {/* Participants */}
-        <div className="border border-neutral-800 p-4 space-y-4">
-          <div className="font-mono text-[10px] tracking-widest text-neutral-700 uppercase flex justify-between">
-            <span>// PARTICIPANTS ({participants.length})</span>
-            {user && user.uid === room?.hostUid && pendingRequests > 0 && (
-              <span className="text-yellow-500 animate-pulse">{pendingRequests} REQUEST{pendingRequests > 1 ? "S" : ""}</span>
-            )}
-          </div>
-          
-          {/* Speakers Section */}
-          {participants.filter(p => p.isSpeaker).length > 0 && (
-            <div className="space-y-2">
-              <p className="font-mono text-[10px] text-neutral-600 uppercase">// SPEAKERS</p>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {participants.filter(p => p.isSpeaker).map((participant) => (
-                  <div
-                    key={participant.id || participant.uid}
-                    className="border border-white p-3 space-y-2 animate-fade-in"
-                  >
-                    <div className="flex items-center gap-2">
+        {/* Speakers - Prominent Top Section */}
+        {participants.filter(p => p.isSpeaker).length > 0 && (
+          <div className="border border-white p-4 space-y-3 bg-white/5">
+            <div className="font-mono text-[10px] tracking-widest text-neutral-700 uppercase flex justify-between">
+              <span>// SPEAKERS ({participants.filter(p => p.isSpeaker).length})</span>
+              {user && user.uid === room?.hostUid && pendingRequests > 0 && (
+                <span className="text-yellow-500 animate-pulse">{pendingRequests} REQUEST{pendingRequests > 1 ? "S" : ""}</span>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-4">
+              {participants.filter(p => p.isSpeaker).map((participant) => (
+                <div
+                  key={participant.id || participant.uid}
+                  className="flex flex-col items-center gap-2"
+                >
+                  <div className="relative">
+                    <button
+                      onClick={() => setProfileModal({ uid: participant.uid, handle: participant.handle })}
+                      className={`w-16 h-16 rounded-full border-2 flex items-center justify-center font-mono text-lg relative hover:border-white hover:text-white transition-all cursor-pointer ${
+                        speakingUsers.has(participant.uid) 
+                          ? "border-green-500 text-green-400 bg-green-500/20" 
+                          : "border-white text-neutral-400 bg-neutral-900"
+                      }`}
+                    >
+                      {participant.handle.charAt(1)}
+                      {speakingUsers.has(participant.uid) && (
+                        <div className="absolute inset-0 bg-green-500/30 rounded-full animate-pulse" />
+                      )}
+                    </button>
+                    {speakingUsers.has(participant.uid) && (
+                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-4 bg-green-500 rounded-full animate-ping" />
+                    )}
+                  </div>
+                  <div className="text-center">
+                    <div className="font-mono text-xs text-white">{participant.handle}</div>
+                    <div className="font-mono text-[10px] text-neutral-600 uppercase">
+                      {speakingUsers.has(participant.uid) ? "SPEAKING" : participant.isMuted ? "MUTED" : "SPEAKER"}
+                    </div>
+                  </div>
+                  {/* Moderator controls for host */}
+                  {user && user.uid === room?.hostUid && participant.uid !== user.uid && (
+                    <div className="flex items-center gap-1">
                       <button
-                        onClick={() => setProfileModal({ uid: participant.uid, handle: participant.handle })}
-                        className={`w-10 h-10 border flex items-center justify-center font-mono text-sm relative hover:border-white hover:text-white transition-colors cursor-pointer ${
-                          speakingUsers.has(participant.uid) 
-                            ? "border-green-500 text-green-400 bg-green-500/10" 
-                            : "border-neutral-700 text-neutral-400"
+                        onClick={() => participant.isMuted ? handleUnmute(participant.uid) : handleMute(participant.uid)}
+                        className={`font-mono text-[8px] uppercase cursor-pointer transition-colors ${
+                          participant.isMuted ? "text-red-500 hover:text-red-400" : "text-neutral-500 hover:text-white"
                         }`}
                       >
-                        {participant.handle.charAt(1)}
-                        {speakingUsers.has(participant.uid) && (
-                          <div className="absolute inset-0 bg-green-500/30 animate-pulse" />
-                        )}
+                        [{participant.isMuted ? "UNMUTE" : "MUTE"}]
                       </button>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-1.5">
-                          {speakingUsers.has(participant.uid) && (
-                            <Mic size={10} className="text-green-500 animate-pulse" />
-                          )}
-                          <div className="font-mono text-xs text-white">{participant.handle}</div>
-                        </div>
-                        <div className="font-mono text-[10px] text-neutral-600 uppercase flex items-center gap-1">
-                          {speakingUsers.has(participant.uid) && (
-                            <span className="text-green-500">NOW SPEAKING</span>
-                          )}
-                          {!speakingUsers.has(participant.uid) && (
-                            <span>{participant.isMuted ? "MUTED" : "SPEAKER"}</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    {/* Moderator controls for host */}
-                    {user && user.uid === room?.hostUid && participant.uid !== user.uid && (
-                      <div className="flex items-center gap-1 pt-2 border-t border-neutral-900 animate-slide-up">
-                        <button
-                          onClick={() => participant.isMuted ? handleUnmute(participant.uid) : handleMute(participant.uid)}
-                          className={`font-mono text-[8px] uppercase cursor-pointer transition-colors ${
-                            participant.isMuted ? "text-red-500 hover:text-red-400" : "text-neutral-500 hover:text-white"
-                          }`}
-                        >
-                          [{participant.isMuted ? "UNMUTE" : "MUTE"}]
-                        </button>
-                        <button
-                          onClick={() => handleDemoteSpeaker(participant.uid)}
-                          className="font-mono text-[8px] text-red-500 hover:text-red-400 uppercase cursor-pointer transition-colors"
-                        >
-                          [DEMOTE]
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Listeners Section */}
-          {participants.filter(p => !p.isSpeaker).length > 0 && (
-            <div className="space-y-2">
-              <p className="font-mono text-[10px] text-neutral-600 uppercase">// LISTENERS</p>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {participants.filter(p => !p.isSpeaker).map((participant) => (
-                  <div
-                    key={participant.id || participant.uid}
-                    className="border border-neutral-900 p-3 space-y-2 animate-fade-in"
-                  >
-                    <div className="flex items-center gap-2">
                       <button
-                        onClick={() => setProfileModal({ uid: participant.uid, handle: participant.handle })}
-                        className="w-10 h-10 border border-neutral-700 flex items-center justify-center font-mono text-sm text-neutral-400 hover:border-white hover:text-white transition-colors cursor-pointer relative"
+                        onClick={() => handleDemoteSpeaker(participant.uid)}
+                        className="font-mono text-[8px] text-red-500 hover:text-red-400 uppercase cursor-pointer transition-colors"
                       >
-                        {participant.handle.charAt(1)}
-                        {participant.raisedHand && (
-                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center animate-bounce">
-                            <Hand size={8} className="text-black" />
-                          </div>
-                        )}
+                        [DEMOTE]
                       </button>
-                      <div className="flex-1">
-                        <div className="font-mono text-xs text-white">{participant.handle}</div>
-                        <div className="font-mono text-[10px] text-neutral-600 uppercase">
-                          {participant.raisedHand ? "HAND RAISED" : "LISTENER"}
-                        </div>
-                      </div>
                     </div>
-                    {/* Moderator controls for host */}
-                    {user && user.uid === room?.hostUid && participant.uid !== user.uid && (
-                      <div className="flex items-center gap-1 pt-2 border-t border-neutral-900 animate-slide-up">
-                        {participant.raisedHand ? (
-                          <button
-                            onClick={() => handlePromoteSpeaker(participant.uid)}
-                            className="font-mono text-[8px] text-green-500 hover:text-green-400 uppercase cursor-pointer transition-colors"
-                          >
-                            [ACCEPT]
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handlePromoteSpeaker(participant.uid)}
-                            className="font-mono text-[8px] text-neutral-500 hover:text-white uppercase cursor-pointer transition-colors"
-                          >
-                            [PROMOTE]
-                          </button>
-                        )}
-                      </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Listeners */}
+        {participants.filter(p => !p.isSpeaker).length > 0 && (
+          <div className="border border-neutral-800 p-4 space-y-3">
+            <div className="font-mono text-[10px] tracking-widest text-neutral-700 uppercase">
+              // LISTENERS ({participants.filter(p => !p.isSpeaker).length})
+            </div>
+            <div className="flex flex-wrap gap-3">
+              {participants.filter(p => !p.isSpeaker).map((participant) => (
+                <div
+                  key={participant.id || participant.uid}
+                  className="flex flex-col items-center gap-1"
+                >
+                  <div className="relative">
+                    <button
+                      onClick={() => setProfileModal({ uid: participant.uid, handle: participant.handle })}
+                      className="w-12 h-12 rounded-full border border-neutral-700 flex items-center justify-center font-mono text-sm text-neutral-400 hover:border-white hover:text-white transition-all cursor-pointer bg-neutral-900"
+                    >
+                      {participant.handle.charAt(1)}
+                      {participant.raisedHand && (
+                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center animate-bounce">
+                          <Hand size={10} className="text-black" />
+                        </div>
+                      )}
+                    </button>
+                  </div>
+                  <div className="text-center">
+                    <div className="font-mono text-[10px] text-neutral-400">{participant.handle}</div>
+                    {participant.raisedHand && (
+                      <div className="font-mono text-[8px] text-yellow-500 uppercase">HAND RAISED</div>
                     )}
                   </div>
-                ))}
-              </div>
+                  {/* Moderator controls for host */}
+                  {user && user.uid === room?.hostUid && participant.uid !== user.uid && (
+                    <div className="flex items-center gap-1">
+                      {participant.raisedHand ? (
+                        <button
+                          onClick={() => handlePromoteSpeaker(participant.uid)}
+                          className="font-mono text-[8px] text-green-500 hover:text-green-400 uppercase cursor-pointer transition-colors"
+                        >
+                          [ACCEPT]
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handlePromoteSpeaker(participant.uid)}
+                          className="font-mono text-[8px] text-neutral-500 hover:text-white uppercase cursor-pointer transition-colors"
+                        >
+                          [PROMOTE]
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Audio Controls */}
         <div className="border border-neutral-800 p-4 space-y-4">
