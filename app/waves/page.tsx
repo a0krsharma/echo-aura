@@ -13,6 +13,7 @@ import Link from "next/link";
 import { subscribeToPosts, togglePulsePost, deletePost } from "@/lib/posts";
 import { useAuth } from "@/app/components/AuthProvider";
 import { createNotification } from "@/lib/notifications";
+import { audioManager } from "@/lib/audioManager";
 
 interface WavePost {
   id: string; audioUrl: string; caption: string;
@@ -49,11 +50,22 @@ function BigWaveform({ playing, color }: { playing: boolean; color: string }) {
 // ── Per-card audio engine ──────────────────────────────────────────────────────
 function useWaveAudio(src: string, durationSec: number, active: boolean, muted: boolean) {
   const audioRef  = useRef<HTMLAudioElement|null>(null);
+  const instanceIdRef = useRef<string | null>(null);
   const [playing, setPlaying]   = useState(false);
   const [current, setCurrent]   = useState(0);
   const [dur,     setDur]       = useState(Math.max(1, durationSec));
   const [loading, setLoading]   = useState(false);
   const [failed,  setFailed]    = useState(false);
+
+  // Generate unique instance ID for this audio player
+  useEffect(() => {
+    instanceIdRef.current = `wave-${src}-${Date.now()}`;
+    return () => {
+      if (instanceIdRef.current) {
+        audioManager.unregister(instanceIdRef.current);
+      }
+    };
+  }, [src]);
 
   // Build audio element once per src
   useEffect(() => {
@@ -66,7 +78,25 @@ function useWaveAudio(src: string, durationSec: number, active: boolean, muted: 
     a.onended         = () => { setPlaying(false); setCurrent(0); };
     a.onerror         = () => setFailed(true);
     audioRef.current  = a;
-    return () => { a.pause(); a.src = ""; };
+    
+    // Register with audio manager
+    const id = instanceIdRef.current;
+    if (id) {
+      audioManager.register(id, a, 2); // Priority 2 for waves (higher than main feed)
+    }
+    
+    return () => { 
+      // Proper cleanup to prevent memory leaks
+      a.pause(); 
+      a.src = "";
+      a.load(); // Force cleanup of audio resources
+      if (audioRef.current === a) {
+        audioRef.current = null;
+      }
+      if (id) {
+        audioManager.unregister(id);
+      }
+    };
   }, [src]);
 
   // Sync mute
@@ -74,19 +104,37 @@ function useWaveAudio(src: string, durationSec: number, active: boolean, muted: 
 
   // Active = play, inactive = pause
   useEffect(() => {
-    const a = audioRef.current; if (!a) return;
+    const a = audioRef.current; 
+    const id = instanceIdRef.current;
+    if (!a || !id) return;
     if (active && !failed) {
       a.volume = 1; a.muted = muted; setLoading(true);
-      a.play().catch(() => { setLoading(false); });
+      audioManager.requestPlay(id).then(() => {
+        setLoading(false);
+      }).catch(() => {
+        setLoading(false);
+      });
     } else {
-      a.pause(); setCurrent(0);
+      audioManager.pause(id);
+      setCurrent(0);
     }
-  }, [active, failed]);
+  }, [active, failed, muted]);
 
   const toggle = async () => {
-    const a = audioRef.current; if (!a) return;
-    if (playing) { a.pause(); }
-    else { setLoading(true); a.play().catch(() => setLoading(false)); }
+    const a = audioRef.current;
+    const id = instanceIdRef.current;
+    if (!a || !id) return;
+    if (playing) { 
+      audioManager.pause(id);
+    }
+    else { 
+      setLoading(true); 
+      audioManager.requestPlay(id).then(() => {
+        setLoading(false);
+      }).catch(() => {
+        setLoading(false);
+      });
+    }
   };
 
   const pct = dur > 0 ? Math.min(100, (current / dur) * 100) : 0;

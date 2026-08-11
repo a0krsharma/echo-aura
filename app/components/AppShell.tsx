@@ -18,7 +18,7 @@ import BottomNav from "@/app/components/BottomNav";
 import LeftSidebar from "@/app/components/LeftSidebar";
 import { RightSidebar } from "@/app/components/RightSidebar";
 import { ToastContainer } from "@/app/components/Toast";
-import { subscribeToNotifications, markNotificationRead, type EchoNotification } from "@/lib/notifications";
+import { subscribeToNotifications, markNotificationRead, subscribeToUnreadCount, type EchoNotification } from "@/lib/notifications";
 import {
   Loader2,
   Menu,
@@ -45,6 +45,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [toastNotifications, setToastNotifications] = useState<EchoNotification[]>([]);
   const [shownToastIds, setShownToastIds] = useState<Set<string>>(new Set());
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const isPublicRoute = pathname === "/login";
 
@@ -52,6 +53,13 @@ function ShellContent({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setDrawerOpen(false);
   }, [pathname]);
+
+  // Subscribe to unread notification count
+  useEffect(() => {
+    if (!user) { setUnreadCount(0); return; }
+    const unsub = subscribeToUnreadCount(user.uid, (count) => setUnreadCount(count));
+    return () => unsub();
+  }, [user]);
 
   // Subscribe to notifications for toasts
   useEffect(() => {
@@ -64,12 +72,15 @@ function ShellContent({ children }: { children: React.ReactNode }) {
       if (newUnread.length > 0) {
         // Add new toasts (limit to 3 at a time)
         setToastNotifications(prev => {
-          const newToasts = newUnread.slice(0, 3);
+          // Filter out any duplicates that might already exist in prev
+          const existingIds = new Set(prev.map(t => t.id));
+          const trulyNew = newUnread.filter(n => !existingIds.has(n.id));
+          const newToasts = trulyNew.slice(0, 3);
           const combined = [...newToasts, ...prev].slice(0, 3);
           return combined;
         });
         
-        // Mark as shown to avoid duplicate toasts
+        // Mark as shown to avoid duplicate toasts (use functional update for consistency)
         setShownToastIds(prev => {
           const newIds = new Set(prev);
           newUnread.forEach(n => newIds.add(n.id));
@@ -86,7 +97,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
     });
 
     return () => unsub();
-  }, [user, shownToastIds]);
+  }, [user]);
 
   const handleDismissToast = (id: string) => {
     setToastNotifications(prev => prev.filter(t => t.id !== id));
@@ -116,17 +127,17 @@ function ShellContent({ children }: { children: React.ReactNode }) {
   if (!user) return null;
 
   const mobileNavItems = [
-    { label: "THE FREQUENCY", href: "/", icon: Radio },
-    { label: "THE RADAR", href: "/radar", icon: Compass },
-    { label: "THE STAGE", href: "/clash", icon: Swords },
-    { label: "LIVE ROOMS", href: "/rooms", icon: Users },
-    { label: "WAVES", href: "/waves", icon: Waves },
-    { label: "SEARCH", href: "/search", icon: Search },
-    { label: "STUDIO", href: "/studio", icon: Mic2 },
-    { label: "WHISPERS", href: "/whispers", icon: MessageSquare },
-    { label: "NOTIFICATIONS", href: "/notifications", icon: Bell },
-    { label: "YOUR PROFILE", href: "/profile", icon: User },
-    { label: "THE TERMINAL", href: "/terminal", icon: Terminal },
+    { label: "[ FREQUENCY ]", href: "/", icon: Radio },
+    { label: "[ RADAR ]", href: "/radar", icon: Compass },
+    { label: "[ STAGE ]", href: "/clash", icon: Swords },
+    { label: "[ ROOMS ]", href: "/rooms", icon: Users },
+    { label: "[ WAVES ]", href: "/waves", icon: Waves },
+    { label: "[ SEARCH ]", href: "/search", icon: Search },
+    { label: "[ STUDIO ]", href: "/studio", icon: Mic2 },
+    { label: "[ WIRE ]", href: "/whispers", icon: MessageSquare },
+    { label: "[ NOTIFS ]", href: "/notifications", icon: Bell },
+    { label: "[ PROFILE ]", href: "/profile", icon: User },
+    { label: "[ TERMINAL ]", href: "/terminal", icon: Terminal },
   ];
 
   return (
@@ -146,11 +157,32 @@ function ShellContent({ children }: { children: React.ReactNode }) {
           </Link>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/notifications"
+            className="relative p-2 border border-neutral-800 text-white hover:border-white transition-colors cursor-pointer"
+            aria-label="Notifications"
+          >
+            <Bell className="w-4 h-4" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 flex items-center justify-center">
+                {unreadCount < 10 ? (
+                  <span className="w-4 h-4 bg-white text-black rounded-full font-mono text-[8px] flex items-center justify-center font-bold">
+                    {unreadCount}
+                  </span>
+                ) : (
+                  <span className="w-4 h-4 bg-white text-black rounded-full font-mono text-[8px] flex items-center justify-center font-bold">
+                    9+
+                  </span>
+                )}
+              </span>
+            )}
+          </Link>
           <Link
             href="/profile"
-            className="font-mono text-xs tracking-widest text-neutral-400 border border-neutral-800 px-2.5 py-1 uppercase hover:border-white hover:text-white transition-colors"
+            className="font-mono text-xs tracking-widest uppercase text-secondary border border-standard px-2.5 py-1 uppercase hover:border-white hover:text-white transition-colors"
           >
+            <span className="font-mono text-xs tracking-widest uppercase text-secondary">LIVE ROOMS</span>
             {user.handle || "@YOU"}
           </Link>
         </div>
@@ -166,9 +198,9 @@ function ShellContent({ children }: { children: React.ReactNode }) {
           />
 
           {/* Drawer Content */}
-          <aside className="relative w-4/5 max-w-xs bg-black border-r border-neutral-800 h-full flex flex-col justify-between p-6 z-10 animate-slide-in">
+          <aside className="relative w-4/5 max-w-xs bg-black border-r border-standard h-full flex flex-col justify-between p-6 z-10 animate-slide-in">
             <div className="space-y-6">
-              <div className="flex items-center justify-between border-b border-neutral-900 pb-4">
+              <div className="md:hidden flex items-center justify-between px-5 pt-10 pb-6 border-b border-standard">
                 <span className="font-serif italic text-2xl text-white">Echo.</span>
                 <button
                   onClick={() => setDrawerOpen(false)}
@@ -188,8 +220,8 @@ function ShellContent({ children }: { children: React.ReactNode }) {
                       href={item.href}
                       className={`flex items-center gap-3 px-3 py-2.5 font-mono text-xs tracking-widest uppercase transition-colors ${
                         active
-                          ? "border-l-2 border-white text-white bg-neutral-950"
-                          : "text-neutral-500 hover:text-white"
+                          ? "border-l-2 border-white text-white bg-secondary"
+                          : "text-secondary hover:text-white"
                       }`}
                     >
                       <Icon className="w-4 h-4" />
@@ -204,7 +236,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
             <div className="border-t border-neutral-900 pt-4 space-y-4">
               <div className="font-mono text-[10px] text-neutral-600 tracking-widest uppercase">
                 <p>{user.handle}</p>
-                <p>AURA: {user.auraScore || 0}</p>
+                <p>[ AURA ]: {user.auraScore || 0}</p>
               </div>
               <button
                 onClick={() => signOut()}

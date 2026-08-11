@@ -11,17 +11,17 @@ export default function LeftSidebar() {
   const hasNotifs = false;
 
   const navItems = [
-    { href: "/",             icon: Radio,         label: "THE FREQUENCY", hasNotifDot: false },
-    { href: "/waves",        icon: Waves,         label: "WAVES",         hasNotifDot: false },
-    { href: "/rooms",        icon: Users,         label: "LIVE ROOMS",    hasNotifDot: false },
-    { href: "/radar",        icon: Compass,       label: "THE RADAR",     hasNotifDot: false },
-    { href: "/studio",       icon: Mic2,          label: "STUDIO",        hasNotifDot: false },
-    { href: "/clash",        icon: Swords,        label: "THE STAGE",     hasNotifDot: false },
-    { href: "/search",       icon: Search,        label: "SEARCH",        hasNotifDot: false },
-    { href: "/whispers",     icon: MessageSquare, label: "WHISPERS",      hasNotifDot: false },
-    { href: "/notifications",icon: Bell,          label: "NOTIFICATIONS", hasNotifDot: hasNotifs },
-    { href: "/profile",      icon: User,          label: "PROFILE",       hasNotifDot: false },
-    { href: "/terminal",     icon: Terminal,      label: "THE TERMINAL",  hasNotifDot: false },
+    { href: "/",             icon: Radio,         label: "[ FREQUENCY ]", hasNotifDot: false },
+    { href: "/waves",        icon: Waves,         label: "[ WAVES ]",     hasNotifDot: false },
+    { href: "/rooms",        icon: Users,         label: "[ ROOMS ]",     hasNotifDot: false },
+    { href: "/radar",        icon: Compass,       label: "[ RADAR ]",     hasNotifDot: false },
+    { href: "/studio",       icon: Mic2,          label: "[ STUDIO ]",    hasNotifDot: false },
+    { href: "/clash",        icon: Swords,        label: "[ STAGE ]",     hasNotifDot: false },
+    { href: "/search",       icon: Search,        label: "[ SEARCH ]",    hasNotifDot: false },
+    { href: "/whispers",     icon: MessageSquare, label: "[ WIRE ]",      hasNotifDot: false },
+    { href: "/notifications",icon: Bell,          label: "[ NOTIFS ]",    hasNotifDot: hasNotifs },
+    { href: "/profile",      icon: User,          label: "[ PROFILE ]",   hasNotifDot: false },
+    { href: "/terminal",     icon: Terminal,      label: "[ TERMINAL ]",  hasNotifDot: false },
   ] as const;
 
   return (
@@ -46,7 +46,7 @@ export default function LeftSidebar() {
               >
                 <Icon size={14} strokeWidth={1.5} className="shrink-0" />
                 <span className="flex items-center gap-2">
-                  {isActive ? `[ ${item.label} ]` : item.label}
+                  {item.label}
                   {item.hasNotifDot && (
                     <span className="w-1.5 h-1.5 bg-white rounded-full inline-block"></span>
                   )}
@@ -69,7 +69,7 @@ export default function LeftSidebar() {
           </button>
         </div>
         <p className="text-white truncate">{user?.handle || "@ANON_GUEST"}</p>
-        <p className="text-neutral-400">AURA: {user?.auraScore || 0}</p>
+        <p className="text-neutral-400">[ AURA ]: {user?.auraScore || 0}</p>
       </div>
     </aside>
   );

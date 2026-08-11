@@ -5,11 +5,16 @@ import Link from "next/link";
 import { collection, query, orderBy, limit, getDocs } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 import { subscribeToClashes, type ClashItem } from "@/lib/clashes";
+import { subscribeToUnreadCount } from "@/lib/notifications";
 import { EchoUser } from "@/lib/userDoc";
+import { Bell } from "lucide-react";
+import { useAuth } from "@/app/components/AuthProvider";
 
 export function RightSidebar() {
+  const { user } = useAuth();
   const [topUsers, setTopUsers] = useState<EchoUser[]>([]);
   const [liveClashes, setLiveClashes] = useState<ClashItem[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     async function fetchTopUsers() {
@@ -28,6 +33,13 @@ export function RightSidebar() {
     return () => unsub();
   }, []);
 
+  // Subscribe to unread notification count
+  useEffect(() => {
+    if (!user) { setUnreadCount(0); return; }
+    const unsub = subscribeToUnreadCount(user.uid, (count) => setUnreadCount(count));
+    return () => unsub();
+  }, [user]);
+
   return (
     <aside
       className="
@@ -39,49 +51,39 @@ export function RightSidebar() {
       "
       aria-label="Right panel"
     >
-      {/* ── RADAR: TOP VOICES ── */}
-      <div className="mb-10">
-        <p className="font-mono text-xs tracking-widest uppercase text-neutral-700 mb-6">
-          // RADAR: TOP VOICES
+      {/* ── NOTIFICATIONS ── */}
+      <div className="flex items-center justify-between mb-6">
+        <p className="font-mono text-xs tracking-widest uppercase text-neutral-700">
+          // NOTIFICATIONS
         </p>
-
-        {topUsers.length === 0 ? (
-          <div className="font-mono text-xs text-neutral-700 uppercase tracking-widest">
-            NO RANKED VOICES YET.
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {topUsers.map((u, i) => (
-              <div key={u.uid}>
-                <div className="flex items-center justify-between mb-1.5 font-mono text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="text-neutral-700">0{i + 1}.</span>
-                    <span className="text-white tracking-widest">{u.handle}</span>
-                  </div>
-                  <span className="text-neutral-500 tracking-widest">
-                    {u.auraScore || 0}
-                  </span>
-                </div>
-                <div className="w-full h-px bg-neutral-900">
-                  <div
-                    className="h-full bg-white"
-                    style={{ width: `${Math.min(100, Math.max(10, ((u.auraScore || 0) / 100) * 100))}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        <Link
+          href="/notifications"
+          className="relative p-2 border border-neutral-800 text-white hover:border-white transition-colors cursor-pointer"
+          aria-label="Notifications"
+        >
+          <Bell className="w-4 h-4" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 flex items-center justify-center">
+              {unreadCount < 10 ? (
+                <span className="w-4 h-4 bg-white text-black rounded-full font-mono text-[8px] flex items-center justify-center font-bold">
+                  {unreadCount}
+                </span>
+              ) : (
+                <span className="w-4 h-4 bg-white text-black rounded-full font-mono text-[8px] flex items-center justify-center font-bold">
+                  9+
+                </span>
+              )}
+            </span>
+          )}
+        </Link>
       </div>
-
-      <div className="border-t border-neutral-900 mb-8" />
 
       {/* ── LIVE ON THE STAGE ── */}
       <div>
         <div className="flex items-center gap-2 mb-6">
           <span className="w-2 h-2 rounded-full bg-white animate-ping" aria-hidden="true" />
           <p className="font-mono text-xs tracking-widest uppercase text-white">
-            LIVE ON THE STAGE
+            LIVE ON [ STAGE ]
           </p>
         </div>
 

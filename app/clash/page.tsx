@@ -46,7 +46,7 @@ function ChallengeModal({ onClose }: { onClose: () => void }) {
       <div className="w-full max-w-md bg-black border border-neutral-700 p-6 md:p-8 animate-slide-up space-y-4">
         <div className="flex items-start justify-between">
           <div>
-            <p className="font-mono text-xs tracking-widest text-neutral-500 mb-1">// CHALLENGE TO THE STAGE</p>
+            <p className="font-mono text-xs tracking-widest text-neutral-500 mb-1">// CHALLENGE TO [ STAGE ]</p>
             <p className="font-serif italic text-white text-lg">Set the debate motion.</p>
           </div>
           <button onClick={onClose} className="text-neutral-600 hover:text-white transition-colors cursor-pointer">
@@ -175,14 +175,14 @@ export default function StagePage() {
       {/* Top bar */}
       <div className="md:hidden flex items-center justify-between px-5 pt-10 pb-6 border-b border-neutral-900">
         <span className="font-serif text-xl font-bold text-white">Echo.</span>
-        <span className="font-mono text-xs tracking-widest uppercase text-white">THE STAGE</span>
+        <span className="font-mono text-xs tracking-widest uppercase text-white">[ STAGE ]</span>
       </div>
 
       <div className="max-w-2xl mx-auto px-5 pt-8 md:pt-12">
         {/* Header */}
         <div className="flex items-start justify-between gap-4 mb-10">
           <div>
-            <p className="font-mono text-xs tracking-widest text-neutral-700 mb-3">// THE STAGE — WHERE VOICES CLASH</p>
+            <p className="font-mono text-xs tracking-widest text-neutral-700 mb-3">// [ STAGE ] — WHERE VOICES CLASH</p>
             <h1 className="font-serif text-4xl italic text-white leading-tight">
               Two voices.<br />One truth.
             </h1>
@@ -198,7 +198,7 @@ export default function StagePage() {
 
         {/* Live Clashes Stream */}
         <section className="space-y-6 mb-12">
-          <p className="font-mono text-xs tracking-widest text-white">// LIVE DEBATES ON THE STAGE</p>
+          <p className="font-mono text-xs tracking-widest text-white">// LIVE DEBATES ON [ STAGE ]</p>
           {clashes.length === 0 ? (
             <div className="border border-neutral-900 p-8 text-center space-y-4">
               <p className="font-serif italic text-neutral-500 text-lg">

@@ -32,7 +32,7 @@ const firebaseConfig = {
 };
 
 // ── App singleton ─────────────────────────────────────────────────
-function getFirebaseApp(): FirebaseApp {
+export function getFirebaseApp(): FirebaseApp {
   if (getApps().length > 0) return getApp();
   return initializeApp(firebaseConfig);
 }

@@ -335,7 +335,7 @@ export default function RoomsPage() {
       {/* Mobile Top Bar */}
       <div className="md:hidden flex items-center justify-between px-5 pt-10 pb-6 border-b border-neutral-900">
         <span className="font-serif text-xl font-bold text-white">Echo.</span>
-        <span className="font-mono text-xs tracking-widest uppercase text-neutral-500">LIVE ROOMS</span>
+        <span className="font-mono text-xs tracking-widest uppercase text-neutral-500">[ ROOMS ]</span>
       </div>
 
       <main className="max-w-2xl mx-auto px-5 pt-8 space-y-10 w-full flex-1">
@@ -427,12 +427,12 @@ export default function RoomsPage() {
 
         {/* Live Rooms Section */}
         <section className="space-y-4">
-          <p className="font-mono text-xs tracking-widest text-white">// LIVE ROOMS</p>
+          <p className="font-mono text-xs tracking-widest text-white">// [ ROOMS ]</p>
           {rooms.length === 0 ? (
             <div className="border border-neutral-900 p-6 text-center space-y-3">
               <Radio className="w-6 h-6 text-neutral-700 mx-auto" />
               <p className="font-mono text-xs text-neutral-500 tracking-widest uppercase">
-                NO LIVE ROOMS ACTIVE
+                NO [ ROOMS ] ACTIVE
               </p>
             </div>
           ) : (

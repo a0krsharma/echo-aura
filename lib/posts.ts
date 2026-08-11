@@ -26,6 +26,8 @@ import {
   type Timestamp,
 } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
+import { createPostMentions, removePostMentions } from "@/lib/mentions";
+import { addBookmark, removeBookmark, isPostBookmarked } from "@/lib/bookmarks";
 
 export interface PostItem {
   id:              string;
@@ -79,48 +81,93 @@ export async function createPost(data: {
   orbitOf?:         string;
   orbitOfHandle?:   string;
 }): Promise<string> {
-  const db = getFirebaseDb();
-  const postsRef = collection(db, "posts");
-  const docRef = await addDoc(postsRef, {
-    audioUrl:        data.audioUrl,
-    caption:         data.caption,
-    authorUid:       data.authorUid,
-    authorHandle:    data.authorHandle,
-    pulseCount:      0,
-    pulsedBy:        [],
-    orbitedBy:       [],
-    orbitCount:      0,
-    reverbCount:     0,
-    duration:        data.duration  || "00:15",
-    durationSec:     data.durationSec || 15,
-    reverbOf:        data.reverbOf        || null,
-    reverbOfHandle:  data.reverbOfHandle  || null,
-    orbitOf:         data.orbitOf         || null,
-    orbitOfHandle:   data.orbitOfHandle   || null,
-    createdAt:       serverTimestamp(),
-  });
-
-  // Bump aura
   try {
-    await updateDoc(doc(db, "users", data.authorUid), { auraScore: increment(10) });
-  } catch {}
+    const db = getFirebaseDb();
+    const postsRef = collection(db, "posts");
+    const docRef = await addDoc(postsRef, {
+      audioUrl:        data.audioUrl,
+      caption:         data.caption,
+      authorUid:       data.authorUid,
+      authorHandle:    data.authorHandle,
+      pulseCount:      0,
+      pulsedBy:        [],
+      orbitedBy:       [],
+      orbitCount:      0,
+      reverbCount:     0,
+      duration:        data.duration  || "00:15",
+      durationSec:     data.durationSec || 15,
+      reverbOf:        data.reverbOf        || null,
+      reverbOfHandle:  data.reverbOfHandle  || null,
+      orbitOf:         data.orbitOf         || null,
+      orbitOfHandle:   data.orbitOfHandle   || null,
+      createdAt:       serverTimestamp(),
+    });
 
-  // Increment parent reverbCount
-  if (data.reverbOf) {
-    try { await updateDoc(doc(db, "posts", data.reverbOf), { reverbCount: increment(1) }); } catch {}
-  }
-
-  // Increment parent orbitCount
-  if (data.orbitOf) {
+    // Bump aura
     try {
-      await updateDoc(doc(db, "posts", data.orbitOf), {
-        orbitCount: increment(1),
-        orbitedBy:  arrayUnion(data.authorUid),
-      });
+      await updateDoc(doc(db, "users", data.authorUid), { auraScore: increment(10) });
     } catch {}
-  }
 
-  return docRef.id;
+    // Create mentions for this post
+    try {
+      await createPostMentions(docRef.id, data.caption, data.authorUid, data.authorHandle, data.audioUrl);
+    } catch (error) {
+      console.error("[createPost] Error creating mentions:", error);
+    }
+
+    // Increment parent reverbCount
+    if (data.reverbOf) {
+      try { await updateDoc(doc(db, "posts", data.reverbOf), { reverbCount: increment(1) }); } catch {}
+    }
+
+    // Increment parent orbitCount
+    if (data.orbitOf) {
+      try {
+        await updateDoc(doc(db, "posts", data.orbitOf), {
+          orbitCount: increment(1),
+          orbitedBy:  arrayUnion(data.authorUid),
+        });
+      } catch {}
+    }
+
+    return docRef.id;
+  } catch (error) {
+    console.error("Error creating post:", error);
+    throw error;
+  }
+}
+
+// ── Toggle bookmark on a post ───────────────────────────────────────────────────
+export async function togglePostBookmark(
+  userId: string,
+  postId: string,
+  postAuthorUid: string,
+  postAuthorHandle: string,
+  postCaption: string,
+  postAudioUrl: string,
+  postDuration: string,
+  postDurationSec: number,
+  postPulseCount: number
+): Promise<boolean> {
+  const isBookmarked = await isPostBookmarked(userId, postId);
+
+  if (isBookmarked) {
+    await removeBookmark(userId, postId);
+    return false;
+  } else {
+    await addBookmark(
+      userId,
+      postId,
+      postAuthorUid,
+      postAuthorHandle,
+      postCaption,
+      postAudioUrl,
+      postDuration,
+      postDurationSec,
+      postPulseCount
+    );
+    return true;
+  }
 }
 
 /**
@@ -215,12 +262,17 @@ export async function togglePulsePost(
   uid: string,
   currentlyPulsed: boolean
 ) {
-  const db = getFirebaseDb();
-  const ref = doc(db, "posts", postId);
-  if (currentlyPulsed) {
-    await updateDoc(ref, { pulseCount: increment(-1), pulsedBy: arrayRemove(uid) });
-  } else {
-    await updateDoc(ref, { pulseCount: increment(1),  pulsedBy: arrayUnion(uid)  });
+  try {
+    const db = getFirebaseDb();
+    const ref = doc(db, "posts", postId);
+    if (currentlyPulsed) {
+      await updateDoc(ref, { pulseCount: increment(-1), pulsedBy: arrayRemove(uid) });
+    } else {
+      await updateDoc(ref, { pulseCount: increment(1),  pulsedBy: arrayUnion(uid)  });
+    }
+  } catch (error) {
+    console.error("Error toggling pulse:", error);
+    throw error;
   }
 }
 
@@ -228,17 +280,22 @@ export async function togglePulsePost(
  * deletePost — delete a post and all its reverbs
  */
 export async function deletePost(postId: string): Promise<void> {
-  const db = getFirebaseDb();
-  
-  // Delete all reverbs first
-  const reverbsRef = collection(db, "posts", postId, "reverbs");
-  const reverbsSnap = await getDocs(reverbsRef);
-  for (const doc of reverbsSnap.docs) {
-    await deleteDoc(doc.ref);
+  try {
+    const db = getFirebaseDb();
+    
+    // Delete all reverbs first
+    const reverbsRef = collection(db, "posts", postId, "reverbs");
+    const reverbsSnap = await getDocs(reverbsRef);
+    for (const doc of reverbsSnap.docs) {
+      await deleteDoc(doc.ref);
+    }
+    
+    // Delete the post
+    await deleteDoc(doc(db, "posts", postId));
+  } catch (error) {
+    console.error("Error deleting post:", error);
+    throw error;
   }
-  
-  // Delete the post
-  await deleteDoc(doc(db, "posts", postId));
 }
 
 /**

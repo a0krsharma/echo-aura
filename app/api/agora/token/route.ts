@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
   if (!channel || !uid) {
     return NextResponse.json(
-      { error: "Missing channel or uid parameter" },
+      { error: "Missing channel or uid parameter", details: { channel, uid } },
       { status: 400 }
     );
   }
@@ -26,15 +26,16 @@ export async function GET(request: NextRequest) {
   const appCertificate = process.env.AGORA_APP_CERTIFICATE;
 
   if (!appId) {
+    console.error("[Agora Token] App ID not configured in environment variables");
     return NextResponse.json(
-      { error: "Agora App ID not configured" },
+      { error: "Agora App ID not configured", hint: "Set NEXT_PUBLIC_AGORA_APP_ID in .env.local" },
       { status: 500 }
     );
   }
 
-  // If certificate is not configured, use App ID-only authentication
-  if (!appCertificate || appCertificate === "YOUR_AGORA_CERTIFICATE_HERE") {
-    console.log("Agora App Certificate not configured, using App ID-only authentication");
+  // Validate certificate configuration
+  if (!appCertificate || appCertificate.trim() === "" || appCertificate === "YOUR_AGORA_CERTIFICATE_HERE") {
+    console.warn("[Agora Token] App Certificate not configured, using App ID-only authentication");
     return NextResponse.json({
       token: null,
       uid,
@@ -42,6 +43,8 @@ export async function GET(request: NextRequest) {
       appId,
       expiresInSeconds: 3600,
       warning: "Using App ID-only authentication (no certificate configured)",
+      mode: "app_id_only",
+      hint: "For production, set AGORA_APP_CERTIFICATE in .env.local"
     });
   }
 
@@ -51,8 +54,10 @@ export async function GET(request: NextRequest) {
     const currentTimestamp = Math.floor(Date.now() / 1000);
     const privilegeExpiredTs = currentTimestamp + expirationTimeInSeconds;
 
-    // Try buildTokenWithAccount first (works with string UIDs)
     let token: string;
+    let tokenType: string;
+
+    // Try buildTokenWithAccount first (works with string UIDs)
     try {
       token = RtcTokenBuilder.buildTokenWithAccount(
         appId,
@@ -62,8 +67,10 @@ export async function GET(request: NextRequest) {
         RtcRole.PUBLISHER,
         privilegeExpiredTs
       );
+      tokenType = "account";
+      console.log(`[Agora Token] Generated token for channel ${channel}, uid ${uid} using buildTokenWithAccount`);
     } catch (accountError) {
-      console.log("buildTokenWithAccount failed, trying buildTokenWithUid");
+      console.warn(`[Agora Token] buildTokenWithAccount failed: ${accountError}, trying buildTokenWithUid`);
       // Fallback to buildTokenWithUid with numeric UID
       const uidNumber = parseInt(uid.replace(/\D/g, '')) || Math.floor(Math.random() * 1000000);
       token = RtcTokenBuilder.buildTokenWithUid(
@@ -74,6 +81,8 @@ export async function GET(request: NextRequest) {
         RtcRole.PUBLISHER,
         privilegeExpiredTs
       );
+      tokenType = "uid_numeric";
+      console.log(`[Agora Token] Generated token for channel ${channel}, uid ${uidNumber} using buildTokenWithUid`);
     }
 
     return NextResponse.json({
@@ -82,18 +91,43 @@ export async function GET(request: NextRequest) {
       channel,
       appId,
       expiresInSeconds: expirationTimeInSeconds,
+      mode: "token_authenticated",
+      tokenType,
+      generatedAt: new Date().toISOString()
     });
   } catch (error) {
-    console.error("Token generation error:", error);
+    console.error("[Agora Token] Token generation error:", error);
     
-    // Fallback: Return null token for App ID-only auth
+    // Determine error type for better debugging
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const isCertificateError = errorMessage.toLowerCase().includes('certificate') || 
+                               errorMessage.toLowerCase().includes('invalid');
+    
+    if (isCertificateError) {
+      return NextResponse.json({
+        token: null,
+        uid,
+        channel,
+        appId,
+        expiresInSeconds: 3600,
+        error: "Certificate validation failed",
+        warning: "Using App ID-only authentication (certificate error)",
+        mode: "app_id_only",
+        details: errorMessage
+      });
+    }
+    
+    // Fallback: Return null token for App ID-only auth on other errors
     return NextResponse.json({
       token: null,
       uid,
       channel,
       appId,
       expiresInSeconds: 3600,
-      warning: "Using App ID-only authentication (token generation failed)",
+      error: "Token generation failed",
+      warning: "Using App ID-only authentication (fallback)",
+      mode: "app_id_only",
+      details: errorMessage
     });
   }
 }

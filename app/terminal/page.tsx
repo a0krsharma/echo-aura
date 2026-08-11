@@ -155,7 +155,7 @@ export default function TerminalPage() {
   // ── Yap control ─────────────────────────────────────────────
   const [yapControl,    setYapControl]    = useState("EVERYONE");
   const [echoControl,   setEchoControl]   = useState("EVERYONE");
-  const [whoCanWhisper, setWhoCanWhisper] = useState("ORBITERS");
+  const [whoCanWhisper, setWhoCanWhisper] = useState("[ ORBIT ]");
 
   // ── Audio settings ──────────────────────────────────────────
   const [audioQuality,  setAudioQuality]  = useState("HIGH");
@@ -239,7 +239,7 @@ export default function TerminalPage() {
   if (view === "hidden") return (
     <SubView title="HIDDEN WORDS" onBack={() => setView("main")}>
       <p className="font-mono text-xs text-neutral-700 tracking-widest mb-8">
-        REVERBS CONTAINING THESE WORDS WILL BE HIDDEN FROM YOU
+        [ REPLIES ] CONTAINING THESE WORDS WILL BE HIDDEN FROM YOU
       </p>
       <div className="border-b border-neutral-900 pb-4 mb-6">
         <input
@@ -255,9 +255,9 @@ export default function TerminalPage() {
   if (view === "pings") return (
     <SubView title="PINGS" onBack={() => setView("main")}>
       <ToggleItem id="ping-pulses"  label="NEW PULSES ON YOUR ECHOES"  sub="someone vibed to you"         value={pingPulses}  onToggle={() => setPingPulses(p => !p)} />
-      <ToggleItem id="ping-reverbs" label="NEW REVERBS / YAPS"          sub="someone dropped a reverb"    value={pingReverbs} onToggle={() => setPingReverbs(p => !p)} />
+      <ToggleItem id="ping-reverbs" label="NEW [ REPLIES ] / YAPS"          sub="someone dropped a reply"    value={pingReverbs} onToggle={() => setPingReverbs(p => !p)} />
       <ToggleItem id="ping-fire"    label="YOU'RE ON FIRE"              sub="when your echo goes viral"   value={pingOnFire}  onToggle={() => setPingOnFire(p => !p)} />
-      <ToggleItem id="ping-lockins" label="NEW ORBITERS"                sub="someone locked in with you"  value={pingLockIns} onToggle={() => setPingLockIns(p => !p)} />
+      <ToggleItem id="ping-lockins" label="NEW [ ORBIT ]"                sub="someone locked in with you"  value={pingLockIns} onToggle={() => setPingLockIns(p => !p)} />
       <ToggleItem id="ping-stage"   label="STAGE INVITES"               sub="clash / battle requests"     value={pingStage}   onToggle={() => setPingStage(p => !p)} />
     </SubView>
   );
@@ -271,7 +271,7 @@ export default function TerminalPage() {
         <Link href="/" className="text-neutral-600 hover:text-white transition-colors">
           <ArrowLeft size={16} strokeWidth={1.5} />
         </Link>
-        <span className="font-mono text-xs tracking-widest uppercase text-white">THE TERMINAL</span>
+        <span className="font-mono text-xs tracking-widest uppercase text-white">[ TERMINAL ]</span>
         <div className="w-4" />
       </div>
 
@@ -331,29 +331,29 @@ export default function TerminalPage() {
           value={audioQuality}
           onChange={setAudioQuality}
         />
-        <ToggleItem id="auto-transcribe" label="AUTO-TRANSCRIBE REVERBS"  sub="convert yaps to text"          value={autoTranscribe} onToggle={() => setAutoTranscribe(p => !p)} />
+        <ToggleItem id="auto-transcribe" label="AUTO-TRANSCRIBE [ REPLIES ]"  sub="convert yaps to text"          value={autoTranscribe} onToggle={() => setAutoTranscribe(p => !p)} />
         <ToggleItem id="auto-play"       label="AUTO-PLAY ON FREQUENCY"   sub="start playing on scroll"       value={autoPlay}       onToggle={() => setAutoPlay(p => !p)} />
 
         {/* ── YAP CONTROL ───────────────────────────────────── */}
-        <SectionHeader label="YAP CONTROL — REVERB PERMISSIONS" />
+        <SectionHeader label="YAP CONTROL — [ REPLY ] PERMISSIONS" />
         <SelectItem
-          label="WHO CAN DROP REVERB"
+          label="WHO CAN DROP [ REPLY ]"
           sub="who can voice-reply to your echoes"
-          options={["EVERYONE", "ORBITERS", "DAY ONES", "NOBODY"]}
+          options={["EVERYONE", "[ ORBIT ]", "DAY ONES", "NOBODY"]}
           value={yapControl}
           onChange={setYapControl}
         />
         <SelectItem
           label="WHO CAN PUT ON / ECHO"
           sub="who can repost your voice"
-          options={["EVERYONE", "ORBITERS", "NOBODY"]}
+          options={["EVERYONE", "[ ORBIT ]", "NOBODY"]}
           value={echoControl}
           onChange={setEchoControl}
         />
         <SelectItem
-          label="WHO CAN WHISPER YOU"
+          label="WHO CAN [ WIRE ] YOU"
           sub="private audio messages"
-          options={["EVERYONE", "ORBITERS", "DAY ONES"]}
+          options={["EVERYONE", "[ ORBIT ]", "DAY ONES"]}
           value={whoCanWhisper}
           onChange={setWhoCanWhisper}
         />

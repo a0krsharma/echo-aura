@@ -9,6 +9,8 @@ import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import AppShell from "@/app/components/AppShell";
 import { ChatProvider } from "@/app/components/ChatProvider";
+import { OfflineIndicator } from "@/app/components/OfflineIndicator";
+import { ErrorBoundary } from "@/app/components/ErrorBoundary";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"], display: "swap" });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"], display: "swap" });
@@ -56,11 +58,27 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} h-full`}>
       <body className="bg-black text-white font-sans antialiased h-full">
-        <ChatProvider>
-          <AppShell>
-            {children}
-          </AppShell>
-        </ChatProvider>
+        <ErrorBoundary>
+          <OfflineIndicator />
+          <ChatProvider>
+            <AppShell>
+              {children}
+            </AppShell>
+          </ChatProvider>
+        </ErrorBoundary>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js').then((reg) => {
+                  console.log('[Service Worker] Registered:', reg.scope);
+                }).catch((err) => {
+                  console.log('[Service Worker] Registration failed:', err);
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   );

@@ -55,10 +55,28 @@ export interface RoomParticipant {
   raisedHand?: boolean;
   raisedHandAt?: Timestamp;
   isMuted?: boolean;
+  isModerator?: boolean;
+  isBanned?: boolean;
+  bannedAt?: Timestamp;
+  bannedBy?: string;
+  bannedReason?: string;
+  breakoutRoomId?: string; // ID of breakout room if assigned
+}
+
+export interface BreakoutRoom {
+  id: string;
+  parentRoomId: string;
+  name: string;
+  maxParticipants: number;
+  participantCount: number;
+  agoraChannel: string;
+  createdAt: Timestamp;
+  isActive: boolean;
 }
 
 const ROOMS_COLLECTION = "rooms";
 const PARTICIPANTS_COLLECTION = "room_participants";
+const BREAKOUT_ROOMS_COLLECTION = "breakout_rooms";
 
 // ── Create a new room ────────────────────────────────────────────────
 export async function createRoom(roomData: {
@@ -73,115 +91,172 @@ export async function createRoom(roomData: {
   scheduledFor?: Timestamp | null;
   openMic?: boolean;
 }): Promise<string> {
-  const db = getFirebaseDb();
-  const roomRef = doc(collection(db, ROOMS_COLLECTION));
-  const roomId = roomRef.id;
-  
-  // Generate Agora channel name from room ID
-  const agoraChannel = `echo_room_${roomId}`;
-
-  const newRoom: Room = {
-    id: roomId,
-    name: roomData.name,
-    description: roomData.description,
-    hostUid: roomData.hostUid,
-    hostHandle: roomData.hostHandle,
-    participantCount: 1, // Host counts as first participant
-    speakerCount: 1, // Host is first speaker
-    maxParticipants: roomData.maxParticipants,
-    isPublic: roomData.isPublic,
-    category: roomData.category,
-    tags: roomData.tags,
-    createdAt: serverTimestamp() as Timestamp,
-    updatedAt: serverTimestamp() as Timestamp,
-    isActive: !roomData.scheduledFor, // Inactive if scheduled for future
-    agoraChannel,
-    scheduledFor: roomData.scheduledFor || null,
-    openMic: roomData.openMic || false, // Default to raise hand mode
-  };
-
-  console.log("[createRoom] Attempting to save room to Firestore:", newRoom);
-  await setDoc(roomRef, newRoom);
-  console.log("[createRoom] Room saved successfully to Firestore with ID:", roomId);
-
-  // Verify the room was saved
-  const roomCheck = await getDoc(roomRef);
-  console.log("[createRoom] Room verification check:", roomCheck.exists() ? "EXISTS" : "DOES NOT EXIST");
-  if (roomCheck.exists()) {
-    console.log("[createRoom] Room data:", roomCheck.data());
-  }
-
-  // Add host as first participant (try-catch to handle permission issues)
   try {
-    await addParticipant(roomId, {
-      uid: roomData.hostUid,
-      handle: roomData.hostHandle,
-      isSpeaker: true,
-    });
-    console.log("[createRoom] Host added as participant");
-  } catch (error) {
-    console.error("[createRoom] Error adding host as participant:", error);
-    // Continue anyway - room was created successfully
-  }
+    const db = getFirebaseDb();
+    const roomRef = doc(collection(db, ROOMS_COLLECTION));
+    const roomId = roomRef.id;
+    
+    // Generate Agora channel name from room ID
+    const agoraChannel = `echo_room_${roomId}`;
 
-  return roomId;
+    const newRoom: Room = {
+      id: roomId,
+      name: roomData.name,
+      description: roomData.description,
+      hostUid: roomData.hostUid,
+      hostHandle: roomData.hostHandle,
+      participantCount: 1, // Host counts as first participant
+      speakerCount: 1, // Host is first speaker
+      maxParticipants: roomData.maxParticipants,
+      isPublic: roomData.isPublic,
+      category: roomData.category,
+      tags: roomData.tags,
+      createdAt: serverTimestamp() as Timestamp,
+      updatedAt: serverTimestamp() as Timestamp,
+      isActive: !roomData.scheduledFor, // Inactive if scheduled for future
+      agoraChannel,
+      scheduledFor: roomData.scheduledFor || null,
+      openMic: roomData.openMic || false, // Default to raise hand mode
+    };
+
+    console.log("[createRoom] Attempting to save room to Firestore:", newRoom);
+    await setDoc(roomRef, newRoom);
+    console.log("[createRoom] Room saved successfully to Firestore with ID:", roomId);
+
+    // Verify the room was saved
+    const roomCheck = await getDoc(roomRef);
+    console.log("[createRoom] Room verification check:", roomCheck.exists() ? "EXISTS" : "DOES NOT EXIST");
+    if (roomCheck.exists()) {
+      console.log("[createRoom] Room data:", roomCheck.data());
+    }
+
+    // Add host as first participant (try-catch to handle permission issues)
+    try {
+      await addParticipant(roomId, {
+        uid: roomData.hostUid,
+        handle: roomData.hostHandle,
+        isSpeaker: true,
+      });
+      console.log("[createRoom] Host added as participant");
+    } catch (error) {
+      console.error("[createRoom] Error adding host as participant:", error);
+      // Continue anyway - room was created successfully
+    }
+
+    return roomId;
+  } catch (error) {
+    console.error("[createRoom] Error creating room:", error);
+    throw error;
+  }
 }
 
 // ── Add participant to room ───────────────────────────────────────────────
 export async function addParticipant(roomId: string, participant: Omit<RoomParticipant, "joinedAt">, isHost: boolean = false): Promise<void> {
-  const db = getFirebaseDb();
-  const participantRef = doc(collection(db, PARTICIPANTS_COLLECTION), `${roomId}_${participant.uid}`);
+  try {
+    const db = getFirebaseDb();
+    const participantRef = doc(collection(db, PARTICIPANTS_COLLECTION), `${roomId}_${participant.uid}`);
+    
+    // Check if participant already exists
+    const existingSnap = await getDoc(participantRef);
+    const isRejoining = existingSnap.exists();
   
-  // Check if participant already exists
-  const existingSnap = await getDoc(participantRef);
-  const isRejoining = existingSnap.exists();
-  
-  const newParticipant: RoomParticipant = {
-    ...participant,
-    isSpeaker: isHost, // Host automatically becomes speaker
-    joinedAt: serverTimestamp() as Timestamp,
-  };
-  
-  await setDoc(participantRef, {
-    ...newParticipant,
-    roomId,
-  });
-  
-  // Get room info for notification
-  const roomSnap = await getDoc(doc(db, ROOMS_COLLECTION, roomId));
-  const roomData = roomSnap.data();
-  
-  // Send notification to host when user joins (not rejoining)
-  if (!isHost && !isRejoining && roomData) {
-    createNotification(roomData.hostUid, {
-      type: "room_join",
-      fromUid: participant.uid,
-      fromHandle: participant.handle,
-      roomId: roomId,
-      roomName: roomData.name,
-      text: `${participant.handle} joined your room "${roomData.name}"`,
+    const newParticipant: RoomParticipant = {
+      ...participant,
+      isSpeaker: isHost, // Host automatically becomes speaker
+      joinedAt: serverTimestamp() as Timestamp,
+    };
+    
+    await setDoc(participantRef, {
+      ...newParticipant,
+      roomId,
     });
+    
+    // Get room info for notification
+    const roomSnap = await getDoc(doc(db, ROOMS_COLLECTION, roomId));
+    const roomData = roomSnap.data();
+    
+    // Send notification to host when user joins (not rejoining)
+    if (!isHost && !isRejoining && roomData) {
+      createNotification(roomData.hostUid, {
+        type: "room_join",
+        fromUid: participant.uid,
+        fromHandle: participant.handle,
+        roomId: roomId,
+        roomName: roomData.name,
+        text: `${participant.handle} joined your room "${roomData.name}"`,
+      });
+    }
+    
+    // Update room participant count using atomic operations
+    // Don't increment for host (already counted in room creation) or rejoining users
+    const roomRef = doc(db, ROOMS_COLLECTION, roomId);
+    const updates: any = {
+      updatedAt: serverTimestamp(),
+    };
+    
+    if (!isHost && !isRejoining) {
+      updates.participantCount = increment(1);
+    }
+    
+    // Speaker count is already set to 1 in room creation for host
+    // Only increment for non-host speakers who are not rejoining
+    if (!isHost && participant.isSpeaker && !isRejoining) {
+      updates.speakerCount = increment(1);
+    }
+    
+    if (Object.keys(updates).length > 1) { // Only update if there are changes beyond updatedAt
+      await updateDoc(roomRef, updates);
+    }
+    
+    // Trigger reconciliation after participant add to ensure counts stay in sync
+    // This runs asynchronously and doesn't block the join operation
+    reconcileParticipantCounts(roomId).catch(err => {
+      console.error("[addParticipant] Reconciliation failed:", err);
+    });
+  } catch (error) {
+    console.error("[addParticipant] Error adding participant:", error);
+    throw error;
   }
-  
-  // Update room participant count (don't increment for host since they're already counted in room creation)
-  // Also don't increment if user is rejoining (they're already counted)
-  const roomRef = doc(db, ROOMS_COLLECTION, roomId);
-  const updates: any = {
-    updatedAt: serverTimestamp(),
-  };
-  
-  if (!isHost && !isRejoining) {
-    updates.participantCount = increment(1);
-  }
-  
-  // Speaker count is already set to 1 in room creation for host
-  // Only increment for non-host speakers who are not rejoining
-  if (!isHost && participant.isSpeaker && !isRejoining) {
-    updates.speakerCount = increment(1);
-  }
-  
-  if (Object.keys(updates).length > 1) { // Only update if there are changes beyond updatedAt
-    await updateDoc(roomRef, updates);
+}
+
+// ── Reconcile participant counts ───────────────────────────────────────────
+// Ensures room participant counts match actual participant documents
+export async function reconcileParticipantCounts(roomId: string): Promise<void> {
+  try {
+    const db = getFirebaseDb();
+    
+    // Count actual participants
+    const participantsSnap = await getDocs(query(
+      collection(db, PARTICIPANTS_COLLECTION),
+      where("roomId", "==", roomId)
+    ));
+    
+    const actualParticipantCount = participantsSnap.size;
+    const actualSpeakerCount = participantsSnap.docs
+      .map(doc => doc.data() as RoomParticipant)
+      .filter(p => p.isSpeaker).length;
+    
+    // Get current room counts
+    const roomSnap = await getDoc(doc(db, ROOMS_COLLECTION, roomId));
+    if (!roomSnap.exists()) return;
+    
+    const roomData = roomSnap.data() as Room;
+    const storedParticipantCount = roomData.participantCount || 0;
+    const storedSpeakerCount = roomData.speakerCount || 0;
+    
+    // Update if counts are out of sync
+    if (actualParticipantCount !== storedParticipantCount || actualSpeakerCount !== storedSpeakerCount) {
+      console.log(`[reconcileParticipantCounts] Syncing room ${roomId}: stored ${storedParticipantCount}/${storedSpeakerCount} -> actual ${actualParticipantCount}/${actualSpeakerCount}`);
+      
+      await updateDoc(doc(db, ROOMS_COLLECTION, roomId), {
+        participantCount: actualParticipantCount,
+        speakerCount: actualSpeakerCount,
+        updatedAt: serverTimestamp(),
+      });
+    }
+  } catch (error) {
+    console.error("[reconcileParticipantCounts] Error:", error);
+    // Don't throw - this is a background maintenance operation
   }
 }
 
@@ -241,75 +316,90 @@ export function subscribeToRoomChat(roomId: string, callback: (messages: Array<{
 
 // ── Remove participant from room ────────────────────────────────────────
 export async function removeParticipant(roomId: string, uid: string): Promise<void> {
-  const db = getFirebaseDb();
-  const participantRef = doc(
-    collection(db, PARTICIPANTS_COLLECTION),
-    `${roomId}_${uid}`
-  );
+  try {
+    const db = getFirebaseDb();
+    const participantRef = doc(
+      collection(db, PARTICIPANTS_COLLECTION),
+      `${roomId}_${uid}`
+    );
 
-  // Check if participant was a speaker before removing
-  const participantSnap = await getDoc(participantRef);
-  const wasSpeaker = participantSnap.exists() && participantSnap.data().isSpeaker;
-  const participantData = participantSnap.data();
+    // Check if participant was a speaker before removing
+    const participantSnap = await getDoc(participantRef);
+    const wasSpeaker = participantSnap.exists() && participantSnap.data().isSpeaker;
+    const participantData = participantSnap.data();
 
-  await deleteDoc(participantRef);
+    await deleteDoc(participantRef);
 
-  // Get room info for notification
-  const roomSnap = await getDoc(doc(db, ROOMS_COLLECTION, roomId));
-  const roomData = roomSnap.data();
+    // Get room info for notification
+    const roomSnap = await getDoc(doc(db, ROOMS_COLLECTION, roomId));
+    const roomData = roomSnap.data();
 
-  // Send notification to host when user leaves
-  if (participantData && roomData && uid !== roomData.hostUid) {
-    createNotification(roomData.hostUid, {
-      type: "room_leave",
-      fromUid: uid,
-      fromHandle: participantData.handle,
-      roomId: roomId,
-      roomName: roomData.name,
-      text: `${participantData.handle} left your room "${roomData.name}"`,
+    // Send notification to host when user leaves
+    if (participantData && roomData && uid !== roomData.hostUid) {
+      createNotification(roomData.hostUid, {
+        type: "room_leave",
+        fromUid: uid,
+        fromHandle: participantData.handle,
+        roomId: roomId,
+        roomName: roomData.name,
+        text: `${participantData.handle} left your room "${roomData.name}"`,
+      });
+    }
+
+    // Update room participant count using atomic operations
+    const roomRef = doc(db, ROOMS_COLLECTION, roomId);
+    const updates: any = {
+      participantCount: increment(-1),
+      updatedAt: serverTimestamp(),
+    };
+  
+    // Also decrement speaker count if they were a speaker
+    if (wasSpeaker) {
+      updates.speakerCount = increment(-1);
+    }
+  
+    await updateDoc(roomRef, updates);
+    
+    // Trigger reconciliation after participant removal to ensure counts stay in sync
+    reconcileParticipantCounts(roomId).catch(err => {
+      console.error("[removeParticipant] Reconciliation failed:", err);
     });
+  } catch (error) {
+    console.error("[removeParticipant] Error removing participant:", error);
+    throw error;
   }
-
-  // Update room participant count
-  const roomRef = doc(db, ROOMS_COLLECTION, roomId);
-  const updates: any = {
-    participantCount: increment(-1),
-    updatedAt: serverTimestamp(),
-  };
-  
-  // Also decrement speaker count if they were a speaker
-  if (wasSpeaker) {
-    updates.speakerCount = increment(-1);
-  }
-  
-  await updateDoc(roomRef, updates);
 }
 
 // ── Delete room ────────────────────────────────────────────────────────
 export async function deleteRoom(roomId: string): Promise<void> {
-  const db = getFirebaseDb();
-  
-  // Delete the room
-  await deleteDoc(doc(db, ROOMS_COLLECTION, roomId));
-  
-  // Delete all participants
-  const participantsQuery = query(
-    collection(db, PARTICIPANTS_COLLECTION),
-    where("roomId", "==", roomId)
-  );
-  const participantsSnap = await getDocs(participantsQuery);
-  for (const doc of participantsSnap.docs) {
-    await deleteDoc(doc.ref);
-  }
-  
-  // Delete all chat messages
-  const messagesQuery = query(
-    collection(db, "room_messages"),
-    where("roomId", "==", roomId)
-  );
-  const messagesSnap = await getDocs(messagesQuery);
-  for (const doc of messagesSnap.docs) {
-    await deleteDoc(doc.ref);
+  try {
+    const db = getFirebaseDb();
+    
+    // Delete the room
+    await deleteDoc(doc(db, ROOMS_COLLECTION, roomId));
+    
+    // Delete all participants
+    const participantsQuery = query(
+      collection(db, PARTICIPANTS_COLLECTION),
+      where("roomId", "==", roomId)
+    );
+    const participantsSnap = await getDocs(participantsQuery);
+    for (const doc of participantsSnap.docs) {
+      await deleteDoc(doc.ref);
+    }
+    
+    // Delete all chat messages
+    const messagesQuery = query(
+      collection(db, "room_messages"),
+      where("roomId", "==", roomId)
+    );
+    const messagesSnap = await getDocs(messagesQuery);
+    for (const doc of messagesSnap.docs) {
+      await deleteDoc(doc.ref);
+    }
+  } catch (error) {
+    console.error("[deleteRoom] Error deleting room:", error);
+    throw error;
   }
 }
 
@@ -634,35 +724,50 @@ export function subscribeToRoom(roomId: string, callback: (room: Room | null) =>
 }
 
 // ── Subscribe to public rooms (real-time) ──────────────────────────────
+// NOTE: This query requires a Firestore composite index on:
+// - isPublic (equality)
+// - isActive (equality) 
+// - createdAt (descending)
+// Create the index in Firebase Console or let Firestore create it automatically on first query
 export function subscribeToPublicRooms(callback: (rooms: Room[]) => void): () => void {
   const db = getFirebaseDb();
   console.log("[subscribeToPublicRooms] Setting up query for public rooms");
   const roomsQuery = query(
     collection(db, ROOMS_COLLECTION),
     where("isPublic", "==", true),
-    where("isActive", "==", true)
+    where("isActive", "==", true),
+    orderBy("createdAt", "desc")
   );
 
   const unsubscribe = onSnapshot(roomsQuery, (querySnap) => {
     console.log("[subscribeToPublicRooms] Query snapshot received, docs count:", querySnap.docs.length);
     const rooms = querySnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Room[];
-    // Sort by participantCount on client side to avoid index requirement
+    // Secondary sort by participantCount on client side
     rooms.sort((a, b) => b.participantCount - a.participantCount);
     console.log("[subscribeToPublicRooms] Public rooms updated:", rooms);
     callback(rooms);
   }, (error) => {
     console.error("[subscribeToPublicRooms] Error subscribing to public rooms:", error);
+    // If error is about missing index, provide helpful message
+    if (error.code === 'failed-precondition') {
+      console.error("[subscribeToPublicRooms] Missing Firestore composite index. Please create index in Firebase Console:");
+      console.error("[subscribeToPublicRooms] Collection: rooms, Fields: isPublic (ASC), isActive (ASC), createdAt (DESC)");
+    }
   });
 
   return unsubscribe;
 }
 
 // ── Subscribe to room participants (real-time) ─────────────────────────
+// NOTE: This query may require a Firestore composite index on:
+// - roomId (equality)
+// - joinedAt (descending)
 export function subscribeToRoomParticipants(roomId: string, callback: (participants: RoomParticipant[]) => void): () => void {
   const db = getFirebaseDb();
   const participantsQuery = query(
     collection(db, PARTICIPANTS_COLLECTION),
-    where("roomId", "==", roomId)
+    where("roomId", "==", roomId),
+    orderBy("joinedAt", "desc")
   );
 
   const unsubscribe = onSnapshot(participantsQuery, (querySnap) => {
@@ -673,6 +778,13 @@ export function subscribeToRoomParticipants(roomId: string, callback: (participa
         id: doc.id, // Include document ID for unique React keys
       }));
     callback(participants);
+  }, (error) => {
+    console.error("[subscribeToRoomParticipants] Error:", error);
+    // If error is about missing index, provide helpful message
+    if (error.code === 'failed-precondition') {
+      console.error("[subscribeToRoomParticipants] Missing Firestore composite index. Please create index in Firebase Console:");
+      console.error("[subscribeToRoomParticipants] Collection: room_participants, Fields: roomId (ASC), joinedAt (DESC)");
+    }
   });
 
   return unsubscribe;
@@ -696,5 +808,588 @@ export async function endRoom(roomId: string): Promise<void> {
     isActive: false,
     updatedAt: serverTimestamp(),
   });
+}
+
+// ── Room Moderation Functions ─────────────────────────────────────────────────────
+
+// ── Ban a user from a room ───────────────────────────────────────────────────────
+export async function banUserFromRoom(
+  roomId: string,
+  targetUid: string,
+  moderatorUid: string,
+  reason?: string
+): Promise<void> {
+  try {
+    const db = getFirebaseDb();
+    
+    // Get participant document
+    const participantQuery = query(
+      collection(db, PARTICIPANTS_COLLECTION),
+      where("roomId", "==", roomId),
+      where("uid", "==", targetUid)
+    );
+    const participantSnap = await getDocs(participantQuery);
+    
+    if (participantSnap.empty) {
+      throw new Error("Participant not found in room");
+    }
+    
+    const participantDoc = participantSnap.docs[0];
+    
+    // Update participant with ban status
+    await updateDoc(participantDoc.ref, {
+      isBanned: true,
+      bannedAt: serverTimestamp(),
+      bannedBy: moderatorUid,
+      bannedReason: reason || "Violation of community guidelines",
+    });
+    
+    // Send notification to banned user
+    await createNotification(targetUid, {
+      type: "room_ban",
+      fromUid: moderatorUid,
+      fromHandle: "Moderator", // Will be updated with actual handle
+      roomId,
+      text: `You have been banned from a room${reason ? `: ${reason}` : ""}`,
+    });
+    
+    // Remove participant from room (they will be kicked)
+    await removeParticipant(roomId, targetUid);
+  } catch (error) {
+    console.error("[banUserFromRoom] Error:", error);
+    throw error;
+  }
+}
+
+// ── Unban a user from a room ─────────────────────────────────────────────────────
+export async function unbanUserFromRoom(roomId: string, targetUid: string): Promise<void> {
+  try {
+    const db = getFirebaseDb();
+    
+    // Get participant document
+    const participantQuery = query(
+      collection(db, PARTICIPANTS_COLLECTION),
+      where("roomId", "==", roomId),
+      where("uid", "==", targetUid)
+    );
+    const participantSnap = await getDocs(participantQuery);
+    
+    if (participantSnap.empty) {
+      throw new Error("Participant not found in room");
+    }
+    
+    const participantDoc = participantSnap.docs[0];
+    
+    // Remove ban status
+    await updateDoc(participantDoc.ref, {
+      isBanned: false,
+      bannedAt: null,
+      bannedBy: null,
+      bannedReason: null,
+    });
+  } catch (error) {
+    console.error("[unbanUserFromRoom] Error:", error);
+    throw error;
+  }
+}
+
+// ── Check if user is banned from room ─────────────────────────────────────────────
+export async function isUserBannedFromRoom(roomId: string, uid: string): Promise<boolean> {
+  try {
+    const db = getFirebaseDb();
+    
+    const participantQuery = query(
+      collection(db, PARTICIPANTS_COLLECTION),
+      where("roomId", "==", roomId),
+      where("uid", "==", uid),
+      where("isBanned", "==", true)
+    );
+    const participantSnap = await getDocs(participantQuery);
+    
+    return !participantSnap.empty;
+  } catch (error) {
+    console.error("[isUserBannedFromRoom] Error:", error);
+    return false;
+  }
+}
+
+// ── Promote user to moderator ─────────────────────────────────────────────────────
+export async function promoteToModerator(roomId: string, targetUid: string): Promise<void> {
+  try {
+    const db = getFirebaseDb();
+    
+    // Get participant document
+    const participantQuery = query(
+      collection(db, PARTICIPANTS_COLLECTION),
+      where("roomId", "==", roomId),
+      where("uid", "==", targetUid)
+    );
+    const participantSnap = await getDocs(participantQuery);
+    
+    if (participantSnap.empty) {
+      throw new Error("Participant not found in room");
+    }
+    
+    const participantDoc = participantSnap.docs[0];
+    
+    // Promote to moderator
+    await updateDoc(participantDoc.ref, {
+      isModerator: true,
+    });
+    
+    // Send notification
+    await createNotification(targetUid, {
+      type: "moderator_promotion",
+      fromUid: roomId, // Using roomId as placeholder for system notification
+      fromHandle: "System",
+      roomId,
+      text: "You have been promoted to moderator in a room",
+    });
+  } catch (error) {
+    console.error("[promoteToModerator] Error:", error);
+    throw error;
+  }
+}
+
+// ── Demote user from moderator ───────────────────────────────────────────────────
+export async function demoteFromModerator(roomId: string, targetUid: string): Promise<void> {
+  try {
+    const db = getFirebaseDb();
+    
+    // Get participant document
+    const participantQuery = query(
+      collection(db, PARTICIPANTS_COLLECTION),
+      where("roomId", "==", roomId),
+      where("uid", "==", targetUid)
+    );
+    const participantSnap = await getDocs(participantQuery);
+    
+    if (participantSnap.empty) {
+      throw new Error("Participant not found in room");
+    }
+    
+    const participantDoc = participantSnap.docs[0];
+    
+    // Demote from moderator
+    await updateDoc(participantDoc.ref, {
+      isModerator: false,
+    });
+  } catch (error) {
+    console.error("[demoteFromModerator] Error:", error);
+    throw error;
+  }
+}
+
+// ── Enable slow mode for room ─────────────────────────────────────────────────────
+export async function enableSlowMode(roomId: string, intervalSeconds: number = 30): Promise<void> {
+  try {
+    const db = getFirebaseDb();
+    const roomRef = doc(db, ROOMS_COLLECTION, roomId);
+    
+    await updateDoc(roomRef, {
+      slowModeEnabled: true,
+      slowModeInterval: intervalSeconds,
+    });
+  } catch (error) {
+    console.error("[enableSlowMode] Error:", error);
+    throw error;
+  }
+}
+
+// ── Disable slow mode for room ────────────────────────────────────────────────────
+export async function disableSlowMode(roomId: string): Promise<void> {
+  try {
+    const db = getFirebaseDb();
+    const roomRef = doc(db, ROOMS_COLLECTION, roomId);
+    
+    await updateDoc(roomRef, {
+      slowModeEnabled: false,
+      slowModeInterval: null,
+    });
+  } catch (error) {
+    console.error("[disableSlowMode] Error:", error);
+    throw error;
+  }
+}
+
+// ── Check if user can send message (slow mode check) ───────────────────────────────
+export async function canUserSendMessage(roomId: string, uid: string): Promise<{ allowed: boolean; reason?: string }> {
+  try {
+    const db = getFirebaseDb();
+    
+    // Get room settings
+    const roomRef = doc(db, ROOMS_COLLECTION, roomId);
+    const roomSnap = await getDoc(roomRef);
+    
+    if (!roomSnap.exists()) {
+      return { allowed: false, reason: "Room not found" };
+    }
+    
+    const roomData = roomSnap.data();
+    const slowModeEnabled = roomData.slowModeEnabled || false;
+    
+    if (!slowModeEnabled) {
+      return { allowed: true };
+    }
+    
+    // Check last message time for this user in this room
+    // This would require a room_messages collection with timestamps
+    // For now, we'll implement a basic check
+    const slowModeInterval = roomData.slowModeInterval || 30;
+    
+    // TODO: Implement proper message timing check when room_messages collection exists
+    // For now, allow messages in slow mode but with a warning
+    return { allowed: true, reason: `Slow mode active: ${slowModeInterval}s interval` };
+  } catch (error) {
+    console.error("[canUserSendMessage] Error:", error);
+    return { allowed: false, reason: "Error checking permissions" };
+  }
+}
+
+// ── Get room bans ─────────────────────────────────────────────────────────────────
+export async function getRoomBans(roomId: string): Promise<RoomParticipant[]> {
+  try {
+    const db = getFirebaseDb();
+    
+    const bansQuery = query(
+      collection(db, PARTICIPANTS_COLLECTION),
+      where("roomId", "==", roomId),
+      where("isBanned", "==", true)
+    );
+    const bansSnap = await getDocs(bansQuery);
+    
+    return bansSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as RoomParticipant[];
+  } catch (error) {
+    console.error("[getRoomBans] Error:", error);
+    return [];
+  }
+}
+
+// ── Get room moderators ────────────────────────────────────────────────────────────
+export async function getRoomModerators(roomId: string): Promise<RoomParticipant[]> {
+  try {
+    const db = getFirebaseDb();
+    
+    const moderatorsQuery = query(
+      collection(db, PARTICIPANTS_COLLECTION),
+      where("roomId", "==", roomId),
+      where("isModerator", "==", true)
+    );
+    const moderatorsSnap = await getDocs(moderatorsQuery);
+    
+    return moderatorsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as RoomParticipant[];
+  } catch (error) {
+    console.error("[getRoomModerators] Error:", error);
+    return [];
+  }
+}
+
+// ── Breakout Room Functions ─────────────────────────────────────────────────────────
+
+// ── Create a breakout room ─────────────────────────────────────────────────────────
+export async function createBreakoutRoom(
+  parentRoomId: string,
+  name: string,
+  maxParticipants: number = 10
+): Promise<string> {
+  try {
+    const db = getFirebaseDb();
+    const breakoutRef = doc(collection(db, BREAKOUT_ROOMS_COLLECTION));
+    const breakoutId = breakoutRef.id;
+    
+    // Generate Agora channel for breakout room
+    const agoraChannel = `echo_breakout_${breakoutId}`;
+    
+    await setDoc(breakoutRef, {
+      id: breakoutId,
+      parentRoomId,
+      name,
+      maxParticipants,
+      participantCount: 0,
+      agoraChannel,
+      createdAt: serverTimestamp(),
+      isActive: true,
+    });
+    
+    return breakoutId;
+  } catch (error) {
+    console.error("[createBreakoutRoom] Error:", error);
+    throw error;
+  }
+}
+
+// ── Get breakout rooms for a parent room ─────────────────────────────────────────────
+export async function getBreakoutRooms(parentRoomId: string): Promise<BreakoutRoom[]> {
+  try {
+    const db = getFirebaseDb();
+    
+    const breakoutQuery = query(
+      collection(db, BREAKOUT_ROOMS_COLLECTION),
+      where("parentRoomId", "==", parentRoomId),
+      where("isActive", "==", true)
+    );
+    const breakoutSnap = await getDocs(breakoutQuery);
+    
+    return breakoutSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as BreakoutRoom[];
+  } catch (error) {
+    console.error("[getBreakoutRooms] Error:", error);
+    return [];
+  }
+}
+
+// ── Subscribe to breakout rooms (real-time) ─────────────────────────────────────────
+export function subscribeToBreakoutRooms(
+  parentRoomId: string,
+  callback: (breakoutRooms: BreakoutRoom[]) => void
+): () => void {
+  const db = getFirebaseDb();
+  
+  const breakoutQuery = query(
+    collection(db, BREAKOUT_ROOMS_COLLECTION),
+    where("parentRoomId", "==", parentRoomId),
+    where("isActive", "==", true)
+  );
+  
+  const unsubscribe = onSnapshot(breakoutQuery, (querySnap) => {
+    const breakoutRooms = querySnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as BreakoutRoom[];
+    callback(breakoutRooms);
+  }, (error) => {
+    console.error("[subscribeToBreakoutRooms] Error:", error);
+  });
+  
+  return unsubscribe;
+}
+
+// ── Assign participant to breakout room ─────────────────────────────────────────────
+export async function assignToBreakoutRoom(
+  parentRoomId: string,
+  participantUid: string,
+  breakoutRoomId: string
+): Promise<void> {
+  try {
+    const db = getFirebaseDb();
+    
+    // Get participant document
+    const participantQuery = query(
+      collection(db, PARTICIPANTS_COLLECTION),
+      where("roomId", "==", parentRoomId),
+      where("uid", "==", participantUid)
+    );
+    const participantSnap = await getDocs(participantQuery);
+    
+    if (participantSnap.empty) {
+      throw new Error("Participant not found in parent room");
+    }
+    
+    const participantDoc = participantSnap.docs[0];
+    
+    // Update participant with breakout room assignment
+    await updateDoc(participantDoc.ref, {
+      breakoutRoomId,
+    });
+    
+    // Increment breakout room participant count
+    const breakoutRef = doc(db, BREAKOUT_ROOMS_COLLECTION, breakoutRoomId);
+    await updateDoc(breakoutRef, {
+      participantCount: increment(1),
+    });
+    
+    // Send notification
+    await createNotification(participantUid, {
+      type: "room_promote",
+      fromUid: parentRoomId,
+      fromHandle: "System",
+      roomId: breakoutRoomId,
+      text: "You have been assigned to a breakout room",
+    });
+  } catch (error) {
+    console.error("[assignToBreakoutRoom] Error:", error);
+    throw error;
+  }
+}
+
+// ── Remove participant from breakout room ───────────────────────────────────────────
+export async function removeFromBreakoutRoom(
+  parentRoomId: string,
+  participantUid: string
+): Promise<void> {
+  try {
+    const db = getFirebaseDb();
+    
+    // Get participant document
+    const participantQuery = query(
+      collection(db, PARTICIPANTS_COLLECTION),
+      where("roomId", "==", parentRoomId),
+      where("uid", "==", participantUid)
+    );
+    const participantSnap = await getDocs(participantQuery);
+    
+    if (participantSnap.empty) {
+      throw new Error("Participant not found in parent room");
+    }
+    
+    const participantDoc = participantSnap.docs[0];
+    const participantData = participantDoc.data();
+    const breakoutRoomId = participantData.breakoutRoomId;
+    
+    if (!breakoutRoomId) {
+      return; // Not in a breakout room
+    }
+    
+    // Remove breakout room assignment
+    await updateDoc(participantDoc.ref, {
+      breakoutRoomId: null,
+    });
+    
+    // Decrement breakout room participant count
+    const breakoutRef = doc(db, BREAKOUT_ROOMS_COLLECTION, breakoutRoomId);
+    await updateDoc(breakoutRef, {
+      participantCount: increment(-1),
+    });
+  } catch (error) {
+    console.error("[removeFromBreakoutRoom] Error:", error);
+    throw error;
+  }
+}
+
+// ── Close breakout room ─────────────────────────────────────────────────────────────
+export async function closeBreakoutRoom(breakoutRoomId: string): Promise<void> {
+  try {
+    const db = getFirebaseDb();
+    const breakoutRef = doc(db, BREAKOUT_ROOMS_COLLECTION, breakoutRoomId);
+    
+    // Mark as inactive
+    await updateDoc(breakoutRef, {
+      isActive: false,
+    });
+    
+    // Remove all participants from this breakout room
+    const participantsQuery = query(
+      collection(db, PARTICIPANTS_COLLECTION),
+      where("breakoutRoomId", "==", breakoutRoomId)
+    );
+    const participantsSnap = await getDocs(participantsQuery);
+    
+    const batch = writeBatch(db);
+    participantsSnap.docs.forEach(doc => {
+      batch.update(doc.ref, { breakoutRoomId: null });
+    });
+    await batch.commit();
+  } catch (error) {
+    console.error("[closeBreakoutRoom] Error:", error);
+    throw error;
+  }
+}
+
+// ── Get participants in a breakout room ─────────────────────────────────────────────
+export async function getBreakoutRoomParticipants(breakoutRoomId: string): Promise<RoomParticipant[]> {
+  try {
+    const db = getFirebaseDb();
+    
+    const participantsQuery = query(
+      collection(db, PARTICIPANTS_COLLECTION),
+      where("breakoutRoomId", "==", breakoutRoomId)
+    );
+    const participantsSnap = await getDocs(participantsQuery);
+    
+    return participantsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as RoomParticipant[];
+  } catch (error) {
+    console.error("[getBreakoutRoomParticipants] Error:", error);
+    return [];
+  }
+}
+
+// ── Auto-assign participants to breakout rooms ───────────────────────────────────────
+export async function autoAssignToBreakoutRooms(
+  parentRoomId: string,
+  breakoutRoomIds: string[]
+): Promise<void> {
+  try {
+    const db = getFirebaseDb();
+    
+    // Get all participants in parent room who are not in breakout rooms
+    const participantsQuery = query(
+      collection(db, PARTICIPANTS_COLLECTION),
+      where("roomId", "==", parentRoomId),
+      where("breakoutRoomId", "==", null)
+    );
+    const participantsSnap = await getDocs(participantsQuery);
+    
+    const participants = participantsSnap.docs;
+    const numBreakoutRooms = breakoutRoomIds.length;
+    
+    if (participants.length === 0 || numBreakoutRooms === 0) {
+      return;
+    }
+    
+    // Distribute participants evenly across breakout rooms
+    participants.forEach((doc, index) => {
+      const breakoutRoomId = breakoutRoomIds[index % numBreakoutRooms];
+      assignToBreakoutRoom(parentRoomId, doc.data().uid, breakoutRoomId);
+    });
+  } catch (error) {
+    console.error("[autoAssignToBreakoutRooms] Error:", error);
+    throw error;
+  }
+}
+
+// ── Firestore Index Requirements Documentation ──────────────────────────────
+// 
+// The following Firestore composite indexes are required for optimal performance:
+// 
+// 1. rooms collection:
+//    - Fields: isPublic (ASC), isActive (ASC), createdAt (DESC)
+//    - Used by: subscribeToPublicRooms()
+//    - Purpose: Query active public rooms sorted by creation time
+// 
+// 2. room_participants collection:
+//    - Fields: roomId (ASC), joinedAt (DESC)
+//    - Used by: subscribeToRoomParticipants()
+//    - Purpose: Query room participants sorted by join time
+// 
+// 3. posts collection (if using orderBy with where):
+//    - Fields: authorUid (ASC), createdAt (DESC)
+//    - Used by: subscribeToUserPosts()
+//    - Purpose: Query user's posts sorted by creation time
+// 
+// To create these indexes:
+// 1. Go to Firebase Console → Firestore → Indexes
+// 2. Click "Add Index"
+// 3. Select the collection and fields as specified above
+// 4. Set the sort order (ASC for where clauses, DESC for orderBy)
+// 5. Click "Create"
+// 
+// Alternatively, let Firestore create them automatically on first query error.
+
+// ── Reconcile all room participant counts (maintenance function) ─────────────
+// Can be called periodically or triggered by admin to fix all room counts
+export async function reconcileAllRoomCounts(): Promise<{ processed: number; fixed: number; errors: number }> {
+  try {
+    const db = getFirebaseDb();
+    const roomsSnap = await getDocs(query(collection(db, ROOMS_COLLECTION)));
+    
+    let processed = 0;
+    let fixed = 0;
+    let errors = 0;
+    
+    for (const roomDoc of roomsSnap.docs) {
+      const roomId = roomDoc.id;
+      processed++;
+      
+      try {
+        await reconcileParticipantCounts(roomId);
+        fixed++;
+      } catch (err) {
+        console.error(`[reconcileAllRoomCounts] Failed for room ${roomId}:`, err);
+        errors++;
+      }
+    }
+    
+    console.log(`[reconcileAllRoomCounts] Processed ${processed} rooms, fixed ${fixed}, errors ${errors}`);
+    return { processed, fixed, errors };
+  } catch (error) {
+    console.error("[reconcileAllRoomCounts] Error:", error);
+    return { processed: 0, fixed: 0, errors: 1 };
+  }
 }
 

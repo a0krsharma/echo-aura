@@ -4,7 +4,7 @@
  * app/whispers/page.tsx
  * ─────────────────────────────────────────────────────
  * Full real-time Firestore-backed private DM system.
- * - Start a whisper with any handle
+ * - Start a wire with any handle
  * - Send text messages in real-time
  * - Conversation list with last message preview
  * - Unread indicator
@@ -140,7 +140,7 @@ function ChatWindow({
         </div>
         <div>
           <p className="font-mono text-xs text-white tracking-widest">{theirHandle}</p>
-          <p className="font-mono text-[10px] text-neutral-600">PRIVATE FREQUENCY</p>
+          <p className="font-mono text-[10px] text-neutral-600">[ PRIVATE WIRE ]</p>
         </div>
       </div>
 
@@ -154,7 +154,7 @@ function ChatWindow({
             <div className="text-center space-y-2">
               <Lock className="w-6 h-6 text-neutral-700 mx-auto" />
               <p className="font-mono text-[10px] text-neutral-700 tracking-widest uppercase">
-                END-TO-END PRIVATE FREQUENCY
+                [ END-TO-END PRIVATE WIRE ]
               </p>
               <p className="font-serif italic text-neutral-600 text-sm">
                 Start the conversation
@@ -204,7 +204,7 @@ function ChatWindow({
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="TYPE A WHISPER..."
+          placeholder="TYPE A WIRE..."
           className="flex-1 bg-transparent border border-neutral-800 focus:border-white outline-none font-mono text-xs text-white placeholder:text-neutral-700 px-3 py-2.5 transition-colors"
         />
         <button
@@ -219,7 +219,7 @@ function ChatWindow({
   );
 }
 
-// ─── New Whisper Modal ────────────────────────────────────────────────────────
+// ─── New Wire Modal ────────────────────────────────────────────────────────
 function NewWhisperModal({
   myUid,
   myHandle,
@@ -254,7 +254,7 @@ function NewWhisperModal({
       onStarted(convId);
       onClose();
     } catch (err) {
-      console.error("Start whisper failed:", err);
+      console.error("Start wire failed:", err);
     } finally {
       setStarting(false);
     }
@@ -265,7 +265,7 @@ function NewWhisperModal({
       <div className="w-full max-w-sm border border-neutral-800 bg-black p-6 space-y-4">
         <div className="flex items-center justify-between">
           <p className="font-mono text-xs tracking-widest text-neutral-500 uppercase">
-            // START PRIVATE WHISPER
+            // START PRIVATE WIRE
           </p>
           <button onClick={onClose} className="text-neutral-500 hover:text-white cursor-pointer">
             <X className="w-4 h-4" />
@@ -321,7 +321,7 @@ export default function WhispersPage() {
   const { user } = useAuth();
   const [conversations,   setConversations]   = useState<WhisperConversation[]>([]);
   const [activeConvId,    setActiveConvId]    = useState<string | null>(null);
-  const [showNewWhisper,  setShowNewWhisper]  = useState(false);
+  const [showNewWire,  setShowNewWire]  = useState(false);
   const [mobileView,      setMobileView]      = useState<"list" | "chat">("list");
 
   const activeConv = conversations.find((c) => c.id === activeConvId) || null;
@@ -344,7 +344,7 @@ export default function WhispersPage() {
     setMobileView("list");
   };
 
-  const handleNewWhisperStarted = (convId: string) => {
+  const handleNewWireStarted = (convId: string) => {
     setActiveConvId(convId);
     setMobileView("chat");
   };
@@ -353,13 +353,13 @@ export default function WhispersPage() {
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col md:flex-row pb-16 md:pb-0">
-      {/* New Whisper Modal */}
-      {showNewWhisper && (
+      {/* New Wire Modal */}
+      {showNewWire && (
         <NewWhisperModal
           myUid={user.uid}
           myHandle={user.handle || "@ANON"}
-          onClose={() => setShowNewWhisper(false)}
-          onStarted={handleNewWhisperStarted}
+          onClose={() => setShowNewWire(false)}
+          onStarted={handleNewWireStarted}
         />
       )}
 
@@ -374,11 +374,11 @@ export default function WhispersPage() {
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-900 shrink-0">
           <div>
-            <h1 className="font-mono text-xs tracking-widest text-white uppercase">WHISPERS</h1>
+            <h1 className="font-mono text-xs tracking-widest text-white uppercase">[ WIRE ]</h1>
             <p className="font-mono text-[10px] text-neutral-600 mt-0.5">PRIVATE FREQUENCY</p>
           </div>
           <button
-            onClick={() => setShowNewWhisper(true)}
+            onClick={() => setShowNewWire(true)}
             className="flex items-center gap-1.5 font-mono text-[10px] tracking-widest uppercase border border-neutral-800 px-3 py-1.5 hover:border-white text-neutral-400 hover:text-white transition-colors cursor-pointer"
           >
             <Plus className="w-3 h-3" /> NEW
@@ -391,13 +391,13 @@ export default function WhispersPage() {
             <div className="flex flex-col items-center justify-center h-full text-center px-6 space-y-4 py-12">
               <Lock className="w-8 h-8 text-neutral-700" />
               <p className="font-mono text-xs text-neutral-600 tracking-widest uppercase">
-                NO WHISPERS YET
+                NO WIRES YET
               </p>
               <button
-                onClick={() => setShowNewWhisper(true)}
+                onClick={() => setShowNewWire(true)}
                 className="px-5 py-2.5 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors cursor-pointer"
               >
-                [ + START A WHISPER ]
+                [ + START A WIRE ]
               </button>
             </div>
           ) : (
@@ -434,17 +434,17 @@ export default function WhispersPage() {
             <Mic2 className="w-10 h-10 text-neutral-700" />
             <div className="space-y-2">
               <p className="font-mono text-xs text-neutral-500 tracking-widest uppercase">
-                SELECT A WHISPER TO READ
+                SELECT A WIRE TO READ
               </p>
               <p className="font-serif italic text-neutral-700 text-sm">
                 Or start a new private frequency
               </p>
             </div>
             <button
-              onClick={() => setShowNewWhisper(true)}
+              onClick={() => setShowNewWire(true)}
               className="px-6 py-3 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors cursor-pointer"
             >
-              [ + NEW WHISPER ]
+              [ + NEW WIRE ]
             </button>
           </div>
         )}

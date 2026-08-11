@@ -26,8 +26,7 @@ export default function BottomNav() {
     { href: "/waves",        icon: Waves,          label: "WAVES"  },
     { href: "/rooms",        icon: Users,          label: "ROOMS"  },
     { href: "/studio",       icon: Mic2,           label: "STUDIO", isCenter: true },
-    { href: "/notifications",icon: Bell,           label: "NOTIFS", hasNotifDot: hasNotifs, notifCount: unreadCount },
-    { href: "/whispers",     icon: MessageSquare,  label: "DMS"    },
+    { href: "/whispers",     icon: MessageSquare,  label: "WIRE"   },
   ];
 
   return (
@@ -61,24 +60,7 @@ export default function BottomNav() {
                 isActive ? "text-white" : "text-neutral-500 hover:text-neutral-400"
               }`}
             >
-              <div className="relative">
-                <Icon size={20} strokeWidth={isActive ? 2 : 1.5} />
-                {item.hasNotifDot && (
-                  <span className="absolute -top-1 -right-1 flex items-center justify-center">
-                    {(item.notifCount ?? 0) > 0 && (item.notifCount ?? 0) < 10 ? (
-                      <span className="w-4 h-4 bg-white text-black rounded-full font-mono text-[8px] flex items-center justify-center font-bold">
-                        {item.notifCount}
-                      </span>
-                    ) : (item.notifCount ?? 0) >= 10 ? (
-                      <span className="w-4 h-4 bg-white text-black rounded-full font-mono text-[8px] flex items-center justify-center font-bold">
-                        9+
-                      </span>
-                    ) : (
-                      <span className="w-2 h-2 bg-white rounded-full" />
-                    )}
-                  </span>
-                )}
-              </div>
+              <Icon size={20} strokeWidth={isActive ? 2 : 1.5} />
               <span className="text-[10px] font-mono tracking-widest uppercase">
                 {item.label}
               </span>

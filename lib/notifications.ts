@@ -32,7 +32,7 @@ import { getFirebaseDb } from "@/lib/firebase";
 
 export interface EchoNotification {
   id:          string;
-  type:        "pulse" | "reverb" | "orbiter" | "stage" | "whisper" | "raise_hand" | "room_join" | "room_leave" | "room_promote" | "room_demote" | "mention" | "bookmark";
+  type:        "pulse" | "reverb" | "orbiter" | "stage" | "whisper" | "raise_hand" | "room_join" | "room_leave" | "room_promote" | "room_demote" | "mention" | "bookmark" | "room_ban" | "moderator_promotion";
   fromUid:     string;
   fromHandle:  string;
   postId?:     string;

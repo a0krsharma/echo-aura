@@ -62,9 +62,9 @@ export function ChatWidget({ targetUid, targetHandle }: ChatWidgetProps) {
           Chat with {targetHandle}
         </button>
       ) : (
-        <div className="w-80 bg-black border border-neutral-800 rounded-lg overflow-hidden">
+        <div className="w-80 bg-black border-standard overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800 bg-neutral-900">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-standard bg-secondary">
             <div className="flex items-center gap-2">
               <MessageSquare size={16} />
               <span className="font-mono text-xs text-white">{targetHandle}</span>
@@ -99,7 +99,7 @@ export function ChatWidget({ targetUid, targetHandle }: ChatWidgetProps) {
                     className={`max-w-[80%] px-3 py-2 rounded-lg text-xs ${
                       msg.from === "me"
                         ? "bg-white text-black"
-                        : "bg-neutral-800 text-white"
+                        : "bg-tertiary text-white"
                     }`}
                   >
                     {msg.text}

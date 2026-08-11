@@ -2,14 +2,14 @@
 
 /**
  * app/search/page.tsx
- * Searches BOTH "posts" and "echoes" collections.
- * Also searches users by handle / displayName.
+ * Enhanced search with filters, history, and optimized Firestore queries
+ * Searches posts, echoes, and users with advanced filtering
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Search, X, Mic2, Users, Play, Loader2 } from "lucide-react";
-import { collection, query, getDocs, limit, orderBy } from "firebase/firestore";
+import { Search, X, Mic2, Users, Play, Loader2, Clock, Filter, TrendingUp } from "lucide-react";
+import { collection, query, getDocs, limit, orderBy, where } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 import { type EchoUser } from "@/lib/userDoc";
 import { type PostItem } from "@/lib/posts";
@@ -53,24 +53,73 @@ function MiniPlay({ url }: { url: string }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // PAGE
 // ─────────────────────────────────────────────────────────────────────────────
+type SearchFilter = "all" | "recent" | "trending" | "long" | "short";
+
 export default function SearchPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [users,       setUsers]       = useState<EchoUser[]>([]);
   const [posts,       setPosts]       = useState<PostItem[]>([]);
   const [loading,     setLoading]     = useState(false);
   const [activeTab,   setActiveTab]   = useState<"ALL" | "VOICES" | "ECHOES">("ALL");
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
+  const [timeFilter, setTimeFilter] = useState<SearchFilter>("all");
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+
+  // Load search history from localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("echo_search_history");
+      if (saved) {
+        try {
+          setSearchHistory(JSON.parse(saved));
+        } catch {}
+      }
+    }
+  }, []);
+
+  // Save search history to localStorage
+  const saveToHistory = useCallback((query: string) => {
+    if (!query.trim()) return;
+    setSearchHistory(prev => {
+      const newHistory = [query, ...prev.filter(q => q !== query)].slice(0, 10);
+      localStorage.setItem("echo_search_history", JSON.stringify(newHistory));
+      return newHistory;
+    });
+  }, []);
 
   useEffect(() => {
     async function search() {
-      if (!searchQuery.trim()) { setUsers([]); setPosts([]); return; }
+      if (!searchQuery.trim()) { 
+        setUsers([]); 
+        setPosts([]); 
+        setSuggestions([]);
+        return; 
+      }
 
       setLoading(true);
       try {
         const db = getFirebaseDb();
         const q  = searchQuery.toLowerCase();
 
-        // Fetch users
-        const usersSnap = await getDocs(query(collection(db, "users"), limit(30)));
+        // Generate suggestions based on partial matches
+        if (searchQuery.length >= 2) {
+          const usersSnap = await getDocs(query(collection(db, "users"), limit(10)));
+          const userSuggestions = usersSnap.docs
+            .map((d) => d.data() as EchoUser)
+            .filter((u) =>
+              u.handle?.toLowerCase().startsWith(q) ||
+              u.displayName?.toLowerCase().startsWith(q)
+            )
+            .map(u => u.handle || u.displayName || "")
+            .slice(0, 5);
+          
+          setSuggestions(userSuggestions);
+        }
+
+        // Fetch users with optimized query
+        let usersQuery = query(collection(db, "users"), limit(30));
+        const usersSnap = await getDocs(usersQuery);
         const matchedUsers = usersSnap.docs
           .map((d) => d.data() as EchoUser)
           .filter((u) =>
@@ -78,19 +127,48 @@ export default function SearchPage() {
             u.displayName?.toLowerCase().includes(q)
           );
 
-        // Fetch from posts collection
-        const postsSnap = await getDocs(
-          query(collection(db, "posts"), orderBy("createdAt", "desc"), limit(50))
-        );
-        const matchedPosts = postsSnap.docs
+        // Build posts query with filters
+        let postsQuery = query(collection(db, "posts"), orderBy("createdAt", "desc"), limit(100));
+        
+        // Apply time-based filters
+        if (timeFilter === "recent") {
+          const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+          postsQuery = query(
+            collection(db, "posts"),
+            where("createdAt", ">=", oneWeekAgo),
+            orderBy("createdAt", "desc"),
+            limit(50)
+          );
+        } else if (timeFilter === "trending") {
+          postsQuery = query(
+            collection(db, "posts"),
+            orderBy("pulseCount", "desc"),
+            limit(50)
+          );
+        }
+
+        const postsSnap = await getDocs(postsQuery);
+        let matchedPosts = postsSnap.docs
           .map((d) => ({ id: d.id, ...(d.data() as Omit<PostItem, "id">) }))
           .filter((p) =>
             p.caption?.toLowerCase().includes(q) ||
             p.authorHandle?.toLowerCase().includes(q)
           );
 
+        // Apply duration filters
+        if (timeFilter === "short") {
+          matchedPosts = matchedPosts.filter(p => (p.durationSec || 0) <= 30);
+        } else if (timeFilter === "long") {
+          matchedPosts = matchedPosts.filter(p => (p.durationSec || 0) > 60);
+        }
+
         setUsers(matchedUsers);
-        setPosts(matchedPosts);
+        setPosts(matchedPosts.slice(0, 50)); // Limit results
+        
+        // Save to history on successful search
+        if (matchedUsers.length > 0 || matchedPosts.length > 0) {
+          saveToHistory(searchQuery);
+        }
       } catch (err) {
         console.error("Search error:", err);
       } finally {
@@ -98,11 +176,21 @@ export default function SearchPage() {
       }
     }
 
-    const t = setTimeout(search, 280);
+    const t = setTimeout(search, 300);
     return () => clearTimeout(t);
-  }, [searchQuery]);
+  }, [searchQuery, timeFilter, saveToHistory]);
 
   const totalResults = users.length + posts.length;
+
+  const clearHistory = () => {
+    setSearchHistory([]);
+    localStorage.removeItem("echo_search_history");
+  };
+
+  const handleSuggestionClick = (suggestion: string) => {
+    setSearchQuery(suggestion);
+    setSuggestions([]);
+  };
 
   return (
     <div className="min-h-screen bg-black text-white pb-24 md:pb-8">
@@ -114,40 +202,117 @@ export default function SearchPage() {
 
       {/* Search Input — sticky */}
       <div className="sticky top-0 z-10 bg-black/95 backdrop-blur border-b border-neutral-900">
-        <div className="max-w-2xl mx-auto px-5 py-4 flex items-center gap-3">
-          <Search className="w-4 h-4 text-neutral-600 shrink-0" strokeWidth={1.5} />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="SEARCH ECHOES, VOICES, HANDLES..."
-            autoFocus
-            className="flex-1 bg-transparent border-none outline-none text-white font-mono text-xs tracking-widest placeholder:text-neutral-700"
-          />
-          {searchQuery && (
+        <div className="max-w-2xl mx-auto px-5 py-4 space-y-3">
+          <div className="flex items-center gap-3">
+            <Search className="w-4 h-4 text-neutral-600 shrink-0" strokeWidth={1.5} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="SEARCH ECHOES, VOICES, HANDLES..."
+              autoFocus
+              className="flex-1 bg-transparent border-none outline-none text-white font-mono text-xs tracking-widest placeholder:text-neutral-700"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => { setSearchQuery(""); setUsers([]); setPosts([]); setSuggestions([]); }}
+                className="text-neutral-600 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
             <button
-              onClick={() => { setSearchQuery(""); setUsers([]); setPosts([]); }}
-              className="text-neutral-600 hover:text-white transition-colors cursor-pointer"
+              onClick={() => setShowFilters(!showFilters)}
+              className={`text-neutral-600 hover:text-white transition-colors cursor-pointer ${showFilters ? "text-white" : ""}`}
             >
-              <X className="w-4 h-4" />
+              <Filter className="w-4 h-4" />
             </button>
+          </div>
+
+          {/* Suggestions dropdown */}
+          {suggestions.length > 0 && !searchQuery && (
+            <div className="border border-neutral-800 bg-black">
+              {suggestions.map((suggestion, i) => (
+                <button
+                  key={i}
+                  onClick={() => handleSuggestionClick(suggestion)}
+                  className="w-full text-left px-4 py-2 font-mono text-xs text-neutral-400 hover:text-white hover:bg-neutral-900 transition-colors cursor-pointer"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Filter panel */}
+          {showFilters && (
+            <div className="flex items-center gap-2 pt-2 border-t border-neutral-900">
+              <span className="font-mono text-[10px] text-neutral-600 uppercase">Filter:</span>
+              {(["all", "recent", "trending", "short", "long"] as SearchFilter[]).map((filter) => (
+                <button
+                  key={filter}
+                  onClick={() => setTimeFilter(filter)}
+                  className={`font-mono text-[10px] uppercase px-2 py-1 border transition-colors cursor-pointer ${
+                    timeFilter === filter
+                      ? "border-white text-white"
+                      : "border-neutral-800 text-neutral-600 hover:border-white hover:text-white"
+                  }`}
+                >
+                  {filter === "all" && "ALL"}
+                  {filter === "recent" && <><Clock className="w-3 h-3 inline mr-1" />RECENT</>}
+                  {filter === "trending" && <><TrendingUp className="w-3 h-3 inline mr-1" />TRENDING</>}
+                  {filter === "short" && "≤30S"}
+                  {filter === "long" && ">60S"}
+                </button>
+              ))}
+            </div>
           )}
         </div>
       </div>
 
       <main className="max-w-2xl mx-auto px-5 pt-6 space-y-8">
         {!searchQuery ? (
-          /* Empty / discovery state */
-          <div className="py-20 text-center space-y-6">
-            <Search className="w-10 h-10 text-neutral-800 mx-auto" />
-            <div className="space-y-2">
-              <p className="font-mono text-xs text-neutral-600 tracking-widest uppercase">
-                FIND VOICES &amp; ECHOES ON THE NETWORK
-              </p>
-              <p className="font-serif italic text-neutral-700 text-sm">
-                Search by handle, name, or topic
-              </p>
+          /* Empty / discovery state with search history */
+          <div className="py-20 space-y-8">
+            <div className="text-center space-y-6">
+              <Search className="w-10 h-10 text-neutral-800 mx-auto" />
+              <div className="space-y-2">
+                <p className="font-mono text-xs text-neutral-600 tracking-widest uppercase">
+                  FIND VOICES &amp; ECHOES ON THE NETWORK
+                </p>
+                <p className="font-serif italic text-neutral-700 text-sm">
+                  Search by handle, name, or topic
+                </p>
+              </div>
             </div>
+
+            {/* Search History */}
+            {searchHistory.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="font-mono text-xs text-neutral-500 tracking-widest uppercase flex items-center gap-2">
+                    <Clock className="w-3.5 h-3.5" /> RECENT SEARCHES
+                  </p>
+                  <button
+                    onClick={clearHistory}
+                    className="font-mono text-[10px] text-neutral-600 hover:text-white uppercase transition-colors cursor-pointer"
+                  >
+                    CLEAR
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {searchHistory.map((query, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setSearchQuery(query)}
+                      className="px-3 py-1.5 border border-neutral-800 font-mono text-xs text-neutral-400 hover:border-white hover:text-white transition-colors cursor-pointer"
+                    >
+                      {query}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ) : loading ? (
           <div className="py-20 flex flex-col items-center gap-4">
@@ -243,8 +408,8 @@ export default function SearchPage() {
                       <div className="flex items-center gap-4 font-mono text-[10px] text-neutral-700 uppercase">
                         <span>{p.pulseCount || 0} PULSES</span>
                         <span>{p.duration || "0:00"}</span>
-                        {p.reverbOf && <span className="text-neutral-600">REVERB</span>}
-                        {p.orbitOf  && <span className="text-neutral-600">ORBIT</span>}
+                        {p.reverbOf && <span className="text-neutral-600">[ REPLY ]</span>}
+                        {p.orbitOf  && <span className="text-neutral-600">[ ORBIT ]</span>}
                       </div>
                     </div>
                   ))}

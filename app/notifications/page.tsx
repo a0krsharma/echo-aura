@@ -37,11 +37,11 @@ function NotifIcon({ type }: { type: EchoNotification["type"] }) {
 
 // ─── Label ───────────────────────────────────────────────────────────────────
 function typeLabel(type: EchoNotification["type"]): string {
-  if (type === "pulse")        return "PULSED YOUR ECHO";
-  if (type === "reverb")       return "REVERBED YOUR ECHO";
-  if (type === "orbiter")      return "ORBITED YOUR ECHO";
-  if (type === "stage")        return "CHALLENGED YOU TO THE STAGE";
-  if (type === "whisper")      return "SENT YOU A WHISPER";
+  if (type === "pulse")        return "[ PULSE ] YOUR ECHO";
+  if (type === "reverb")       return "[ REPLY ] ON YOUR ECHO";
+  if (type === "orbiter")      return "[ ORBIT ] YOUR ECHO";
+  if (type === "stage")        return "CHALLENGED YOU TO [ STAGE ]";
+  if (type === "whisper")      return "SENT YOU A [ WIRE ]";
   if (type === "raise_hand")   return "RAISED HAND IN YOUR ROOM";
   if (type === "room_join")    return "JOINED YOUR ROOM";
   if (type === "room_leave")   return "LEFT YOUR ROOM";
@@ -62,7 +62,7 @@ function timeAgo(ts: any): string {
   return `${Math.floor(diff / 86400)}D AGO`;
 }
 
-const TABS = ["ALL", "PULSES", "REVERBS", "ORBITERS", "STAGE"] as const;
+const TABS = ["ALL", "[ PULSE ]", "[ REPLIES ]", "[ ORBIT ]", "[ STAGE ]"] as const;
 type Tab = typeof TABS[number];
 
 export default function NotificationsPage() {
@@ -96,11 +96,11 @@ export default function NotificationsPage() {
 
   // Filter by tab
   const filtered = notifs.filter((n) => {
-    if (filter === "ALL")       return true;
-    if (filter === "PULSES")    return n.type === "pulse";
-    if (filter === "REVERBS")   return n.type === "reverb";
-    if (filter === "ORBITERS")  return n.type === "orbiter";
-    if (filter === "STAGE")     return n.type === "stage";
+    if (filter === "ALL")         return true;
+    if (filter === "[ PULSE ]")   return n.type === "pulse";
+    if (filter === "[ REPLIES ]") return n.type === "reverb";
+    if (filter === "[ ORBIT ]")   return n.type === "orbiter";
+    if (filter === "[ STAGE ]")   return n.type === "stage";
     return true;
   });
 
@@ -154,10 +154,10 @@ export default function NotificationsPage() {
               const count = tab === "ALL"
                 ? notifs.length
                 : notifs.filter((n) =>
-                    tab === "PULSES"   ? n.type === "pulse"   :
-                    tab === "REVERBS"  ? n.type === "reverb"  :
-                    tab === "ORBITERS" ? n.type === "orbiter" :
-                    tab === "STAGE"    ? n.type === "stage"   : true
+                    tab === "[ PULSE ]"   ? n.type === "pulse"   :
+                    tab === "[ REPLIES ]" ? n.type === "reverb"  :
+                    tab === "[ ORBIT ]"   ? n.type === "orbiter" :
+                    tab === "[ STAGE ]"   ? n.type === "stage"   : true
                   ).length;
 
               return (

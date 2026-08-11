@@ -833,7 +833,7 @@ function RoomContent({ roomId }: RoomClientProps) {
                         : "border border-white text-white hover:bg-white hover:text-black"
                     }`}
                   >
-                    {isOrbiting ? "UNORBIT" : "ORBIT"}
+                    {isOrbiting ? "[ UNORBIT ]" : "[ ORBIT ]"}
                   </button>
                 )}
 

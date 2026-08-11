@@ -194,7 +194,7 @@ function PostItem({ post }: { post: UserPost }) {
         </button>
         <div className="flex items-center gap-1.5 text-neutral-600">
           <Volume2 size={12} strokeWidth={1.5} />
-          <span className="font-mono text-xs tracking-widest uppercase">0 REVERBS</span>
+          <span className="font-mono text-xs tracking-widest uppercase">0 [ REPLIES ]</span>
         </div>
       </div>
     </article>
@@ -346,7 +346,7 @@ export default function HandlePage({ params }: { params: { handle: string } }) {
                 className="flex items-center gap-1.5 font-mono text-xs tracking-widest uppercase border border-neutral-800 px-3 py-2 hover:border-white hover:text-white transition-colors cursor-pointer shrink-0 text-neutral-500 disabled:opacity-30"
               >
                 <MessageSquare size={10} strokeWidth={1.5} />
-                {startingWhisper ? "STARTING..." : "WHISPER"}
+                {startingWhisper ? "STARTING..." : "[ WIRE ]"}
               </button>
             )}
             <button
@@ -358,7 +358,7 @@ export default function HandlePage({ params }: { params: { handle: string } }) {
               }`}
             >
               <Lock size={10} strokeWidth={1.5} />
-              {orbiting ? "ORBITING" : "LOCK IN"}
+              {orbiting ? "[ ORBITING ]" : "[ LOCK IN ]"}
             </button>
           </div>
         </div>

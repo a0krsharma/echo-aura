@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation";
 import { uploadAudio } from "@/lib/cloudinary";
 import { createNotification } from "@/lib/notifications";
 import { followUser, unfollowUser, isFollowing } from "@/lib/follows";
+import { audioManager } from "@/lib/audioManager";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface FeedPost {
@@ -92,10 +93,12 @@ function Waveform({ playing, small, audioRef }: { playing: boolean; small?: bool
   const [waveformData, setWaveformData] = useState<number[]>(WAVE_H);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const animationFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!audioRef?.current || !playing) {
+      // Always cleanup animation frame when not playing
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
         animationFrameRef.current = null;
@@ -112,11 +115,16 @@ function Waveform({ playing, small, audioRef }: { playing: boolean; small?: bool
     
     const audioContext = audioContextRef.current;
     
-    // Create analyser
+    // Resume AudioContext if suspended (browser autoplay policy)
+    if (audioContext.state === 'suspended') {
+      audioContext.resume();
+    }
+    
+    // Create analyser and source only once
     if (!analyserRef.current) {
       analyserRef.current = audioContext.createAnalyser();
-      const source = audioContext.createMediaElementSource(audio);
-      source.connect(analyserRef.current);
+      sourceRef.current = audioContext.createMediaElementSource(audio);
+      sourceRef.current.connect(analyserRef.current);
       analyserRef.current.connect(audioContext.destination);
     }
     
@@ -126,6 +134,8 @@ function Waveform({ playing, small, audioRef }: { playing: boolean; small?: bool
     const dataArray = new Uint8Array(bufferLength);
 
     const updateWaveform = () => {
+      if (!analyserRef.current) return;
+      
       analyser.getByteFrequencyData(dataArray);
       
       // Convert frequency data to waveform heights
@@ -142,8 +152,39 @@ function Waveform({ playing, small, audioRef }: { playing: boolean; small?: bool
     updateWaveform();
 
     return () => {
+      // Cleanup animation frame
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+      
+      // Cleanup audio nodes to prevent memory leaks
+      if (sourceRef.current) {
+        try {
+          sourceRef.current.disconnect();
+        } catch (e) {
+          // Ignore disconnect errors
+        }
+        sourceRef.current = null;
+      }
+      
+      if (analyserRef.current) {
+        try {
+          analyserRef.current.disconnect();
+        } catch (e) {
+          // Ignore disconnect errors
+        }
+        analyserRef.current = null;
+      }
+      
+      // Close AudioContext if no longer needed
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        try {
+          audioContextRef.current.close();
+        } catch (e) {
+          // Ignore close errors
+        }
+        audioContextRef.current = null;
       }
     };
   }, [playing, audioRef, small]);
@@ -194,9 +235,35 @@ function AudioPlayer({ audioUrl, fallbackDurationSec, isActive, onPlayToggle, sm
   const [failed, setFailed]   = useState(false);
   const [speed, setSpeed]     = useState(1);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const instanceIdRef = useRef<string | null>(null);
   const src = variants[vi] || audioUrl;
 
+  // Generate unique instance ID for this audio player
+  useEffect(() => {
+    instanceIdRef.current = `audio-${audioUrl}-${Date.now()}`;
+    return () => {
+      if (instanceIdRef.current) {
+        audioManager.unregister(instanceIdRef.current);
+      }
+    };
+  }, [audioUrl]);
+
   useEffect(() => { setVi(0); setFailed(false); setPlaying(false); setCurrent(0); setDur(Math.max(1,fallbackDurationSec)); setSpeed(1); }, [audioUrl]);
+
+  // Register audio element with global manager
+  useEffect(() => {
+    const a = audioRef.current;
+    const id = instanceIdRef.current;
+    if (!a || !id) return;
+
+    audioManager.register(id, a, 1); // Priority 1 for main feed audio
+
+    return () => {
+      if (id) {
+        audioManager.unregister(id);
+      }
+    };
+  }, [src]);
 
   useEffect(() => {
     const a = audioRef.current; if (!a) return;
@@ -208,6 +275,20 @@ function AudioPlayer({ audioUrl, fallbackDurationSec, isActive, onPlayToggle, sm
     }
   }, [isActive]);
 
+  // Lazy load audio - only set src when needed
+  useEffect(() => {
+    const a = audioRef.current;
+    if (!a) return;
+    
+    // Only load audio when component is active or user interacts
+    if (isActive || playing) {
+      a.src = src;
+      a.preload = "auto";
+    } else {
+      a.preload = "none";
+    }
+  }, [src, isActive, playing]);
+
   const onErr = () => {
     setPlaying(false); setLoading(false);
     const next = vi+1;
@@ -215,11 +296,25 @@ function AudioPlayer({ audioUrl, fallbackDurationSec, isActive, onPlayToggle, sm
   };
 
   const toggle = async () => {
-    const a = audioRef.current; if (!a) return;
-    if (playing) { a.pause(); setPlaying(false); onPlayToggle?.(false); }
+    const a = audioRef.current; 
+    const id = instanceIdRef.current;
+    if (!a || !id) return;
+    
+    if (playing) { 
+      audioManager.pause(id);
+      setPlaying(false); 
+      onPlayToggle?.(false); 
+    }
     else {
       a.volume=1; a.muted=false; setLoading(true);
-      try { await a.play(); onPlayToggle?.(true); }
+      try { 
+        const granted = await audioManager.requestPlay(id);
+        if (granted) {
+          onPlayToggle?.(true);
+        } else {
+          setLoading(false);
+        }
+      }
       catch { onErr(); } finally { setLoading(false); }
     }
   };
@@ -276,8 +371,8 @@ function AudioPlayer({ audioUrl, fallbackDurationSec, isActive, onPlayToggle, sm
   );
 }
 
-// ─── Reverb Record Modal ───────────────────────────────────────────────────────
-function ReverbRecordModal({ postId, postCaption, postAuthorHandle, postAuthorUid, reverbOfReverbId, reverbOfHandle, currentUser, onClose }: {
+// ─── Reply Record Modal ───────────────────────────────────────────────────────
+function ReplyRecordModal({ postId, postCaption, postAuthorHandle, postAuthorUid, reverbOfReverbId, reverbOfHandle, currentUser, onClose }: {
   postId: string; postCaption: string; postAuthorHandle: string; postAuthorUid: string;
   reverbOfReverbId?: string; reverbOfHandle?: string; currentUser: any; onClose: ()=>void;
 }) {
@@ -335,8 +430,8 @@ function ReverbRecordModal({ postId, postCaption, postAuthorHandle, postAuthorUi
     try{
       const sec=Math.max(1,Math.floor(ms/1000));
       const up=await uploadAudio(blob,`rev-${currentUser.uid}-${Date.now()}`);
-      await addPostReverb(postId,{uid:currentUser.uid,handle:currentUser.handle||"@ANON",audioUrl:up.secureUrl,caption:caption.trim()||`@${postAuthorHandle} REVERB`,durationSec:sec,reverbOfReverbId,reverbOfHandle});
-      await createNotification(postAuthorUid,{type:"reverb",fromUid:currentUser.uid,fromHandle:currentUser.handle||"@ANON",postId,postCaption,text:`${currentUser.handle} dropped a reverb on your echo.`});
+      await addPostReverb(postId,{uid:currentUser.uid,handle:currentUser.handle||"@ANON",audioUrl:up.secureUrl,caption:caption.trim()||`@${postAuthorHandle} REPLY`,durationSec:sec,reverbOfReverbId,reverbOfHandle});
+      await createNotification(postAuthorUid,{type:"reverb",fromUid:currentUser.uid,fromHandle:currentUser.handle||"@ANON",postId,postCaption,text:`${currentUser.handle} dropped a reply on your echo.`});
       if(previewUrl)URL.revokeObjectURL(previewUrl);
       onClose();
     }catch(e:any){setMsg(`ERROR: ${e?.message||"FAILED"}`);setState("preview");}
@@ -347,7 +442,7 @@ function ReverbRecordModal({ postId, postCaption, postAuthorHandle, postAuthorUi
       <div className="w-full max-w-md bg-black border border-neutral-700 p-6 space-y-5 m-4">
         <div className="flex items-center justify-between">
           <p className="font-mono text-xs tracking-widest uppercase text-white">
-            {reverbOfHandle?`↩ REVERB ON ${reverbOfHandle}`:`// REVERB ON ${postAuthorHandle}`}
+            {reverbOfHandle?`↩ REPLY ON ${reverbOfHandle}`:`// REPLY ON ${postAuthorHandle}`}
           </p>
           <button onClick={onClose} className="font-mono text-xs text-neutral-600 hover:text-white cursor-pointer">[ ✕ ]</button>
         </div>
@@ -360,7 +455,7 @@ function ReverbRecordModal({ postId, postCaption, postAuthorHandle, postAuthorUi
         </div>
         <div className="font-mono text-3xl text-white text-center tabular-nums">{fmtMs(ms)}</div>
         <div className="space-y-3">
-          {state==="idle"&&<button onClick={startRec} className="w-full border border-neutral-700 text-white font-mono text-xs tracking-widest uppercase py-4 hover:border-white hover:bg-neutral-950 transition-colors cursor-pointer">[ 🎙 TAP TO RECORD REVERB ]</button>}
+          {state==="idle"&&<button onClick={startRec} className="w-full border border-neutral-700 text-white font-mono text-xs tracking-widest uppercase py-4 hover:border-white hover:bg-neutral-950 transition-colors cursor-pointer">[ 🎙 TAP TO RECORD REPLY ]</button>}
           {state==="recording"&&<button onClick={stopRec} className="w-full border border-white bg-white text-black font-mono text-xs tracking-widest uppercase py-4 animate-pulse cursor-pointer font-bold">[ ⏹ STOP RECORDING ]</button>}
           {state==="preview"&&(
             <div className="flex gap-3">
@@ -372,16 +467,16 @@ function ReverbRecordModal({ postId, postCaption, postAuthorHandle, postAuthorUi
           {state==="uploading"&&<div className="w-full border border-neutral-800 py-4 flex items-center justify-center gap-3 font-mono text-xs tracking-widest uppercase text-neutral-400"><Loader2 className="w-4 h-4 animate-spin"/>UPLOADING...</div>}
         </div>
         {msg&&<p className="font-mono text-[10px] text-neutral-500 tracking-widest uppercase text-center">{msg}</p>}
-        <p className="font-mono text-[10px] text-neutral-700 tracking-widest uppercase text-center">REVERB = VOICE COMMENT • SHOWS INLINE UNDER POST</p>
+        <p className="font-mono text-[10px] text-neutral-700 tracking-widest uppercase text-center">[ REPLIES ] = VOICE COMMENTS • SHOWS INLINE UNDER POST</p>
       </div>
     </div>
   );
 }
 
-// ─── Reverb Thread (inline comments) ─────────────────────────────────────────
-function ReverbThread({ post, currentUser, onReverbClick, onProfileClick }: {
+// ─── Reply Thread (inline comments) ─────────────────────────────────────────
+function ReplyThread({ post, currentUser, onReplyClick, onProfileClick }: {
   post: FeedPost; currentUser: any;
-  onReverbClick: (rid?: string, rh?: string) => void;
+  onReplyClick: (rid?: string, rh?: string) => void;
   onProfileClick: (h: string) => void;
 }) {
   const [reverbs, setReverbs]   = useState<PostReverbItem[]>([]);
@@ -405,13 +500,13 @@ function ReverbThread({ post, currentUser, onReverbClick, onProfileClick }: {
       <button onClick={()=>setExpanded(v=>!v)}
         className="flex items-center gap-1.5 font-mono text-[10px] text-neutral-600 tracking-widest uppercase hover:text-neutral-400 transition-colors cursor-pointer">
         {expanded?<ChevronUp className="w-3 h-3"/>:<ChevronDown className="w-3 h-3"/>}
-        {total>0?`${total} REVERB${total!==1?"S":""}`:expanded?"REVERBS":"ADD REVERB"}
+        {total>0?`${total} REPLY${total!==1?"S":""}`:expanded?"[ REPLIES ]":"[ + ADD REPLY ]"}
       </button>
 
       {expanded&&(
         <div className="border-l-2 border-neutral-900 pl-4 space-y-5 mt-2">
           {reverbs.length===0&&(
-            <p className="font-mono text-[10px] text-neutral-700 tracking-widest uppercase animate-pulse">LOADING REVERBS...</p>
+            <p className="font-mono text-[10px] text-neutral-700 tracking-widest uppercase animate-pulse">LOADING [ REPLIES ]...</p>
           )}
           {reverbs.map(rv=>{
             const pulsed=currentUser?(rv.pulsedBy||[]).includes(currentUser.uid):false;
@@ -428,18 +523,18 @@ function ReverbThread({ post, currentUser, onReverbClick, onProfileClick }: {
                 <div className="flex items-center gap-4">
                   <button onClick={()=>handlePulse(rv)} className={`flex items-center gap-1 font-mono text-[10px] tracking-widest uppercase cursor-pointer transition-colors ${pulsed?"text-white":"text-neutral-600 hover:text-white"}`}>
                     <Heart className={`w-3 h-3 ${pulsed?"fill-white":""}`}/>
-                    {rv.pulseCount>0?formatNum(rv.pulseCount):"PULSE"}
+                    {rv.pulseCount>0?formatNum(rv.pulseCount):"[ PULSE ]"}
                   </button>
-                  <button onClick={()=>onReverbClick(rv.id,rv.handle)} className="flex items-center gap-1 font-mono text-[10px] tracking-widest uppercase text-neutral-600 hover:text-white cursor-pointer transition-colors">
-                    <Repeat2 className="w-3 h-3"/>REVERB
+                  <button onClick={()=>onReplyClick(rv.id,rv.handle)} className="flex items-center gap-1 font-mono text-[10px] tracking-widest uppercase text-neutral-600 hover:text-white cursor-pointer transition-colors">
+                    <Repeat2 className="w-3 h-3"/>[ REPLY ]
                   </button>
                 </div>
               </div>
             );
           })}
           {currentUser&&(
-            <button onClick={()=>onReverbClick()} className="flex items-center justify-center gap-1.5 font-mono text-[10px] text-neutral-700 tracking-widest uppercase hover:text-neutral-400 transition-colors cursor-pointer border border-neutral-900 px-3 py-2 w-full">
-              <Mic2 className="w-3 h-3"/>+ ADD YOUR REVERB
+            <button onClick={()=>onReplyClick()} className="flex items-center justify-center gap-1.5 font-mono text-[10px] text-neutral-700 tracking-widest uppercase hover:text-neutral-400 transition-colors cursor-pointer border border-neutral-900 px-3 py-2 w-full">
+              <Mic2 className="w-3 h-3"/>[ + ADD YOUR REPLY ]
             </button>
           )}
         </div>
@@ -506,10 +601,10 @@ function useSwipeGesture(onSwipeLeft?: () => void, onSwipeRight?: () => void) {
 }
 
 // ─── Post Card Component (for proper hook usage) ───────────────────────────────
-function PostCard({ post, user, orbitedPosts, activePostId, deletingId, onPulse, onOrbit, onShare, onDelete, onReverbClick, onProfileClick, onActiveChange, setRef, onFollow, onUnfollow, following }: {
+function PostCard({ post, user, orbitedPosts, activePostId, deletingId, onPulse, onOrbit, onShare, onDelete, onReplyClick, onProfileClick, onActiveChange, setRef, onFollow, onUnfollow, following }: {
   post: FeedPost; user: any; orbitedPosts: Set<string>; activePostId: string | null;
   deletingId: string | null; onPulse: (p: FeedPost) => void; onOrbit: (p: FeedPost) => void;
-  onShare: (p: FeedPost) => void; onDelete: (id: string) => void; onReverbClick: (rid?: string, rh?: string) => void;
+  onShare: (p: FeedPost) => void; onDelete: (id: string) => void; onReplyClick: (rid?: string, rh?: string) => void;
   onProfileClick: (h: string) => void; onActiveChange: (id: string | null) => void; setRef: (id: string, el: HTMLElement | null) => void;
   onFollow: (uid: string, handle: string) => void; onUnfollow: (uid: string) => void; following: Set<string>;
 }) {
@@ -547,7 +642,7 @@ function PostCard({ post, user, orbitedPosts, activePostId, deletingId, onPulse,
                   : "border-white text-white hover:bg-white hover:text-black"
               }`}
             >
-              {following.has(post.authorUid) ? "ORBITING" : "ORBIT"}
+              {following.has(post.authorUid) ? "[ ORBITING ]" : "[ ORBIT ]"}
             </button>
           )}
         </div>
@@ -577,13 +672,13 @@ function PostCard({ post, user, orbitedPosts, activePostId, deletingId, onPulse,
         <button onClick={() => onPulse(post)}
           className={`flex items-center gap-2 font-mono text-xs tracking-widest uppercase cursor-pointer transition-colors ${isPulsed ? "text-white" : "text-neutral-500 hover:text-white"}`}>
           <ArrowUp className={`w-3.5 h-3.5 ${isPulsed ? "fill-white" : ""}`} />
-          {formatNum(post.pulseCount)} PULSES
+          {formatNum(post.pulseCount)} [ PULSE ]
         </button>
         <div className="flex items-center gap-4">
           {!isOwn && (
             <button onClick={() => onOrbit(post)} disabled={isOrbited}
               className={`flex items-center gap-1.5 font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer ${isOrbited ? "text-white" : "text-neutral-500 hover:text-white"}`}>
-              <RefreshCw className="w-3.5 h-3.5" />{isOrbited ? "ORBITED" : "ORBIT"}
+              <RefreshCw className="w-3.5 h-3.5" />{isOrbited ? "[ ORBITED ]" : "[ ORBIT ]"}
             </button>
           )}
           <button onClick={() => onShare(post)}
@@ -593,9 +688,9 @@ function PostCard({ post, user, orbitedPosts, activePostId, deletingId, onPulse,
         </div>
       </div>
 
-      {/* Inline reverb thread */}
-      <ReverbThread post={post} currentUser={user}
-        onReverbClick={onReverbClick}
+      {/* Inline reply thread */}
+      <ReplyThread post={post} currentUser={user}
+        onReplyClick={onReplyClick}
         onProfileClick={onProfileClick} />
     </article>
   );
@@ -610,7 +705,7 @@ export default function HomeFeedPage() {
   const [orbitedPosts, setOrbited]  = useState<Set<string>>(new Set());
   const [activePostId, setActiveId] = useState<string|null>(null);
   const [deletingId, setDeletingId] = useState<string|null>(null);
-  const [reverbModal, setReverbModal] = useState<{post:FeedPost;rid?:string;rh?:string}|null>(null);
+  const [replyModal, setReplyModal] = useState<{post:FeedPost;rid?:string;rh?:string}|null>(null);
   const [following, setFollowing]  = useState<Set<string>>(new Set());
   const userInteracted = useRef(false);
   const articleRefs    = useRef<Map<string,HTMLElement>>(new Map());
@@ -707,7 +802,7 @@ export default function HomeFeedPage() {
       onClick={()=>{userInteracted.current=true;}}>
       <header className="w-full bg-black border-b border-neutral-900 py-2.5 px-4 overflow-x-hidden">
         <div className="flex items-center gap-5 font-mono text-[10px] tracking-widest text-neutral-500 uppercase whitespace-nowrap">
-          <span className="flex items-center gap-1.5 text-white shrink-0"><Flame className="w-3 h-3"/>THE FREQUENCY</span>
+          <span className="flex items-center gap-1.5 text-white shrink-0"><Flame className="w-3 h-3"/>[ FREQUENCY ]</span>
           <span className="shrink-0">•</span><span className="shrink-0">LIVE AUDIO FEED</span>
           <span className="shrink-0">•</span><span className="shrink-0">UNFILTERED VOICES</span>
         </div>
@@ -741,9 +836,9 @@ export default function HomeFeedPage() {
                 onOrbit={handleOrbit}
                 onShare={handleShare}
                 onDelete={handleDelete}
-                onReverbClick={(rid, rh) => {
+                onReplyClick={(rid?: string, rh?: string) => {
                   if (!user) { router.push("/login"); return; }
-                  setReverbModal({ post, rid, rh });
+                  setReplyModal({ post, rid, rh });
                 }}
                 onProfileClick={h => router.push(`/${h.replace(/^@/, "")}`)}
                 onActiveChange={setActiveId}
@@ -757,16 +852,16 @@ export default function HomeFeedPage() {
         )}
       </main>
 
-      {reverbModal&&(
-        <ReverbRecordModal
-          postId={reverbModal.post.id}
-          postCaption={reverbModal.post.caption}
-          postAuthorHandle={reverbModal.post.authorHandle}
-          postAuthorUid={reverbModal.post.authorUid}
-          reverbOfReverbId={reverbModal.rid}
-          reverbOfHandle={reverbModal.rh}
+      {replyModal&&(
+        <ReplyRecordModal
+          postId={replyModal.post.id}
+          postCaption={replyModal.post.caption}
+          postAuthorHandle={replyModal.post.authorHandle}
+          postAuthorUid={replyModal.post.authorUid}
+          reverbOfReverbId={replyModal.rid}
+          reverbOfHandle={replyModal.rh}
           currentUser={user}
-          onClose={()=>setReverbModal(null)}/>
+          onClose={()=>setReplyModal(null)}/>
       )}
     </div>
   );

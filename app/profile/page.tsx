@@ -91,7 +91,7 @@ function MiniPlayer({ audioUrl, durationSec }: { audioUrl: string; durationSec: 
 
 export default function ProfilePage() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<"ECHOES" | "REVERBS" | "ORBITS" | "PULSED">("ECHOES");
+  const [activeTab, setActiveTab] = useState<"ECHOES" | "REPLIES" | "ORBITS" | "PULSED">("ECHOES");
   const [userPosts, setUserPosts] = useState<PostItem[]>([]);
   const [pulsedPosts, setPulsedPosts] = useState<PostItem[]>([]);
   const [shareModalOpen, setShareModalOpen] = useState(false);
@@ -292,7 +292,7 @@ export default function ProfilePage() {
                   {post.reverbOf && <Repeat2 className="w-3 h-3 text-neutral-600" />}
                   {post.orbitOf && <RefreshCw className="w-3 h-3 text-neutral-600" />}
                   <span className="font-mono text-[10px] text-neutral-500 uppercase">
-                    {post.reverbOf ? `REVERB ON ${post.reverbOfHandle}` : post.orbitOf ? `ORBIT OF ${post.orbitOfHandle}` : "ECHO"}
+                    {post.reverbOf ? `[ REPLY ] ON ${post.reverbOfHandle}` : post.orbitOf ? `[ ORBIT ] OF ${post.orbitOfHandle}` : "ECHO"}
                   </span>
                 </div>
                 <span className="font-mono text-[10px] text-neutral-600">
@@ -316,10 +316,10 @@ export default function ProfilePage() {
                 </div>
                 <div className="flex items-center gap-4 font-mono text-[10px] text-neutral-600 uppercase">
                   {(post.reverbCount || 0) > 0 && (
-                    <span>{post.reverbCount} REVERBS</span>
+                    <span>{post.reverbCount} [ REPLIES ]</span>
                   )}
                   {(post.orbitCount || 0) > 0 && (
-                    <span>{post.orbitCount} ORBITS</span>
+                    <span>{post.orbitCount} [ ORBITS ]</span>
                   )}
                   <span>{post.duration || "0:00"}</span>
                 </div>
@@ -376,9 +376,9 @@ export default function ProfilePage() {
           {/* Stats row */}
           <div className="flex gap-6 font-mono text-xs text-neutral-600 uppercase tracking-widest">
             <span>{echoePosts.length} ECHOES</span>
-            <span>{reverbPosts.length} REVERBS</span>
-            <span>{orbitPosts.length} ORBITS</span>
-            <span>{pulsedPosts.length} PULSED</span>
+            <span>{reverbPosts.length} [ REPLIES ]</span>
+            <span>{orbitPosts.length} [ ORBITS ]</span>
+            <span>{pulsedPosts.length} [ PULSED ]</span>
           </div>
         </div>
 
@@ -482,7 +482,7 @@ export default function ProfilePage() {
 
         {/* Tabs */}
         <div className="flex border-b border-neutral-900 mb-6 font-mono text-xs tracking-widest overflow-x-auto no-scrollbar">
-          {(["ECHOES", "REVERBS", "ORBITS", "PULSED"] as const).map((tab) => (
+          {(["ECHOES", "REPLIES", "ORBITS", "PULSED"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -494,7 +494,7 @@ export default function ProfilePage() {
             >
               {tab}
               <span className="ml-1 text-neutral-700">
-                ({tab === "ECHOES" ? echoePosts.length : tab === "REVERBS" ? reverbPosts.length : tab === "ORBITS" ? orbitPosts.length : pulsedPosts.length})
+                ({tab === "ECHOES" ? echoePosts.length : tab === "REPLIES" ? reverbPosts.length : tab === "ORBITS" ? orbitPosts.length : pulsedPosts.length})
               </span>
             </button>
           ))}
@@ -502,7 +502,7 @@ export default function ProfilePage() {
 
         {/* Tab Content */}
         {activeTab === "ECHOES"  && renderPostList(echoePosts,  "echoes")}
-        {activeTab === "REVERBS" && renderPostList(reverbPosts, "reverbs")}
+        {activeTab === "REPLIES" && renderPostList(reverbPosts, "replies")}
         {activeTab === "ORBITS"  && renderPostList(orbitPosts,  "orbits")}
         {activeTab === "PULSED"  && renderPostList(pulsedPosts, "pulsed posts")}
       </main>
