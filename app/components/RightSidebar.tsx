@@ -106,7 +106,7 @@ export function RightSidebar() {
                     <span className="text-neutral-700"> vs </span>
                     {c.sideB?.handle || "SIDE B"}
                   </p>
-                  <p className="font-serif text-sm italic text-neutral-500 mt-1 leading-snug">
+                  <p className="font-mono text-sm text-neutral-500 mt-1 leading-snug">
                     "{c.topic}"
                   </p>
                   <p className="font-mono text-[10px] text-neutral-700 tracking-widest mt-1.5">

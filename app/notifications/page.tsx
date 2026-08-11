@@ -112,7 +112,7 @@ export default function NotificationsPage() {
       <div className="md:hidden flex items-center justify-between px-5 pt-10 pb-6 border-b border-neutral-900">
         <span className="font-serif text-xl font-bold text-white italic">Echo.</span>
         <div className="flex items-center gap-2">
-          <span className="font-mono text-xs tracking-widest uppercase text-neutral-500">NOTIFICATIONS</span>
+          <span className="font-mono text-xs tracking-widest uppercase text-neutral-500">[ NOTIFS ]</span>
           {unreadCount > 0 && (
             <span className="w-5 h-5 rounded-full bg-white text-black font-mono text-[10px] flex items-center justify-center">
               {unreadCount > 9 ? "9+" : unreadCount}
@@ -125,7 +125,7 @@ export default function NotificationsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-mono text-xs tracking-widest text-neutral-500">// NOTIFICATIONS</p>
+            <p className="font-mono text-xs tracking-widest text-neutral-700 uppercase">// [ NOTIFS ]</p>
             {unreadCount > 0 && (
               <p className="font-mono text-[10px] text-white tracking-widest mt-0.5">
                 {unreadCount} UNREAD
@@ -231,7 +231,7 @@ export default function NotificationsPage() {
                   </div>
 
                   {notif.postCaption && (
-                    <p className="font-serif italic text-neutral-500 text-sm leading-snug truncate">
+                    <p className="font-mono text-neutral-500 text-sm leading-snug truncate">
                       "{notif.postCaption}"
                     </p>
                   )}

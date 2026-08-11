@@ -341,9 +341,9 @@ export default function RoomsPage() {
       <main className="max-w-2xl mx-auto px-5 pt-8 space-y-10 w-full flex-1">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-2">
-            <p className="font-mono text-xs tracking-widest text-neutral-500 uppercase">// LIVE AUDIO ROOMS & RELAYS</p>
-            <h1 className="font-serif italic text-3xl text-white">
-              Listen in. Zero filter.
+            <p className="font-mono text-xs tracking-widest text-neutral-700 uppercase">// LIVE AUDIO ROOMS</p>
+            <h1 className="font-mono text-3xl tracking-widest text-white uppercase">
+              [ ROOMS ]
             </h1>
           </div>
           <button
@@ -358,7 +358,7 @@ export default function RoomsPage() {
         {/* Trending Rooms Section */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <p className="font-mono text-xs tracking-widest text-white">// 🔥 TRENDING ROOMS</p>
+            <p className="font-mono text-xs tracking-widest text-neutral-700 uppercase">// 🔥 TRENDING</p>
             <div className="flex items-center gap-2">
               {CATEGORIES.map(cat => (
                 <button
@@ -377,7 +377,7 @@ export default function RoomsPage() {
           </div>
           {loadingTrending ? (
             <div className="border border-neutral-900 p-6 text-center">
-              <p className="font-mono text-xs text-neutral-500 tracking-widest uppercase animate-pulse">LOADING TRENDING ROOMS...</p>
+              <p className="font-mono text-xs text-neutral-500 tracking-widest uppercase animate-pulse">LOADING...</p>
             </div>
           ) : trendingRooms.length === 0 ? (
             <div className="border border-neutral-900 p-6 text-center">
@@ -399,7 +399,7 @@ export default function RoomsPage() {
                     </div>
                   </div>
                   {room.description && (
-                    <p className="font-serif italic text-neutral-300 text-sm">{room.description}</p>
+                    <p className="font-mono text-neutral-300 text-sm">{room.description}</p>
                   )}
                   <div className="flex items-center gap-2 pt-2">
                     <button
@@ -427,7 +427,7 @@ export default function RoomsPage() {
 
         {/* Live Rooms Section */}
         <section className="space-y-4">
-          <p className="font-mono text-xs tracking-widest text-white">// [ ROOMS ]</p>
+          <p className="font-mono text-xs tracking-widest text-neutral-700 uppercase">// [ ROOMS ]</p>
           {rooms.length === 0 ? (
             <div className="border border-neutral-900 p-6 text-center space-y-3">
               <Radio className="w-6 h-6 text-neutral-700 mx-auto" />
@@ -453,7 +453,7 @@ export default function RoomsPage() {
                     </div>
                   </div>
                   {room.description && (
-                    <p className="font-serif italic text-neutral-400 text-sm">"{room.description}"</p>
+                    <p className="font-mono text-neutral-400 text-sm">"{room.description}"</p>
                   )}
                   <div className="flex items-center justify-between pt-2">
                     <div className="flex items-center gap-2">
@@ -496,7 +496,7 @@ export default function RoomsPage() {
 
         {/* Stage Debates Section */}
         <section className="space-y-4">
-          <p className="font-mono text-xs tracking-widest text-white">// STAGE DEBATES</p>
+          <p className="font-mono text-xs tracking-widest text-neutral-700 uppercase">// STAGE DEBATES</p>
           {clashes.length === 0 ? (
             <div className="border border-neutral-900 p-6 text-center space-y-3">
               <Swords className="w-6 h-6 text-neutral-700 mx-auto" />
@@ -523,7 +523,7 @@ export default function RoomsPage() {
                       {c.listeners ? `${c.listeners * 12} AUDIENCE` : "1.4K AUDIENCE"}
                     </span>
                   </div>
-                  <p className="font-serif italic text-neutral-300">"{c.topic}"</p>
+                  <p className="font-mono text-neutral-300">"{c.topic}"</p>
                   <div className="pt-2">
                     <Link
                       href={`/stage/${c.id}`}
