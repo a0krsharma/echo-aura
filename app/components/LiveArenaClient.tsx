@@ -22,7 +22,22 @@ import AgoraRTC, {
 
 import { useAuth } from "@/app/components/AuthProvider";
 import { AGORA_APP_ID } from "@/lib/agora";
-import { voteOnClash, subscribeToClashes, type ClashItem } from "@/lib/clashes";
+import { 
+  voteOnClash, 
+  subscribeToClashes, 
+  type ClashItem,
+  startClashTimer,
+  pauseClashTimer,
+  resumeClashTimer,
+  switchClashTimerSide,
+  updateClashTimer,
+  resetClashTimer,
+  disableClashTimer,
+  submitClashQuestion,
+  upvoteClashQuestion,
+  subscribeToClashQuestions,
+  type ClashQuestion
+} from "@/lib/clashes";
 import { subscribeToVibeChat, sendVibeMessage, type VibeChatMessage } from "@/lib/stageChat";
 import { doc, getDoc } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
@@ -62,6 +77,16 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
   const [reactions, setReactions] = useState<Array<{emoji: string; x: number; y: number; id: number}>>([]);
   const reactionIdRef = useRef(0);
 
+  // Timer state
+  const [timerRunning, setTimerRunning] = useState(false);
+  const [currentSideTime, setCurrentSideTime] = useState(0);
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Q&A state
+  const [showQA, setShowQA] = useState(false);
+  const [questionInput, setQuestionInput] = useState("");
+  const [questions, setQuestions] = useState<any[]>([]);
+
   const REACTIONS = [
     { emoji: '🔥', icon: Flame, label: 'FIRE' },
     { emoji: '❤️', icon: Heart, label: 'LOVE' },
@@ -81,6 +106,94 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
     setTimeout(() => {
       setReactions(prev => prev.filter(r => r.id !== id));
     }, 3000);
+  };
+
+  // ── Timer Logic ─────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!clash) return;
+
+    // Initialize timer state from clash data
+    if (clash.currentSide) {
+      const timeRemaining = clash.currentSide === "A" ? clash.sideATimeRemaining : clash.sideBTimeRemaining;
+      setCurrentSideTime(timeRemaining);
+      setTimerRunning(!clash.timerPausedAt);
+    } else {
+      setCurrentSideTime(clash.timerDuration || 300);
+      setTimerRunning(false);
+    }
+  }, [clash]);
+
+  // Timer countdown
+  useEffect(() => {
+    if (!timerRunning || !clash?.currentSide) {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+      return;
+    }
+
+    timerIntervalRef.current = setInterval(() => {
+      setCurrentSideTime((prev) => {
+        if (prev <= 1) {
+          // Timer ended, switch sides automatically
+          handleSwitchSide();
+          return prev;
+        }
+        const newTime = prev - 1;
+        // Update Firestore periodically
+        if (newTime % 5 === 0) {
+          updateClashTimer(clashId, clash.currentSide!, newTime);
+        }
+        return newTime;
+      });
+    }, 1000);
+
+    return () => {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+      }
+    };
+  }, [timerRunning, clash?.currentSide, clashId]);
+
+  const handleStartTimer = async () => {
+    if (!clash) return;
+    const side = clash.currentSide || "A";
+    await startClashTimer(clashId, side);
+    setTimerRunning(true);
+  };
+
+  const handlePauseTimer = async () => {
+    if (!clash) return;
+    await pauseClashTimer(clashId);
+    setTimerRunning(false);
+  };
+
+  const handleResumeTimer = async () => {
+    if (!clash) return;
+    await resumeClashTimer(clashId);
+    setTimerRunning(true);
+  };
+
+  const handleSwitchSide = async () => {
+    if (!clash) return;
+    const newSide = clash.currentSide === "A" ? "B" : "A";
+    await switchClashTimerSide(clashId);
+    setCurrentSideTime(clash.timerDuration || 300);
+  };
+
+  const handleResetTimer = async () => {
+    if (!clash) return;
+    await resetClashTimer(clashId);
+    setCurrentSideTime(clash.timerDuration || 300);
+    setTimerRunning(false);
+  };
+
+  // Format time as MM:SS
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   // ── AgoraRTC Join Channel ───────────────────────────────────────
@@ -232,11 +345,20 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
       }, 100);
     });
 
+    // Subscribe to Q&A if enabled
+    let unsubQA: (() => void) | null = null;
+    if (clash?.qaEnabled) {
+      unsubQA = subscribeToClashQuestions(clashId, (qs) => {
+        setQuestions(qs);
+      });
+    }
+
     return () => {
       unsubClashes();
       unsubChat();
+      if (unsubQA) unsubQA();
     };
-  }, [clashId]);
+  }, [clashId, clash?.qaEnabled]);
 
   // Vote handler
   const handleVote = async (side: "A" | "B") => {
@@ -263,6 +385,27 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
       console.error("Failed to send chat:", err);
     } finally {
       setIsSendingChat(false);
+    }
+  };
+
+  // Q&A handlers
+  const handleSubmitQuestion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!questionInput.trim() || !user) return;
+    try {
+      await submitClashQuestion(clashId, questionInput.trim(), user.handle || "@ANON", user.uid);
+      setQuestionInput("");
+    } catch (err) {
+      console.error("Failed to submit question:", err);
+    }
+  };
+
+  const handleUpvoteQuestion = async (questionId: string) => {
+    if (!user) return;
+    try {
+      await upvoteClashQuestion(questionId, user.uid);
+    } catch (err) {
+      console.error("Failed to upvote question:", err);
     }
   };
 
@@ -377,6 +520,58 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
           </div>
         </div>
 
+        {/* ── Timer Display ── */}
+        {clash?.timerEnabled && (
+          <div className="border border-neutral-900 p-4 space-y-3">
+            <div className="font-mono text-[10px] tracking-widest uppercase text-neutral-600 flex justify-between">
+              <span>// DEBATE TIMER</span>
+              <span>SIDE {clash.currentSide || "A"}</span>
+            </div>
+            <div className="text-center space-y-3">
+              <div className="font-mono text-4xl md:text-5xl text-white tracking-widest">
+                {formatTime(currentSideTime)}
+              </div>
+              <div className="flex items-center justify-center gap-2">
+                {!timerRunning ? (
+                  <button
+                    onClick={handleStartTimer}
+                    className="px-4 py-2 border border-white text-white hover:bg-white hover:text-black font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer"
+                  >
+                    [ START ]
+                  </button>
+                ) : (
+                  <button
+                    onClick={handlePauseTimer}
+                    className="px-4 py-2 border border-neutral-800 text-neutral-500 hover:text-white font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer"
+                  >
+                    [ PAUSE ]
+                  </button>
+                )}
+                {clash.timerPausedAt && (
+                  <button
+                    onClick={handleResumeTimer}
+                    className="px-4 py-2 border border-neutral-800 text-neutral-500 hover:text-white font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer"
+                  >
+                    [ RESUME ]
+                  </button>
+                )}
+                <button
+                  onClick={handleSwitchSide}
+                  className="px-4 py-2 border border-neutral-800 text-neutral-500 hover:text-white font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer"
+                >
+                  [ SWITCH SIDE ]
+                </button>
+                <button
+                  onClick={handleResetTimer}
+                  className="px-4 py-2 border border-red-900 text-red-500 hover:text-red-400 font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer"
+                >
+                  [ RESET ]
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── ASCII Tug-of-War Engine ── */}
         <div className="space-y-4 text-center">
           <div className="flex justify-between font-mono text-xs tracking-widest text-neutral-500 uppercase">
@@ -446,6 +641,81 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
             </button>
           )}
         </div>
+
+        {/* ── Q&A Section ── */}
+        {clash?.qaEnabled && (
+          <div className="border border-neutral-900 p-4 space-y-3">
+            <div className="font-mono text-[10px] tracking-widest uppercase text-neutral-600 flex justify-between">
+              <span>// AUDIENCE Q&A</span>
+              <button
+                onClick={() => setShowQA(!showQA)}
+                className="text-neutral-500 hover:text-white transition-colors cursor-pointer"
+              >
+                {showQA ? "[ HIDE ]" : "[ SHOW ]"}
+              </button>
+            </div>
+
+            {showQA && (
+              <div className="space-y-3">
+                {/* Question Input */}
+                <form onSubmit={handleSubmitQuestion} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={questionInput}
+                    onChange={(e) => setQuestionInput(e.target.value)}
+                    placeholder="ASK A QUESTION..."
+                    className="flex-1 bg-transparent border border-neutral-800 px-3 py-2 font-mono text-xs text-white placeholder-neutral-700 focus:outline-none focus:border-white transition-colors"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!questionInput.trim()}
+                    className="px-4 py-2 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors cursor-pointer disabled:opacity-30"
+                  >
+                    [ ASK ]
+                  </button>
+                </form>
+
+                {/* Questions List */}
+                <div className="space-y-2 max-h-48 overflow-y-auto no-scrollbar">
+                  {questions.length === 0 ? (
+                    <div className="text-neutral-700 font-mono py-4 text-center">
+                      NO QUESTIONS YET. BE THE FIRST TO ASK.
+                    </div>
+                  ) : (
+                    questions.map((q) => (
+                      <div
+                        key={q.id}
+                        className={`border p-3 space-y-2 ${
+                          q.answered ? "border-green-900 bg-green-950/20" : "border-neutral-900"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="font-mono text-xs text-white flex-1">{q.question}</p>
+                          {q.answered && (
+                            <span className="font-mono text-[8px] text-green-500 uppercase">
+                              ANSWERED BY {q.answeredBy}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-[10px] text-neutral-500">{q.askedBy}</span>
+                            <button
+                              onClick={() => handleUpvoteQuestion(q.id)}
+                              className="font-mono text-[10px] text-neutral-600 hover:text-white transition-colors cursor-pointer flex items-center gap-1"
+                            >
+                              ↑ {q.upvotes}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── Live Reactions Bar ── */}
         <div className="border border-neutral-900 p-4 space-y-3">
