@@ -488,14 +488,14 @@ function RoomContent({ roomId }: RoomClientProps) {
         <div className="border border-neutral-800 p-6 space-y-4">
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-2">
-              <div className="font-mono text-[10px] tracking-widest text-neutral-600 uppercase">
+              <div className="font-mono text-[10px] tracking-widest text-neutral-700 uppercase">
                 // ROOM
               </div>
-              <h1 className="font-serif italic text-2xl text-white">
+              <h1 className="font-mono text-2xl tracking-widest text-white uppercase">
                 "{room.name}"
               </h1>
               {room.description && (
-                <p className="font-serif italic text-neutral-400 text-sm">
+                <p className="font-mono text-neutral-400 text-sm">
                   {room.description}
                 </p>
               )}
@@ -526,99 +526,139 @@ function RoomContent({ roomId }: RoomClientProps) {
         </div>
 
         {/* Participants */}
-        <div className="border border-neutral-800 p-4 space-y-3">
-          <div className="font-mono text-[10px] tracking-widest text-neutral-600 uppercase flex justify-between">
+        <div className="border border-neutral-800 p-4 space-y-4">
+          <div className="font-mono text-[10px] tracking-widest text-neutral-700 uppercase flex justify-between">
             <span>// PARTICIPANTS ({participants.length})</span>
+            {user && user.uid === room?.hostUid && pendingRequests > 0 && (
+              <span className="text-yellow-500 animate-pulse">{pendingRequests} REQUEST{pendingRequests > 1 ? "S" : ""}</span>
+            )}
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {participants.map((participant) => (
-              <div
-                key={participant.id || participant.uid}
-                className={`border p-3 space-y-2 animate-fade-in ${
-                  participant.isSpeaker ? "border-white" : "border-neutral-900"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setProfileModal({ uid: participant.uid, handle: participant.handle })}
-                    className={`w-8 h-8 border flex items-center justify-center font-mono text-xs relative hover:border-white hover:text-white transition-colors cursor-pointer ${
-                      speakingUsers.has(participant.uid) 
-                        ? "border-green-500 text-green-400 bg-green-500/10" 
-                        : "border-neutral-700 text-neutral-400"
-                    }`}
+          
+          {/* Speakers Section */}
+          {participants.filter(p => p.isSpeaker).length > 0 && (
+            <div className="space-y-2">
+              <p className="font-mono text-[10px] text-neutral-600 uppercase">// SPEAKERS</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {participants.filter(p => p.isSpeaker).map((participant) => (
+                  <div
+                    key={participant.id || participant.uid}
+                    className="border border-white p-3 space-y-2 animate-fade-in"
                   >
-                    {participant.handle.charAt(1)}
-                    {speakingUsers.has(participant.uid) && (
-                      <div className="absolute inset-0 bg-green-500/30 animate-pulse" />
-                    )}
-                    {participant.raisedHand && (
-                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center animate-bounce">
-                        <Hand size={8} className="text-black" />
-                      </div>
-                    )}
-                  </button>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-1.5">
-                      {speakingUsers.has(participant.uid) && (
-                        <Mic size={10} className="text-green-500 animate-pulse" />
-                      )}
-                      <div className="font-mono text-xs text-white">{participant.handle}</div>
-                    </div>
-                    <div className="font-mono text-[10px] text-neutral-600 uppercase flex items-center gap-1">
-                      {speakingUsers.has(participant.uid) && (
-                        <span className="text-green-500">NOW SPEAKING</span>
-                      )}
-                      {!speakingUsers.has(participant.uid) && (
-                        <span>{participant.isSpeaker ? "SPEAKER" : "LISTENER"}</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                {/* Moderator controls for host */}
-                {user && user.uid === room?.hostUid && participant.uid !== user.uid && (
-                  <div className="flex items-center gap-1 pt-2 border-t border-neutral-900 animate-slide-up">
-                    {participant.raisedHand ? (
+                    <div className="flex items-center gap-2">
                       <button
-                        onClick={() => handlePromoteSpeaker(participant.uid)}
-                        className="font-mono text-[8px] text-green-500 hover:text-green-400 uppercase cursor-pointer transition-colors"
-                      >
-                        [ACCEPT]
-                      </button>
-                    ) : null}
-                    {participant.isSpeaker ? (
-                      <button
-                        onClick={() => handleDemoteSpeaker(participant.uid)}
-                        className="font-mono text-[8px] text-red-500 hover:text-red-400 uppercase cursor-pointer transition-colors"
-                      >
-                        [DEMOTE]
-                      </button>
-                    ) : null}
-                    {participant.isSpeaker && (
-                      <button
-                        onClick={() => participant.isMuted ? handleUnmute(participant.uid) : handleMute(participant.uid)}
-                        className={`font-mono text-[8px] uppercase cursor-pointer transition-colors ${
-                          participant.isMuted ? "text-red-500 hover:text-red-400" : "text-neutral-500 hover:text-white"
+                        onClick={() => setProfileModal({ uid: participant.uid, handle: participant.handle })}
+                        className={`w-10 h-10 border flex items-center justify-center font-mono text-sm relative hover:border-white hover:text-white transition-colors cursor-pointer ${
+                          speakingUsers.has(participant.uid) 
+                            ? "border-green-500 text-green-400 bg-green-500/10" 
+                            : "border-neutral-700 text-neutral-400"
                         }`}
                       >
-                        [{participant.isMuted ? "UNMUTE" : "MUTE"}]
+                        {participant.handle.charAt(1)}
+                        {speakingUsers.has(participant.uid) && (
+                          <div className="absolute inset-0 bg-green-500/30 animate-pulse" />
+                        )}
                       </button>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-1.5">
+                          {speakingUsers.has(participant.uid) && (
+                            <Mic size={10} className="text-green-500 animate-pulse" />
+                          )}
+                          <div className="font-mono text-xs text-white">{participant.handle}</div>
+                        </div>
+                        <div className="font-mono text-[10px] text-neutral-600 uppercase flex items-center gap-1">
+                          {speakingUsers.has(participant.uid) && (
+                            <span className="text-green-500">NOW SPEAKING</span>
+                          )}
+                          {!speakingUsers.has(participant.uid) && (
+                            <span>{participant.isMuted ? "MUTED" : "SPEAKER"}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    {/* Moderator controls for host */}
+                    {user && user.uid === room?.hostUid && participant.uid !== user.uid && (
+                      <div className="flex items-center gap-1 pt-2 border-t border-neutral-900 animate-slide-up">
+                        <button
+                          onClick={() => participant.isMuted ? handleUnmute(participant.uid) : handleMute(participant.uid)}
+                          className={`font-mono text-[8px] uppercase cursor-pointer transition-colors ${
+                            participant.isMuted ? "text-red-500 hover:text-red-400" : "text-neutral-500 hover:text-white"
+                          }`}
+                        >
+                          [{participant.isMuted ? "UNMUTE" : "MUTE"}]
+                        </button>
+                        <button
+                          onClick={() => handleDemoteSpeaker(participant.uid)}
+                          className="font-mono text-[8px] text-red-500 hover:text-red-400 uppercase cursor-pointer transition-colors"
+                        >
+                          [DEMOTE]
+                        </button>
+                      </div>
                     )}
                   </div>
-                )}
-                {participant.isSpeaker && (
-                  <div className="flex items-center gap-1">
-                    <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                    <span className="font-mono text-[10px] text-neutral-600 uppercase">LIVE</span>
-                  </div>
-                )}
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          )}
+
+          {/* Listeners Section */}
+          {participants.filter(p => !p.isSpeaker).length > 0 && (
+            <div className="space-y-2">
+              <p className="font-mono text-[10px] text-neutral-600 uppercase">// LISTENERS</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {participants.filter(p => !p.isSpeaker).map((participant) => (
+                  <div
+                    key={participant.id || participant.uid}
+                    className="border border-neutral-900 p-3 space-y-2 animate-fade-in"
+                  >
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setProfileModal({ uid: participant.uid, handle: participant.handle })}
+                        className="w-10 h-10 border border-neutral-700 flex items-center justify-center font-mono text-sm text-neutral-400 hover:border-white hover:text-white transition-colors cursor-pointer relative"
+                      >
+                        {participant.handle.charAt(1)}
+                        {participant.raisedHand && (
+                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center animate-bounce">
+                            <Hand size={8} className="text-black" />
+                          </div>
+                        )}
+                      </button>
+                      <div className="flex-1">
+                        <div className="font-mono text-xs text-white">{participant.handle}</div>
+                        <div className="font-mono text-[10px] text-neutral-600 uppercase">
+                          {participant.raisedHand ? "HAND RAISED" : "LISTENER"}
+                        </div>
+                      </div>
+                    </div>
+                    {/* Moderator controls for host */}
+                    {user && user.uid === room?.hostUid && participant.uid !== user.uid && (
+                      <div className="flex items-center gap-1 pt-2 border-t border-neutral-900 animate-slide-up">
+                        {participant.raisedHand ? (
+                          <button
+                            onClick={() => handlePromoteSpeaker(participant.uid)}
+                            className="font-mono text-[8px] text-green-500 hover:text-green-400 uppercase cursor-pointer transition-colors"
+                          >
+                            [ACCEPT]
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handlePromoteSpeaker(participant.uid)}
+                            className="font-mono text-[8px] text-neutral-500 hover:text-white uppercase cursor-pointer transition-colors"
+                          >
+                            [PROMOTE]
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Audio Controls */}
         <div className="border border-neutral-800 p-4 space-y-4">
-          <div className="font-mono text-[10px] tracking-widest text-neutral-600 uppercase">
+          <div className="font-mono text-[10px] tracking-widest text-neutral-700 uppercase">
             // AUDIO CONTROLS
           </div>
           
@@ -648,7 +688,15 @@ function RoomContent({ roomId }: RoomClientProps) {
           ) : (
             <div className="flex items-center justify-between">
               <span className="font-mono text-xs text-neutral-600 uppercase">LISTENING MODE</span>
-              {hasRequestedToSpeak ? (
+              {room.openMic ? (
+                <button
+                  onClick={handleRequestToSpeak}
+                  className="px-4 py-2 border border-white text-white hover:bg-white hover:text-black font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center gap-2"
+                >
+                  <Mic size={12} />
+                  [ JOIN AS SPEAKER ]
+                </button>
+              ) : hasRequestedToSpeak ? (
                 <button
                   onClick={handleCancelRequest}
                   className="px-4 py-2 border border-yellow-500 text-yellow-500 hover:bg-yellow-500 hover:text-black font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center gap-2"
@@ -671,7 +719,7 @@ function RoomContent({ roomId }: RoomClientProps) {
 
         {/* Chat */}
         <div className="border border-neutral-800 p-4 space-y-4">
-          <div className="font-mono text-[10px] tracking-widest text-neutral-600 uppercase">
+          <div className="font-mono text-[10px] tracking-widest text-neutral-700 uppercase">
             // ROOM CHAT
           </div>
           
@@ -699,15 +747,15 @@ function RoomContent({ roomId }: RoomClientProps) {
             )}
             
             {chatMessages.length === 0 ? (
-              <div className="text-neutral-700 italic font-serif py-4 text-center">
-                No messages yet. Start the conversation.
+              <div className="text-neutral-700 font-mono py-4 text-center">
+                NO MESSAGES YET. START THE CONVERSATION.
               </div>
             ) : (
               chatMessages.map((msg, i) => (
                 <div key={i} className="text-neutral-300 leading-relaxed">
                   <span className="text-neutral-700">{msg.time} </span>
                   <span className="text-white">{msg.handle}: </span>
-                  <span className="text-neutral-400 font-serif italic">{msg.text}</span>
+                  <span className="text-neutral-400 font-mono">{msg.text}</span>
                 </div>
               ))
             )}
@@ -774,7 +822,7 @@ function RoomContent({ roomId }: RoomClientProps) {
                 {profileData.bio && (
                   <div>
                     <p className="font-mono text-[10px] tracking-widest text-neutral-600 block mb-1">BIO</p>
-                    <p className="font-serif italic text-neutral-300 text-sm">{profileData.bio}</p>
+                    <p className="font-mono text-neutral-300 text-sm">{profileData.bio}</p>
                   </div>
                 )}
 
@@ -815,7 +863,7 @@ function RoomContent({ roomId }: RoomClientProps) {
                     <div className="space-y-2 max-h-40 overflow-y-auto">
                       {profilePosts.map((post) => (
                         <div key={post.id} className="border border-neutral-900 p-2">
-                          <p className="font-serif italic text-neutral-300 text-sm truncate">"{post.caption}"</p>
+                          <p className="font-mono text-neutral-300 text-sm truncate">"{post.caption}"</p>
                           <p className="font-mono text-[10px] text-neutral-600 mt-1">{post.pulseCount || 0} PULSES</p>
                         </div>
                       ))}
