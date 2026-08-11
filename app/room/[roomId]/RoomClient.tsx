@@ -522,14 +522,14 @@ function RoomContent({ roomId }: RoomClientProps) {
         </div>
 
         {/* Speakers - Prominent Top Section */}
-        {participants.filter(p => p.isSpeaker).length > 0 && (
-          <div className="border border-white p-4 space-y-3 bg-white/5">
-            <div className="font-mono text-[10px] tracking-widest text-neutral-700 uppercase flex justify-between">
-              <span>// SPEAKERS ({participants.filter(p => p.isSpeaker).length})</span>
-              {user && user.uid === room?.hostUid && pendingRequests > 0 && (
-                <span className="text-yellow-500 animate-pulse">{pendingRequests} REQUEST{pendingRequests > 1 ? "S" : ""}</span>
-              )}
-            </div>
+        <div className="border border-white p-4 space-y-3 bg-white/5">
+          <div className="font-mono text-[10px] tracking-widest text-neutral-700 uppercase flex justify-between">
+            <span>// SPEAKERS ({participants.filter(p => p.isSpeaker).length})</span>
+            {user && user.uid === room?.hostUid && pendingRequests > 0 && (
+              <span className="text-yellow-500 animate-pulse">{pendingRequests} REQUEST{pendingRequests > 1 ? "S" : ""}</span>
+            )}
+          </div>
+          {participants.filter(p => p.isSpeaker).length > 0 ? (
             <div className="flex flex-wrap gap-4">
               {participants.filter(p => p.isSpeaker).map((participant) => (
                 <div
@@ -582,15 +582,19 @@ function RoomContent({ roomId }: RoomClientProps) {
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="text-center py-8 font-mono text-xs text-neutral-500 uppercase">
+              NO SPEAKERS YET
+            </div>
+          )}
+        </div>
 
         {/* Listeners */}
-        {participants.filter(p => !p.isSpeaker).length > 0 && (
-          <div className="border border-neutral-800 p-4 space-y-3">
-            <div className="font-mono text-[10px] tracking-widest text-neutral-700 uppercase">
-              // LISTENERS ({participants.filter(p => !p.isSpeaker).length})
-            </div>
+        <div className="border border-neutral-800 p-4 space-y-3">
+          <div className="font-mono text-[10px] tracking-widest text-neutral-700 uppercase">
+            // LISTENERS ({participants.filter(p => !p.isSpeaker).length})
+          </div>
+          {participants.filter(p => !p.isSpeaker).length > 0 ? (
             <div className="flex flex-wrap gap-3">
               {participants.filter(p => !p.isSpeaker).map((participant) => (
                 <div
@@ -639,8 +643,12 @@ function RoomContent({ roomId }: RoomClientProps) {
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="text-center py-8 font-mono text-xs text-neutral-500 uppercase">
+              NO LISTENERS YET
+            </div>
+          )}
+        </div>
 
         {/* Audio Controls */}
         <div className="border border-neutral-800 p-4 space-y-4">
