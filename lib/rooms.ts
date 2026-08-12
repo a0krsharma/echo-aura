@@ -143,6 +143,31 @@ export async function createRoom(roomData: {
       // Continue anyway - room was created successfully
     }
 
+    // Notify followers that host started a stage/room (best-effort, non-blocking)
+    (async () => {
+      try {
+        const followsRef = collection(getFirebaseDb(), "follows");
+        const q = query(followsRef, where("followingUid", "==", roomData.hostUid));
+        const snap = await getDocs(q);
+        const { createNotification } = await import("@/lib/notifications");
+        for (const f of snap.docs) {
+          const data: any = f.data();
+          const followerUid = data.followerUid;
+          // Create a stage notification for each follower
+          await createNotification(followerUid, {
+            type: "stage",
+            fromUid: roomData.hostUid,
+            fromHandle: roomData.hostHandle,
+            roomId,
+            roomName: roomData.name,
+            text: `${roomData.hostHandle} started a stage: \"${roomData.name}\"`,
+          });
+        }
+      } catch (err) {
+        console.error("[createRoom] notify followers failed:", err);
+      }
+    })();
+
     return roomId;
   } catch (error) {
     console.error("[createRoom] Error creating room:", error);

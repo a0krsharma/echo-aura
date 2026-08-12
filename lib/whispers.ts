@@ -126,6 +126,28 @@ export async function sendWhisper(
     lastAt: serverTimestamp(),
   });
 
+  // Notify the other participant about the new wire message
+  try {
+    const convSnap = await getDoc(convRef);
+    if (convSnap.exists()) {
+      const conv = convSnap.data() as any;
+      const participants: string[] = conv.participants || [];
+      const recipient = participants.find((p) => p !== senderUid);
+      if (recipient) {
+        // Importing here to avoid circular dependency at module load time
+        const { createNotification } = await import("@/lib/notifications");
+        await createNotification(recipient, {
+          type: "wire",
+          fromUid: senderUid,
+          fromHandle: senderHandle,
+          text: text || "Sent you a wire",
+        });
+      }
+    }
+  } catch (e) {
+    console.error("sendWhisper: failed to notify recipient:", e);
+  }
+
   return msgRef.id;
 }
 
