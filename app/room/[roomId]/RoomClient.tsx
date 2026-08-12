@@ -242,6 +242,39 @@ function RoomContent({ roomId }: RoomClientProps) {
     };
   }, [roomId, user?.uid]);
 
+  // Auto-route listeners to HLS when host enables HLS broadcast
+  useEffect(() => {
+    if (!user) return;
+    if (isSpeaker) return; // speakers remain on RTC
+
+    const prevHlsRef = { current: false } as { current: boolean };
+
+    // track previous state across renders
+    if (typeof (prevHlsRef as any).initialized === 'undefined') {
+      (prevHlsRef as any).initialized = true;
+      prevHlsRef.current = !!room?.hlsEnabled;
+    }
+
+    // If HLS just became enabled, prompt the listener to switch
+    if (room?.hlsEnabled && !prevHlsRef.current) {
+      try {
+        const switchToHls = window.confirm('Host has started broadcasting via HLS. Switch to low-bandwidth HLS player for best listening experience?');
+        if (switchToHls) {
+          // Navigate to listen page with room context
+          const hlsParam = room.hlsUrl ? `&hls=${encodeURIComponent(room.hlsUrl)}` : '';
+          router.push(`/listen?room=${encodeURIComponent(roomId)}${hlsParam}`);
+          return;
+        }
+      } catch (e) {
+        console.warn('[Room] Auto-route to HLS prompt failed:', e);
+      }
+    }
+
+    // update prev
+    (prevHlsRef as any).current = !!room?.hlsEnabled;
+  }, [room?.hlsEnabled, isSpeaker, user, roomId, router]);
+
+
   // Handle leaving room
   const handleLeave = async () => {
     if (user) {

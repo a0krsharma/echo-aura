@@ -34,30 +34,56 @@ if (source && source !== 'stdin') {
 
 console.log('Starting ffmpeg with args:', ffArgs.join(' '));
 
-const ff = spawn('ffmpeg', ffArgs, { stdio: ['pipe', 'inherit', 'inherit'] });
+let attempts = 0;
+const maxRetries = 6;
+let backoffMs = 2000;
+let ff = null;
 
-ff.on('exit', (code, sig) => {
-  console.log('ffmpeg exited', code, sig);
-  process.exit(code === null ? 1 : code);
-});
+function startFfmpeg() {
+  attempts++;
+  console.log(`ffmpeg bridge starting (attempt ${attempts}/${maxRetries})`);
+  ff = spawn('ffmpeg', ffArgs, { stdio: ['pipe', 'inherit', 'inherit'] });
 
-ff.on('error', (err) => {
-  console.error('Failed to start ffmpeg:', err);
-  process.exit(1);
-});
+  ff.on('exit', (code, sig) => {
+    console.log('ffmpeg exited', code, sig);
+    if (attempts < maxRetries) {
+      const delay = backoffMs * attempts;
+      console.log(`Restarting ffmpeg in ${delay}ms`);
+      setTimeout(startFfmpeg, delay);
+    } else {
+      console.error('ffmpeg bridge reached max retries, exiting');
+      process.exit(code === null ? 1 : code);
+    }
+  });
 
-// If source is a file, nothing to pipe. If stdin, pipe process.stdin to ffmpeg
-if (!source || source === 'stdin') {
-  process.stdin.pipe(ff.stdin);
+  ff.on('error', (err) => {
+    console.error('Failed to start ffmpeg:', err);
+    if (attempts < maxRetries) {
+      const delay = backoffMs * attempts;
+      console.log(`Retrying ffmpeg in ${delay}ms`);
+      setTimeout(startFfmpeg, delay);
+    } else {
+      process.exit(1);
+    }
+  });
+
+  // If source is a file, nothing to pipe. If stdin, pipe process.stdin to ffmpeg
+  if (!source || source === 'stdin') {
+    process.stdin.pipe(ff.stdin);
+  }
 }
+
+startFfmpeg();
 
 // Graceful shutdown
 process.on('SIGINT', () => {
   console.log('SIGINT received, killing ffmpeg');
-  ff.kill('SIGINT');
+  if (ff) ff.kill('SIGINT');
+  process.exit(0);
 });
 
 process.on('SIGTERM', () => {
   console.log('SIGTERM received, killing ffmpeg');
-  ff.kill('SIGTERM');
+  if (ff) ff.kill('SIGTERM');
+  process.exit(0);
 });
