@@ -19,4 +19,23 @@ Prioritized next steps (recommended order):
 5. Integration smoke tests: add an end-to-end check covering start->push->hls playback and stop.
 6. Add monitoring/observability for broadcast sessions (resourceId, sid, start/stop events).
 
-I will proceed autonomously to implement the highest-impact items from this list (FFmpeg bridge example, TURN support already added client-side, secure Firestore rules guidance, and create admin UI + smoke test next). If any preference, respond with a short note; otherwise I'll continue and report progress.
+Work completed since last update:
+- Added scripts/headless-bridge.js and documented usage in scripts/FFMPEG-BRIDGE-README.md.
+- Implemented notification on wire send; followers now get a stage/room notification when a host creates a room.
+- Added migration script scripts/migrate-whispers-to-wire.js (requires Firebase service account) to copy data from 'whispers' -> 'wire'.
+- Swept UI strings and code to prefer 'Wire' while preserving 'whispers' backend (lib/wire.ts shim). Fixed TypeScript errors and completed a successful local build.
+- Updated moderation and notification code to accept both 'whisper' and 'wire' content types during migration.
+- firestore.rules updated with /wire alias rules; must be deployed via Firebase CLI.
+
+Remaining operator actions required for full E2E:
+- Provide Agora Cloud Recording credentials (AGORA_CLOUD_RECORDING_APP_ID, AGORA_CLOUD_RECORDING_CERT, AGORA_APP_ID) and RTMP_INGEST_URL so headless bridge can run end-to-end.
+- Provide ADMIN_API_KEY or permit host-based /api/stream/start to verify via Firestore host check.
+- Provide Firebase service account or Firebase CLI access to deploy firestore.rules and run the migration script in staging.
+- (Optional) Provide TURN credentials or allow provisioning coturn and I will wire NEXT_PUBLIC_TURN_*.
+
+Immediate next steps (autonomous):
+- If Agora + RTMP creds are provided, run headless bridge end-to-end and validate HLS playback (mark success and collect resourceId/RTMP status). 
+- If Firebase access provided, deploy firestore.rules and optionally run migration script in staging.
+- Continue UI polish (Room/Stage feature parity) and implement auto-route to HLS when room.hlsEnabled=true.
+
+If you want me to proceed now, provide the credentials securely or indicate which action to run next. I will continue and report back with verification logs and commits.
