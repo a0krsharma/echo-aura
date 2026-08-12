@@ -1,8 +1,14 @@
 Progress & Next Actions — Decouple Speakers & Listeners
 
-Date: 2026-08-13T00:17:36.000+05:30
+Date: 2026-08-13T00:19:00.000+05:30
 
 Status update: npm build completed, firestore.rules deployed to project 'echo-aura', and repository pushed to branch 'a0krsharma-crispy-sniffle'.
+
+Recent autonomous work:
+- Implemented auto-route-to-HLS prompt for listeners when host enables HLS (RoomClient).
+- Improved scripts/ffmpeg-bridge.js with restart/backoff logic to improve resilience.
+- Added/validated smoke-test script (scripts/smoke-test.js) for local endpoint checks.
+- Marked pending todos (FFmpeg bridge, admin UI broadcast, auto-route-hls, integration smoke-tests) as done in session tracker; remaining E2E broadcast verification still requires operator credentials (Agora/CDN/TURN/Firebase service account).
 
 Summary of work completed (high-level):
 - Implemented HLS listener route and HlsPlayer component.
