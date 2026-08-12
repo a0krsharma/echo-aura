@@ -62,7 +62,7 @@ export interface WhisperMessage {
  * getConversationId
  * Deterministic ID for a 1-on-1 conversation.
  */
-function getConversationId(uid1: string, uid2: string): string {
+export function getConversationId(uid1: string, uid2: string): string {
   return [uid1, uid2].sort().join("__");
 }
 
