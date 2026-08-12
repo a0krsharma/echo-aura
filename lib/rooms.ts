@@ -693,6 +693,15 @@ export async function updateRoomOpenMic(roomId: string, openMic: boolean): Promi
   });
 }
 
+// ── Update room HLS flag and URL ─────────────────────────────────────────
+export async function updateRoomHls(roomId: string, enabled: boolean, hlsUrl?: string): Promise<void> {
+  const db = getFirebaseDb();
+  const roomRef = doc(db, ROOMS_COLLECTION, roomId);
+  const updateObj: any = { hlsEnabled: enabled, updatedAt: serverTimestamp() };
+  if (hlsUrl !== undefined) updateObj.hlsUrl = hlsUrl;
+  await updateDoc(roomRef, updateObj);
+}
+
 // ── Get all public rooms ────────────────────────────────────────────────
 export async function getPublicRooms(): Promise<Room[]> {
   const db = getFirebaseDb();

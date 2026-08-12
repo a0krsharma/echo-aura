@@ -225,3 +225,36 @@ export async function searchUsersByHandle(handle: string): Promise<Array<{ uid: 
     return [];
   }
 }
+
+/**
+ * Signaling helpers for P2P WebRTC 1v1 (uses a 'signaling' subcollection under whispers/{convId})
+ */
+export async function addSignalingMessage(conversationId: string, fromUid: string, type: string, payload: any) {
+  try {
+    const db = getFirebaseDb();
+    const ref = collection(db, "whispers", conversationId, "signaling");
+    await addDoc(ref, {
+      fromUid,
+      type,
+      payload,
+      createdAt: serverTimestamp(),
+    });
+    return true;
+  } catch (e) {
+    console.error("addSignalingMessage failed:", e);
+    return false;
+  }
+}
+
+export function subscribeToSignaling(conversationId: string, callback: (msg: any) => void) {
+  const db = getFirebaseDb();
+  const q = query(collection(db, "whispers", conversationId, "signaling"), orderBy("createdAt", "asc"));
+  const unsub = onSnapshot(q, (snap) => {
+    snap.docChanges().forEach((change) => {
+      if (change.type === "added") {
+        callback({ id: change.doc.id, ...(change.doc.data() as any) });
+      }
+    });
+  });
+  return unsub;
+}

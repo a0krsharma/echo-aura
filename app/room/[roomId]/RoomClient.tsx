@@ -14,7 +14,7 @@ import AgoraRTC from "agora-rtc-sdk-ng";
 
 import { useAuth } from "@/app/components/AuthProvider";
 import { AGORA_APP_ID } from "@/lib/agora";
-import { getRoom, subscribeToRoom, subscribeToRoomParticipants, removeParticipant, sendRoomChatMessage, subscribeToRoomChat, raiseHand, lowerHand, promoteToSpeaker, demoteFromSpeaker, muteParticipant, unmuteParticipant, sendRoomReaction, subscribeToRoomReactions, bookmarkRoom, removeRoomBookmark, updateRoomOpenMic, type Room, type RoomParticipant } from "@/lib/rooms";
+import { getRoom, subscribeToRoom, subscribeToRoomParticipants, removeParticipant, sendRoomChatMessage, subscribeToRoomChat, raiseHand, lowerHand, promoteToSpeaker, demoteFromSpeaker, muteParticipant, unmuteParticipant, sendRoomReaction, subscribeToRoomReactions, bookmarkRoom, removeRoomBookmark, updateRoomOpenMic, updateRoomHls, type Room, type RoomParticipant } from "@/lib/rooms";
 import { collection, query, where, getDocs, orderBy, limit, doc, getDoc } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 import { followUser, unfollowUser, isFollowing } from "@/lib/follows";
@@ -61,18 +61,19 @@ function RoomContent({ roomId }: RoomClientProps) {
   const clientRef = useRef<any>(null);
   const localTrackRef = useRef<any>(null);
 
-  // Initialize Agora client and join channel
+  // Initialize Agora client and join channel only for speakers/hosts
   useEffect(() => {
-    if (!user || !room?.agoraChannel) return;
+    // Only initialize Agora when the current user is a speaker (or host) and room has an agoraChannel
+    if (!user || !room?.agoraChannel || !isSpeaker) return;
 
     let mounted = true;
 
     async function setupAgora() {
       try {
         if (!room?.agoraChannel || !user?.uid) return;
-        
+
         console.log("[Room] Setting up Agora for channel:", room.agoraChannel);
-        
+
         // Request microphone permission first
         try {
           await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -82,9 +83,9 @@ function RoomContent({ roomId }: RoomClientProps) {
           alert("Microphone permission is required for audio in rooms. Please allow microphone access and refresh.");
           return;
         }
-        
-        // Create client
-        const client = AgoraRTC.createClient({ codec: "vp8", mode: "rtc" });
+
+        // Create client in live (interactive live streaming) mode so roles (host/audience) are supported
+        const client = AgoraRTC.createClient({ codec: "vp8", mode: "live" });
         clientRef.current = client;
 
         // Fetch token
@@ -98,10 +99,17 @@ function RoomContent({ roomId }: RoomClientProps) {
         await client.join(AGORA_APP_ID, room.agoraChannel, agoraToken || undefined, user.uid);
         console.log("[Room] Joined Agora channel");
 
+        // Set role to host for speakers
+        try {
+          client.setClientRole && (await client.setClientRole("host"));
+        } catch (e) {
+          console.warn("[Room] setClientRole failed or not supported in this SDK build:", e);
+        }
+
         // Create and publish local audio track
         const localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
         localTrackRef.current = localAudioTrack;
-        
+
         await client.publish([localAudioTrack]);
         console.log("[Room] Published local audio track");
 
@@ -113,13 +121,17 @@ function RoomContent({ roomId }: RoomClientProps) {
             // Play the remote audio track
             remoteUser.audioTrack.play();
             console.log("[Room] Playing remote audio for:", remoteUser.uid);
-            
-            // Track speaking users
-            remoteUser.audioTrack.on("volume-indicator", (volume: number) => {
-              if (volume > 5 && mounted) {
-                setSpeakingUsers(prev => new Set([...prev, remoteUser.uid]));
-              }
-            });
+
+            // Track speaking users (volume-indicator may not be supported; keep basic detection)
+            try {
+              remoteUser.audioTrack.on && remoteUser.audioTrack.on("volume-indicator", (volume: number) => {
+                if (volume > 5 && mounted) {
+                  setSpeakingUsers(prev => new Set([...prev, remoteUser.uid]));
+                }
+              });
+            } catch (e) {
+              // ignore
+            }
           }
         });
 
@@ -148,6 +160,7 @@ function RoomContent({ roomId }: RoomClientProps) {
         } catch (e) {
           console.log("[Room] Error closing local track:", e);
         }
+        localTrackRef.current = null;
       }
       if (clientRef.current) {
         try {
@@ -155,9 +168,10 @@ function RoomContent({ roomId }: RoomClientProps) {
         } catch (e) {
           console.log("[Room] Error leaving Agora channel:", e);
         }
+        clientRef.current = null;
       }
     };
-  }, [user, room?.agoraChannel]);
+  }, [user, room?.agoraChannel, isSpeaker]);
 
   // Mute/unmute local track
   useEffect(() => {
@@ -237,6 +251,23 @@ function RoomContent({ roomId }: RoomClientProps) {
         console.error("Error leaving room:", error);
       }
     }
+
+    // If connected to Agora client, leave cleanly
+    if (clientRef.current) {
+      try {
+        // If local track exists, stop it
+        if (localTrackRef.current) {
+          try { localTrackRef.current.stop && localTrackRef.current.stop(); } catch(e){}
+          try { localTrackRef.current.close && localTrackRef.current.close(); } catch(e){}
+          localTrackRef.current = null;
+        }
+        await clientRef.current.leave();
+      } catch (e) {
+        console.warn('[Room] Error leaving Agora client during handleLeave:', e);
+      }
+      clientRef.current = null;
+    }
+
     router.push("/rooms");
   };
 
@@ -400,6 +431,119 @@ function RoomContent({ roomId }: RoomClientProps) {
     }
   };
 
+  // Inactivity auto-disconnect for non-speakers (30 min idle -> 60s confirm)
+  useEffect(() => {
+    if (!user) return;
+
+    let idleTimer: any = null;
+
+    // Only run inactivity checks for non-speakers (listeners)
+    if (isSpeaker) return;
+
+    const resetIdle = () => {
+      if (idleTimer) clearTimeout(idleTimer);
+      // 30 minutes = 30 * 60 * 1000 ms
+      idleTimer = setTimeout(async () => {
+        try {
+          const keep = window.confirm('Are you still listening? Click OK to stay connected.');
+          if (!keep) {
+            // Leave the room if user doesn't confirm
+            await handleLeave();
+          }
+        } catch (e) {
+          // best effort
+          await handleLeave();
+        }
+      }, 30 * 60 * 1000);
+    };
+
+    const events = ['mousemove', 'keydown', 'touchstart', 'click', 'scroll'];
+    events.forEach((ev) => window.addEventListener(ev, resetIdle));
+    resetIdle();
+
+    return () => {
+      if (idleTimer) clearTimeout(idleTimer);
+      events.forEach((ev) => window.removeEventListener(ev, resetIdle));
+    };
+  }, [user, isSpeaker]);
+
+  // Broadcast control (host) - start/stop RTMP push via /api/stream/*
+  const [broadcastInfo, setBroadcastInfo] = useState<any | null>(null);
+  const [broadcasting, setBroadcasting] = useState(false);
+  const [adminKeyInput, setAdminKeyInput] = useState<string>("");
+
+
+  const handleStartBroadcast = async () => {
+    if (!user || !room) return;
+    try {
+      const headers: any = { 'Content-Type': 'application/json' };
+      if (adminKeyInput && adminKeyInput.trim()) headers['x-admin-key'] = adminKeyInput.trim();
+      const res = await fetch('/api/stream/start', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ channel: room.agoraChannel, uid: user.uid }),
+      });
+      const data = await res.json();
+      setBroadcastInfo(data);
+      if (data.ok || data.start) {
+        setBroadcasting(true);
+        // Mark room as HLS-enabled so listeners can be auto-routed to HLS
+        try {
+          const hlsUrl = (process.env.NEXT_PUBLIC_HLS_URL as string) || (window as any)?.NEXT_PUBLIC_HLS_URL || null;
+          await updateRoomHls(roomId, true, hlsUrl || undefined);
+        } catch (e) {
+          console.warn('Failed to update room HLS flag:', e);
+        }
+      }
+      alert('Start broadcast response:\n' + JSON.stringify(data, null, 2));
+    } catch (err) {
+      console.error('Start broadcast error:', err);
+      alert('Start broadcast failed: ' + String(err));
+    }
+  };
+
+  const handleStopBroadcast = async () => {
+    if (!broadcastInfo) {
+      alert('No broadcast info available to stop.');
+      return;
+    }
+    try {
+      const payload: any = {};
+      // If start returned resourceId and sid, use them
+      if (broadcastInfo.start && broadcastInfo.start.sid) {
+        payload.resourceId = broadcastInfo.acquire?.resourceId || broadcastInfo.resourceId || null;
+        payload.sid = broadcastInfo.start.sid || broadcastInfo.sid || null;
+      } else if (broadcastInfo.resourceId && broadcastInfo.sid) {
+        payload.resourceId = broadcastInfo.resourceId;
+        payload.sid = broadcastInfo.sid;
+      } else {
+        alert('No resourceId/sid available in broadcast info; manual stop may be required.');
+        return;
+      }
+
+      const headers: any = { 'Content-Type': 'application/json' };
+      if (adminKeyInput && adminKeyInput.trim()) headers['x-admin-key'] = adminKeyInput.trim();
+      const res = await fetch('/api/stream/stop', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      setBroadcastInfo(null);
+      setBroadcasting(false);
+      // Clear HLS flag on room so listeners can be prompted to rejoin RTC if desired
+      try {
+        await updateRoomHls(roomId, false);
+      } catch (e) {
+        console.warn('Failed to clear room HLS flag:', e);
+      }
+      alert('Stop broadcast response:\n' + JSON.stringify(data, null, 2));
+    } catch (err) {
+      console.error('Stop broadcast error:', err);
+      alert('Stop broadcast failed: ' + String(err));
+    }
+  };
+
   // Send chat message
   const handleSendChat = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -455,15 +599,37 @@ function RoomContent({ roomId }: RoomClientProps) {
             </span>
           )}
           {user && user.uid === room?.hostUid && (
-            <button
-              onClick={handleToggleOpenMic}
-              className={`font-mono text-[10px] uppercase px-2 py-1 border transition-colors cursor-pointer ${
-                room.openMic ? "border-white text-white" : "border-neutral-800 text-neutral-500"
-              }`}
-              title={room.openMic ? "Switch to raise hand mode" : "Switch to open mic mode"}
-            >
-              {room.openMic ? "OPEN MIC" : "RAISE HAND"}
-            </button>
+            <>
+              <button
+                onClick={handleToggleOpenMic}
+                className={`font-mono text-[10px] uppercase px-2 py-1 border transition-colors cursor-pointer ${
+                  room.openMic ? "border-white text-white" : "border-neutral-800 text-neutral-500"
+                }`}
+                title={room.openMic ? "Switch to raise hand mode" : "Switch to open mic mode"}
+              >
+                {room.openMic ? "OPEN MIC" : "RAISE HAND"}
+              </button>
+
+              <button
+                onClick={broadcasting ? handleStopBroadcast : handleStartBroadcast}
+                className={`font-mono text-[10px] uppercase px-2 py-1 border transition-colors cursor-pointer ${
+                  broadcasting ? "border-red-500 text-red-400" : "border-green-500 text-green-400"
+                }`}
+                title={broadcasting ? "Stop broadcast (RTMP->CDN)" : "Start broadcast (RTMP->CDN)"}
+              >
+                {broadcasting ? "STOP BROADCAST" : "START BROADCAST"}
+              </button>
+
+              {/* Admin key input (optional) */}
+              <input
+                type="password"
+                placeholder="admin key"
+                value={adminKeyInput}
+                onChange={(e) => setAdminKeyInput(e.target.value)}
+                className="ml-2 px-2 py-1 text-xs font-mono bg-neutral-900 border border-neutral-800 placeholder-neutral-600 text-neutral-200"
+                title="Optional: supply x-admin-key header for protected endpoints"
+              />
+            </>
           )}
           {user && (
             <button
@@ -697,6 +863,15 @@ function RoomContent({ roomId }: RoomClientProps) {
                 >
                   [ 💬 CHAT ({chatMessages.length}) ]
                 </button>
+
+                <button
+                  onClick={() => router.push('/listen')}
+                  className="px-4 py-2 border border-neutral-800 text-neutral-500 hover:text-white font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer"
+                  title="Switch to HLS listener mode"
+                >
+                  [ SWITCH TO HLS ]
+                </button>
+
                 {room.openMic ? (
                   <button
                     onClick={handleRequestToSpeak}
