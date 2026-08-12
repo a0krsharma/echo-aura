@@ -61,7 +61,7 @@ export default function WirePage() {
           <div className="col-span-2 border border-neutral-800 p-2 rounded">
             {activeConv ? (
               <div>
-                <div className="font-mono text-sm mb-2">Conversation with {Object.values(activeConv.handles || {})[0]}</div>
+                <div className="font-mono text-sm mb-2">Conversation with {String(Object.values(activeConv.handles || {})[0] || '')}</div>
                 {/* Placeholder for messages and input (reuse whispers UI later) */}
                 <div className="h-64 bg-neutral-900 rounded mb-2 p-2">Messages will appear here.</div>
                 <div className="flex gap-2">
