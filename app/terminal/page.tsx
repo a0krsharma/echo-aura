@@ -355,7 +355,7 @@ export default function TerminalPage() {
           sub="private audio messages"
           options={["EVERYONE", "[ ORBIT ]", "DAY ONES"]}
           value={whoCanWire}
-          onChange={setWhoCanWhisper}
+          onChange={setWhoCanWire}
         />
 
         {/* ── PRIVACY & BOUNDARIES ──────────────────────────── */}

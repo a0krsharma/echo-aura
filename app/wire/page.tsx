@@ -12,8 +12,8 @@ import {
   subscribeToMessages,
   markMessagesRead,
   searchUsersByHandle,
-  type WhisperConversation,
-  type WhisperMessage,
+  type WireConversation,
+  type WireMessage,
 } from "@/lib/wire";
 
 // Keep the rest of the code identical to whispers page but label as WIRE in UI

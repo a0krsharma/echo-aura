@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Radio, Waves, Mic2, Bell, MessageSquare, Users, Compass } from "lucide-react";
+import { Radio, Waves, Mic2, Bell, MessageSquare, Users, Compass, Swords } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
 import { subscribeToUnreadCount } from "@/lib/notifications";
 
