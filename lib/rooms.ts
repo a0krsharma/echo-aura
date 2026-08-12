@@ -44,6 +44,9 @@ export interface Room {
   agoraChannel: string;
   scheduledFor: Timestamp | null;
   openMic: boolean;
+  // Optional HLS metadata set when a broadcast (RTMP->CDN) is active
+  hlsEnabled?: boolean;
+  hlsUrl?: string;
 }
 
 export interface RoomParticipant {
