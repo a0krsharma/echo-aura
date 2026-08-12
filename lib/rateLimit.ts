@@ -40,7 +40,7 @@ const RATE_LIMIT_COLLECTION = "rate_limits";
 const RATE_LIMIT_CONFIGS: Record<string, RateLimitConfig> = {
   "create_post": { maxRequests: 10, windowMs: 60 * 60 * 1000 }, // 10 posts per hour
   "create_comment": { maxRequests: 50, windowMs: 60 * 60 * 1000 }, // 50 comments per hour
-  "send_whisper": { maxRequests: 30, windowMs: 60 * 60 * 1000 }, // 30 whispers per hour
+  "send_wire": { maxRequests: 30, windowMs: 60 * 60 * 1000 }, // 30 wires per hour
   "create_room": { maxRequests: 5, windowMs: 60 * 60 * 1000 }, // 5 rooms per hour
   "vote_clash": { maxRequests: 20, windowMs: 60 * 60 * 1000 }, // 20 votes per hour
   "default": { maxRequests: 100, windowMs: 60 * 60 * 1000 }, // 100 requests per hour

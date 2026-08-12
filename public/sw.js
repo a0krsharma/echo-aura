@@ -10,7 +10,7 @@ const urlsToCache = [
   '/waves',
   '/clash',
   '/radar',
-  '/whispers',
+  '/wire',
   '/terminal',
   '/manifest.json'
 ];

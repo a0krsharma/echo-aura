@@ -7,7 +7,7 @@ Summary of work completed (high-level):
 - Added /api/stream/start and /api/stream/stop with dev-friendly behavior.
 - Room client updated: only speakers join Agora; added START/STOP broadcast and HLS flag toggles.
 - Inactivity auto-disconnect for listeners.
-- P2P whispers implemented; now enhanced with optional TURN support (NEXT_PUBLIC_TURN_* env vars).
+- P2P wire (1v1 P2P) implemented; now enhanced with optional TURN support (NEXT_PUBLIC_TURN_* env vars).
 - Stream endpoints hardened to verify caller is room host when ADMIN_API_KEY is not set.
 - .env.example and HLS-RTMP-setup.md updated with TURN and FFmpeg guidance.
 

@@ -26,7 +26,7 @@ export default function BottomNav() {
     { href: "/waves",        icon: Waves,          label: "WAVES"  },
     { href: "/rooms",        icon: Users,          label: "ROOMS"  },
     { href: "/studio",       icon: Mic2,           label: "STUDIO", isCenter: true },
-    { href: "/whispers",     icon: MessageSquare,  label: "WIRE"   },
+    { href: "/wire",     icon: MessageSquare,  label: "WIRE"   },
     { href: "/radar",        icon: Compass,        label: "RADAR"  },
   ];
 

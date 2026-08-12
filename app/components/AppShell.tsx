@@ -133,7 +133,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
     { label: "[ STUDIO ]", href: "/studio", icon: Mic2 },
     { label: "[ STAGE ]", href: "/clash", icon: Swords },
     { label: "[ SEARCH ]", href: "/search", icon: Search },
-    { label: "[ WIRE ]", href: "/whispers", icon: MessageSquare },
+    { label: "[ WIRE ]", href: "/wire", icon: MessageSquare },
     { label: "[ RADAR ]", href: "/radar", icon: Compass },
     { label: "[ NOTIFS ]", href: "/notifications", icon: Bell },
     { label: "[ PROFILE ]", href: "/profile", icon: User },

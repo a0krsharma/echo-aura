@@ -36,7 +36,7 @@ const STEPS: OnboardingStep[] = [
   {
     id: 4,
     title: "Connect with Others",
-    description: "Follow creators, join live rooms, participate in debates, and send whispers.",
+    description: "Follow creators, join live rooms, participate in debates, and send wires.",
   },
   {
     id: 5,

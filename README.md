@@ -136,7 +136,7 @@ echo/
 │   ├── stage/[clashId]/   # Live 1v1 debate room (Agora RTC)
 │   ├── studio/            # Audio recording studio
 │   ├── terminal/          # Settings
-│   ├── whispers/          # DM inbox
+│   ├── wire/              # DM inbox ("Wire")
 │   ├── globals.css        # Design system
 │   ├── layout.tsx         # Root layout + metadata
 │   └── page.tsx           # The Frequency (home feed)

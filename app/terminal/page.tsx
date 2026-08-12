@@ -155,7 +155,7 @@ export default function TerminalPage() {
   // ── Yap control ─────────────────────────────────────────────
   const [yapControl,    setYapControl]    = useState("EVERYONE");
   const [echoControl,   setEchoControl]   = useState("EVERYONE");
-  const [whoCanWhisper, setWhoCanWhisper] = useState("[ ORBIT ]");
+  const [whoCanWire, setWhoCanWire] = useState("[ ORBIT ]");
 
   // ── Audio settings ──────────────────────────────────────────
   const [audioQuality,  setAudioQuality]  = useState("HIGH");
@@ -354,7 +354,7 @@ export default function TerminalPage() {
           label="WHO CAN [ WIRE ] YOU"
           sub="private audio messages"
           options={["EVERYONE", "[ ORBIT ]", "DAY ONES"]}
-          value={whoCanWhisper}
+          value={whoCanWire}
           onChange={setWhoCanWhisper}
         />
 
