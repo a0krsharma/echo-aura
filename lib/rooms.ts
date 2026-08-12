@@ -728,6 +728,39 @@ export async function updateRoomHls(roomId: string, enabled: boolean, hlsUrl?: s
   const updateObj: any = { hlsEnabled: enabled, updatedAt: serverTimestamp() };
   if (hlsUrl !== undefined) updateObj.hlsUrl = hlsUrl;
   await updateDoc(roomRef, updateObj);
+
+  // Best-effort notification: when enabling HLS, tell followers the host is broadcasting
+  if (enabled) {
+    try {
+      const roomSnap = await getDoc(roomRef);
+      if (!roomSnap.exists()) return;
+      const roomData: any = roomSnap.data();
+
+      const followsRef = collection(getFirebaseDb(), "follows");
+      const q = query(followsRef, where("followingUid", "==", roomData.hostUid));
+      const snap = await getDocs(q);
+      for (const f of snap.docs) {
+        const data: any = f.data();
+        const followerUid = data.followerUid;
+        // Fire-and-forget notification
+        try {
+          await createNotification(followerUid, {
+            type: "stage",
+            fromUid: roomData.hostUid,
+            fromHandle: roomData.hostHandle,
+            roomId,
+            roomName: roomData.name,
+            text: `${roomData.hostHandle} is now broadcasting \"${roomData.name}\" via HLS`,
+          });
+        } catch (e) {
+          // best-effort per-follower
+          console.warn("[updateRoomHls] notify follower failed for", followerUid, e);
+        }
+      }
+    } catch (err) {
+      console.warn("[updateRoomHls] notify followers failed:", err);
+    }
+  }
 }
 
 // ── Get all public rooms ────────────────────────────────────────────────
