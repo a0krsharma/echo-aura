@@ -52,8 +52,8 @@ export default function WirePage() {
             <div>
               {conversations.map((c) => (
                 <button key={c.id} onClick={() => setActiveConv(c)} className="w-full text-left p-2 border-b border-neutral-900 hover:bg-neutral-950">
-                  <div className="text-sm">{Object.values(c.handles || {})[0]}</div>
-                  <div className="text-xs text-neutral-600">{c.lastMessage}</div>
+                  <div className="text-sm">{String(Object.values(c.handles || {})[0] || '')}</div>
+                  <div className="text-xs text-neutral-600">{String(c.lastMessage || '')}</div>
                 </button>
               ))}
             </div>
