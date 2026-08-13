@@ -13,6 +13,7 @@ import { Mic, MicOff, Users, Radio, Send, X, Volume2, Hand, Lock } from "lucide-
 import AgoraRTC from "agora-rtc-sdk-ng";
 
 import { useAuth } from "@/app/components/AuthProvider";
+import BroadcastModal from "@/app/components/BroadcastModal";
 import { AGORA_APP_ID } from "@/lib/agora";
 import { getRoom, subscribeToRoom, subscribeToRoomParticipants, removeParticipant, sendRoomChatMessage, subscribeToRoomChat, raiseHand, lowerHand, promoteToSpeaker, demoteFromSpeaker, muteParticipant, unmuteParticipant, sendRoomReaction, subscribeToRoomReactions, bookmarkRoom, removeRoomBookmark, updateRoomOpenMic, updateRoomHls, type Room, type RoomParticipant } from "@/lib/rooms";
 import { collection, query, where, getDocs, orderBy, limit, doc, getDoc } from "firebase/firestore";
@@ -504,17 +505,21 @@ function RoomContent({ roomId }: RoomClientProps) {
   const [broadcastInfo, setBroadcastInfo] = useState<any | null>(null);
   const [broadcasting, setBroadcasting] = useState(false);
   const [adminKeyInput, setAdminKeyInput] = useState<string>("");
+  const [showBroadcastModal, setShowBroadcastModal] = useState(false);
 
 
-  const handleStartBroadcast = async () => {
+  const handleStartBroadcast = async (opts?: { adminKey?: string; rtmpUrl?: string }) => {
     if (!user || !room) return;
     try {
       const headers: any = { 'Content-Type': 'application/json' };
-      if (adminKeyInput && adminKeyInput.trim()) headers['x-admin-key'] = adminKeyInput.trim();
+      if (opts?.adminKey && opts.adminKey.trim()) headers['x-admin-key'] = opts.adminKey.trim();
+      const body: any = { channel: room.agoraChannel, uid: user.uid };
+      if (opts?.rtmpUrl) body.rtmp = opts.rtmpUrl;
+
       const res = await fetch('/api/stream/start', {
         method: 'POST',
         headers,
-        body: JSON.stringify({ channel: room.agoraChannel, uid: user.uid }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       setBroadcastInfo(data);
@@ -644,7 +649,7 @@ function RoomContent({ roomId }: RoomClientProps) {
               </button>
 
               <button
-                onClick={broadcasting ? handleStopBroadcast : handleStartBroadcast}
+                onClick={() => setShowBroadcastModal(true)}
                 className={`font-mono text-[10px] uppercase px-2 py-1 border transition-colors cursor-pointer ${
                   broadcasting ? "border-red-500 text-red-400" : "border-green-500 text-green-400"
                 }`}
@@ -692,6 +697,22 @@ function RoomContent({ roomId }: RoomClientProps) {
                     </>
                   )}
                 </div>
+              )}
+
+              {/* Broadcast modal */}
+              {showBroadcastModal && (
+                <BroadcastModal
+                  visible={showBroadcastModal}
+                  onClose={() => setShowBroadcastModal(false)}
+                  onStart={async (opts) => {
+                    // If already broadcasting, stop instead
+                    if (broadcasting) {
+                      await handleStopBroadcast();
+                      return;
+                    }
+                    await handleStartBroadcast(opts);
+                  }}
+                />
               )}
             </>
           )}
