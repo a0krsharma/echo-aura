@@ -26,10 +26,22 @@ export async function GET(request: NextRequest) {
   const appCertificate = process.env.AGORA_APP_CERTIFICATE;
 
   if (!appId) {
-    console.error("[Agora Token] App ID not configured in environment variables");
+    // Development-friendly fallback: return a 200 with a stubbed payload so the UI can still render
+    // and show helpful guidance instead of breaking with a 500. This is safe because no token
+    // or secret is returned.
+    console.warn("[Agora Token] App ID not configured — returning dev stub payload");
     return NextResponse.json(
-      { error: "Agora App ID not configured", hint: "Set NEXT_PUBLIC_AGORA_APP_ID in .env.local" },
-      { status: 500 }
+      {
+        token: null,
+        uid,
+        channel,
+        appId: null,
+        expiresInSeconds: 0,
+        mode: "dev_stub",
+        warning: "Agora App ID not configured — set NEXT_PUBLIC_AGORA_APP_ID in environment to enable real tokens",
+        hint: "This response is a development stub and contains no secrets."
+      },
+      { status: 200 }
     );
   }
 
