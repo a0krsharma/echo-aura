@@ -616,8 +616,8 @@ function RoomContent({ roomId }: RoomClientProps) {
       {/* Header */}
       <header className="flex items-center justify-between border-b border-neutral-900 p-4 font-mono text-xs tracking-widest uppercase">
         <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1.5 text-white">
-            <span className="w-2 h-2 rounded-full bg-white animate-ping" /> [ ● LIVE ]
+          <span className="flex items-center gap-1.5">
+                      <span className="live-dot-green" /> <span className="text-white font-mono text-[11px] tracking-widest">[ ● LIVE ]</span>
           </span>
           <span className="text-neutral-700">•</span>
           <span className="text-neutral-500">{room.name}</span>
@@ -662,6 +662,37 @@ function RoomContent({ roomId }: RoomClientProps) {
                 className="ml-2 px-2 py-1 text-xs font-mono bg-neutral-900 border border-neutral-800 placeholder-neutral-600 text-neutral-200"
                 title="Optional: supply x-admin-key header for protected endpoints"
               />
+
+              {/* Broadcast info panel for hosts */}
+              {broadcastInfo && (
+                <div className="ml-4 p-2 border border-neutral-800 bg-[#070707] rounded text-xs font-mono flex items-center gap-3">
+                  <span className="text-[11px] text-green-400">Broadcasting</span>
+                  { (broadcastInfo.resourceId || broadcastInfo.acquire?.resourceId) && (
+                    <span className="text-neutral-500">RID: {broadcastInfo.resourceId || broadcastInfo.acquire?.resourceId}</span>
+                  )}
+                  { (broadcastInfo.start?.sid || broadcastInfo.sid) && (
+                    <span className="text-neutral-500">SID: {broadcastInfo.start?.sid || broadcastInfo.sid}</span>
+                  )}
+                  {/* HLS URL to copy */}
+                  { (room?.hlsUrl || process.env.NEXT_PUBLIC_HLS_URL) && (
+                    <>
+                      <a href={room?.hlsUrl || (process.env.NEXT_PUBLIC_HLS_URL as string)} target="_blank" rel="noreferrer" className="text-[11px] underline text-neutral-300">Open HLS</a>
+                      <button
+                        onClick={async () => {
+                          try {
+                            const url = room?.hlsUrl || (process.env.NEXT_PUBLIC_HLS_URL as string) || '';
+                            await navigator.clipboard.writeText(url);
+                            alert('HLS URL copied to clipboard');
+                          } catch (e) {
+                            console.warn('Copy failed', e);
+                          }
+                        }}
+                        className="ml-2 px-2 py-1 text-[11px] border border-neutral-800 rounded hover:border-white"
+                      >Copy HLS</button>
+                    </>
+                  )}
+                </div>
+              )}
             </>
           )}
           {user && (

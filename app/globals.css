@@ -329,17 +329,18 @@ body {
   height: 52px;
   border-radius: 50%;
   border: 1px solid #333;
-  background: #000;
+  background: linear-gradient(180deg, #0b0b0b, #000000);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: border-color 0.2s ease, transform 0.15s ease;
-  box-shadow: 0 0 0 1px #111, 0 8px 32px rgba(0,0,0,0.8);
+  transition: border-color 0.2s ease, transform 0.15s ease, box-shadow 0.18s ease;
+  box-shadow: 0 4px 22px rgba(0,0,0,0.6), inset 0 -6px 18px rgba(255,255,255,0.01);
 }
 .fab:hover {
   border-color: #fff;
   transform: scale(1.05);
+  box-shadow: 0 8px 36px rgba(0,0,0,0.75), inset 0 -6px 20px rgba(255,255,255,0.02);
 }
 .fab:active {
   transform: scale(0.95);
@@ -349,6 +350,35 @@ body {
 @media (min-width: 768px) {
   .fab { display: none; }
 }
+
+/* Button utilities */
+.btn-primary {
+  background: linear-gradient(90deg, rgba(255,69,0,0.12), rgba(154,230,0,0.06));
+  border: 1px solid rgba(255,255,255,0.06);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+.btn-primary:hover { border-color: #fff; }
+
+.btn-danger {
+  background: linear-gradient(90deg, rgba(255,0,0,0.06), rgba(255,69,0,0.06));
+  border: 1px solid rgba(255,69,0,0.12);
+  color: #ffb8b0;
+}
+.btn-ghost {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.04);
+  color: #cfcfcf;
+}
+.btn-small {
+  padding: 6px 8px;
+  font-size: 11px;
+}
+
 
 /* ── Standardized Typography Classes ───────────────────────────── */
 .typo-heading {
