@@ -176,15 +176,36 @@ export async function sendWhisper(
   }
 
   // 2. Add message document to messages subcollection
-  const messagesRef = collection(db, "whispers", conversationId, "messages");
-  const msgRef = await addDoc(messagesRef, {
-    senderUid,
-    senderHandle,
-    text,
-    audioUrl: audioUrl || null,
-    readBy: [senderUid],
-    createdAt: serverTimestamp(),
-  });
+  let msgRefId = "";
+  try {
+    const messagesRef = collection(db, "whispers", conversationId, "messages");
+    const msgRef = await addDoc(messagesRef, {
+      senderUid,
+      senderHandle,
+      text,
+      audioUrl: audioUrl || null,
+      readBy: [senderUid],
+      createdAt: serverTimestamp(),
+    });
+    msgRefId = msgRef.id;
+  } catch (msgErr) {
+    console.warn("[sendWhisper] Warning adding message to subcollection:", msgErr);
+    // Fallback: try wire subcollection alias
+    try {
+      const wireMsgRef = collection(db, "wire", conversationId, "messages");
+      const msgRef = await addDoc(wireMsgRef, {
+        senderUid,
+        senderHandle,
+        text,
+        audioUrl: audioUrl || null,
+        readBy: [senderUid],
+        createdAt: serverTimestamp(),
+      });
+      msgRefId = msgRef.id;
+    } catch (aliasErr) {
+      console.warn("[sendWhisper] Alias write warning:", aliasErr);
+    }
+  }
 
   // 3. Notify recipient
   try {
@@ -198,9 +219,11 @@ export async function sendWhisper(
         text: text || "Sent you a wire",
       });
     }
-  } catch (e) {}
+  } catch (err) {
+    // Silent catch
+  }
 
-  return msgRef.id;
+  return msgRefId;
 }
 
 /**
