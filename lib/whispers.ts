@@ -132,16 +132,16 @@ export async function sendWhisper(
 ): Promise<string> {
   const db = getFirebaseDb();
   const convRef = doc(db, "whispers", conversationId);
-  const uids = conversationId.split("__");
+  const uids = conversationId.split("__").filter(Boolean);
 
-  // 1. Ensure parent conversation document exists FIRST so subcollection rules pass
+  // 1. Ensure parent conversation document exists & participants array contains sender & receiver
   try {
     const snap = await getDoc(convRef);
     if (!snap.exists()) {
       await setDoc(
         convRef,
         {
-          participants: uids.length === 2 ? uids : [senderUid],
+          participants: uids.length > 0 ? uids : [senderUid],
           handles: {
             [senderUid]: senderHandle || "@ANON",
           },
@@ -153,16 +153,18 @@ export async function sendWhisper(
       );
     } else {
       await updateDoc(convRef, {
+        participants: arrayUnion(...(uids.length > 0 ? uids : [senderUid])),
         [`handles.${senderUid}`]: senderHandle || "@ANON",
         lastMessage: text || "🎙 Voice message",
         lastAt: serverTimestamp(),
       });
     }
   } catch (err) {
+    console.warn("[sendWhisper] Warning updating conversation doc:", err);
     await setDoc(
       convRef,
       {
-        participants: uids.length === 2 ? uids : [senderUid],
+        participants: uids.length > 0 ? uids : [senderUid],
         handles: {
           [senderUid]: senderHandle || "@ANON",
         },
