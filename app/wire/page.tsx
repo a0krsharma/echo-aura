@@ -1,9 +1,18 @@
 "use client";
 
-// Copy of app/whispers/page.tsx adapted to /wire route and Wire naming
+/**
+ * app/wire/page.tsx
+ * ─────────────────────────────────────────────────────
+ * Full real-time Firestore-backed private DM system (Wire).
+ * - Start a wire with any handle
+ * - Send text messages in real-time
+ * - Conversation list with last message preview
+ * - Unread indicator
+ * - P2P audio calls via WebRTC
+ */
 
 import { useState, useEffect, useRef } from "react";
-import { Mic2, Lock, Plus, Search, X, Send, ChevronLeft, Loader2 } from "lucide-react";
+import { Mic2, Lock, Plus, Search, X, Send, ChevronLeft, Loader2, Phone, PhoneOff } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
 import {
   startOrGetConversation,
@@ -12,12 +21,13 @@ import {
   subscribeToMessages,
   markMessagesRead,
   searchUsersByHandle,
-  type WireConversation,
-  type WireMessage,
-} from "@/lib/wire";
+  addSignalingMessage,
+  subscribeToSignaling,
+  type WhisperConversation,
+  type WhisperMessage,
+} from "@/lib/whispers";
 
-// Keep the rest of the code identical to whispers page but label as WIRE in UI
-
+// ─── Time helper ─────────────────────────────────────────────────────────────
 function timeStr(ts: any): string {
   if (!ts?.seconds) return "";
   const d = new Date(ts.seconds * 1000);
@@ -28,10 +38,314 @@ function timeStr(ts: any): string {
   return d.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
+// ─── ICE servers helper (STUN + optional TURN) ───────────────────────────────
+function getIceServers() {
+  const stunUrl = process.env.NEXT_PUBLIC_STUN_URL || "stun:stun.l.google.com:19302";
+  const iceServers: any[] = [{ urls: [stunUrl] }];
+
+  const turnUrlsRaw = process.env.NEXT_PUBLIC_TURN_URL;
+  const turnUsername = process.env.NEXT_PUBLIC_TURN_USERNAME;
+  const turnCredential = process.env.NEXT_PUBLIC_TURN_PASSWORD;
+
+  if (turnUrlsRaw) {
+    const urls = turnUrlsRaw.split(",").map(s => s.trim()).filter(Boolean);
+    const turnConfig: any = { urls };
+    if (turnUsername) turnConfig.username = turnUsername;
+    if (turnCredential) turnConfig.credential = turnCredential;
+    iceServers.push(turnConfig);
+  }
+
+  return iceServers;
+}
+
+// ─── Conversation list item ───────────────────────────────────────────────────
+function ConversationItem({
+  conv,
+  myUid,
+  onClick,
+  active,
+}: {
+  conv: WhisperConversation;
+  myUid: string;
+  onClick: () => void;
+  active: boolean;
+}) {
+  const theirHandle = Object.entries(conv.handles || {})
+    .find(([uid]) => uid !== myUid)?.[1] || "UNKNOWN";
+
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full text-left px-4 py-4 border-b border-neutral-900 flex items-center gap-4 hover:bg-neutral-950 transition-colors ${
+        active ? "bg-neutral-950 border-l-2 border-l-white" : ""
+      }`}
+    >
+      <div className="w-9 h-9 border border-neutral-700 flex items-center justify-center shrink-0 font-mono text-xs text-neutral-500">
+        {theirHandle.replace("@", "").charAt(0)}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between">
+          <p className="font-mono text-xs text-white tracking-widest truncate">{theirHandle}</p>
+          <span className="font-mono text-[10px] text-neutral-700 shrink-0 ml-2">
+            {timeStr(conv.lastAt)}
+          </span>
+        </div>
+        <p className="font-mono text-[10px] text-neutral-600 truncate mt-0.5">
+          {conv.lastMessage || "No messages yet"}
+        </p>
+      </div>
+    </button>
+  );
+}
+
+// ─── Chat window ─────────────────────────────────────────────────────────────
+function ChatWindow({
+  conv,
+  myUid,
+  myHandle,
+  onBack,
+}: {
+  conv: WhisperConversation;
+  myUid: string;
+  myHandle: string;
+  onBack: () => void;
+}) {
+  const [messages, setMessages] = useState<WhisperMessage[]>([]);
+  const [input, setInput]       = useState("");
+  const [sending, setSending]   = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const theirHandle = Object.entries(conv.handles || {})
+    .find(([uid]) => uid !== myUid)?.[1] || "UNKNOWN";
+
+  useEffect(() => {
+    const unsub = subscribeToMessages(conv.id, (msgs) => {
+      setMessages(msgs);
+      setTimeout(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+      }, 80);
+    });
+    markMessagesRead(conv.id, myUid).catch(() => {});
+    return () => unsub();
+  }, [conv.id, myUid]);
+
+  const [callActive, setCallActive] = useState(false);
+  const pcRef = useRef<RTCPeerConnection | null>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const text = input.trim();
+    if (!text || sending) return;
+    setInput("");
+    setSending(true);
+    try {
+      await sendWhisper(conv.id, myUid, myHandle, text);
+    } catch (err) {
+      console.error("Send failed:", err);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const startCall = async () => {
+    if (callActive) return;
+    try {
+      const pc = new RTCPeerConnection({ iceServers: getIceServers() });
+      pcRef.current = pc;
+
+      const localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      localStreamRef.current = localStream;
+      localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
+
+      const remoteAudio = document.createElement("audio");
+      remoteAudio.autoplay = true;
+      remoteAudio.controls = false;
+      pc.ontrack = (ev) => {
+        try {
+          remoteAudio.srcObject = ev.streams[0];
+        } catch (e) {}
+      };
+
+      pc.onicecandidate = (ev) => {
+        if (ev.candidate) {
+          addSignalingMessage(conv.id, myUid, "ice", ev.candidate.toJSON());
+        }
+      };
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      await addSignalingMessage(conv.id, myUid, "offer", offer);
+
+      setCallActive(true);
+    } catch (err) {
+      console.error("startCall error:", err);
+      cleanupCall();
+    }
+  };
+
+  const cleanupCall = async () => {
+    try {
+      if (pcRef.current) {
+        pcRef.current.close();
+        pcRef.current = null;
+      }
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach((t) => t.stop());
+        localStreamRef.current = null;
+      }
+    } catch (e) {}
+    setCallActive(false);
+  };
+
+  useEffect(() => {
+    const unsubSig = subscribeToSignaling(conv.id, async (msg: any) => {
+      if (!msg || msg.fromUid === myUid) return;
+      try {
+        const pc = pcRef.current || new RTCPeerConnection({ iceServers: getIceServers() });
+        if (!pcRef.current) pcRef.current = pc;
+
+        if (msg.type === "offer") {
+          await pc.setRemoteDescription(new RTCSessionDescription(msg.payload));
+          const localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          localStreamRef.current = localStream;
+          localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
+
+          pc.ontrack = (ev) => {
+            const remoteAudio = document.createElement("audio");
+            remoteAudio.autoplay = true;
+            remoteAudio.srcObject = ev.streams[0];
+          };
+
+          pc.onicecandidate = (ev) => {
+            if (ev.candidate) addSignalingMessage(conv.id, myUid, "ice", ev.candidate.toJSON());
+          };
+
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          await addSignalingMessage(conv.id, myUid, "answer", answer);
+
+          setCallActive(true);
+        } else if (msg.type === "answer") {
+          await pc.setRemoteDescription(new RTCSessionDescription(msg.payload));
+        } else if (msg.type === "ice") {
+          try {
+            await pc.addIceCandidate(new RTCIceCandidate(msg.payload));
+          } catch (e) {
+            console.warn('addIceCandidate failed:', e);
+          }
+        } else if (msg.type === "hangup") {
+          cleanupCall();
+        }
+      } catch (e) {
+        console.error('Signaling handler error:', e);
+      }
+    });
+
+    return () => {
+      unsubSig();
+      cleanupCall();
+    };
+  }, [conv.id, myUid]);
+
+  const hangUp = async () => {
+    try { await addSignalingMessage(conv.id, myUid, 'hangup', {}); } catch (e) {}
+    cleanupCall();
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-neutral-900 shrink-0">
+        <button
+          onClick={onBack}
+          className="md:hidden text-neutral-500 hover:text-white transition-colors cursor-pointer p-1"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        <div className="w-8 h-8 border border-neutral-700 flex items-center justify-center font-mono text-xs text-neutral-500">
+          {theirHandle.replace("@", "").charAt(0)}
+        </div>
+        <div>
+          <p className="font-mono text-xs text-white tracking-widest">{theirHandle}</p>
+          <p className="font-mono text-[10px] text-neutral-600">[ PRIVATE WIRE ]</p>
+        </div>
+
+        <div className="ml-auto flex items-center gap-2">
+          {!callActive ? (
+            <button
+              onClick={startCall}
+              className="px-3 py-1 border border-white text-white font-mono text-xs hover:bg-white hover:text-black transition-colors cursor-pointer flex items-center gap-2"
+            >
+              <Phone className="w-3 h-3" /> [ CALL ]
+            </button>
+          ) : (
+            <button
+              onClick={hangUp}
+              className="px-3 py-1 border border-red-500 text-red-500 font-mono text-xs hover:bg-red-500 hover:text-black transition-colors cursor-pointer flex items-center gap-2"
+            >
+              <PhoneOff className="w-3 h-3" /> [ HANG UP ]
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
+        {messages.length === 0 ? (
+          <div className="text-center py-8 font-mono text-xs text-neutral-600">
+            NO MESSAGES YET. START THE CONVERSATION.
+          </div>
+        ) : (
+          messages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`flex ${msg.fromUid === myUid ? "justify-end" : "justify-start"}`}
+            >
+              <div
+                className={`max-w-[80%] px-3 py-2 ${
+                  msg.fromUid === myUid
+                    ? "bg-white text-black"
+                    : "bg-neutral-900 text-white border border-neutral-800"
+                }`}
+              >
+                <p className="font-mono text-xs">{msg.text}</p>
+                <p className="font-mono text-[9px] text-neutral-600 mt-1">{timeStr(msg.createdAt)}</p>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      <form onSubmit={handleSend} className="p-4 border-t border-neutral-900 flex gap-2">
+        <input
+          type="text"
+          value={ input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Send a wire..."
+          className="flex-1 bg-neutral-900 border border-neutral-800 px-3 py-2 font-mono text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white transition-colors"
+        />
+        <button
+          type="submit"
+          disabled={!input.trim() || sending}
+          className="px-4 py-2 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors cursor-pointer disabled:opacity-30 flex items-center gap-2"
+        >
+          {sending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+          SEND
+        </button>
+      </form>
+    </div>
+  );
+}
+
 export default function WirePage() {
   const { user } = useAuth();
-  const [conversations, setConversations] = useState<any[]>([]);
-  const [activeConv, setActiveConv] = useState<any | null>(null);
+  const [conversations, setConversations] = useState<WhisperConversation[]>([]);
+  const [activeConv, setActiveConv] = useState<WhisperConversation | null>(null);
+  const [showNew, setShowNew] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -39,40 +353,131 @@ export default function WirePage() {
     return () => unsub && unsub();
   }, [user]);
 
+  const handleSearch = async () => {
+    if (!searchQuery.trim() || !user) return;
+    setSearching(true);
+    try {
+      const results = await searchUsersByHandle(searchQuery.trim());
+      setSearchResults(results);
+    } catch (err) {
+      console.error("Search failed:", err);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleStartConversation = async (targetUid: string, targetHandle: string) => {
+    if (!user) return;
+    try {
+      const conv = await startOrGetConversation(user.uid, user.handle || "@ANON", targetUid, targetHandle);
+      setActiveConv(conv);
+      setShowNew(false);
+      setSearchQuery("");
+      setSearchResults([]);
+    } catch (err) {
+      console.error("Failed to start conversation:", err);
+    }
+  };
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center font-mono text-xs tracking-widest uppercase">
+        <div className="border border-neutral-800 p-6 animate-pulse">
+          [ AUTHENTICATING... ]
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-black text-white font-mono">
-      <div className="max-w-4xl mx-auto p-4">
-        <h2 className="text-xl font-bold mb-4">[ WIRE ]</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="col-span-1 border border-neutral-800 p-2 rounded">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-sm text-neutral-600">Conversations</div>
-              <button className="text-xs text-neutral-500">New</button>
+      <div className="max-w-4xl mx-auto h-screen flex flex-col md:flex-row">
+        {/* Conversation List */}
+        <div className={`w-full md:w-80 border-r border-neutral-900 flex flex-col ${activeConv ? 'hidden md:flex' : 'flex'}`}>
+          <div className="p-4 border-b border-neutral-900">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-bold tracking-widest uppercase">[ WIRE ]</h2>
+              <button
+                onClick={() => setShowNew(!showNew)}
+                className="text-xs text-neutral-500 hover:text-white transition-colors cursor-pointer flex items-center gap-1"
+              >
+                <Plus className="w-3 h-3" /> NEW
+              </button>
             </div>
-            <div>
-              {conversations.map((c) => (
-                <button key={c.id} onClick={() => setActiveConv(c)} className="w-full text-left p-2 border-b border-neutral-900 hover:bg-neutral-950">
-                  <div className="text-sm">{String(Object.values(c.handles || {})[0] || '')}</div>
-                  <div className="text-xs text-neutral-600">{String(c.lastMessage || '')}</div>
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="col-span-2 border border-neutral-800 p-2 rounded">
-            {activeConv ? (
-              <div>
-                <div className="font-mono text-sm mb-2">Conversation with {String(Object.values(activeConv.handles || {})[0] || '')}</div>
-                {/* Placeholder for messages and input (reuse whispers UI later) */}
-                <div className="h-64 bg-neutral-900 rounded mb-2 p-2">Messages will appear here.</div>
+
+            {showNew && (
+              <div className="space-y-2">
                 <div className="flex gap-2">
-                  <input className="flex-1 bg-neutral-900 p-2 rounded" placeholder="Send a wire..." />
-                  <button className="px-3 py-2 bg-white text-black rounded">Send</button>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search by handle..."
+                    className="flex-1 bg-neutral-900 border border-neutral-800 px-2 py-1 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white transition-colors"
+                  />
+                  <button
+                    onClick={handleSearch}
+                    disabled={searching}
+                    className="px-2 py-1 border border-white text-white text-xs hover:bg-white hover:text-black transition-colors cursor-pointer disabled:opacity-30"
+                  >
+                    {searching ? <Loader2 className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3" />}
+                  </button>
                 </div>
+                {searchResults.length > 0 && (
+                  <div className="border border-neutral-800 max-h-48 overflow-y-auto">
+                    {searchResults.map((u) => (
+                      <button
+                        key={u.uid}
+                        onClick={() => handleStartConversation(u.uid, u.handle)}
+                        className="w-full text-left px-3 py-2 border-b border-neutral-900 hover:bg-neutral-950 transition-colors"
+                      >
+                        <p className="text-xs text-white">{u.handle}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className="text-neutral-600">Select a conversation to view messages.</div>
             )}
           </div>
+
+          <div className="flex-1 overflow-y-auto">
+            {conversations.length === 0 ? (
+              <div className="p-8 text-center">
+                <p className="text-xs text-neutral-600 tracking-widest uppercase">NO WIRES YET</p>
+                <p className="text-[10px] text-neutral-700 mt-2">Start a new wire to begin</p>
+              </div>
+            ) : (
+              conversations.map((conv) => (
+                <ConversationItem
+                  key={conv.id}
+                  conv={conv}
+                  myUid={user.uid}
+                  onClick={() => setActiveConv(conv)}
+                  active={activeConv?.id === conv.id}
+                />
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Chat Window */}
+        <div className={`flex-1 flex flex-col ${activeConv ? 'flex' : 'hidden md:flex'}`}>
+          {activeConv ? (
+            <ChatWindow
+              conv={activeConv}
+              myUid={user.uid}
+              myHandle={user.handle || "@ANON"}
+              onBack={() => setActiveConv(null)}
+            />
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <Mic2 className="w-12 h-12 text-neutral-800 mx-auto mb-4" />
+                <p className="text-xs text-neutral-600 tracking-widest uppercase">SELECT A WIRE</p>
+                <p className="text-[10px] text-neutral-700 mt-2">Choose a conversation to start messaging</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
