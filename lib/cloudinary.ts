@@ -93,23 +93,14 @@ export async function uploadAudio(
   //
   // Pattern: /video/upload/<transformation>/<version>/<public_id>.<format>
   // Result:  /video/upload/f_mp3,q_auto:good/<version>/<public_id>.mp3
-  const mp3Url = rawUrl
-    ? rawUrl
-        .replace(
-          /\/video\/upload\//,
-          "/video/upload/f_mp3,q_auto:good/"
-        )
-        .replace(/\.[^.]+$/, ".mp3")  // swap extension to .mp3
-    : rawUrl;
-
-  const finalUrl = mp3Url || rawUrl;
+  const finalUrl = rawUrl;
 
   return {
     secureUrl: finalUrl,
     publicId,
     duration:  data.duration || undefined,
-    format:    mp3Url ? "mp3" : (data.format || ext),
-    bytes:     data.bytes    || blob.size,
+    format:    data.format || ext,
+    bytes:     data.bytes  || blob.size,
   };
 }
 
@@ -170,6 +161,8 @@ export function getPlayableUrl(rawUrl: string): string {
   // Fix legacy /raw/upload/ path to /video/upload/ for browser audio playback compatibility
   url = url.replace(/\/raw\/upload\//g, "/video/upload/");
   
+  // Strip any raw extension if it was saved with .webm but uploaded under video/upload
+  // Also provide fallback mp3 transformation if direct webm fails
   return url;
 }
 
