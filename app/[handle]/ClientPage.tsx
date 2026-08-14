@@ -86,9 +86,10 @@ function MiniPlayer({ audioUrl, duration, durationSec }: { audioUrl: string; dur
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    if (!audioUrl) return;
-    const a = new Audio();
-    a.preload = "auto"; // buffer entire file upfront
+    if (typeof window === "undefined" || !audioUrl) return;
+    const playableUrl = getPlayableUrl(audioUrl);
+    const a = new Audio(playableUrl);
+    a.preload = "auto";
     audioRef.current = a;
     a.addEventListener("loadedmetadata", () => {
       if (isFinite(a.duration) && a.duration > 0) setDur(Math.ceil(a.duration));
@@ -103,10 +104,7 @@ function MiniPlayer({ audioUrl, duration, durationSec }: { audioUrl: string; dur
         globalHandleAudioPauseHandler = null;
       }
     });
-    a.addEventListener("playing", () => { setPlaying(true); setLoading(false); });
-    a.addEventListener("error", () => { setPlaying(false); setLoading(false); });
-    a.src = audioUrl;
-    a.load();
+
     return () => {
       a.pause();
       a.src = "";

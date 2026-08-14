@@ -45,7 +45,7 @@ function MiniPlayer({ audioUrl, durationSec }: { audioUrl: string; durationSec: 
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    if (!audioUrl) return;
+    if (typeof window === "undefined" || !audioUrl) return;
     const rawUrl = getPlayableUrl(audioUrl);
     const a = new Audio(rawUrl);
     a.preload = "auto";
@@ -66,8 +66,7 @@ function MiniPlayer({ audioUrl, durationSec }: { audioUrl: string; durationSec: 
       }
     });
     a.addEventListener("error", () => setReady(false));
-    a.src = getPlayableUrl(audioUrl);
-    a.load();
+    a.src = rawUrl;
 
     return () => {
       a.pause();

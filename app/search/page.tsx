@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
  * real-time ORBIT toggle buttons, and direct WIRE message launchers.
  */
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Search, X, Mic2, Users, Play, Loader2, Clock, Filter, TrendingUp, MessageSquare, UserPlus, UserCheck, Sparkles } from "lucide-react";
@@ -18,6 +18,7 @@ import { type EchoUser } from "@/lib/userDoc";
 import { type PostItem } from "@/lib/posts";
 import { followUser, unfollowUser, subscribeToFollowStatus } from "@/lib/follows";
 import { startOrGetConversation } from "@/lib/wire";
+import { getPlayableUrl } from "@/lib/cloudinary";
 import { useAuth } from "@/app/components/AuthProvider";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -149,24 +150,34 @@ function UserSearchResultCard({ targetUser }: { targetUser: EchoUser }) {
 // ─────────────────────────────────────────────────────────────────────────────
 function MiniPlay({ url }: { url: string }) {
   const [playing, setPlaying] = useState(false);
-  const [audio] = useState(() => {
-    if (typeof window === "undefined") return null;
-    const a = new Audio(url);
-    a.preload = "none";
-    return a;
-  });
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    if (!audio) return;
-    audio.onended = () => setPlaying(false);
-    return () => { audio.pause(); };
-  }, [audio]);
+    if (typeof window === "undefined" || !url) return;
+    const playable = getPlayableUrl(url);
+    const a = new Audio(playable);
+    a.preload = "none";
+    audioRef.current = a;
+    a.onended = () => setPlaying(false);
+
+    return () => {
+      a.pause();
+      a.src = "";
+      audioRef.current = null;
+    };
+  }, [url]);
 
   const toggle = async () => {
-    if (!audio) return;
-    if (playing) { audio.pause(); setPlaying(false); }
-    else {
-      try { await audio.play(); setPlaying(true); } catch {}
+    const a = audioRef.current;
+    if (!a) return;
+    if (playing) {
+      a.pause();
+      setPlaying(false);
+    } else {
+      try {
+        await a.play();
+        setPlaying(true);
+      } catch {}
     }
   };
 
