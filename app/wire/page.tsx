@@ -30,7 +30,8 @@ import {
   type WhisperMessage,
 } from "@/lib/whispers";
 import { getFirebaseDb } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, collection, getDocs, query, limit } from "firebase/firestore";
+import { subscribeToFollowing, type Follow } from "@/lib/follows";
 
 // ─── Time helper ─────────────────────────────────────────────────────────────
 function timeStr(ts: any): string {
@@ -479,10 +480,40 @@ export default function WirePage() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
 
+  // Orbiting & Suggested Accounts state
+  const [followingList, setFollowingList] = useState<Follow[]>([]);
+  const [suggestedVoices, setSuggestedVoices] = useState<{ uid: string; handle: string; auraScore?: number }[]>([]);
+
   useEffect(() => {
     if (!user) return;
-    const unsub = subscribeToConversations(user.uid, (convs) => setConversations(convs));
-    return () => unsub && unsub();
+    const currentUid = user.uid;
+    const unsub = subscribeToConversations(currentUid, (convs) => setConversations(convs));
+    
+    // Subscribe to accounts user is orbiting
+    const unsubFollowing = subscribeToFollowing(currentUid, (follows) => {
+      setFollowingList(follows);
+    });
+
+    // Fetch top suggested accounts from Firestore
+    async function loadSuggested() {
+      try {
+        const db = getFirebaseDb();
+        const snap = await getDocs(query(collection(db, "users"), limit(10)));
+        const list = snap.docs
+          .map((d) => ({ uid: d.id, ...d.data() } as any))
+          .filter((u) => u.uid !== currentUid)
+          .map((u) => ({ uid: u.uid, handle: u.handle || "@ANON", auraScore: u.auraScore || 0 }));
+        setSuggestedVoices(list);
+      } catch (err) {
+        console.warn("[Wire] Load suggested error:", err);
+      }
+    }
+    loadSuggested();
+
+    return () => {
+      unsub && unsub();
+      unsubFollowing && unsubFollowing();
+    };
   }, [user]);
 
   // Read URL query parameter ?c=... safely on client side without triggering React Error #310
@@ -552,43 +583,67 @@ export default function WirePage() {
         {/* Conversation List */}
         <div className={`w-full md:w-80 border-r border-neutral-900 flex flex-col ${activeConv ? 'hidden md:flex' : 'flex'}`}>
           <div className="p-4 border-b border-neutral-900">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-bold tracking-widest uppercase">[ WIRE ]</h2>
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-sm font-bold tracking-widest uppercase flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5 text-neutral-400" /> [ WIRE ]
+              </h2>
               <button
                 onClick={() => setShowNew(!showNew)}
-                className="text-xs text-neutral-500 hover:text-white transition-colors cursor-pointer flex items-center gap-1"
+                className="text-xs text-neutral-400 hover:text-white transition-colors cursor-pointer flex items-center gap-1 border border-neutral-800 px-2 py-0.5"
               >
-                <Plus className="w-3 h-3" /> NEW
+                <Plus className="w-3 h-3" /> NEW WIRE
               </button>
             </div>
 
+            {/* Quick Suggestions Bar for Orbiting / Top Voices */}
+            <div className="pt-2">
+              <p className="text-[9px] font-mono text-neutral-500 uppercase tracking-widest mb-1.5">
+                [ 💫 QUICK WIRE — ACCOUNTS YOU ORBIT ]
+              </p>
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                {(followingList.length > 0
+                  ? followingList.map((f) => ({ uid: f.followingUid, handle: f.followingHandle }))
+                  : suggestedVoices
+                ).slice(0, 6).map((u) => (
+                  <button
+                    key={u.uid}
+                    onClick={() => handleStartConversation(u.uid, u.handle)}
+                    className="px-2 py-1 bg-neutral-900 hover:bg-white hover:text-black border border-neutral-800 text-[10px] text-neutral-300 font-mono transition-colors cursor-pointer shrink-0 flex items-center gap-1 rounded-sm"
+                  >
+                    <span>{u.handle}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {showNew && (
-              <div className="space-y-2">
+              <div className="mt-3 space-y-2 pt-2 border-t border-neutral-900">
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search by handle..."
-                    className="flex-1 bg-neutral-900 border border-neutral-800 px-2 py-1 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white transition-colors"
+                    placeholder="Search handle..."
+                    className="flex-1 bg-neutral-900 border border-neutral-800 px-2.5 py-1 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white transition-colors"
                   />
                   <button
                     onClick={handleSearch}
                     disabled={searching}
-                    className="px-2 py-1 border border-white text-white text-xs hover:bg-white hover:text-black transition-colors cursor-pointer disabled:opacity-30"
+                    className="px-2.5 py-1 border border-white text-white text-xs hover:bg-white hover:text-black transition-colors cursor-pointer disabled:opacity-30"
                   >
                     {searching ? <Loader2 className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3" />}
                   </button>
                 </div>
                 {searchResults.length > 0 && (
-                  <div className="border border-neutral-800 max-h-48 overflow-y-auto">
+                  <div className="border border-neutral-800 max-h-48 overflow-y-auto bg-neutral-950">
                     {searchResults.map((u) => (
                       <button
                         key={u.uid}
                         onClick={() => handleStartConversation(u.uid, u.handle)}
-                        className="w-full text-left px-3 py-2 border-b border-neutral-900 hover:bg-neutral-950 transition-colors"
+                        className="w-full text-left px-3 py-2 border-b border-neutral-900 hover:bg-neutral-900 transition-colors flex items-center justify-between"
                       >
-                        <p className="text-xs text-white">{u.handle}</p>
+                        <p className="text-xs text-white font-mono">{u.handle}</p>
+                        <span className="text-[9px] text-neutral-500 border border-neutral-800 px-1.5 py-0.5">[ 💬 WIRE ]</span>
                       </button>
                     ))}
                   </div>
@@ -599,9 +654,40 @@ export default function WirePage() {
 
           <div className="flex-1 overflow-y-auto">
             {conversations.length === 0 ? (
-              <div className="p-8 text-center">
-                <p className="text-xs text-neutral-600 tracking-widest uppercase">NO WIRES YET</p>
-                <p className="text-[10px] text-neutral-700 mt-2">Start a new wire to begin</p>
+              <div className="p-4 space-y-4">
+                <div className="p-3 border border-neutral-900 bg-neutral-950 text-center space-y-1">
+                  <p className="text-xs text-neutral-400 tracking-widest uppercase font-bold">[ NO ACTIVE WIRES ]</p>
+                  <p className="text-[10px] text-neutral-600">Tap any user below to start a private voice DM</p>
+                </div>
+
+                {/* Rich Suggested Voices List */}
+                <div className="space-y-2">
+                  <p className="text-[10px] font-mono text-neutral-500 uppercase tracking-widest">
+                    {followingList.length > 0 ? "ACCOUNTS YOU ORBIT:" : "TOP SUGGESTED VOICES:"}
+                  </p>
+                  <div className="space-y-1.5">
+                    {(followingList.length > 0
+                      ? followingList.map((f) => ({ uid: f.followingUid, handle: f.followingHandle }))
+                      : suggestedVoices
+                    ).map((u) => (
+                      <button
+                        key={u.uid}
+                        onClick={() => handleStartConversation(u.uid, u.handle)}
+                        className="w-full p-2.5 border border-neutral-900 hover:border-neutral-700 bg-neutral-950/60 hover:bg-neutral-900 flex items-center justify-between transition-colors cursor-pointer group text-left"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full border border-neutral-800 bg-neutral-900 flex items-center justify-center text-xs font-bold text-neutral-400 group-hover:text-white group-hover:border-white">
+                            {u.handle.replace("@", "").charAt(0)}
+                          </div>
+                          <span className="text-xs font-mono text-white group-hover:text-amber-300">{u.handle}</span>
+                        </div>
+                        <span className="text-[9px] font-mono border border-neutral-800 px-2 py-0.5 text-neutral-400 group-hover:border-white group-hover:text-white uppercase transition-colors">
+                          [ 💬 WIRE ]
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             ) : (
               conversations.map((conv) => (
@@ -627,11 +713,13 @@ export default function WirePage() {
               onBack={() => setActiveConv(null)}
             />
           ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center space-y-3">
-                <Mic2 className="w-12 h-12 text-neutral-800 mx-auto" />
-                <p className="text-xs text-neutral-600 tracking-widest uppercase">SELECT A WIRE</p>
-                <p className="text-[10px] text-neutral-700">Choose a conversation or start a voice message</p>
+            <div className="flex-1 flex items-center justify-center p-6">
+              <div className="text-center space-y-4 max-w-sm">
+                <Mic2 className="w-12 h-12 text-neutral-800 mx-auto animate-pulse" />
+                <div>
+                  <p className="text-xs text-neutral-400 tracking-widest uppercase font-bold">[ SELECT A WIRE ]</p>
+                  <p className="text-[11px] text-neutral-600 mt-1">Choose a conversation or tap a suggested voice to start private audio messaging.</p>
+                </div>
               </div>
             </div>
           )}
