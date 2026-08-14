@@ -23,6 +23,7 @@ import {
   arrayRemove,
   serverTimestamp,
   getDocs,
+  getDoc,
   type Timestamp,
 } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
@@ -47,6 +48,9 @@ export interface PostItem {
   orbitOf?:        string;
   orbitOfHandle?:  string;
   createdAt:       Timestamp | null;
+  // [ SPIKE ] - Trending metrics
+  spikeScore?:     number;
+  spikeCategory?:  "RISING" | "HOT" | "VIRAL" | null;
 }
 
 /** Inline voice comment on a post — stored in posts/{id}/reverbs subcollection */
@@ -101,6 +105,9 @@ export async function createPost(data: {
       orbitOf:         data.orbitOf         || null,
       orbitOfHandle:   data.orbitOfHandle   || null,
       createdAt:       serverTimestamp(),
+      // [ SPIKE ] - Initialize trending metrics
+      spikeScore:      0,
+      spikeCategory:   null,
     });
 
     // Bump aura
@@ -117,7 +124,10 @@ export async function createPost(data: {
 
     // Increment parent reverbCount
     if (data.reverbOf) {
-      try { await updateDoc(doc(db, "posts", data.reverbOf), { reverbCount: increment(1) }); } catch {}
+      try { 
+        await updateDoc(doc(db, "posts", data.reverbOf), { reverbCount: increment(1) });
+        await updateSpikeMetrics(data.reverbOf);
+      } catch {}
     }
 
     // Increment parent orbitCount
@@ -127,6 +137,7 @@ export async function createPost(data: {
           orbitCount: increment(1),
           orbitedBy:  arrayUnion(data.authorUid),
         });
+        await updateSpikeMetrics(data.orbitOf);
       } catch {}
     }
 
@@ -255,8 +266,64 @@ export function subscribeToUserPulsedPosts(
 }
 
 /**
- * togglePulsePost
+ * calculateSpikeScore
+ * Calculate trending score based on engagement metrics
  */
+function calculateSpikeScore(post: PostItem): number {
+  const pulseWeight = 1;
+  const reverbWeight = 2;
+  const orbitWeight = 3;
+  
+  const pulseScore = post.pulseCount * pulseWeight;
+  const reverbScore = (post.reverbCount || 0) * reverbWeight;
+  const orbitScore = (post.orbitCount || 0) * orbitWeight;
+  
+  return pulseScore + reverbScore + orbitScore;
+}
+
+/**
+ * updateSpikeMetrics
+ * Update trending metrics for a post
+ */
+export async function updateSpikeMetrics(postId: string): Promise<void> {
+  const db = getFirebaseDb();
+  const postRef = doc(db, "posts", postId);
+  const postSnap = await getDoc(postRef);
+  
+  if (!postSnap.exists()) return;
+  
+  const post = { id: postSnap.id, ...postSnap.data() } as PostItem;
+  const spikeScore = calculateSpikeScore(post);
+  
+  // Determine spike category based on score
+  let spikeCategory: "RISING" | "HOT" | "VIRAL" | null = null;
+  if (spikeScore >= 100) spikeCategory = "VIRAL";
+  else if (spikeScore >= 50) spikeCategory = "HOT";
+  else if (spikeScore >= 20) spikeCategory = "RISING";
+  
+  await updateDoc(postRef, {
+    spikeScore,
+    spikeCategory,
+  });
+}
+
+/**
+ * getTrendingPosts
+ * Get posts sorted by spike score
+ */
+export async function getTrendingPosts(limitCount: number = 20): Promise<PostItem[]> {
+  const db = getFirebaseDb();
+  const postsRef = collection(db, "posts");
+  const q = query(postsRef, orderBy("createdAt", "desc"), limit(100));
+  
+  const snap = await getDocs(q);
+  const posts = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PostItem[];
+  
+  // Sort by spike score (descending)
+  return posts
+    .sort((a, b) => (b.spikeScore || 0) - (a.spikeScore || 0))
+    .slice(0, limitCount);
+}
 export async function togglePulsePost(
   postId: string,
   uid: string,
@@ -268,11 +335,13 @@ export async function togglePulsePost(
     if (currentlyPulsed) {
       await updateDoc(ref, { pulseCount: increment(-1), pulsedBy: arrayRemove(uid) });
     } else {
-      await updateDoc(ref, { pulseCount: increment(1),  pulsedBy: arrayUnion(uid)  });
+      await updateDoc(ref, { pulseCount: increment(1), pulsedBy: arrayUnion(uid) });
     }
-  } catch (error) {
-    console.error("Error toggling pulse:", error);
-    throw error;
+    // Update [ SPIKE ] metrics after pulse change
+    await updateSpikeMetrics(postId);
+  } catch (err) {
+    console.warn("[Firestore] togglePulsePost error:", err);
+    throw err;
   }
 }
 
