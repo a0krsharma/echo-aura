@@ -36,6 +36,7 @@ import {
   submitClashQuestion,
   upvoteClashQuestion,
   subscribeToClashQuestions,
+  updateStageAudience,
   type ClashQuestion
 } from "@/lib/clashes";
 import { subscribeToVibeChat, sendVibeMessage, type VibeChatMessage } from "@/lib/stageChat";
@@ -240,13 +241,21 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
     }
   }, [client]);
 
+  // Track real-time Stage audience
+  useEffect(() => {
+    updateStageAudience(clashId, 1);
+    return () => {
+      updateStageAudience(clashId, -1);
+    };
+  }, [clashId]);
+
   useJoin(
     {
       appid: AGORA_APP_ID,
       channel: clashId,
-      token: token,
+      token: token || null,
     },
-    !!token
+    true
   );
 
   // ── Local Audio Publishing (if Debater) ─────────────────────────

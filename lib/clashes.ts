@@ -108,15 +108,30 @@ export function subscribeToClashes(
   callback: (clashes: ClashItem[]) => void
 ): () => void {
   const db = getFirebaseDb();
-  const q = query(collection(db, "clashes"), orderBy("createdAt", "desc"));
+  const q = query(collection(db, "clashes"));
 
   return onSnapshot(q, (snapshot) => {
     const items: ClashItem[] = snapshot.docs.map((d) => ({
       id: d.id,
       ...(d.data() as Omit<ClashItem, "id">),
     }));
+    items.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
     callback(items);
   }, () => callback([]));
+}
+
+/**
+ * updateStageAudience
+ * Update listener count for a clash in real-time.
+ */
+export async function updateStageAudience(clashId: string, delta: number) {
+  try {
+    const db = getFirebaseDb();
+    const ref = doc(db, "clashes", clashId);
+    await updateDoc(ref, { listeners: increment(delta) });
+  } catch (err) {
+    console.warn("updateStageAudience warning:", err);
+  }
 }
 
 /**

@@ -520,8 +520,8 @@ export default function RoomsPage() {
                       <span className="w-2 h-2 rounded-full bg-white animate-ping" />
                       <span className="text-white font-bold">{c.title}</span>
                     </div>
-                    <span className="text-neutral-500">
-                      {c.listeners ? `${c.listeners * 12} AUDIENCE` : "1.4K AUDIENCE"}
+                    <span className="text-neutral-500 font-mono text-[10px] tracking-widest uppercase">
+                      {c.listeners ? `${c.listeners} AUDIENCE` : "1 AUDIENCE"}
                     </span>
                   </div>
                   <p className="font-mono text-neutral-300">"{c.topic}"</p>
