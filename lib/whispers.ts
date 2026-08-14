@@ -131,24 +131,18 @@ export async function sendWhisper(
   audioUrl?: string
 ): Promise<string> {
   const db = getFirebaseDb();
-  const messagesRef = collection(db, "whispers", conversationId, "messages");
-  
-  // 1. Add message document
-  const msgRef = await addDoc(messagesRef, {
-    senderUid,
-    senderHandle,
-    text,
-    audioUrl: audioUrl || null,
-    readBy: [senderUid],
-    createdAt: serverTimestamp(),
-  });
-
-  // 2. Update parent conversation with setDoc merge: true
   const convRef = doc(db, "whispers", conversationId);
+
+  // 1. Ensure parent conversation document exists FIRST so subcollection rules pass
   try {
+    const uids = conversationId.split("__");
     await setDoc(
       convRef,
       {
+        participants: uids.length === 2 ? uids : [senderUid],
+        handles: {
+          [senderUid]: senderHandle || "@ANON",
+        },
         lastMessage: text || "🎙 Voice message",
         lastAt: serverTimestamp(),
       },
@@ -157,6 +151,17 @@ export async function sendWhisper(
   } catch (err) {
     console.warn("sendWhisper: setDoc parent update warning:", err);
   }
+
+  // 2. Add message document to messages subcollection
+  const messagesRef = collection(db, "whispers", conversationId, "messages");
+  const msgRef = await addDoc(messagesRef, {
+    senderUid,
+    senderHandle,
+    text,
+    audioUrl: audioUrl || null,
+    readBy: [senderUid],
+    createdAt: serverTimestamp(),
+  });
 
   // 3. Notify recipient
   try {
