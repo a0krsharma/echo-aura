@@ -22,7 +22,7 @@ import { uploadAudio, getPlayableUrl } from "@/lib/cloudinary";
 import { subscribeToUserPosts, subscribeToUserPulsedPosts, type PostItem } from "@/lib/posts";
 import { doc, updateDoc } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
-import { addTag, removeTag, getUserTags, getFreqMap } from "@/lib/userDoc";
+import { addTag, removeTag, getUserTags, getFreqMap, setSignalStatus, getSignalStatus, getVibeRead, analyzeVibeRead, updateVibeRead } from "@/lib/userDoc";
 
 // Simple in-profile audio player
 function MiniPlayer({ audioUrl, durationSec }: { audioUrl: string; durationSec: number }) {
@@ -100,6 +100,13 @@ export default function ProfilePage() {
   const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState("");
   const [freqMap, setFreqMap] = useState<Record<string, number>>({});
+  const [signalStatus, setSignalStatusState] = useState<"ONLINE" | "OFFLINE" | "SIGNAL-OFF">("ONLINE");
+  const [vibeRead, setVibeRead] = useState<{
+    pitch: number;
+    tempo: number;
+    energy: number;
+    clarity: number;
+  } | null>(null);
 
   // Voice Bio states
   const [bioState, setBioState] = useState<"idle" | "recording" | "preview" | "saved">("idle");
@@ -144,6 +151,18 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!user) return;
     getFreqMap(user.uid).then(setFreqMap);
+  }, [user]);
+
+  // Fetch user's signal status
+  useEffect(() => {
+    if (!user) return;
+    getSignalStatus(user.uid).then(setSignalStatusState);
+  }, [user]);
+
+  // Fetch user's vibe read
+  useEffect(() => {
+    if (!user) return;
+    getVibeRead(user.uid).then(setVibeRead);
   }, [user]);
 
   // Voice Bio recording timer — auto-stop at max duration
@@ -224,6 +243,16 @@ export default function ProfilePage() {
         voiceBioUrl: uploaded.secureUrl,
         voiceBioDuration: `${bioElapsed}s`,
       });
+      
+      // Analyze and save vibe read
+      try {
+        const vibeData = await analyzeVibeRead(bioBlob);
+        await updateVibeRead(user.uid, vibeData);
+        setVibeRead(vibeData);
+      } catch (err) {
+        console.error("Failed to analyze vibe read:", err);
+      }
+      
       setBioState("saved");
     } catch (err) {
       console.error("Failed to save voice bio:", err);
@@ -288,6 +317,17 @@ export default function ProfilePage() {
       setTags(tags.filter(t => t !== tag));
     } catch (err) {
       console.error("Failed to remove tag:", err);
+    }
+  };
+
+  const handleSignalToggle = async () => {
+    if (!user) return;
+    const newStatus = signalStatus === "ONLINE" ? "SIGNAL-OFF" : "ONLINE";
+    try {
+      await setSignalStatus(user.uid, newStatus);
+      setSignalStatusState(newStatus);
+    } catch (err) {
+      console.error("Failed to update signal status:", err);
     }
   };
 
@@ -605,6 +645,111 @@ export default function ProfilePage() {
                       <span className="font-mono text-[10px] text-neutral-500 tabular-nums">{count}</span>
                     </div>
                   ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* [ SIGNAL-OFF ] Section */}
+        <div className="p-6 border border-neutral-900 bg-neutral-950/40 mb-8 space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-xs text-neutral-500 tracking-widest uppercase">
+              // [ SIGNAL-OFF ] - SIGNAL RETENTION
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="font-mono text-xs text-white tracking-widest uppercase">
+                CURRENT STATUS
+              </p>
+              <p className={`font-mono text-[10px] tracking-widest uppercase ${
+                signalStatus === "ONLINE" ? "text-green-500" : 
+                signalStatus === "OFFLINE" ? "text-neutral-500" : 
+                "text-red-500"
+              }`}>
+                {signalStatus}
+              </p>
+            </div>
+            <button
+              onClick={handleSignalToggle}
+              className={`px-4 py-2 border font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer ${
+                signalStatus === "ONLINE"
+                  ? "border-white text-white hover:bg-white hover:text-black"
+                  : "border-red-500 text-red-500 hover:bg-red-500 hover:text-black"
+              }`}
+            >
+              {signalStatus === "ONLINE" ? "[ GO SIGNAL-OFF ]" : "[ GO ONLINE ]"}
+            </button>
+          </div>
+          <p className="font-mono text-[10px] text-neutral-700 tracking-widest uppercase">
+            SIGNAL-OFF MODE: HIDE YOUR STATUS AND PREVENT NOTIFICATIONS
+          </p>
+        </div>
+
+        {/* [ VIBE_READ ] Section */}
+        <div className="p-6 border border-neutral-900 bg-neutral-950/40 mb-8 space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-xs text-neutral-500 tracking-widest uppercase">
+              // [ VIBE_READ ] - VOCAL BIOMETRICS
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            {!vibeRead ? (
+              <p className="font-mono text-[10px] text-neutral-700 tracking-widest uppercase">
+                NO DATA YET. RECORD YOUR VOICE BIO TO GENERATE YOUR VIBE READ.
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="font-mono text-[10px] text-neutral-500 tracking-widest uppercase">PITCH</p>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-2 bg-neutral-900 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-purple-500 to-pink-500"
+                        style={{ width: `${vibeRead.pitch}%` }}
+                      />
+                    </div>
+                    <span className="font-mono text-[10px] text-white tabular-nums">{vibeRead.pitch}</span>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <p className="font-mono text-[10px] text-neutral-500 tracking-widest uppercase">TEMPO</p>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-2 bg-neutral-900 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-blue-500 to-cyan-500"
+                        style={{ width: `${vibeRead.tempo}%` }}
+                      />
+                    </div>
+                    <span className="font-mono text-[10px] text-white tabular-nums">{vibeRead.tempo}</span>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <p className="font-mono text-[10px] text-neutral-500 tracking-widest uppercase">ENERGY</p>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-2 bg-neutral-900 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-orange-500 to-yellow-500"
+                        style={{ width: `${vibeRead.energy}%` }}
+                      />
+                    </div>
+                    <span className="font-mono text-[10px] text-white tabular-nums">{vibeRead.energy}</span>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <p className="font-mono text-[10px] text-neutral-500 tracking-widest uppercase">CLARITY</p>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-2 bg-neutral-900 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-green-500 to-emerald-500"
+                        style={{ width: `${vibeRead.clarity}%` }}
+                      />
+                    </div>
+                    <span className="font-mono text-[10px] text-white tabular-nums">{vibeRead.clarity}</span>
+                  </div>
+                </div>
               </div>
             )}
           </div>

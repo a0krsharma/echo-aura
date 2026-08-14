@@ -5,7 +5,7 @@
  * for an authenticated Firebase user.
  */
 
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp, increment, arrayUnion, arrayRemove } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, increment, arrayUnion, arrayRemove, type Timestamp } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 import type { User as FirebaseUser } from "firebase/auth";
 
@@ -21,6 +21,14 @@ export interface EchoUser {
   streak:      number;
   lastActiveDate: string | null;
   freqMap:     Record<string, number>; // Topic -> count
+  signalStatus: "ONLINE" | "OFFLINE" | "SIGNAL-OFF";
+  lastSignalChange: Timestamp | null;
+  vibeRead:    {
+    pitch: number;
+    tempo: number;
+    energy: number;
+    clarity: number;
+  } | null;
 }
 
 /** Generate a random anonymous handle like @ANON_4X7K */
@@ -51,6 +59,9 @@ export async function getOrCreateUserDoc(firebaseUser: FirebaseUser): Promise<Ec
     streak:      0,
     lastActiveDate: null,
     freqMap:     {},
+    signalStatus: "ONLINE",
+    lastSignalChange: null,
+    vibeRead:    null,
   };
 
   try {
@@ -75,6 +86,9 @@ export async function getOrCreateUserDoc(firebaseUser: FirebaseUser): Promise<Ec
       lastActiveDate: null,
       tags: [],
       freqMap: {},
+      signalStatus: "ONLINE",
+      lastSignalChange: null,
+      vibeRead: null,
     });
 
     return fallbackUser;
@@ -82,6 +96,134 @@ export async function getOrCreateUserDoc(firebaseUser: FirebaseUser): Promise<Ec
     console.warn("[Firestore] User doc permission notice (using fallback user):", err.message);
     return fallbackUser;
   }
+}
+
+/**
+ * analyzeVibeRead
+ * Analyze audio blob for vocal biometrics (pitch, tempo, energy, clarity)
+ * This is a simplified analysis - in production would use Web Audio API or ML
+ */
+export async function analyzeVibeRead(audioBlob: Blob): Promise<{
+  pitch: number;
+  tempo: number;
+  energy: number;
+  clarity: number;
+}> {
+  // Simplified analysis based on blob properties
+  // In production, this would use Web Audio API for actual analysis
+  const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+  const arrayBuffer = await audioBlob.arrayBuffer();
+  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+  
+  // Calculate basic metrics
+  const channelData = audioBuffer.getChannelData(0);
+  const sampleRate = audioBuffer.sampleRate;
+  
+  // Energy (RMS)
+  let sumSquares = 0;
+  for (let i = 0; i < channelData.length; i++) {
+    sumSquares += channelData[i] * channelData[i];
+  }
+  const rms = Math.sqrt(sumSquares / channelData.length);
+  const energy = Math.min(100, rms * 1000); // Normalize to 0-100
+  
+  // Pitch (simplified zero-crossing rate)
+  let zeroCrossings = 0;
+  for (let i = 1; i < channelData.length; i++) {
+    if ((channelData[i] >= 0 && channelData[i-1] < 0) || 
+        (channelData[i] < 0 && channelData[i-1] >= 0)) {
+      zeroCrossings++;
+    }
+  }
+  const zeroCrossingRate = zeroCrossings / channelData.length;
+  const pitch = Math.min(100, zeroCrossingRate * 10000); // Normalize to 0-100
+  
+  // Tempo (simplified - based on duration)
+  const duration = audioBuffer.duration;
+  const tempo = Math.min(100, (1 / duration) * 20); // Normalize to 0-100
+  
+  // Clarity (signal-to-noise ratio approximation)
+  const signalLevel = rms;
+  const noiseLevel = 0.001; // Simplified noise floor
+  const clarity = Math.min(100, (signalLevel / (signalLevel + noiseLevel)) * 100);
+  
+  return {
+    pitch: Math.round(pitch),
+    tempo: Math.round(tempo),
+    energy: Math.round(energy),
+    clarity: Math.round(clarity),
+  };
+}
+
+/**
+ * updateVibeRead
+ * Update user's vocal biometrics
+ */
+export async function updateVibeRead(uid: string, vibeRead: {
+  pitch: number;
+  tempo: number;
+  energy: number;
+  clarity: number;
+}): Promise<void> {
+  const db = getFirebaseDb();
+  const ref = doc(db, "users", uid);
+  
+  await updateDoc(ref, {
+    vibeRead: vibeRead,
+  });
+}
+
+/**
+ * getVibeRead
+ * Get user's vocal biometrics
+ */
+export async function getVibeRead(uid: string): Promise<{
+  pitch: number;
+  tempo: number;
+  energy: number;
+  clarity: number;
+} | null> {
+  const db = getFirebaseDb();
+  const ref = doc(db, "users", uid);
+  const snap = await getDoc(ref);
+  
+  if (!snap.exists()) {
+    return null;
+  }
+  
+  const userData = snap.data() as EchoUser;
+  return userData.vibeRead || null;
+}
+
+/**
+ * setSignalStatus
+ * Update user's signal status (ONLINE/OFFLINE/SIGNAL-OFF)
+ */
+export async function setSignalStatus(uid: string, status: "ONLINE" | "OFFLINE" | "SIGNAL-OFF"): Promise<void> {
+  const db = getFirebaseDb();
+  const ref = doc(db, "users", uid);
+  
+  await updateDoc(ref, {
+    signalStatus: status,
+    lastSignalChange: serverTimestamp(),
+  });
+}
+
+/**
+ * getSignalStatus
+ * Get user's current signal status
+ */
+export async function getSignalStatus(uid: string): Promise<"ONLINE" | "OFFLINE" | "SIGNAL-OFF"> {
+  const db = getFirebaseDb();
+  const ref = doc(db, "users", uid);
+  const snap = await getDoc(ref);
+  
+  if (!snap.exists()) {
+    return "OFFLINE";
+  }
+  
+  const userData = snap.data() as EchoUser;
+  return userData.signalStatus || "OFFLINE";
 }
 
 /**
