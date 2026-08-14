@@ -136,13 +136,16 @@ function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate:
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="font-mono text-[9px] tracking-widest text-neutral-600 block mb-1">MAX PARTICIPANTS</label>
+            <label className="font-mono text-[9px] tracking-widest text-neutral-600 block mb-1">MAX PARTICIPANTS (2 - 1000)</label>
             <input
               type="number"
               value={maxParticipants}
-              onChange={e => setMaxParticipants(parseInt(e.target.value) || 100)}
+              onChange={e => {
+                const val = parseInt(e.target.value);
+                setMaxParticipants(isNaN(val) ? 2 : Math.max(2, Math.min(1000, val)));
+              }}
               min="2"
-              max="100"
+              max="1000"
               className="w-full bg-transparent border border-neutral-800 p-2 font-mono text-xs text-white"
             />
           </div>
