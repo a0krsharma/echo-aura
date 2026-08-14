@@ -88,6 +88,10 @@ export function subscribeToNotifications(
   callback: (notifs: EchoNotification[]) => void,
   maxItems = 100
 ): () => void {
+  if (!uid) {
+    callback([]);
+    return () => {};
+  }
   const db = getFirebaseDb();
   const q = query(
     collection(db, "notifications", uid, "items"),
@@ -117,7 +121,7 @@ export function subscribeToNotifications(
       callback(notifs);
     },
     (err) => {
-      console.warn("[Notifications] Error:", err.message);
+      // Silent graceful fallback if user auth token is refreshing
       callback([]);
     }
   );

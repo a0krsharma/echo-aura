@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 /**
  * app/notifications/page.tsx
  * ─────────────────────────────────────────────────────

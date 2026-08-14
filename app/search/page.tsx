@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 /**
  * app/search/page.tsx
  * Enhanced search with filters, history, Top 10 suggested profiles,
