@@ -26,6 +26,7 @@ import { subscribeToUserPosts, subscribeToUserPulsedPosts, type PostItem } from 
 import { doc, updateDoc } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 import { addTag, removeTag, getUserTags, getFreqMap, setSignalStatus, getSignalStatus, getVibeRead, analyzeVibeRead, updateVibeRead } from "@/lib/userDoc";
+import { subscribeToFollowers, subscribeToFollowing, type Follow } from "@/lib/follows";
 
 // Simple in-profile audio player
 function MiniPlayer({ audioUrl, durationSec }: { audioUrl: string; durationSec: number }) {
@@ -95,9 +96,19 @@ function MiniPlayer({ audioUrl, durationSec }: { audioUrl: string; durationSec: 
 
 export default function ProfilePage() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<"ECHOES" | "REPLIES" | "ORBITS" | "PULSED">("ECHOES");
+  const [activeTab, setActiveTab] = useState<"ECHOES" | "REPLIES" | "RE-ECHOES" | "PULSED">("ECHOES");
   const [userPosts, setUserPosts] = useState<PostItem[]>([]);
   const [pulsedPosts, setPulsedPosts] = useState<PostItem[]>([]);
+  const [followersList, setFollowersList] = useState<Follow[]>([]);
+  const [followingList, setFollowingList] = useState<Follow[]>([]);
+  const [followsModal, setFollowsModal] = useState<"ORBITERS" | "ORBITING" | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    const unsub1 = subscribeToFollowers(user.uid, setFollowersList);
+    const unsub2 = subscribeToFollowing(user.uid, setFollowingList);
+    return () => { unsub1(); unsub2(); };
+  }, [user]);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
@@ -426,7 +437,7 @@ export default function ProfilePage() {
                   {post.reverbOf && <Repeat2 className="w-3 h-3 text-neutral-600" />}
                   {post.orbitOf && <RefreshCw className="w-3 h-3 text-neutral-600" />}
                   <span className="font-mono text-[10px] text-neutral-500 uppercase">
-                    {post.reverbOf ? `[ REPLY ] ON ${post.reverbOfHandle}` : post.orbitOf ? `[ ORBIT ] OF ${post.orbitOfHandle}` : "ECHO"}
+                    {post.reverbOf ? `[ REPLY ] ON ${post.reverbOfHandle}` : post.orbitOf ? `[ RE-ECHO ] OF ${post.orbitOfHandle}` : "ECHO"}
                   </span>
                 </div>
                 <span className="font-mono text-[10px] text-neutral-600">
@@ -453,7 +464,7 @@ export default function ProfilePage() {
                     <span>{post.reverbCount} [ REPLIES ]</span>
                   )}
                   {(post.orbitCount || 0) > 0 && (
-                    <span>{post.orbitCount} [ ORBITS ]</span>
+                    <span>{post.orbitCount} [ RE-ECHOES ]</span>
                   )}
                   <span>{post.duration || "0:00"}</span>
                 </div>
@@ -555,12 +566,22 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Stats row */}
-          <div className="flex gap-6 font-mono text-xs text-neutral-600 uppercase tracking-widest">
-            <span>{echoePosts.length} ECHOES</span>
-            <span>{reverbPosts.length} [ REPLIES ]</span>
-            <span>{orbitPosts.length} [ ORBITS ]</span>
-            <span>{pulsedPosts.length} [ PULSED ]</span>
+          {/* Functional Orbiters / Orbiting row */}
+          <div className="flex items-center gap-6 font-mono text-xs tracking-widest border-t border-neutral-900 pt-3 mt-3">
+            <button
+              onClick={() => setFollowsModal("ORBITING")}
+              className="text-neutral-400 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5"
+            >
+              <span className="text-white font-bold">{followingList.length}</span>
+              <span className="text-neutral-500 uppercase">[ ORBITING ]</span>
+            </button>
+            <button
+              onClick={() => setFollowsModal("ORBITERS")}
+              className="text-neutral-400 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5"
+            >
+              <span className="text-white font-bold">{followersList.length}</span>
+              <span className="text-neutral-500 uppercase">[ ORBITERS ]</span>
+            </button>
           </div>
         </div>
 
@@ -738,7 +759,7 @@ export default function ProfilePage() {
 
         {/* Tabs */}
         <div className="flex border-b border-neutral-900 mb-6 font-mono text-xs tracking-widest overflow-x-auto no-scrollbar">
-          {(["ECHOES", "REPLIES", "ORBITS", "PULSED"] as const).map((tab) => (
+          {(["ECHOES", "REPLIES", "RE-ECHOES", "PULSED"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -750,18 +771,61 @@ export default function ProfilePage() {
             >
               {tab}
               <span className="ml-1 text-neutral-700">
-                ({tab === "ECHOES" ? echoePosts.length : tab === "REPLIES" ? reverbPosts.length : tab === "ORBITS" ? orbitPosts.length : pulsedPosts.length})
+                ({tab === "ECHOES" ? echoePosts.length : tab === "REPLIES" ? reverbPosts.length : tab === "RE-ECHOES" ? orbitPosts.length : pulsedPosts.length})
               </span>
             </button>
           ))}
         </div>
 
         {/* Tab Content */}
-        {activeTab === "ECHOES"  && renderPostList(echoePosts,  "echoes")}
-        {activeTab === "REPLIES" && renderPostList(reverbPosts, "replies")}
-        {activeTab === "ORBITS"  && renderPostList(orbitPosts,  "orbits")}
-        {activeTab === "PULSED"  && renderPostList(pulsedPosts, "pulsed posts")}
+        {activeTab === "ECHOES"    && renderPostList(echoePosts,  "echoes")}
+        {activeTab === "REPLIES"   && renderPostList(reverbPosts, "replies")}
+        {activeTab === "RE-ECHOES" && renderPostList(orbitPosts,  "re-echoes")}
+        {activeTab === "PULSED"    && renderPostList(pulsedPosts, "pulsed posts")}
       </main>
+
+      {/* ORBITERS / ORBITING MODAL */}
+      {followsModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-sm border border-neutral-800 bg-black p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-neutral-900 pb-3">
+              <span className="font-mono text-xs tracking-widest text-white uppercase font-bold">
+                // {followsModal} ({followsModal === "ORBITERS" ? followersList.length : followingList.length})
+              </span>
+              <button
+                onClick={() => setFollowsModal(null)}
+                className="font-mono text-xs text-neutral-500 hover:text-white cursor-pointer"
+              >
+                [ ✕ CLOSE ]
+              </button>
+            </div>
+
+            {(followsModal === "ORBITERS" ? followersList : followingList).length === 0 ? (
+              <p className="font-mono text-xs text-neutral-600 uppercase text-center py-6">
+                NO {followsModal} YET.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {(followsModal === "ORBITERS" ? followersList : followingList).map((f) => {
+                  const targetHandle = followsModal === "ORBITERS" ? f.followerHandle : f.followingHandle;
+                  return (
+                    <div key={f.id} className="flex items-center justify-between p-3 border border-neutral-900 bg-neutral-950">
+                      <span className="font-mono text-xs text-white tracking-widest">{targetHandle}</span>
+                      <Link
+                        href={`/${targetHandle.replace("@", "")}`}
+                        onClick={() => setFollowsModal(null)}
+                        className="font-mono text-[10px] border border-neutral-800 px-2 py-1 text-neutral-400 hover:border-white hover:text-white uppercase"
+                      >
+                        VIEW PROFILE →
+                      </Link>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* EDIT PROFILE MODAL */}
       {editProfileOpen && (
