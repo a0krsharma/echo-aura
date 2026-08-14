@@ -10,7 +10,7 @@
  * - Desktop LeftSidebar + RightSidebar
  */
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AuthProvider, useAuth } from "@/app/components/AuthProvider";
@@ -44,7 +44,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [toastNotifications, setToastNotifications] = useState<EchoNotification[]>([]);
-  const [shownToastIds, setShownToastIds] = useState<Set<string>>(new Set());
+  const shownToastIdsRef = useRef<Set<string>>(new Set());
   const [unreadCount, setUnreadCount] = useState(0);
 
   const isPublicRoute = pathname === "/login";
@@ -67,10 +67,10 @@ function ShellContent({ children }: { children: React.ReactNode }) {
 
     const unsub = subscribeToNotifications(user.uid, (notifications) => {
       // Show toasts for new unread notifications
-      const newUnread = notifications.filter(n => !n.read && !shownToastIds.has(n.id));
+      const newUnread = notifications.filter(n => !n.read && !shownToastIdsRef.current.has(n.id));
       
       if (newUnread.length > 0) {
-        // Add new toasts (limit to 3 at a time)
+        newUnread.forEach(n => shownToastIdsRef.current.add(n.id));
         setToastNotifications(prev => {
           // Filter out any duplicates that might already exist in prev
           const existingIds = new Set(prev.map(t => t.id));
@@ -78,13 +78,6 @@ function ShellContent({ children }: { children: React.ReactNode }) {
           const newToasts = trulyNew.slice(0, 3);
           const combined = [...newToasts, ...prev].slice(0, 3);
           return combined;
-        });
-        
-        // Mark as shown to avoid duplicate toasts (use functional update for consistency)
-        setShownToastIds(prev => {
-          const newIds = new Set(prev);
-          newUnread.forEach(n => newIds.add(n.id));
-          return newIds;
         });
 
         // Auto-dismiss after showing
