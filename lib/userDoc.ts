@@ -15,6 +15,9 @@ export interface EchoUser {
   email:       string;
   displayName: string;
   photoUrl:    string;
+  photoURL?:   string;
+  avatarUrl?:  string;
+  bio?:        string;
   auraScore:   number;
   badges:      string[];
   tags:        string[];

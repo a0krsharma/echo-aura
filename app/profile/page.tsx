@@ -17,9 +17,11 @@ import {
   RefreshCw,
   Repeat2,
   Terminal,
+  Camera,
+  Edit3,
 } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
-import { uploadAudio, getPlayableUrl } from "@/lib/cloudinary";
+import { uploadAudio, uploadImage, getPlayableUrl } from "@/lib/cloudinary";
 import { subscribeToUserPosts, subscribeToUserPulsedPosts, type PostItem } from "@/lib/posts";
 import { doc, updateDoc } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
@@ -123,6 +125,58 @@ export default function ProfilePage() {
   const bioTimerRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  // Edit Profile States
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const [userHandle, setUserHandle] = useState(user?.handle || "@ANON");
+  const [userBio, setUserBio] = useState(user?.bio || "");
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.photoURL || user?.avatarUrl || null);
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setUserHandle(user.handle || "@ANON");
+      setUserBio(user.bio || "");
+      setAvatarPreview(user.photoURL || user.avatarUrl || null);
+    }
+  }, [user]);
+
+  const handleAvatarFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
+  };
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    setSavingProfile(true);
+    try {
+      const db = getFirebaseDb();
+      let photoURL = user.photoURL || user.avatarUrl || "";
+
+      if (avatarFile) {
+        const res = await uploadImage(avatarFile, `avatar-${user.uid}`);
+        photoURL = res.secureUrl;
+      }
+
+      const formattedHandle = userHandle.trim().startsWith("@") ? userHandle.trim() : `@${userHandle.trim()}`;
+
+      await updateDoc(doc(db, "users", user.uid), {
+        handle: formattedHandle,
+        bio: userBio.trim(),
+        photoURL,
+        avatarUrl: photoURL,
+      });
+
+      setEditProfileOpen(false);
+    } catch (err) {
+      console.error("Failed to update profile:", err);
+    } finally {
+      setSavingProfile(false);
+    }
+  };
 
   // Subscribe to user's own posts from `posts` collection (NOT `echoes`)
   useEffect(() => {
@@ -416,7 +470,13 @@ export default function ProfilePage() {
       {/* Top Header */}
       <header className="p-6 flex items-center justify-between border-b border-neutral-900">
         <span className="font-serif italic text-lg text-white">Echo.</span>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => setEditProfileOpen(true)}
+            className="px-3 py-1.5 border border-white text-white hover:bg-white hover:text-black font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center gap-1.5 font-bold"
+          >
+            <Edit3 className="w-3.5 h-3.5" /> [ EDIT PROFILE ]
+          </button>
           <button
             onClick={() => setShareModalOpen(true)}
             className="p-2 text-neutral-500 hover:text-white transition-colors cursor-pointer"
@@ -428,19 +488,54 @@ export default function ProfilePage() {
       </header>
 
       <main className="max-w-2xl mx-auto px-5 md:px-6 pt-8 w-full flex-1">
-        {/* User Handle & Aura Section */}
+        {/* User Handle & Avatar Picture Section */}
         <div className="space-y-4 mb-8">
           <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <div className="flex items-center space-x-3">
-                <h1 className="font-mono text-2xl font-bold tracking-widest text-white">
-                  {handle}
-                </h1>
-                <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+            <div className="flex items-center space-x-4">
+              <div className="relative group">
+                <div className={`w-16 h-16 rounded-full border-2 overflow-hidden flex items-center justify-center font-mono text-xl bg-neutral-950 ${
+                  vibeRead ? "border-green-500 shadow-lg shadow-green-500/20" : "border-neutral-700"
+                }`}>
+                  {user?.photoURL || user?.avatarUrl || avatarPreview ? (
+                    <img
+                      src={avatarPreview || user?.photoURL || user?.avatarUrl}
+                      alt={handle}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-white font-bold">{handle.charAt(1).toUpperCase()}</span>
+                  )}
+                </div>
+                <button
+                  onClick={() => setEditProfileOpen(true)}
+                  className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white"
+                  title="Upload profile picture"
+                >
+                  <Camera className="w-5 h-5" />
+                </button>
               </div>
-              <p className="font-mono text-xs text-neutral-600 tracking-widest uppercase">
-                AUTHENTICATED PROFILE
-              </p>
+
+              <div className="space-y-1">
+                <div className="flex items-center space-x-3">
+                  <h1 className="font-mono text-2xl font-bold tracking-widest text-white">
+                    {handle}
+                  </h1>
+                  <span className={`w-2 h-2 rounded-full ${signalStatus === "ONLINE" ? "bg-green-500 animate-ping" : "bg-red-500"}`} />
+                </div>
+                <p className="font-mono text-xs text-neutral-500 tracking-widest uppercase">
+                  {user?.bio || "AUTHENTICATED PROFILE"}
+                </p>
+                {/* Active Domain Tags */}
+                {tags.length > 0 && (
+                  <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                    {tags.map((tag) => (
+                      <span key={tag} className="font-mono text-[9px] px-1.5 py-0.5 border border-neutral-800 text-neutral-400 uppercase">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="text-right">
@@ -590,140 +685,18 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* [ TAGS ] Section */}
-        <div className="p-6 border border-neutral-900 bg-neutral-950/40 mb-8 space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-xs text-neutral-500 tracking-widest uppercase">
-              // [ TAGS ] - YOUR DOMAINS
-            </span>
-          </div>
-
-          <div className="space-y-3">
-            {/* Add Tag Input */}
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                maxLength={15}
-                placeholder="ADD TAG..."
-                className="flex-1 bg-transparent border border-neutral-800 px-3 py-2 font-mono text-xs text-white placeholder-neutral-700 focus:outline-none focus:border-white transition-colors uppercase"
-              />
-              <button
-                onClick={handleAddTag}
-                disabled={!newTag.trim()}
-                className="px-4 py-2 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors cursor-pointer disabled:opacity-30"
-              >
-                [ ADD ]
-              </button>
-            </div>
-
-            {/* Tags Display */}
-            <div className="flex flex-wrap gap-2">
-              {tags.length === 0 ? (
-                <p className="font-mono text-[10px] text-neutral-700 tracking-widest uppercase">
-                  NO TAGS YET. ADD YOUR DOMAINS.
-                </p>
-              ) : (
-                tags.map((tag) => (
-                  <div
-                    key={tag}
-                    className="flex items-center gap-2 px-3 py-1.5 border border-neutral-700 bg-neutral-900/50"
-                  >
-                    <span className="font-mono text-[10px] text-white tracking-widest uppercase">{tag}</span>
-                    <button
-                      onClick={() => handleRemoveTag(tag)}
-                      className="text-neutral-600 hover:text-white transition-colors cursor-pointer"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* [ FREQ_MAP ] Section */}
-        <div className="p-6 border border-neutral-900 bg-neutral-950/40 mb-8 space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-xs text-neutral-500 tracking-widest uppercase">
-              // [ FREQ_MAP ]
-            </span>
-          </div>
-
-          <div className="space-y-3">
-            {Object.keys(freqMap).length === 0 ? (
-              <p className="font-mono text-[10px] text-neutral-700 tracking-widest uppercase">
-                NO DATA YET. LISTEN TO CONTENT TO BUILD YOUR FOOTPRINT.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {Object.entries(freqMap)
-                  .sort(([, a], [, b]) => b - a)
-                  .slice(0, 10)
-                  .map(([topic, count]) => (
-                    <div key={topic} className="flex items-center gap-3">
-                      <span className="font-mono text-[10px] text-white tracking-widest uppercase w-24">
-                        {topic}
-                      </span>
-                      <div className="flex-1 h-2 bg-neutral-900 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-purple-500 to-blue-500"
-                          style={{ width: `${Math.min(100, (count / Math.max(...Object.values(freqMap))) * 100)}%` }}
-                        />
-                      </div>
-                      <span className="font-mono text-[10px] text-neutral-500 tabular-nums">{count}</span>
-                    </div>
-                  ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* [ SIGNAL-OFF ] Section */}
-        <div className="p-6 border border-neutral-900 bg-neutral-950/40 mb-8 space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-xs text-neutral-500 tracking-widest uppercase">
-              // [ SIGNAL-OFF ] - SIGNAL RETENTION
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="font-mono text-xs text-white tracking-widest uppercase">
-                CURRENT STATUS
-              </p>
-              <p className={`font-mono text-[10px] tracking-widest uppercase ${
-                signalStatus === "ONLINE" ? "text-green-500" : 
-                signalStatus === "OFFLINE" ? "text-neutral-500" : 
-                "text-red-500"
-              }`}>
-                {signalStatus}
-              </p>
-            </div>
-            <button
-              onClick={handleSignalToggle}
-              className={`px-4 py-2 border font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer ${
-                signalStatus === "ONLINE"
-                  ? "border-white text-white hover:bg-white hover:text-black"
-                  : "border-red-500 text-red-500 hover:bg-red-500 hover:text-black"
-              }`}
-            >
-              {signalStatus === "ONLINE" ? "[ GO SIGNAL-OFF ]" : "[ GO ONLINE ]"}
-            </button>
-          </div>
-          <p className="font-mono text-[10px] text-neutral-700 tracking-widest uppercase">
-            SIGNAL-OFF MODE: HIDE YOUR STATUS AND PREVENT NOTIFICATIONS
-          </p>
-        </div>
-
         {/* [ VIBE_READ ] Section */}
         <div className="p-6 border border-neutral-900 bg-neutral-950/40 mb-8 space-y-4">
           <div className="flex items-center justify-between">
-            <span className="font-mono text-xs text-neutral-500 tracking-widest uppercase">
-              // [ VIBE_READ ]
+            <span className="font-mono text-xs text-neutral-500 tracking-widest uppercase flex items-center gap-2">
+              // [ LIVE VIBE_READ ]
             </span>
+            <button
+              onClick={() => setEditProfileOpen(true)}
+              className="font-mono text-[10px] text-neutral-500 hover:text-white uppercase cursor-pointer"
+            >
+              [ EDIT PROFILE SETTINGS ]
+            </button>
           </div>
 
           <div className="space-y-3">
@@ -812,6 +785,169 @@ export default function ProfilePage() {
         {activeTab === "ORBITS"  && renderPostList(orbitPosts,  "orbits")}
         {activeTab === "PULSED"  && renderPostList(pulsedPosts, "pulsed posts")}
       </main>
+
+      {/* EDIT PROFILE MODAL */}
+      {editProfileOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-lg border border-neutral-800 bg-black p-6 space-y-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-neutral-900 pb-4">
+              <span className="font-mono text-xs tracking-widest text-white uppercase font-bold flex items-center gap-2">
+                <Edit3 className="w-4 h-4" /> // EDIT AUTHENTICATED PROFILE
+              </span>
+              <button
+                onClick={() => setEditProfileOpen(false)}
+                className="font-mono text-xs text-neutral-500 hover:text-white cursor-pointer"
+              >
+                [ ✕ CLOSE ]
+              </button>
+            </div>
+
+            {/* Avatar Photo Upload */}
+            <div className="space-y-3">
+              <span className="font-mono text-xs text-neutral-500 tracking-widest uppercase block">
+                // PROFILE PICTURE / AVATAR
+              </span>
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-full border-2 border-neutral-700 overflow-hidden flex items-center justify-center bg-neutral-950 font-mono text-xl text-white">
+                  {avatarPreview ? (
+                    <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    handle.charAt(1).toUpperCase()
+                  )}
+                </div>
+                <div>
+                  <label className="px-4 py-2 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors cursor-pointer inline-flex items-center gap-2">
+                    <Camera className="w-3.5 h-3.5" /> [ UPLOAD PHOTO ]
+                    <input type="file" accept="image/*" className="hidden" onChange={handleAvatarFileSelect} />
+                  </label>
+                  <p className="font-mono text-[10px] text-neutral-600 mt-1 uppercase">
+                    SUPPORTS JPG, PNG, WEBP UP TO 5MB
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Handle & Bio Inputs */}
+            <div className="space-y-4">
+              <div>
+                <label className="font-mono text-xs text-neutral-500 tracking-widest uppercase block mb-1">
+                  HANDLE / USERNAME
+                </label>
+                <input
+                  type="text"
+                  value={userHandle}
+                  onChange={(e) => setUserHandle(e.target.value)}
+                  className="w-full bg-neutral-950 border border-neutral-800 p-2.5 font-mono text-xs text-white focus:outline-none focus:border-white"
+                />
+              </div>
+
+              <div>
+                <label className="font-mono text-xs text-neutral-500 tracking-widest uppercase block mb-1">
+                  BIO / CREDO
+                </label>
+                <textarea
+                  rows={3}
+                  value={userBio}
+                  onChange={(e) => setUserBio(e.target.value)}
+                  placeholder="Enter your voice bio or credo..."
+                  className="w-full bg-neutral-950 border border-neutral-800 p-2.5 font-mono text-xs text-white placeholder-neutral-700 focus:outline-none focus:border-white"
+                />
+              </div>
+            </div>
+
+            {/* [ TAGS ] Section */}
+            <div className="p-4 border border-neutral-900 bg-neutral-950/40 space-y-3">
+              <span className="font-mono text-xs text-neutral-400 tracking-widest uppercase block">
+                // [ TAGS ] - YOUR DOMAINS
+              </span>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  maxLength={15}
+                  placeholder="ADD TAG..."
+                  className="flex-1 bg-transparent border border-neutral-800 px-3 py-1.5 font-mono text-xs text-white placeholder-neutral-700 focus:outline-none focus:border-white uppercase"
+                />
+                <button
+                  onClick={handleAddTag}
+                  disabled={!newTag.trim()}
+                  className="px-3 py-1.5 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors cursor-pointer disabled:opacity-30"
+                >
+                  [ ADD ]
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {tags.map((tag) => (
+                  <div key={tag} className="flex items-center gap-2 px-2.5 py-1 border border-neutral-800 bg-neutral-900/50">
+                    <span className="font-mono text-[10px] text-white tracking-widest uppercase">{tag}</span>
+                    <button onClick={() => handleRemoveTag(tag)} className="text-neutral-600 hover:text-white cursor-pointer">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* [ FREQ_MAP ] Section */}
+            <div className="p-4 border border-neutral-900 bg-neutral-950/40 space-y-3">
+              <span className="font-mono text-xs text-neutral-400 tracking-widest uppercase block">
+                // [ FREQ_MAP ] - FOOTPRINT
+              </span>
+              {Object.keys(freqMap).length === 0 ? (
+                <p className="font-mono text-[10px] text-neutral-600 uppercase">NO DATA YET.</p>
+              ) : (
+                <div className="space-y-2">
+                  {Object.entries(freqMap).slice(0, 5).map(([topic, count]) => (
+                    <div key={topic} className="flex items-center gap-3 font-mono text-[10px]">
+                      <span className="text-white uppercase w-20 truncate">{topic}</span>
+                      <div className="flex-1 h-1.5 bg-neutral-900 rounded-full overflow-hidden">
+                        <div className="h-full bg-blue-500" style={{ width: `${Math.min(100, count * 10)}%` }} />
+                      </div>
+                      <span className="text-neutral-500">{count}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* [ SIGNAL-OFF ] Section */}
+            <div className="p-4 border border-neutral-900 bg-neutral-950/40 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="font-mono text-xs text-neutral-400 tracking-widest uppercase block">
+                    // [ SIGNAL-OFF ] - SIGNAL RETENTION
+                  </span>
+                  <span className={`font-mono text-[10px] uppercase font-bold ${
+                    signalStatus === "ONLINE" ? "text-green-500" : "text-red-500"
+                  }`}>
+                    STATUS: {signalStatus}
+                  </span>
+                </div>
+                <button
+                  onClick={handleSignalToggle}
+                  className={`px-3 py-1.5 border font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer ${
+                    signalStatus === "ONLINE"
+                      ? "border-white text-white hover:bg-white hover:text-black"
+                      : "border-red-500 text-red-500 hover:bg-red-500 hover:text-black"
+                  }`}
+                >
+                  {signalStatus === "ONLINE" ? "[ GO SIGNAL-OFF ]" : "[ GO ONLINE ]"}
+                </button>
+              </div>
+            </div>
+
+            {/* Save Button */}
+            <button
+              onClick={handleSaveProfile}
+              disabled={savingProfile}
+              className="w-full py-3 bg-white text-black font-mono text-xs tracking-widest uppercase font-bold hover:bg-neutral-200 transition-colors cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40"
+            >
+              {savingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : "[ SAVE PROFILE CHANGES ]"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Share Profile Modal */}
       {shareModalOpen && (
