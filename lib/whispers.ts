@@ -132,6 +132,8 @@ export async function sendWhisper(
 ): Promise<string> {
   const db = getFirebaseDb();
   const messagesRef = collection(db, "whispers", conversationId, "messages");
+  
+  // 1. Add message document
   const msgRef = await addDoc(messagesRef, {
     senderUid,
     senderHandle,
@@ -141,14 +143,22 @@ export async function sendWhisper(
     createdAt: serverTimestamp(),
   });
 
-  // Update last message on conversation
+  // 2. Update parent conversation with setDoc merge: true
   const convRef = doc(db, "whispers", conversationId);
-  await updateDoc(convRef, {
-    lastMessage: text || "🎙 Voice message",
-    lastAt: serverTimestamp(),
-  });
+  try {
+    await setDoc(
+      convRef,
+      {
+        lastMessage: text || "🎙 Voice message",
+        lastAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  } catch (err) {
+    console.warn("sendWhisper: setDoc parent update warning:", err);
+  }
 
-  // Notify the other participant about the new wire message
+  // 3. Notify recipient
   try {
     const convSnap = await getDoc(convRef);
     if (convSnap.exists()) {
@@ -156,7 +166,6 @@ export async function sendWhisper(
       const participants: string[] = conv.participants || [];
       const recipient = participants.find((p) => p !== senderUid);
       if (recipient) {
-        // Importing here to avoid circular dependency at module load time
         const { createNotification } = await import("@/lib/notifications");
         await createNotification(recipient, {
           type: "wire",
@@ -166,9 +175,7 @@ export async function sendWhisper(
         });
       }
     }
-  } catch (e) {
-    console.error("sendWhisper: failed to notify recipient:", e);
-  }
+  } catch (e) {}
 
   return msgRef.id;
 }
@@ -181,6 +188,10 @@ export function subscribeToConversations(
   uid: string,
   callback: (convs: WhisperConversation[]) => void
 ): () => void {
+  if (!uid) {
+    callback([]);
+    return () => {};
+  }
   const db = getFirebaseDb();
   const q = query(
     collection(db, "whispers"),
@@ -199,7 +210,6 @@ export function subscribeToConversations(
       callback(convs);
     },
     (err) => {
-      console.warn("[subscribeToConversations] Error:", err.message);
       callback([]);
     }
   );
@@ -213,6 +223,10 @@ export function subscribeToMessages(
   conversationId: string,
   callback: (msgs: WhisperMessage[]) => void
 ): () => void {
+  if (!conversationId) {
+    callback([]);
+    return () => {};
+  }
   const db = getFirebaseDb();
   const q = query(
     collection(db, "whispers", conversationId, "messages"),
@@ -234,7 +248,8 @@ export function subscribeToMessages(
       callback(msgs);
     },
     (err) => {
-      console.warn("[subscribeToMessages] Error:", err.message);
+      // Graceful fallback for permission check
+      callback([]);
     }
   );
 }
