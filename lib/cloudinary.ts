@@ -148,6 +148,7 @@ export async function uploadImage(
  * Ensures a Cloudinary audio URL is directly playable by:
  * 1. Converting /raw/upload/ to /video/upload/ (legacy path fix)
  * 2. Stripping transformation segments that break HTTP range requests
+ * 3. Ensuring HTTPS protocol to avoid mixed content errors
  *
  * e.g. https://res.cloudinary.com/x/raw/upload/v1/foo.webm
  *   → https://res.cloudinary.com/x/video/upload/v1/foo.webm
@@ -163,8 +164,11 @@ export function getPlayableUrl(rawUrl: string): string {
   // Blob URLs are local — return as-is
   if (rawUrl.startsWith("blob:")) return rawUrl;
   
+  // Ensure HTTPS to avoid mixed content errors
+  let url = rawUrl.replace(/^http:/, "https:");
+  
   // Fix legacy /raw/upload/ path to /video/upload/
-  let url = rawUrl.replace(/\/raw\/upload\//g, "/video/upload/");
+  url = url.replace(/\/raw\/upload\//g, "/video/upload/");
   
   // Strip Cloudinary transformation segments (e.g. /f_mp3,q_auto/)
   url = url.replace(/\/[a-z_,;:0-9]+(?:\/[a-z_,;:0-9]+)*\//i, (match) => {

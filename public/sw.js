@@ -33,6 +33,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Skip Cloudinary URLs to avoid mixed content and caching large audio files
+  if (event.request.url.includes('cloudinary.com')) {
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
