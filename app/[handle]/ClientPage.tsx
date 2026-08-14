@@ -71,6 +71,10 @@ function Waveform({ playing }: { playing: boolean }) {
   );
 }
 
+// Global Audio Singleton Manager — ensures only one audio echo plays at a time
+let globalHandleAudioInstance: HTMLAudioElement | null = null;
+let globalHandleAudioPauseHandler: (() => void) | null = null;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // MINI AUDIO PLAYER
 // ─────────────────────────────────────────────────────────────────────────────
@@ -81,9 +85,6 @@ function MiniPlayer({ audioUrl, duration, durationSec }: { audioUrl: string; dur
   const [loading, setLoading] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // CRITICAL FIX: create Audio on mount, set preload=auto, do NOT inject
-  // Cloudinary transformations — they cause range-request streaming failures
-  // that stop playback after ~1 second.
   useEffect(() => {
     if (!audioUrl) return;
     const a = new Audio();
@@ -93,12 +94,28 @@ function MiniPlayer({ audioUrl, duration, durationSec }: { audioUrl: string; dur
       if (isFinite(a.duration) && a.duration > 0) setDur(Math.ceil(a.duration));
     });
     a.addEventListener("timeupdate", () => setCurrent(a.currentTime));
-    a.addEventListener("ended",       () => { setPlaying(false); setCurrent(0); a.currentTime = 0; });
-    a.addEventListener("playing",     () => { setPlaying(true); setLoading(false); });
-    a.addEventListener("error",       () => { setPlaying(false); setLoading(false); });
-    a.src = audioUrl; // raw URL — no transformation injection
+    a.addEventListener("ended", () => {
+      setPlaying(false);
+      setCurrent(0);
+      a.currentTime = 0;
+      if (globalHandleAudioInstance === a) {
+        globalHandleAudioInstance = null;
+        globalHandleAudioPauseHandler = null;
+      }
+    });
+    a.addEventListener("playing", () => { setPlaying(true); setLoading(false); });
+    a.addEventListener("error", () => { setPlaying(false); setLoading(false); });
+    a.src = audioUrl;
     a.load();
-    return () => { a.pause(); a.src = ""; audioRef.current = null; };
+    return () => {
+      a.pause();
+      a.src = "";
+      if (globalHandleAudioInstance === a) {
+        globalHandleAudioInstance = null;
+        globalHandleAudioPauseHandler = null;
+      }
+      audioRef.current = null;
+    };
   }, [audioUrl]);
 
   const toggle = async () => {
@@ -114,7 +131,14 @@ function MiniPlayer({ audioUrl, duration, durationSec }: { audioUrl: string; dur
         if (isFinite(a!.duration) && a!.duration > 0) setDur(Math.ceil(a!.duration));
       });
       a.addEventListener("timeupdate", () => setCurrent(a!.currentTime));
-      a.addEventListener("ended", () => { setPlaying(false); setCurrent(0); });
+      a.addEventListener("ended", () => {
+        setPlaying(false);
+        setCurrent(0);
+        if (globalHandleAudioInstance === a) {
+          globalHandleAudioInstance = null;
+          globalHandleAudioPauseHandler = null;
+        }
+      });
       a.addEventListener("playing", () => { setPlaying(true); setLoading(false); });
       a.addEventListener("error", () => { setPlaying(false); setLoading(false); });
     }
@@ -122,7 +146,22 @@ function MiniPlayer({ audioUrl, duration, durationSec }: { audioUrl: string; dur
     if (playing) {
       a.pause();
       setPlaying(false);
+      if (globalHandleAudioInstance === a) {
+        globalHandleAudioInstance = null;
+        globalHandleAudioPauseHandler = null;
+      }
     } else {
+      // Pause any currently playing audio on this profile
+      if (globalHandleAudioInstance && globalHandleAudioInstance !== a) {
+        try { globalHandleAudioInstance.pause(); } catch {}
+        if (globalHandleAudioPauseHandler) {
+          try { globalHandleAudioPauseHandler(); } catch {}
+        }
+      }
+
+      globalHandleAudioInstance = a;
+      globalHandleAudioPauseHandler = () => setPlaying(false);
+
       setLoading(true);
       try {
         if (!a.src || a.src === window.location.href) {
@@ -132,6 +171,11 @@ function MiniPlayer({ audioUrl, duration, durationSec }: { audioUrl: string; dur
         setPlaying(true);
       } catch (err) {
         console.error("Audio playback error:", err);
+        setPlaying(false);
+        if (globalHandleAudioInstance === a) {
+          globalHandleAudioInstance = null;
+          globalHandleAudioPauseHandler = null;
+        }
       } finally {
         setLoading(false);
       }

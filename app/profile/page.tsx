@@ -31,6 +31,10 @@ import { addTag, removeTag, getUserTags, getFreqMap, setSignalStatus, getSignalS
 import { subscribeToFollowers, subscribeToFollowing, type Follow } from "@/lib/follows";
 import OrbitLogo from "@/app/components/OrbitLogo";
 
+// Global Audio Singleton Manager — ensures only one audio echo plays at a time
+let globalAudioInstance: HTMLAudioElement | null = null;
+let globalAudioPauseHandler: (() => void) | null = null;
+
 // Simple in-profile audio player
 function MiniPlayer({ audioUrl, durationSec }: { audioUrl: string; durationSec: number }) {
   const [playing, setPlaying] = useState(false);
@@ -52,12 +56,28 @@ function MiniPlayer({ audioUrl, durationSec }: { audioUrl: string; durationSec: 
       setReady(true);
     });
     a.addEventListener("timeupdate", () => setCurrent(a.currentTime));
-    a.addEventListener("ended", () => { setPlaying(false); setCurrent(0); a.currentTime = 0; });
+    a.addEventListener("ended", () => {
+      setPlaying(false);
+      setCurrent(0);
+      a.currentTime = 0;
+      if (globalAudioInstance === a) {
+        globalAudioInstance = null;
+        globalAudioPauseHandler = null;
+      }
+    });
     a.addEventListener("error", () => setReady(false));
     a.src = getPlayableUrl(audioUrl);
     a.load();
 
-    return () => { a.pause(); a.src = ""; audioRef.current = null; };
+    return () => {
+      a.pause();
+      a.src = "";
+      if (globalAudioInstance === a) {
+        globalAudioInstance = null;
+        globalAudioPauseHandler = null;
+      }
+      audioRef.current = null;
+    };
   }, [audioUrl]);
 
   const toggle = async () => {
@@ -72,13 +92,35 @@ function MiniPlayer({ audioUrl, durationSec }: { audioUrl: string; durationSec: 
         if (isFinite(a!.duration) && a!.duration > 0) setDur(Math.ceil(a!.duration));
       });
       a.addEventListener("timeupdate", () => setCurrent(a!.currentTime));
-      a.addEventListener("ended", () => { setPlaying(false); setCurrent(0); });
+      a.addEventListener("ended", () => {
+        setPlaying(false);
+        setCurrent(0);
+        if (globalAudioInstance === a) {
+          globalAudioInstance = null;
+          globalAudioPauseHandler = null;
+        }
+      });
     }
 
     if (playing) {
       a.pause();
       setPlaying(false);
+      if (globalAudioInstance === a) {
+        globalAudioInstance = null;
+        globalAudioPauseHandler = null;
+      }
     } else {
+      // Pause any currently playing echo before playing this one
+      if (globalAudioInstance && globalAudioInstance !== a) {
+        try { globalAudioInstance.pause(); } catch {}
+        if (globalAudioPauseHandler) {
+          try { globalAudioPauseHandler(); } catch {}
+        }
+      }
+
+      globalAudioInstance = a;
+      globalAudioPauseHandler = () => setPlaying(false);
+
       setLoading(true);
       try {
         if (!a.src || a.src === window.location.href) {
@@ -88,6 +130,11 @@ function MiniPlayer({ audioUrl, durationSec }: { audioUrl: string; durationSec: 
         setPlaying(true);
       } catch (err) {
         console.error("Audio playback error:", err);
+        setPlaying(false);
+        if (globalAudioInstance === a) {
+          globalAudioInstance = null;
+          globalAudioPauseHandler = null;
+        }
       } finally {
         setLoading(false);
       }
