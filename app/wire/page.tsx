@@ -11,9 +11,11 @@
  * - P2P audio calls via WebRTC
  */
 
-import { useState, useEffect, useRef } from "react";
-import { Mic2, Lock, Plus, Search, X, Send, ChevronLeft, Loader2, Phone, PhoneOff } from "lucide-react";
+import { useState, useEffect, useRef, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import { Mic, Mic2, Lock, Plus, Search, X, Send, ChevronLeft, Loader2, Phone, PhoneOff, Play, Pause, Square } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
+import { uploadAudio } from "@/lib/cloudinary";
 import {
   startOrGetConversation,
   sendWhisper,
@@ -136,6 +138,82 @@ function ChatWindow({
   const [callActive, setCallActive] = useState(false);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+
+  // Voice Echo Recording states
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordElapsed, setRecordElapsed] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<any>(null);
+
+  const startVoiceRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunksRef.current = [];
+      const mr = new MediaRecorder(stream);
+      mediaRecorderRef.current = mr;
+
+      mr.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mr.start(100);
+      setIsRecording(true);
+      setRecordElapsed(0);
+
+      timerRef.current = setInterval(() => {
+        setRecordElapsed((prev) => {
+          if (prev >= 30) {
+            stopAndSendVoice();
+            return 30;
+          }
+          return prev + 1;
+        });
+      }, 1000);
+    } catch (err) {
+      console.error("[Wire] Microphone recording error:", err);
+    }
+  };
+
+  const stopAndSendVoice = async () => {
+    if (!mediaRecorderRef.current) return;
+    clearInterval(timerRef.current);
+    setIsRecording(false);
+    setSending(true);
+
+    try {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current.stream.getTracks().forEach((t) => t.stop());
+
+      await new Promise((res) => setTimeout(res, 200));
+
+      const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+      if (blob.size < 100) return;
+
+      const uploadRes = await uploadAudio(blob, `wire_voice_${Date.now()}.webm`);
+      const audioUrl = typeof uploadRes === "string" ? uploadRes : uploadRes?.secureUrl || "";
+      await sendWhisper(conv.id, myUid, myHandle, "🎙 Voice Message", audioUrl);
+    } catch (err) {
+      console.error("[Wire] Failed to send voice message:", err);
+    } finally {
+      setSending(false);
+      setRecordElapsed(0);
+      mediaRecorderRef.current = null;
+    }
+  };
+
+  const cancelVoiceRecording = () => {
+    clearInterval(timerRef.current);
+    if (mediaRecorderRef.current) {
+      try {
+        mediaRecorderRef.current.stop();
+        mediaRecorderRef.current.stream.getTracks().forEach((t) => t.stop());
+      } catch {}
+    }
+    setIsRecording(false);
+    setRecordElapsed(0);
+    mediaRecorderRef.current = null;
+  };
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -305,34 +383,85 @@ function ChatWindow({
               className={`flex ${msg.senderUid === myUid ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-[80%] px-3 py-2 ${
+                className={`max-w-[85%] px-3.5 py-2.5 space-y-1.5 ${
                   msg.senderUid === myUid
                     ? "bg-white text-black"
                     : "bg-neutral-900 text-white border border-neutral-800"
                 }`}
               >
-                <p className="font-mono text-xs">{msg.text}</p>
-                <p className="font-mono text-[9px] text-neutral-600 mt-1">{timeStr(msg.createdAt)}</p>
+                {msg.audioUrl ? (
+                  <div className="space-y-1.5 min-w-[200px]">
+                    <p className="font-mono text-xs font-bold flex items-center gap-1.5">
+                      <Mic className="w-3.5 h-3.5" /> VOICE ECHO
+                    </p>
+                    <audio src={msg.audioUrl} controls className="w-full h-8 accent-black" />
+                  </div>
+                ) : (
+                  <p className="font-mono text-xs">{msg.text}</p>
+                )}
+                <p className="font-mono text-[9px] text-neutral-500 tracking-widest uppercase">
+                  {timeStr(msg.createdAt)}
+                </p>
               </div>
             </div>
           ))
         )}
       </div>
 
+      {/* Voice Echo Recording Indicator Bar */}
+      {isRecording && (
+        <div className="p-3 bg-red-950/60 border-t border-red-900/60 flex items-center justify-between font-mono text-xs text-red-400">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
+            <span className="font-bold">RECORDING VOICE ECHO... {recordElapsed}s / 30s</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={cancelVoiceRecording}
+              className="px-2 py-1 border border-neutral-800 text-neutral-400 hover:text-white uppercase"
+            >
+              CANCEL
+            </button>
+            <button
+              onClick={stopAndSendVoice}
+              className="px-3 py-1 bg-red-600 text-white font-bold uppercase hover:bg-red-500"
+            >
+              STOP &amp; SEND
+            </button>
+          </div>
+        </div>
+      )}
+
       <form onSubmit={handleSend} className="p-4 border-t border-neutral-900 flex gap-2">
         <input
           type="text"
-          value={ input}
+          value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Send a wire..."
-          className="flex-1 bg-neutral-900 border border-neutral-800 px-3 py-2 font-mono text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white transition-colors"
+          disabled={isRecording}
+          className="flex-1 bg-neutral-900 border border-neutral-800 px-3 py-2 font-mono text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white transition-colors disabled:opacity-40"
         />
+
+        {/* Voice Echo Mic Button */}
+        {!isRecording && (
+          <button
+            type="button"
+            onClick={startVoiceRecording}
+            disabled={sending}
+            className="px-3 py-2 border border-neutral-700 text-neutral-300 hover:border-white hover:text-white font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
+            title="Record Voice Echo"
+          >
+            <Mic className="w-3.5 h-3.5 text-red-400" />
+            [ 🎙 VOICE ]
+          </button>
+        )}
+
         <button
           type="submit"
-          disabled={!input.trim() || sending}
-          className="px-4 py-2 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors cursor-pointer disabled:opacity-30 flex items-center gap-2"
+          disabled={!input.trim() || sending || isRecording}
+          className="px-4 py-2 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors cursor-pointer disabled:opacity-30 flex items-center gap-2 shrink-0 font-bold"
         >
-          {sending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+          {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
           SEND
         </button>
       </form>
@@ -340,8 +469,11 @@ function ChatWindow({
   );
 }
 
-export default function WirePage() {
+function WirePageContent() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const targetConvId = searchParams.get("c");
+
   const [conversations, setConversations] = useState<WhisperConversation[]>([]);
   const [activeConv, setActiveConv] = useState<WhisperConversation | null>(null);
   const [showNew, setShowNew] = useState(false);
@@ -354,6 +486,22 @@ export default function WirePage() {
     const unsub = subscribeToConversations(user.uid, (convs) => setConversations(convs));
     return () => unsub && unsub();
   }, [user]);
+
+  // Auto-select conversation from query param ?c=...
+  useEffect(() => {
+    if (!targetConvId) return;
+    const found = conversations.find((c) => c.id === targetConvId);
+    if (found) {
+      setActiveConv(found);
+    } else {
+      const db = getFirebaseDb();
+      getDoc(doc(db, "whispers", targetConvId)).then((snap) => {
+        if (snap.exists()) {
+          setActiveConv({ id: snap.id, ...snap.data() } as WhisperConversation);
+        }
+      });
+    }
+  }, [targetConvId, conversations]);
 
   const handleSearch = async () => {
     if (!searchQuery.trim() || !user) return;
@@ -372,7 +520,6 @@ export default function WirePage() {
     if (!user) return;
     try {
       const convId = await startOrGetConversation(user.uid, user.handle || "@ANON", targetUid, targetHandle);
-      // Fetch the full conversation object
       const db = getFirebaseDb();
       const convRef = doc(db, "whispers", convId);
       const convSnap = await getDoc(convRef);
@@ -479,15 +626,29 @@ export default function WirePage() {
             />
           ) : (
             <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <Mic2 className="w-12 h-12 text-neutral-800 mx-auto mb-4" />
+              <div className="text-center space-y-3">
+                <Mic2 className="w-12 h-12 text-neutral-800 mx-auto" />
                 <p className="text-xs text-neutral-600 tracking-widest uppercase">SELECT A WIRE</p>
-                <p className="text-[10px] text-neutral-700 mt-2">Choose a conversation to start messaging</p>
+                <p className="text-[10px] text-neutral-700">Choose a conversation or start a voice message</p>
               </div>
             </div>
           )}
         </div>
       </div>
     </div>
+  );
+}
+
+export default function WirePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black text-white flex items-center justify-center font-mono text-xs tracking-widest uppercase">
+        <div className="border border-neutral-800 p-6 animate-pulse">
+          [ LOADING WIRE CONSOLE... ]
+        </div>
+      </div>
+    }>
+      <WirePageContent />
+    </Suspense>
   );
 }
