@@ -15,7 +15,7 @@ import AgoraRTC from "agora-rtc-sdk-ng";
 import { useAuth } from "@/app/components/AuthProvider";
 import BroadcastModal from "@/app/components/BroadcastModal";
 import { AGORA_APP_ID } from "@/lib/agora";
-import { getRoom, subscribeToRoom, subscribeToRoomParticipants, addParticipant, removeParticipant, sendRoomChatMessage, subscribeToRoomChat, raiseHand, lowerHand, promoteToSpeaker, demoteFromSpeaker, muteParticipant, unmuteParticipant, sendRoomReaction, subscribeToRoomReactions, bookmarkRoom, removeRoomBookmark, updateRoomOpenMic, updateRoomTransmit, type Room, type RoomParticipant } from "@/lib/rooms";
+import { getRoom, subscribeToRoom, subscribeToRoomParticipants, addParticipant, removeParticipant, sendRoomChatMessage, subscribeToRoomChat, raiseHand, lowerHand, promoteToSpeaker, demoteFromSpeaker, muteParticipant, unmuteParticipant, sendRoomReaction, subscribeToRoomReactions, bookmarkRoom, removeRoomBookmark, updateRoomOpenMic, updateRoomTransmit, hostOverrideBan, endRoom, type Room, type RoomParticipant } from "@/lib/rooms";
 import { collection, query, where, getDocs, orderBy, limit, doc, getDoc } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 import { followUser, unfollowUser, isFollowing } from "@/lib/follows";
@@ -236,6 +236,10 @@ function RoomContent({ roomId }: RoomClientProps) {
               await navigator.mediaDevices.getUserMedia({ audio: true });
               const track = await AgoraRTC.createMicrophoneAudioTrack();
               localTrackRef.current = track;
+              if (micMuted) {
+                await track.setMuted(true);
+                await track.setEnabled(false);
+              }
               await client.publish([track]);
               console.log("[Room] Role → host: mic published");
             } catch (e) { console.error("[Room] Promote mic error:", e); }
@@ -262,12 +266,71 @@ function RoomContent({ roomId }: RoomClientProps) {
     switchRole();
   }, [isSpeaker]); // Fires whenever Firestore promotes/demotes this user
 
-  // Mute/unmute local track
+  // Mute/unmute local track cleanly both in SDK track and Firestore
   useEffect(() => {
     if (localTrackRef.current) {
-      localTrackRef.current.setMuted(micMuted);
+      localTrackRef.current.setMuted(micMuted).catch(() => {});
+      localTrackRef.current.setEnabled(!micMuted).catch(() => {});
     }
-  }, [micMuted]);
+    if (user?.uid && roomId) {
+      if (micMuted) {
+        muteParticipant(roomId, user.uid).catch(() => {});
+      } else {
+        unmuteParticipant(roomId, user.uid).catch(() => {});
+      }
+    }
+  }, [micMuted, user?.uid, roomId]);
+
+  // 5-Minute Host Expiry Auto-Close
+  const hostMissingSinceRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!room?.hostUid || !room?.isActive) return;
+
+    const hostPresent = participants.some((p) => p.uid === room.hostUid);
+
+    if (hostPresent) {
+      hostMissingSinceRef.current = null;
+    } else {
+      if (!hostMissingSinceRef.current) {
+        hostMissingSinceRef.current = Date.now();
+      }
+
+      const interval = setInterval(() => {
+        if (!hostMissingSinceRef.current) return;
+        const elapsed = Date.now() - hostMissingSinceRef.current;
+        if (elapsed >= 5 * 60 * 1000) { // 5 minutes
+          clearInterval(interval);
+          endRoom(roomId).catch(() => {});
+          alert("This room was closed permanently because the host left for more than 5 minutes.");
+          router.push("/rooms");
+        }
+      }, 10000);
+
+      return () => clearInterval(interval);
+    }
+  }, [participants, room?.hostUid, room?.isActive, roomId, router]);
+
+  const handleKickUser = async (targetUid: string) => {
+    if (!user || user.uid !== room?.hostUid) return;
+    try {
+      await removeParticipant(roomId, targetUid);
+      setProfileModal(null);
+    } catch (e) {
+      console.error("[Room] Kick user error:", e);
+    }
+  };
+
+  const handleBanUser = async (targetUid: string) => {
+    if (!user || user.uid !== room?.hostUid) return;
+    if (!window.confirm("Are you sure you want to ban this user from the room?")) return;
+    try {
+      await hostOverrideBan(roomId, targetUid, user.uid, "Host moderation ban");
+      setProfileModal(null);
+    } catch (e) {
+      console.error("[Room] Ban user error:", e);
+    }
+  };
 
   // ── Auto-join room as participant when entering ───────────────────────────
   // Host is added in createRoom(); guests are auto-added here as listeners.
@@ -1240,6 +1303,64 @@ function RoomContent({ roomId }: RoomClientProps) {
                           <p className="font-mono text-[10px] text-neutral-600 mt-1">{post.pulseCount || 0} PULSES</p>
                         </div>
                       ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Host Moderation Controls */}
+                {user && user.uid === room?.hostUid && profileModal.uid !== user.uid && (
+                  <div className="border border-red-900/60 bg-red-950/20 p-3 space-y-2 rounded">
+                    <p className="font-mono text-[10px] tracking-widest text-red-400 uppercase font-semibold">
+                      // HOST MODERATION ACTIONS
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {participants.find(p => p.uid === profileModal.uid)?.isSpeaker ? (
+                        <button
+                          onClick={() => {
+                            handleDemoteSpeaker(profileModal.uid);
+                            setProfileModal(null);
+                          }}
+                          className="px-2 py-1.5 font-mono text-xs border border-yellow-800 text-yellow-400 hover:bg-yellow-950 uppercase"
+                        >
+                          🎧 DEMOTE
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            handlePromoteSpeaker(profileModal.uid);
+                            setProfileModal(null);
+                          }}
+                          className="px-2 py-1.5 font-mono text-xs border border-green-800 text-green-400 hover:bg-green-950 uppercase"
+                        >
+                          🎙️ PROMOTE
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => {
+                          const p = participants.find(p => p.uid === profileModal.uid);
+                          if (p?.isMuted) handleUnmute(profileModal.uid);
+                          else handleMute(profileModal.uid);
+                          setProfileModal(null);
+                        }}
+                        className="px-2 py-1.5 font-mono text-xs border border-neutral-700 text-neutral-300 hover:border-white uppercase"
+                      >
+                        {participants.find(p => p.uid === profileModal.uid)?.isMuted ? '🔊 UNMUTE' : '🔇 MUTE'}
+                      </button>
+
+                      <button
+                        onClick={() => handleKickUser(profileModal.uid)}
+                        className="px-2 py-1.5 font-mono text-xs border border-red-800 text-red-400 hover:bg-red-950 uppercase"
+                      >
+                        🚪 KICK
+                      </button>
+
+                      <button
+                        onClick={() => handleBanUser(profileModal.uid)}
+                        className="px-2 py-1.5 font-mono text-xs bg-red-950 text-red-400 border border-red-700 hover:bg-red-900 uppercase font-bold"
+                      >
+                        ⛔ BAN
+                      </button>
                     </div>
                   </div>
                 )}
