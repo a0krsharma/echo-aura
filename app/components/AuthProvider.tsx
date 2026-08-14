@@ -33,13 +33,14 @@ import {
   type User as FirebaseUser,
 } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase";
-import { getOrCreateUserDoc, type EchoUser } from "@/lib/userDoc";
+import { getOrCreateUserDoc, type EchoUser, type UserSettings, DEFAULT_SETTINGS } from "@/lib/userDoc";
 import { initializeChat, closeChat } from "@/lib/agoraChat";
 
 // ─── Context ─────────────────────────────────────────────────────────────────
 interface AuthContextValue {
   user:             EchoUser     | null;
   firebaseUser:     FirebaseUser | null;
+  settings:         UserSettings | null;
   isLoading:        boolean;
   error:            string       | null;
   signInWithGoogle: ()           => Promise<void>;
@@ -53,6 +54,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user,         setUser]         = useState<EchoUser     | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [settings,     setSettings]     = useState<UserSettings | null>(null);
   const [isLoading,    setIsLoading]    = useState(true);
   const [error,        setError]        = useState<string | null>(null);
 
@@ -82,6 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const echoUser = await getOrCreateUserDoc(fbUser);
           setUser(echoUser);
+          setSettings(echoUser.settings || { ...DEFAULT_SETTINGS });
           
           // Initialize Agora Chat with Firebase Auth UID
           try {
@@ -97,6 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } else {
         setUser(null);
+        setSettings(null);
         // Close Agora Chat connection when user signs out
         await closeChat();
       }
@@ -155,7 +159,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, firebaseUser, isLoading, error, signInWithGoogle, signOut, clearError }}
+      value={{ user, firebaseUser, settings, isLoading, error, signInWithGoogle, signOut, clearError }}
     >
       {children}
     </AuthContext.Provider>

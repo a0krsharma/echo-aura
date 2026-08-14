@@ -73,12 +73,23 @@ service cloud.firestore {
     }
 
     // ── NOTIFICATIONS ────────────────────────────────────────────────────
-    match /notifications/{notifId} {
+    // lib/notifications.ts writes to notifications/{uid}/items/{notifId} subcollection
+    match /notifications/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+
+      match /items/{notifId} {
+        allow read:   if request.auth != null && request.auth.uid == uid;
+        allow create: if request.auth != null; // any auth user can notify another
+        allow update: if request.auth != null && request.auth.uid == uid;
+        allow delete: if request.auth != null && request.auth.uid == uid;
+      }
+    }
+
+    // ── NOTIFICATIONS (legacy flat collection — keep for backward compat) ──
+    match /notifications_flat/{notifId} {
       allow read:   if request.auth != null
                     && resource.data.toUid == request.auth.uid;
-      allow create: if request.auth != null
-                    && request.resource.data.toUid != request.auth.uid
-                    && request.resource.data.fromUid == request.auth.uid;
+      allow create: if request.auth != null;
       allow update: if request.auth != null
                     && resource.data.toUid == request.auth.uid;
       allow delete: if request.auth != null
@@ -100,11 +111,11 @@ service cloud.firestore {
       // Whisper messages sub-collection
       match /messages/{messageId} {
         allow read:   if request.auth != null
-                      && request.auth.uid in resource.data.readBy;
+                      && request.auth.uid in get(/databases/$(database)/documents/whispers/$(conversationId)).data.participants;
         allow create: if request.auth != null
-                      && request.auth.uid in request.resource.data.participants;
+                      && request.auth.uid in get(/databases/$(database)/documents/whispers/$(conversationId)).data.participants;
         allow update: if request.auth != null
-                      && request.auth.uid in resource.data.readBy;
+                      && request.auth.uid in get(/databases/$(database)/documents/whispers/$(conversationId)).data.participants;
         allow delete: if false;
       }
 
@@ -128,11 +139,11 @@ service cloud.firestore {
 
       match /messages/{messageId} {
         allow read:   if request.auth != null
-                      && request.auth.uid in resource.data.readBy;
+                      && request.auth.uid in get(/databases/$(database)/documents/wire/$(conversationId)).data.participants;
         allow create: if request.auth != null
-                      && request.auth.uid in request.resource.data.participants;
+                      && request.auth.uid in get(/databases/$(database)/documents/wire/$(conversationId)).data.participants;
         allow update: if request.auth != null
-                      && request.auth.uid in resource.data.readBy;
+                      && request.auth.uid in get(/databases/$(database)/documents/wire/$(conversationId)).data.participants;
         allow delete: if false;
       }
 
@@ -208,6 +219,21 @@ service cloud.firestore {
                     && request.auth.uid == userId;
       allow delete: if request.auth != null
                     && request.auth.uid == userId;
+    }
+
+    // ── POST COMMENTS ─────────────────────────────────────────────
+    match /post_comments/{commentId} {
+      allow read: if true;
+      allow create: if request.auth != null
+                    && request.resource.data.authorUid == request.auth.uid;
+      allow update: if request.auth != null; // likes/unlike increment
+      allow delete: if request.auth != null
+                    && resource.data.authorUid == request.auth.uid;
+    }
+
+    // ── BREAKOUT ROOMS ────────────────────────────────────────────
+    match /breakout_rooms/{breakoutId} {
+      allow read, write: if request.auth != null;
     }
 
   }

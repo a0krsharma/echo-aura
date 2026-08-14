@@ -2,11 +2,14 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { Search, X, MapPin, MessageSquare, Radio } from "lucide-react";
-import { collection, query, where, onSnapshot, getDocs } from "firebase/firestore";
+import { useRouter } from "next/navigation";
+import { Search, X, MapPin, MessageSquare, Radio, Users, Plus } from "lucide-react";
+import { collection, query, where, onSnapshot, getDocs, doc, setDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 import { EchoUser } from "@/lib/userDoc";
 import { useAuth } from "@/app/components/AuthProvider";
+import { createRoom } from "@/lib/rooms";
+import { createNotification } from "@/lib/notifications";
 
 interface OpenUser {
   uid: string;
@@ -14,9 +17,11 @@ interface OpenUser {
   topic: string;
   auraScore: number;
   lastActive: any;
+  photoUrl?: string;
 }
 
 export default function RadarPage() {
+  const router = useRouter();
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("ALL");
@@ -42,6 +47,7 @@ export default function RadarPage() {
           topic: data.topic,
           auraScore: data.auraScore || 0,
           lastActive: data.lastActive,
+          photoUrl: data.photoUrl || "",
         });
       });
       setOpenUsers(users);
@@ -58,38 +64,26 @@ export default function RadarPage() {
 
     const updateOpenStatus = async () => {
       const db = getFirebaseDb();
-      const openUsersRef = collection(db, "openUsers");
+      const userRef = doc(db, "openUsers", user.uid);
       
       if (isOpen && myTopic.trim()) {
-        // Add/update user to open users
-        const userDoc = {
+        // Write this user to openUsers collection
+        await setDoc(userRef, {
           uid: user.uid,
           handle: user.handle || "@ANON",
           topic: myTopic.trim(),
           auraScore: user.auraScore || 0,
-          lastActive: new Date(),
-        };
-        
-        // Check if already exists
-        const existingQuery = query(openUsersRef, where("uid", "==", user.uid));
-        const snapshot = await getDocs(existingQuery);
-        
-        if (snapshot.empty) {
-          // Add new document with custom ID
-          await getDocs(query(openUsersRef)); // Force refresh
-        }
+          lastActive: serverTimestamp(),
+          photoUrl: user.photoUrl || "",
+        });
       } else {
         // Remove user from open users
-        const existingQuery = query(openUsersRef, where("uid", "==", user.uid));
-        const snapshot = await getDocs(existingQuery);
-        snapshot.forEach((doc) => {
-          // In a real app, you'd delete the doc here
-        });
+        try { await deleteDoc(userRef); } catch (e) { /* doc may not exist */ }
       }
     };
 
     updateOpenStatus();
-  }, [user, isOpen, myTopic]);
+  }, [user?.uid, isOpen, myTopic]);
 
   const filteredUsers = searchQuery
     ? openUsers.filter((u) => 
@@ -104,6 +98,33 @@ export default function RadarPage() {
     } else {
       setIsOpen(false);
       setMyTopic("");
+    }
+  };
+
+  const handleInviteToRoom = async (targetUid: string, targetHandle: string) => {
+    if (!user) return;
+    try {
+      const roomId = await createRoom({
+        name: `${user.handle} × ${targetHandle}`,
+        description: `Spontaneous room from Radar`,
+        hostUid: user.uid,
+        hostHandle: user.handle || "@ANON",
+        maxParticipants: 10,
+        isPublic: true,
+        category: "CASUAL",
+        tags: ["RADAR"],
+      });
+      await createNotification(targetUid, {
+        type: "stage",
+        fromUid: user.uid,
+        fromHandle: user.handle || "@ANON",
+        roomId,
+        roomName: `${user.handle} × ${targetHandle}`,
+        text: `${user.handle} invited you to a room.`,
+      });
+      router.push(`/room/${roomId}`);
+    } catch (e) {
+      console.error("[Radar] Failed to create room:", e);
     }
   };
 
@@ -200,34 +221,61 @@ export default function RadarPage() {
         <section className="space-y-4">
           <p className="font-mono text-xs tracking-widest text-neutral-700">// PEOPLE OPEN FOR TALK</p>
           {filteredUsers.length === 0 ? (
-            <div className="py-8 border border-neutral-900 p-6 text-center font-mono text-xs text-neutral-600 tracking-widest uppercase">
-              NO ONE OPEN FOR TALK RIGHT NOW.
+            <div className="py-16 border border-dashed border-neutral-800 p-8 text-center space-y-4">
+              <div className="w-12 h-12 mx-auto border border-neutral-800 flex items-center justify-center">
+                <Radio className="w-5 h-5 text-neutral-600" />
+              </div>
+              <div className="space-y-2">
+                <p className="font-mono text-xs tracking-widest text-neutral-500 uppercase">NO SIGNALS DETECTED</p>
+                <p className="font-mono text-[10px] tracking-widest text-neutral-700">BE THE FIRST TO GO OPEN AND START A CONVERSATION</p>
+              </div>
+              {user && !isOpen && (
+                <button
+                  onClick={handleToggleOpen}
+                  className="font-mono text-xs tracking-widest uppercase px-6 py-3 border border-white text-white hover:bg-white hover:text-black transition-colors cursor-pointer"
+                >
+                  [ GO OPEN ]
+                </button>
+              )}
             </div>
           ) : (
             <div className="divide-y divide-neutral-900">
               {filteredUsers.map((u) => (
                 <div key={u.uid} className="flex items-center justify-between py-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-3 h-3 text-neutral-600" />
-                      <p className="font-mono text-xs text-white tracking-widest">
-                        {u.handle}
-                      </p>
+                  <div className="flex items-center gap-3">
+                    {/* Avatar */}
+                    {u.photoUrl ? (
+                      <img src={u.photoUrl} alt="" className="w-8 h-8 rounded-full object-cover border border-neutral-800" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full border border-neutral-800 flex items-center justify-center bg-neutral-900">
+                        <span className="font-mono text-[10px] text-neutral-500">{u.handle.replace('@','').slice(0,2).toUpperCase()}</span>
+                      </div>
+                    )}
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-3 h-3 text-neutral-600" />
+                        <p className="font-mono text-xs text-white tracking-widest">{u.handle}</p>
+                      </div>
+                      <p className="font-mono text-[10px] text-neutral-400 ml-5">TOPIC: {u.topic}</p>
+                      <p className="font-mono text-[10px] text-neutral-600 ml-5">[ AURA ]: {u.auraScore || 0}</p>
                     </div>
-                    <p className="font-mono text-[10px] text-neutral-400 ml-5">
-                      TOPIC: {u.topic}
-                    </p>
-                    <p className="font-mono text-[10px] text-neutral-600 ml-5">
-                      AURA: {u.auraScore || 0}
-                    </p>
                   </div>
-                  <Link
-                    href={`/${u.handle.replace("@", "")}`}
-                    className="flex items-center gap-2 font-mono text-xs border border-neutral-800 px-3 py-2 text-neutral-400 hover:border-white hover:text-white uppercase transition-colors cursor-pointer"
-                  >
-                    <MessageSquare className="w-3 h-3" />
-                    [ WIRE ]
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    {user && u.uid !== user.uid && (
+                      <button
+                        onClick={() => handleInviteToRoom(u.uid, u.handle)}
+                        className="flex items-center gap-1.5 font-mono text-[10px] border border-neutral-800 px-2 py-1.5 text-neutral-500 hover:border-white hover:text-white uppercase transition-colors cursor-pointer tracking-widest"
+                      >
+                        <Radio className="w-3 h-3" />[ ROOM ]
+                      </button>
+                    )}
+                    <Link
+                      href={`/wire?with=${u.uid}&handle=${encodeURIComponent(u.handle)}`}
+                      className="flex items-center gap-1.5 font-mono text-xs border border-neutral-800 px-3 py-2 text-neutral-400 hover:border-white hover:text-white uppercase transition-colors cursor-pointer"
+                    >
+                      <MessageSquare className="w-3 h-3" />[ WIRE ]
+                    </Link>
+                  </div>
                 </div>
               ))}
             </div>

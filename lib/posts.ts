@@ -42,6 +42,7 @@ export interface PostItem {
   orbitedBy?:      string[];
   orbitCount?:     number;
   reverbCount?:    number;
+  commentCount?:   number;
   duration?:       string;
   durationSec?:    number;
   reverbOf?:       string;

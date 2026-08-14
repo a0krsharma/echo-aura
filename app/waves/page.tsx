@@ -203,7 +203,7 @@ function WaveCard({ post, index, active, muted, onPulse, onReverb, onShare, onPr
         </p>
         <div className="flex items-center gap-2 pointer-events-none">
           <span className={`font-mono text-[10px] tracking-widest uppercase px-2 py-0.5 rounded-full ${tag}`}>
-            WAVE
+            [ WAVES ]
           </span>
         </div>
       </div>

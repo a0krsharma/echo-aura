@@ -15,7 +15,7 @@ import AgoraRTC from "agora-rtc-sdk-ng";
 import { useAuth } from "@/app/components/AuthProvider";
 import BroadcastModal from "@/app/components/BroadcastModal";
 import { AGORA_APP_ID } from "@/lib/agora";
-import { getRoom, subscribeToRoom, subscribeToRoomParticipants, removeParticipant, sendRoomChatMessage, subscribeToRoomChat, raiseHand, lowerHand, promoteToSpeaker, demoteFromSpeaker, muteParticipant, unmuteParticipant, sendRoomReaction, subscribeToRoomReactions, bookmarkRoom, removeRoomBookmark, updateRoomOpenMic, updateRoomTransmit, type Room, type RoomParticipant } from "@/lib/rooms";
+import { getRoom, subscribeToRoom, subscribeToRoomParticipants, addParticipant, removeParticipant, sendRoomChatMessage, subscribeToRoomChat, raiseHand, lowerHand, promoteToSpeaker, demoteFromSpeaker, muteParticipant, unmuteParticipant, sendRoomReaction, subscribeToRoomReactions, bookmarkRoom, removeRoomBookmark, updateRoomOpenMic, updateRoomTransmit, type Room, type RoomParticipant } from "@/lib/rooms";
 import { collection, query, where, getDocs, orderBy, limit, doc, getDoc } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 import { followUser, unfollowUser, isFollowing } from "@/lib/follows";
@@ -56,97 +56,138 @@ function RoomContent({ roomId }: RoomClientProps) {
   const [previousPendingRequests, setPreviousPendingRequests] = useState(0);
 
   // Agora setup (raw SDK)
-  const [token, setToken] = useState<string | null>(null);
   const [micMuted, setMicMuted] = useState(false);
   const [speakingUsers, setSpeakingUsers] = useState<Set<string>>(new Set());
   const clientRef = useRef<any>(null);
   const localTrackRef = useRef<any>(null);
+  const silenceTimerRef = useRef<any>(null);      // VAD: 30s silence → auto-demote
+  const isSpeakerRef = useRef(false);              // stale-closure-safe copy of isSpeaker
+  const agoraInitializedRef = useRef(false);       // guard against double-init
 
-  // Initialize Agora client and join channel only for speakers/hosts
+  // Keep isSpeakerRef in sync so volume-indicator callback always sees latest value
   useEffect(() => {
-    // Only initialize Agora when the current user is a speaker (or host) and room has an agoraChannel
-    if (!user || !room?.agoraChannel || !isSpeaker) return;
+    isSpeakerRef.current = isSpeaker;
+  }, [isSpeaker]);
+
+  // ── Initialize Agora for ALL users (listeners → audience, speakers → host) ──
+  // Runs once when room channel is available. Role transitions handled in the
+  // separate effect below.
+  useEffect(() => {
+    if (!user?.uid || !room?.agoraChannel) return;
+    if (agoraInitializedRef.current) return; // guard double-init on re-renders
+    agoraInitializedRef.current = true;
 
     let mounted = true;
 
     async function setupAgora() {
       try {
-        if (!room?.agoraChannel || !user?.uid) return;
+        console.log("[Room] Initialising Agora for channel:", room!.agoraChannel);
 
-        console.log("[Room] Setting up Agora for channel:", room.agoraChannel);
-
-        // Request microphone permission first
-        try {
-          await navigator.mediaDevices.getUserMedia({ audio: true });
-          console.log("[Room] Microphone permission granted");
-        } catch (permError) {
-          console.error("[Room] Microphone permission denied:", permError);
-          alert("Microphone permission is required for audio in rooms. Please allow microphone access and refresh.");
-          return;
-        }
-
-        // Create client in live (interactive live streaming) mode so roles (host/audience) are supported
+        // Create client in live mode (supports both host and audience roles)
         const client = AgoraRTC.createClient({ codec: "vp8", mode: "live" });
         clientRef.current = client;
 
-        // Fetch token
-        const response = await fetch(
-          `/api/agora/token?channel=${room.agoraChannel}&uid=${user.uid}`
-        );
-        const data = await response.json();
-        const agoraToken = data.token || null;
-
-        // Join channel
-        await client.join(AGORA_APP_ID, room.agoraChannel, agoraToken || undefined, user.uid);
-        console.log("[Room] Joined Agora channel");
-
-        // Set role to host for speakers
+        // Fetch Agora token
+        let agoraToken: string | null = null;
         try {
-          client.setClientRole && (await client.setClientRole("host"));
+          const res = await fetch(`/api/agora/token?channel=${room!.agoraChannel}&uid=${user!.uid}`);
+          const data = await res.json();
+          agoraToken = data.token || null;
         } catch (e) {
-          console.warn("[Room] setClientRole failed or not supported in this SDK build:", e);
+          console.warn("[Room] Token fetch failed, joining without token:", e);
         }
 
-        // Create and publish local audio track
-        const localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-        localTrackRef.current = localAudioTrack;
+        // Set initial Agora role based on current speaker status
+        const initialRole = isSpeakerRef.current ? "host" : "audience";
+        try { await client.setClientRole(initialRole); } catch (e) {
+          console.warn("[Room] setClientRole failed:", e);
+        }
 
-        await client.publish([localAudioTrack]);
-        console.log("[Room] Published local audio track");
+        // Join channel — ALL users join (listeners as audience, speakers as host)
+        await client.join(AGORA_APP_ID, room!.agoraChannel, agoraToken || null, user!.uid);
+        if (!mounted) { try { client.leave(); } catch(e){} return; }
+        console.log("[Room] Joined Agora channel as", initialRole);
 
-        // Subscribe to remote users
+        // If entering as a speaker (host of room), request mic and publish immediately
+        if (isSpeakerRef.current) {
+          await publishLocalMic(client, mounted);
+        }
+
+        // Enable volume indicator for VAD (fires every 200ms)
+        try { client.enableAudioVolumeIndicator(); } catch (e) { /* SDK version may differ */ }
+
+        // ── Remote audio subscription ────────────────────────────────────
         client.on("user-published", async (remoteUser: any, mediaType: string) => {
-          if (mediaType === "audio") {
-            await client.subscribe(remoteUser, mediaType);
-            console.log("[Room] Subscribed to remote user:", remoteUser.uid);
-            // Play the remote audio track
-            remoteUser.audioTrack.play();
-            console.log("[Room] Playing remote audio for:", remoteUser.uid);
-
-            // Track speaking users (volume-indicator may not be supported; keep basic detection)
+          if (mediaType === "audio" && mounted) {
             try {
-              remoteUser.audioTrack.on && remoteUser.audioTrack.on("volume-indicator", (volume: number) => {
-                if (volume > 5 && mounted) {
-                  setSpeakingUsers(prev => new Set([...prev, remoteUser.uid]));
-                }
-              });
+              await client.subscribe(remoteUser, mediaType);
+              remoteUser.audioTrack?.play();
+              console.log("[Room] Subscribed & playing remote audio:", remoteUser.uid);
             } catch (e) {
-              // ignore
+              console.warn("[Room] Subscribe error:", e);
             }
           }
         });
 
         client.on("user-unpublished", (remoteUser: any) => {
-          console.log("[Room] Remote user unpublished:", remoteUser.uid);
           setSpeakingUsers(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(remoteUser.uid);
-            return newSet;
+            const s = new Set(prev); s.delete(String(remoteUser.uid)); return s;
           });
+        });
+
+        // ── VAD: volume-indicator → speaking display + 30s silence auto-demote ──
+        client.on("volume-indicator", (volumes: Array<{uid: string|number; level: number}>) => {
+          if (!mounted) return;
+
+          // Update the speaking-users set for UI glows
+          const speaking = new Set<string>();
+          volumes.forEach(({ uid, level }) => { if (level > 5) speaking.add(String(uid)); });
+          setSpeakingUsers(speaking);
+
+          // Auto-demote: only for non-host speakers who go silent for 30s
+          if (isSpeakerRef.current && user?.uid && room?.hostUid !== user?.uid) {
+            const me = volumes.find(v => String(v.uid) === user!.uid);
+            const isTalking = me && me.level > 5;
+
+            if (!isTalking) {
+              // Start silence countdown if not already running
+              if (!silenceTimerRef.current) {
+                silenceTimerRef.current = setTimeout(async () => {
+                  silenceTimerRef.current = null;
+                  if (isSpeakerRef.current && user?.uid && mounted) {
+                    console.log("[Room] VAD: 30s silence — auto-demoting to listener");
+                    try { await demoteFromSpeaker(room!.id, user!.uid); } catch (e) {}
+                  }
+                }, 30000); // 30 seconds
+              }
+            } else {
+              // User is talking — reset silence timer
+              if (silenceTimerRef.current) {
+                clearTimeout(silenceTimerRef.current);
+                silenceTimerRef.current = null;
+              }
+            }
+          }
         });
 
       } catch (error) {
         console.error("[Room] Agora setup error:", error);
+        agoraInitializedRef.current = false; // allow retry on next render
+      }
+    }
+
+    // Helper: request mic permission and publish local audio track
+    async function publishLocalMic(client: any, isMounted: boolean) {
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+        const track = await AgoraRTC.createMicrophoneAudioTrack();
+        if (!isMounted) { track.close(); return; }
+        localTrackRef.current = track;
+        await client.publish([track]);
+        console.log("[Room] Local mic published");
+      } catch (e) {
+        console.error("[Room] Mic publish error:", e);
+        if (isMounted) alert("Microphone access required to speak. Please allow mic access.");
       }
     }
 
@@ -154,36 +195,79 @@ function RoomContent({ roomId }: RoomClientProps) {
 
     return () => {
       mounted = false;
-      // Cleanup
+      // Cleanup on unmount
+      if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
       if (localTrackRef.current) {
-        try {
-          localTrackRef.current.close();
-        } catch (e) {
-          console.log("[Room] Error closing local track:", e);
-        }
+        try { localTrackRef.current.stop?.(); localTrackRef.current.close?.(); } catch (e) {}
         localTrackRef.current = null;
       }
       if (clientRef.current) {
-        try {
-          clientRef.current.leave();
-        } catch (e) {
-          console.log("[Room] Error leaving Agora channel:", e);
-        }
+        try { clientRef.current.leave(); } catch (e) {}
         clientRef.current = null;
       }
+      agoraInitializedRef.current = false;
     };
-  }, [user, room?.agoraChannel, isSpeaker]);
+  }, [user?.uid, room?.agoraChannel]); // Only re-run if channel changes (e.g. room restart)
+
+  // ── Switch Agora role when isSpeaker changes (promote/demote) ────────────
+  useEffect(() => {
+    const client = clientRef.current;
+    if (!client) return; // Agora not initialised yet; setupAgora will set initial role
+
+    const switchRole = async () => {
+      try {
+        if (isSpeaker) {
+          // Promoted to speaker → switch to host and publish mic
+          await client.setClientRole("host");
+          if (!localTrackRef.current) {
+            try {
+              await navigator.mediaDevices.getUserMedia({ audio: true });
+              const track = await AgoraRTC.createMicrophoneAudioTrack();
+              localTrackRef.current = track;
+              await client.publish([track]);
+              console.log("[Room] Role → host: mic published");
+            } catch (e) { console.error("[Room] Promote mic error:", e); }
+          }
+          // Clear any lingering silence timer when becoming speaker
+          if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
+        } else {
+          // Demoted / stopped speaking → unpublish, switch to audience
+          if (localTrackRef.current) {
+            try { await client.unpublish([localTrackRef.current]); } catch (e) {}
+            try { localTrackRef.current.stop?.(); localTrackRef.current.close?.(); } catch (e) {}
+            localTrackRef.current = null;
+          }
+          try { await client.setClientRole("audience"); } catch (e) {}
+          // Clear silence timer on demotion
+          if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
+          console.log("[Room] Role → audience");
+        }
+      } catch (e) {
+        console.error("[Room] Role switch error:", e);
+      }
+    };
+
+    switchRole();
+  }, [isSpeaker]); // Fires whenever Firestore promotes/demotes this user
 
   // Mute/unmute local track
   useEffect(() => {
     if (localTrackRef.current) {
-      if (micMuted) {
-        localTrackRef.current.setMuted(true);
-      } else {
-        localTrackRef.current.setMuted(false);
-      }
+      localTrackRef.current.setMuted(micMuted);
     }
   }, [micMuted]);
+
+  // ── Auto-join room as participant when entering ───────────────────────────
+  // Host is added in createRoom(); guests are auto-added here as listeners.
+  useEffect(() => {
+    if (!user?.uid || !room?.id) return;
+    const isHost = user.uid === room.hostUid;
+    addParticipant(
+      room.id,
+      { uid: user.uid, handle: user.handle || "@ANON", isSpeaker: isHost },
+      isHost
+    ).catch(err => console.warn("[Room] Auto-join participant failed:", err));
+  }, [user?.uid, room?.id]);
 
   // Fetch room details
   useEffect(() => {
@@ -931,7 +1015,11 @@ function RoomContent({ roomId }: RoomClientProps) {
                   [ 💬 CHAT ({chatMessages.length}) ]
                 </button>
                 <button
-                  onClick={() => setIsSpeaker(false)}
+                  onClick={async () => {
+                    if (user) {
+                      try { await demoteFromSpeaker(roomId, user.uid); } catch (e) {}
+                    }
+                  }}
                   className="px-4 py-2 border border-neutral-800 text-neutral-500 hover:text-white font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer"
                 >
                   [ STOP SPEAKING ]
@@ -1123,14 +1211,14 @@ function RoomContent({ roomId }: RoomClientProps) {
                   </div>
                   <div className="text-center">
                     <p className="font-mono text-lg text-white">{profileData.badges?.length || 0}</p>
-                    <p className="font-mono text-[10px] text-neutral-600 uppercase">BADGES</p>
+                    <p className="font-mono text-[10px] text-neutral-600 uppercase">[ TAGS ]</p>
                   </div>
                 </div>
 
                 {/* Badges */}
                 {profileData.badges && profileData.badges.length > 0 && (
                   <div>
-                    <p className="font-mono text-[10px] tracking-widest text-neutral-600 block mb-2">BADGES</p>
+                    <p className="font-mono text-[10px] tracking-widest text-neutral-600 block mb-2">[ TAGS ]</p>
                     <div className="flex items-center gap-2 flex-wrap">
                       {profileData.badges.map((badge: string, i: number) => (
                         <span key={i} className="px-2 py-1 border border-neutral-800 font-mono text-xs text-neutral-400">

@@ -15,8 +15,11 @@ import {
   getDocs,
   serverTimestamp,
   Timestamp,
+  orderBy,
+  limit,
 } from "firebase/firestore";
 import { getFirebaseDb } from "./firebase";
+import { createNotification } from "./notifications";
 
 export interface Follow {
   id: string;
@@ -53,6 +56,18 @@ export async function followUser(followerUid: string, followerHandle: string, fo
     followingHandle,
     createdAt: serverTimestamp(),
   });
+
+  // Fire orbit (follow) notification
+  try {
+    await createNotification(followingUid, {
+      type: "orbiter",
+      fromUid: followerUid,
+      fromHandle: followerHandle,
+      text: `${followerHandle} started orbiting you`,
+    });
+  } catch (e) {
+    console.warn("[followUser] Notification failed:", e);
+  }
 }
 
 /**
@@ -134,5 +149,49 @@ export function subscribeToFollowStatus(followerUid: string, followingUid: strin
     callback(!snap.empty);
   }, (error) => {
     console.error("[subscribeToFollowStatus] Error:", error);
+  });
+}
+
+/**
+ * Subscribe to a user's followers list (real-time)
+ */
+export function subscribeToFollowers(
+  uid: string,
+  callback: (follows: Follow[]) => void
+): () => void {
+  const db = getFirebaseDb();
+  const q = query(
+    collection(db, "follows"),
+    where("followingUid", "==", uid),
+    orderBy("createdAt", "desc"),
+    limit(100)
+  );
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Follow, "id">) })));
+  }, (err) => {
+    console.error("[subscribeToFollowers] Error:", err);
+    callback([]);
+  });
+}
+
+/**
+ * Subscribe to users this uid is following (real-time)
+ */
+export function subscribeToFollowing(
+  uid: string,
+  callback: (follows: Follow[]) => void
+): () => void {
+  const db = getFirebaseDb();
+  const q = query(
+    collection(db, "follows"),
+    where("followerUid", "==", uid),
+    orderBy("createdAt", "desc"),
+    limit(100)
+  );
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Follow, "id">) })));
+  }, (err) => {
+    console.error("[subscribeToFollowing] Error:", err);
+    callback([]);
   });
 }

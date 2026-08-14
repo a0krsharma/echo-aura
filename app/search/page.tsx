@@ -370,7 +370,7 @@ export default function SearchPage() {
                           <p className="font-mono text-[10px] text-neutral-500">{u.displayName}</p>
                         )}
                         <p className="font-mono text-[10px] text-neutral-700">
-                          AURA: {u.auraScore || 0}
+                          [ AURA ]: {u.auraScore || 0}
                         </p>
                       </div>
                       <Link

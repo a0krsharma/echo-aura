@@ -29,7 +29,51 @@ export interface EchoUser {
     energy: number;
     clarity: number;
   } | null;
+  settings?:   UserSettings;
 }
+
+export interface UserSettings {
+  // Notifications
+  pingPulses: boolean;
+  pingReverbs: boolean;
+  pingOnFire: boolean;
+  pingLockIns: boolean;
+  pingStage: boolean;
+  // Privacy
+  privateAcc: boolean;
+  auraVisible: boolean;
+  anonMode: boolean;
+  lockApproval: boolean;
+  // Audio
+  audioQuality: string;
+  autoTranscribe: boolean;
+  autoPlay: boolean;
+  // Permissions
+  yapControl: string;
+  echoControl: string;
+  whoCanWire: string;
+  // Content filtering
+  hiddenWords: string[];
+}
+
+export const DEFAULT_SETTINGS: UserSettings = {
+  pingPulses: true,
+  pingReverbs: true,
+  pingOnFire: true,
+  pingLockIns: false,
+  pingStage: true,
+  privateAcc: false,
+  auraVisible: true,
+  anonMode: false,
+  lockApproval: false,
+  audioQuality: "HIGH",
+  autoTranscribe: false,
+  autoPlay: true,
+  yapControl: "EVERYONE",
+  echoControl: "EVERYONE",
+  whoCanWire: "[ ORBIT ]",
+  hiddenWords: [],
+};
 
 /** Generate a random anonymous handle like @ANON_4X7K */
 function generateAnonHandle(): string {
@@ -62,6 +106,7 @@ export async function getOrCreateUserDoc(firebaseUser: FirebaseUser): Promise<Ec
     signalStatus: "ONLINE",
     lastSignalChange: null,
     vibeRead:    null,
+    settings:    DEFAULT_SETTINGS,
   };
 
   try {
@@ -89,6 +134,7 @@ export async function getOrCreateUserDoc(firebaseUser: FirebaseUser): Promise<Ec
       signalStatus: "ONLINE",
       lastSignalChange: null,
       vibeRead: null,
+      settings: DEFAULT_SETTINGS,
     });
 
     return fallbackUser;
@@ -96,6 +142,25 @@ export async function getOrCreateUserDoc(firebaseUser: FirebaseUser): Promise<Ec
     console.warn("[Firestore] User doc permission notice (using fallback user):", err.message);
     return fallbackUser;
   }
+}
+
+export async function updateUserSettings(uid: string, updates: Partial<UserSettings>): Promise<void> {
+  const db = getFirebaseDb();
+  const ref = doc(db, "users", uid);
+  const settingsUpdate: Record<string, any> = {};
+  for (const [key, value] of Object.entries(updates)) {
+    settingsUpdate[`settings.${key}`] = value;
+  }
+  await updateDoc(ref, settingsUpdate);
+}
+
+export async function getUserSettings(uid: string): Promise<UserSettings> {
+  const db = getFirebaseDb();
+  const ref = doc(db, "users", uid);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return { ...DEFAULT_SETTINGS };
+  const data = snap.data();
+  return { ...DEFAULT_SETTINGS, ...(data.settings || {}) };
 }
 
 /**

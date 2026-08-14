@@ -444,7 +444,7 @@ export default function ProfilePage() {
 
             <div className="text-right">
               <div className="font-mono text-xs text-neutral-500 tracking-widest uppercase mb-1">
-                Aura Score
+                [ AURA ]
               </div>
               <div className="font-serif italic text-3xl text-white">
                 {auraScore.toLocaleString()}
@@ -617,7 +617,7 @@ export default function ProfilePage() {
         <div className="p-6 border border-neutral-900 bg-neutral-950/40 mb-8 space-y-4">
           <div className="flex items-center justify-between">
             <span className="font-mono text-xs text-neutral-500 tracking-widest uppercase">
-              // [ FREQ_MAP ] - YOUR SPECTRAL FOOTPRINT
+              // [ FREQ_MAP ]
             </span>
           </div>
 
@@ -691,7 +691,7 @@ export default function ProfilePage() {
         <div className="p-6 border border-neutral-900 bg-neutral-950/40 mb-8 space-y-4">
           <div className="flex items-center justify-between">
             <span className="font-mono text-xs text-neutral-500 tracking-widest uppercase">
-              // [ VIBE_READ ] - VOCAL BIOMETRICS
+              // [ VIBE_READ ]
             </span>
           </div>
 

@@ -368,7 +368,7 @@ export default function HandlePage({ params }: { params: { handle: string } }) {
           <p className="font-mono text-4xl text-white tracking-widest leading-none">
             {aura >= 1000 ? `${(aura / 1000).toFixed(1)}K` : aura}
           </p>
-          <p className="font-mono text-xs text-neutral-700 tracking-widest uppercase mt-1">AURA SCORE</p>
+          <p className="font-mono text-xs text-neutral-700 tracking-widest uppercase mt-1">[ AURA ]</p>
         </div>
 
         {/* Bio */}

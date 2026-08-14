@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   ArrowUp, Flame, Mic2, Share2, RefreshCw,
   Loader2, Send, Trash2, ChevronDown, ChevronUp,
-  Heart, AtSign, Repeat2,
+  Heart, AtSign, Repeat2, MessageSquare
 } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
 import {
@@ -18,6 +18,7 @@ import { uploadAudio } from "@/lib/cloudinary";
 import { createNotification } from "@/lib/notifications";
 import { followUser, unfollowUser, isFollowing } from "@/lib/follows";
 import { audioManager } from "@/lib/audioManager";
+import { subscribeToPostComments, createComment, toggleLikeComment, deleteComment, type CommentItem } from "@/lib/comments";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface FeedPost {
@@ -25,7 +26,7 @@ interface FeedPost {
   authorHandle: string; authorUid: string;
   pulseCount: number; pulsedBy: string[];
   orbitedBy?: string[]; duration: string; durationSec: number;
-  reverbCount: number; createdAt: any;
+  reverbCount: number; commentCount: number; createdAt: any;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -553,6 +554,119 @@ function ReplyThread({ post, currentUser, onReplyClick, onProfileClick }: {
   );
 }
 
+// ─── Text Comments Section ───────────────────────────────────────────────────
+function TextCommentSection({ postId, postAuthorUid, currentUser, onClose }: {
+  postId: string; postAuthorUid: string; currentUser: any; onClose: () => void;
+}) {
+  const [comments, setComments] = useState<CommentItem[]>([]);
+  const [text, setText] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const unsub = subscribeToPostComments(postId, setComments);
+    return () => unsub();
+  }, [postId]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!text.trim() || !currentUser || loading) return;
+    setLoading(true);
+    try {
+      await createComment({
+        postId,
+        parentId: null,
+        authorUid: currentUser.uid,
+        authorHandle: currentUser.handle || "@ANON",
+        text: text.trim(),
+      });
+      if (postAuthorUid && postAuthorUid !== currentUser.uid) {
+        await createNotification(postAuthorUid, {
+          type: "comment" as any,
+          fromUid: currentUser.uid,
+          fromHandle: currentUser.handle || "@ANON",
+          postId,
+          text: `${currentUser.handle || "@ANON"} commented on your echo.`,
+        });
+      }
+      setText("");
+    } catch (err) {
+      console.error("[TextCommentSection] Error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLike = async (c: CommentItem) => {
+    if (!currentUser) return;
+    const isLiked = (c.likedBy || []).includes(currentUser.uid);
+    await toggleLikeComment(c.id, currentUser.uid, isLiked);
+  };
+
+  const handleDelete = async (cId: string) => {
+    await deleteComment(cId, postId);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/85 backdrop-blur-sm" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="w-full max-w-xl bg-black border-t border-neutral-700 h-[70vh] flex flex-col m-0 md:mb-0 md:border md:rounded-t-lg">
+        <div className="flex items-center justify-between p-4 border-b border-neutral-900">
+          <p className="font-mono text-xs tracking-widest uppercase text-white">[ TEXT COMMENTS ]</p>
+          <button onClick={onClose} className="font-mono text-xs text-neutral-600 hover:text-white cursor-pointer">[ ✕ ]</button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {comments.length === 0 ? (
+            <p className="font-mono text-[10px] text-neutral-600 tracking-widest uppercase text-center py-8">NO COMMENTS YET</p>
+          ) : (
+            comments.map(c => {
+              const liked = currentUser ? (c.likedBy || []).includes(currentUser.uid) : false;
+              const isOwn = currentUser?.uid === c.authorUid;
+              return (
+                <div key={c.id} className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-[10px] tracking-widest text-neutral-400 uppercase">{c.authorHandle}</span>
+                    <span className="font-mono text-[8px] text-neutral-700">{timeAgo(c.createdAt)}</span>
+                  </div>
+                  <p className="font-mono text-sm text-neutral-200">{c.text}</p>
+                  <div className="flex items-center gap-4 pt-1">
+                    <button onClick={() => handleLike(c)} className={`flex items-center gap-1 font-mono text-[10px] tracking-widest uppercase cursor-pointer transition-colors ${liked ? "text-white" : "text-neutral-600 hover:text-white"}`}>
+                      <Heart className={`w-3 h-3 ${liked ? "fill-white" : ""}`} />
+                      {c.likeCount > 0 ? formatNum(c.likeCount) : ""} [ LIKE ]
+                    </button>
+                    {isOwn && (
+                      <button onClick={() => handleDelete(c.id)} className="font-mono text-[10px] text-neutral-700 hover:text-red-500 uppercase tracking-widest cursor-pointer">
+                        <Trash2 className="w-3 h-3 inline mr-1"/>DELETE
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+        <div className="p-4 border-t border-neutral-900">
+          <form onSubmit={handleSubmit} className="flex gap-2">
+            <input 
+              type="text" 
+              value={text} 
+              onChange={e => setText(e.target.value)}
+              placeholder={currentUser ? "ADD A COMMENT..." : "LOGIN TO COMMENT"}
+              disabled={!currentUser || loading}
+              className="flex-1 bg-transparent border border-neutral-800 px-3 py-2 font-mono text-xs text-white placeholder-neutral-700 outline-none focus:border-neutral-500 transition-colors"
+            />
+            <button 
+              type="submit" 
+              disabled={!text.trim() || !currentUser || loading}
+              className="px-4 border border-white bg-white text-black font-mono text-xs tracking-widest uppercase hover:bg-neutral-200 transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin"/> : "POST"}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Skeleton Loading State ─────────────────────────────────────────────────
 function PostSkeleton() {
   return (
@@ -611,12 +725,12 @@ function useSwipeGesture(onSwipeLeft?: () => void, onSwipeRight?: () => void) {
 }
 
 // ─── Post Card Component (for proper hook usage) ───────────────────────────────
-function PostCard({ post, user, orbitedPosts, activePostId, deletingId, onPulse, onOrbit, onShare, onDelete, onReplyClick, onProfileClick, onActiveChange, setRef, onFollow, onUnfollow, following }: {
+function PostCard({ post, user, orbitedPosts, activePostId, deletingId, onPulse, onOrbit, onShare, onDelete, onReplyClick, onProfileClick, onActiveChange, setRef, onFollow, onUnfollow, following, onComment }: {
   post: FeedPost; user: any; orbitedPosts: Set<string>; activePostId: string | null;
   deletingId: string | null; onPulse: (p: FeedPost) => void; onOrbit: (p: FeedPost) => void;
   onShare: (p: FeedPost) => void; onDelete: (id: string) => void; onReplyClick: (rid?: string, rh?: string) => void;
   onProfileClick: (h: string) => void; onActiveChange: (id: string | null) => void; setRef: (id: string, el: HTMLElement | null) => void;
-  onFollow: (uid: string, handle: string) => void; onUnfollow: (uid: string) => void; following: Set<string>;
+  onFollow: (uid: string, handle: string) => void; onUnfollow: (uid: string) => void; following: Set<string>; onComment: (p: FeedPost) => void;
 }) {
   const swipeHandlers = useSwipeGesture(
     () => onPulse(post), // Swipe left = pulse
@@ -679,11 +793,18 @@ function PostCard({ post, user, orbitedPosts, activePostId, deletingId, onPulse,
 
       {/* Actions */}
       <div className="flex items-center justify-between pt-1">
-        <button onClick={() => onPulse(post)}
-          className={`flex items-center gap-2 font-mono text-xs tracking-widest uppercase cursor-pointer transition-colors ${isPulsed ? "text-white" : "text-neutral-500 hover:text-white"}`}>
-          <ArrowUp className={`w-3.5 h-3.5 ${isPulsed ? "fill-white" : ""}`} />
-          {formatNum(post.pulseCount)} [ PULSE ]
-        </button>
+        <div className="flex items-center gap-4">
+          <button onClick={() => onPulse(post)}
+            className={`flex items-center gap-2 font-mono text-xs tracking-widest uppercase cursor-pointer transition-colors ${isPulsed ? "text-white" : "text-neutral-500 hover:text-white"}`}>
+            <ArrowUp className={`w-3.5 h-3.5 ${isPulsed ? "fill-white" : ""}`} />
+            {formatNum(post.pulseCount)} [ PULSE ]
+          </button>
+          <button onClick={() => onComment(post)}
+            className="flex items-center gap-2 font-mono text-xs tracking-widest uppercase cursor-pointer transition-colors text-neutral-500 hover:text-white">
+            <MessageSquare className="w-3.5 h-3.5" />
+            {post.commentCount > 0 ? formatNum(post.commentCount) : ""} [ COMMENT ]
+          </button>
+        </div>
         <div className="flex items-center gap-4">
           {!isOwn && (
             <button onClick={() => onOrbit(post)} disabled={isOrbited}
@@ -716,6 +837,7 @@ export default function HomeFeedPage() {
   const [activePostId, setActiveId] = useState<string|null>(null);
   const [deletingId, setDeletingId] = useState<string|null>(null);
   const [replyModal, setReplyModal] = useState<{post:FeedPost;rid?:string;rh?:string}|null>(null);
+  const [commentPost, setCommentPost] = useState<FeedPost|null>(null);
   const [following, setFollowing]  = useState<Set<string>>(new Set());
   const userInteracted = useRef(false);
   const articleRefs    = useRef<Map<string,HTMLElement>>(new Map());
@@ -735,7 +857,7 @@ export default function HomeFeedPage() {
         authorHandle:p.authorHandle||"@ANON", authorUid:p.authorUid||"anon",
         pulseCount:p.pulseCount||0, pulsedBy:p.pulsedBy||[],
         orbitedBy:(p as any).orbitedBy||[], duration:p.duration||"00:15",
-        durationSec:p.durationSec||15, reverbCount:p.reverbCount||0, createdAt:p.createdAt,
+        durationSec:p.durationSec||15, reverbCount:p.reverbCount||0, commentCount: (p as any).commentCount || 0, createdAt:p.createdAt,
       })));
       setLoading(false);
     });
@@ -850,6 +972,10 @@ export default function HomeFeedPage() {
                   if (!user) { router.push("/login"); return; }
                   setReplyModal({ post, rid, rh });
                 }}
+                onComment={(post: FeedPost) => {
+                  if (!user) { router.push("/login"); return; }
+                  setCommentPost(post);
+                }}
                 onProfileClick={h => router.push(`/${h.replace(/^@/, "")}`)}
                 onActiveChange={setActiveId}
                 onFollow={handleFollow}
@@ -872,6 +998,13 @@ export default function HomeFeedPage() {
           reverbOfHandle={replyModal.rh}
           currentUser={user}
           onClose={()=>setReplyModal(null)}/>
+      )}
+      {commentPost&&(
+        <TextCommentSection
+          postId={commentPost.id}
+          postAuthorUid={commentPost.authorUid}
+          currentUser={user}
+          onClose={()=>setCommentPost(null)}/>
       )}
     </div>
   );

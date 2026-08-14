@@ -61,8 +61,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Token expiration: 1 hour (3600 seconds)
-    const expirationTimeInSeconds = 3600;
+    // Token expiration: 24 hours (86400 seconds) for long-running room sessions
+    const expirationTimeInSeconds = 86400;
     const currentTimestamp = Math.floor(Date.now() / 1000);
     const privilegeExpiredTs = currentTimestamp + expirationTimeInSeconds;
 

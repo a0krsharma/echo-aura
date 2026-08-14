@@ -180,9 +180,8 @@ function ShellContent({ children }: { children: React.ReactNode }) {
           </Link>
           <Link
             href="/profile"
-            className="font-mono text-xs tracking-widest uppercase text-secondary border border-standard px-2.5 py-1 uppercase hover:border-white hover:text-white transition-colors"
+            className="font-mono text-xs tracking-widest uppercase text-secondary border border-standard px-2.5 py-1 hover:border-white hover:text-white transition-colors"
           >
-            <span className="font-mono text-xs tracking-widest uppercase text-secondary">[ ROOMS ]</span>
             {user.handle || "@YOU"}
           </Link>
         </div>
