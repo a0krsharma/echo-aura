@@ -276,29 +276,33 @@ function AudioPlayer({ audioUrl, fallbackDurationSec, isActive, onPlayToggle, sm
     };
   }, [src]);
 
-  useEffect(() => {
-    const a = audioRef.current; if (!a) return;
-    if (isActive && !playing) {
-      a.volume=1; a.muted=false;
-      a.play().then(()=>{setPlaying(true);onPlayToggle?.(true);}).catch(()=>{});
-    } else if (!isActive && playing) {
-      a.pause(); setPlaying(false); onPlayToggle?.(false);
-    }
-  }, [isActive]);
-
-  // Lazy load audio - only set src when needed
+  // Ensure src is always attached to audio element
   useEffect(() => {
     const a = audioRef.current;
     if (!a) return;
-    
-    // Only load audio when component is active or user interacts
-    if (isActive || playing) {
+    if (a.src !== src) {
       a.src = src;
-      a.preload = "auto";
-    } else {
-      a.preload = "none";
+      a.preload = "metadata";
     }
-  }, [src, isActive, playing]);
+  }, [src]);
+
+  useEffect(() => {
+    const a = audioRef.current; if (!a || !instanceIdRef.current) return;
+    if (isActive && !playing) {
+      a.volume = 1; a.muted = false;
+      if (!a.src) a.src = src;
+      audioManager.requestPlay(instanceIdRef.current).then(granted => {
+        if (granted) {
+          setPlaying(true);
+          onPlayToggle?.(true);
+        }
+      }).catch(() => {});
+    } else if (!isActive && playing) {
+      audioManager.pause(instanceIdRef.current);
+      setPlaying(false);
+      onPlayToggle?.(false);
+    }
+  }, [isActive]);
 
   const onErr = () => {
     setPlaying(false); setLoading(false);
@@ -317,10 +321,12 @@ function AudioPlayer({ audioUrl, fallbackDurationSec, isActive, onPlayToggle, sm
       onPlayToggle?.(false); 
     }
     else {
-      a.volume=1; a.muted=false; setLoading(true);
+      a.volume = 1; a.muted = false; setLoading(true);
+      if (!a.src) a.src = src;
       try { 
         const granted = await audioManager.requestPlay(id);
         if (granted) {
+          setPlaying(true);
           onPlayToggle?.(true);
         } else {
           setLoading(false);

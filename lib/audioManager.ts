@@ -91,14 +91,17 @@ class AudioManager {
     // Check if we should interrupt the current active instance
     const currentActive = this.activeInstanceId ? this.instances.get(this.activeInstanceId) : null;
     
-    if (currentActive && instance.priority <= currentActive.priority) {
-      // Don't interrupt if priority is not higher
+    // Only block if currentActive is ACTUALLY actively playing (not paused or ended) AND has higher priority
+    if (currentActive && currentActive.audioElement && !currentActive.audioElement.paused && instance.priority < currentActive.priority) {
+      // Don't interrupt if higher priority audio is actively playing
       return false;
     }
 
     // Pause current active instance if exists
-    if (currentActive) {
-      currentActive.audioElement.pause();
+    if (currentActive && currentActive.id !== id) {
+      try {
+        currentActive.audioElement.pause();
+      } catch {}
       this.updateState(this.activeInstanceId!, 'paused');
     }
 
@@ -107,6 +110,10 @@ class AudioManager {
     this.notifyListeners();
 
     try {
+      // Ensure src is loaded if element has data-src or src attribute
+      if (!instance.audioElement.src && instance.audioElement.dataset.src) {
+        instance.audioElement.src = instance.audioElement.dataset.src;
+      }
       await instance.audioElement.play();
       return true;
     } catch (error) {

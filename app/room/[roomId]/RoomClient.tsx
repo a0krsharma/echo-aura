@@ -129,6 +129,18 @@ function RoomContent({ roomId }: RoomClientProps) {
           }
         });
 
+        // Autoplay policy fallback — resume WebRTC audio playback on user interaction
+        const handleUserGesture = () => {
+          if (!clientRef.current) return;
+          clientRef.current.remoteUsers.forEach((remoteUser: any) => {
+            if (remoteUser.audioTrack && !remoteUser.audioTrack.isPlaying) {
+              try { remoteUser.audioTrack.play(); } catch (e) {}
+            }
+          });
+        };
+        window.addEventListener("click", handleUserGesture);
+        window.addEventListener("touchstart", handleUserGesture);
+
         client.on("user-unpublished", (remoteUser: any) => {
           setSpeakingUsers(prev => {
             const s = new Set(prev); s.delete(String(remoteUser.uid)); return s;

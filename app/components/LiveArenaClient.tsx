@@ -269,7 +269,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
 
   useEffect(() => {
     audioTracks.forEach((track) => {
-      track.play();
+      try { track.play(); } catch (e) {}
       
       // Enable audio level monitoring
       track.setVolume(100);
@@ -294,8 +294,20 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
         clearInterval(interval);
       };
     });
+
+    const unblockStageAudio = () => {
+      audioTracks.forEach((track) => {
+        if (!track.isPlaying) {
+          try { track.play(); } catch {}
+        }
+      });
+    };
+    window.addEventListener("click", unblockStageAudio);
+    window.addEventListener("touchstart", unblockStageAudio);
     
     return () => {
+      window.removeEventListener("click", unblockStageAudio);
+      window.removeEventListener("touchstart", unblockStageAudio);
       audioTracks.forEach((track) => {
         try {
           track.stop();
