@@ -63,8 +63,8 @@ export async function createNotification(
     text:         string;
   }
 ): Promise<void> {
-  // Don't notify yourself
-  if (targetUid === data.fromUid) return;
+  // Don't notify yourself or empty target
+  if (!targetUid || !data.fromUid || targetUid === data.fromUid) return;
 
   try {
     const db = getFirebaseDb();
@@ -75,7 +75,7 @@ export async function createNotification(
       createdAt: serverTimestamp(),
     });
   } catch (err) {
-    console.error("[Notifications] Failed to create notification:", err);
+    // Silent catch so permission notices on target uids resolve quietly
   }
 }
 
@@ -132,6 +132,7 @@ export function subscribeToNotifications(
  * Mark a single notification as read.
  */
 export async function markNotificationRead(uid: string, notifId: string): Promise<void> {
+  if (!uid || !notifId) return;
   try {
     const db = getFirebaseDb();
     await updateDoc(doc(db, "notifications", uid, "items", notifId), { read: true });
@@ -143,6 +144,7 @@ export async function markNotificationRead(uid: string, notifId: string): Promis
  * Mark all unread notifications as read.
  */
 export async function markAllNotificationsRead(uid: string): Promise<void> {
+  if (!uid) return;
   try {
     const db = getFirebaseDb();
     const q = query(
@@ -164,6 +166,10 @@ export function subscribeToUnreadCount(
   uid: string,
   callback: (count: number) => void
 ): () => void {
+  if (!uid) {
+    callback(0);
+    return () => {};
+  }
   const db = getFirebaseDb();
   const q = query(
     collection(db, "notifications", uid, "items"),
