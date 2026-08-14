@@ -307,7 +307,7 @@ export default function HandlePage({ params }: { params: { handle: string } }) {
         profile.uid,
         profile.handle
       );
-      router.push("/wire");
+      router.push(`/wire?c=${convId}`);
     } catch (err) {
       console.error("Failed to start wire:", err);
     } finally {

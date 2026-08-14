@@ -2,17 +2,145 @@
 
 /**
  * app/search/page.tsx
- * Enhanced search with filters, history, and optimized Firestore queries
- * Searches posts, echoes, and users with advanced filtering
+ * Enhanced search with filters, history, Top 10 suggested profiles,
+ * real-time ORBIT toggle buttons, and direct WIRE message launchers.
  */
 
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Search, X, Mic2, Users, Play, Loader2, Clock, Filter, TrendingUp } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Search, X, Mic2, Users, Play, Loader2, Clock, Filter, TrendingUp, MessageSquare, UserPlus, UserCheck, Sparkles } from "lucide-react";
 import { collection, query, getDocs, limit, orderBy, where } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 import { type EchoUser } from "@/lib/userDoc";
 import { type PostItem } from "@/lib/posts";
+import { followUser, unfollowUser, subscribeToFollowStatus } from "@/lib/follows";
+import { startOrGetConversation } from "@/lib/wire";
+import { useAuth } from "@/app/components/AuthProvider";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// User Card with Real-time ORBIT Toggle & Direct WIRE Trigger
+// ─────────────────────────────────────────────────────────────────────────────
+function UserSearchResultCard({ targetUser }: { targetUser: EchoUser }) {
+  const { user } = useAuth();
+  const router = useRouter();
+  const [isFollowingState, setIsFollowingState] = useState(false);
+  const [loadingFollow, setLoadingFollow] = useState(false);
+
+  useEffect(() => {
+    if (!user?.uid || !targetUser?.uid) return;
+    const unsub = subscribeToFollowStatus(user.uid, targetUser.uid, setIsFollowingState);
+    return () => unsub();
+  }, [user?.uid, targetUser?.uid]);
+
+  const handleToggleOrbit = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    setLoadingFollow(true);
+    try {
+      if (isFollowingState) {
+        await unfollowUser(user.uid, targetUser.uid);
+      } else {
+        await followUser(user.uid, user.handle || "@ANON", targetUser.uid, targetUser.handle);
+      }
+    } catch (err) {
+      console.error("[UserCard] Orbit toggle error:", err);
+    } finally {
+      setLoadingFollow(false);
+    }
+  };
+
+  const handleOpenWire = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    try {
+      const convId = await startOrGetConversation(user.uid, user.handle || "@ANON", targetUser.uid, targetUser.handle);
+      router.push(`/wire?c=${convId}`);
+    } catch (err) {
+      console.error("[UserCard] Wire open error:", err);
+      router.push("/wire");
+    }
+  };
+
+  const avatarSrc = targetUser.photoUrl || (targetUser as any).photoURL || (targetUser as any).avatarUrl;
+
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-neutral-950/60 border border-neutral-900 hover:border-neutral-800 transition-colors gap-3">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-full border border-neutral-700 bg-neutral-900 overflow-hidden flex items-center justify-center font-mono text-sm text-white font-bold shrink-0">
+          {avatarSrc ? (
+            <img src={avatarSrc} alt={targetUser.handle} className="w-full h-full object-cover" />
+          ) : (
+            targetUser.handle?.charAt(1)?.toUpperCase() || "A"
+          )}
+        </div>
+        <div className="space-y-0.5">
+          <Link href={`/${targetUser.handle?.replace("@", "")}`} className="font-mono text-sm text-white hover:underline tracking-widest block font-bold">
+            {targetUser.handle}
+          </Link>
+          {targetUser.displayName && (
+            <p className="font-mono text-[10px] text-neutral-500">{targetUser.displayName}</p>
+          )}
+          <p className="font-mono text-[10px] text-neutral-600">
+            [ AURA ]: {targetUser.auraScore || 0}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 self-end sm:self-auto">
+        {user && user.uid !== targetUser.uid && (
+          <>
+            <button
+              onClick={handleToggleOrbit}
+              disabled={loadingFollow}
+              className={`font-mono text-[10px] uppercase px-3 py-1.5 border transition-colors cursor-pointer flex items-center gap-1.5 ${
+                isFollowingState
+                  ? "border-neutral-700 text-neutral-400 hover:border-red-800 hover:text-red-400"
+                  : "border-white text-white hover:bg-white hover:text-black font-bold"
+              }`}
+            >
+              {loadingFollow ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : isFollowingState ? (
+                <>
+                  <UserCheck className="w-3 h-3" />
+                  [ ORBITING ]
+                </>
+              ) : (
+                <>
+                  <UserPlus className="w-3 h-3" />
+                  [ ORBIT ]
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={handleOpenWire}
+              className="font-mono text-[10px] uppercase px-2.5 py-1.5 border border-neutral-800 text-neutral-400 hover:border-white hover:text-white transition-colors cursor-pointer flex items-center gap-1"
+              title="Send direct audio wire message"
+            >
+              <MessageSquare className="w-3 h-3 text-neutral-300" />
+              [ WIRE ]
+            </button>
+          </>
+        )}
+
+        <Link
+          href={`/${targetUser.handle?.replace("@", "")}`}
+          className="font-mono text-[10px] border border-neutral-800 px-2.5 py-1.5 text-neutral-500 hover:text-white uppercase transition-colors"
+        >
+          VIEW →
+        </Link>
+      </div>
+    </div>
+  );
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Mini inline audio player for search results
@@ -51,13 +179,14 @@ function MiniPlay({ url }: { url: string }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PAGE
+// MAIN SEARCH PAGE
 // ─────────────────────────────────────────────────────────────────────────────
 type SearchFilter = "all" | "recent" | "trending" | "long" | "short";
 
 export default function SearchPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [users,       setUsers]       = useState<EchoUser[]>([]);
+  const [suggestedUsers, setSuggestedUsers] = useState<EchoUser[]>([]);
   const [posts,       setPosts]       = useState<PostItem[]>([]);
   const [loading,     setLoading]     = useState(false);
   const [activeTab,   setActiveTab]   = useState<"ALL" | "VOICES" | "ECHOES">("ALL");
@@ -66,23 +195,34 @@ export default function SearchPage() {
   const [timeFilter, setTimeFilter] = useState<SearchFilter>("all");
   const [suggestions, setSuggestions] = useState<string[]>([]);
 
-  // Load search history from localStorage
+  // Load search history & Top 10 suggested users on mount
   useEffect(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("echo_search_history");
       if (saved) {
-        try {
-          setSearchHistory(JSON.parse(saved));
-        } catch {}
+        try { setSearchHistory(JSON.parse(saved)); } catch {}
       }
     }
+
+    async function loadSuggested() {
+      try {
+        const db = getFirebaseDb();
+        const qSnap = await getDocs(query(collection(db, "users"), limit(10)));
+        const list = qSnap.docs.map(d => d.data() as EchoUser);
+        list.sort((a, b) => (b.auraScore || 0) - (a.auraScore || 0));
+        setSuggestedUsers(list);
+      } catch (e) {
+        console.warn("[SearchPage] Failed loading suggested users:", e);
+      }
+    }
+    loadSuggested();
   }, []);
 
   // Save search history to localStorage
-  const saveToHistory = useCallback((query: string) => {
-    if (!query.trim()) return;
+  const saveToHistory = useCallback((queryStr: string) => {
+    if (!queryStr.trim()) return;
     setSearchHistory(prev => {
-      const newHistory = [query, ...prev.filter(q => q !== query)].slice(0, 10);
+      const newHistory = [queryStr, ...prev.filter(q => q !== queryStr)].slice(0, 10);
       localStorage.setItem("echo_search_history", JSON.stringify(newHistory));
       return newHistory;
     });
@@ -102,7 +242,7 @@ export default function SearchPage() {
         const db = getFirebaseDb();
         const q  = searchQuery.toLowerCase();
 
-        // Generate suggestions based on partial matches
+        // Generate autocomplete suggestions
         if (searchQuery.length >= 2) {
           const usersSnap = await getDocs(query(collection(db, "users"), limit(10)));
           const userSuggestions = usersSnap.docs
@@ -117,7 +257,7 @@ export default function SearchPage() {
           setSuggestions(userSuggestions);
         }
 
-        // Fetch users with optimized query
+        // Fetch users
         let usersQuery = query(collection(db, "users"), limit(30));
         const usersSnap = await getDocs(usersQuery);
         const matchedUsers = usersSnap.docs
@@ -130,7 +270,6 @@ export default function SearchPage() {
         // Build posts query with filters
         let postsQuery = query(collection(db, "posts"), orderBy("createdAt", "desc"), limit(100));
         
-        // Apply time-based filters
         if (timeFilter === "recent") {
           const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
           postsQuery = query(
@@ -155,7 +294,6 @@ export default function SearchPage() {
             p.authorHandle?.toLowerCase().includes(q)
           );
 
-        // Apply duration filters
         if (timeFilter === "short") {
           matchedPosts = matchedPosts.filter(p => (p.durationSec || 0) <= 30);
         } else if (timeFilter === "long") {
@@ -163,9 +301,8 @@ export default function SearchPage() {
         }
 
         setUsers(matchedUsers);
-        setPosts(matchedPosts.slice(0, 50)); // Limit results
+        setPosts(matchedPosts.slice(0, 50));
         
-        // Save to history on successful search
         if (matchedUsers.length > 0 || matchedPosts.length > 0) {
           saveToHistory(searchQuery);
         }
@@ -197,7 +334,7 @@ export default function SearchPage() {
       {/* Mobile top bar */}
       <div className="md:hidden flex items-center justify-between px-5 pt-10 pb-6 border-b border-neutral-900">
         <span className="font-serif text-xl font-bold text-white">Echo.</span>
-        <span className="font-mono text-xs tracking-widest uppercase text-neutral-500">SEARCH</span>
+        <span className="font-mono text-xs tracking-widest uppercase text-neutral-500">SEARCH &amp; DISCOVER</span>
       </div>
 
       {/* Search Input — sticky */}
@@ -230,7 +367,7 @@ export default function SearchPage() {
           </div>
 
           {/* Suggestions dropdown */}
-          {suggestions.length > 0 && !searchQuery && (
+          {suggestions.length > 0 && searchQuery && (
             <div className="border border-neutral-800 bg-black">
               {suggestions.map((suggestion, i) => (
                 <button
@@ -272,23 +409,32 @@ export default function SearchPage() {
 
       <main className="max-w-2xl mx-auto px-5 pt-6 space-y-8">
         {!searchQuery ? (
-          /* Empty / discovery state with search history */
-          <div className="py-20 space-y-8">
-            <div className="text-center space-y-6">
-              <Search className="w-10 h-10 text-neutral-800 mx-auto" />
-              <div className="space-y-2">
-                <p className="font-mono text-xs text-neutral-600 tracking-widest uppercase">
-                  FIND VOICES &amp; ECHOES ON THE NETWORK
-                </p>
-                <p className="font-serif italic text-neutral-700 text-sm">
-                  Search by handle, name, or topic
-                </p>
-              </div>
-            </div>
+          /* Default discovery view with Top 10 Suggested Voices & History */
+          <div className="space-y-8 pb-12">
+            {/* Top 10 Suggested Voices to Orbit */}
+            {suggestedUsers.length > 0 && (
+              <section className="space-y-4">
+                <div className="flex items-center justify-between border-b border-neutral-900 pb-3">
+                  <span className="font-mono text-xs text-white tracking-widest uppercase font-bold flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-purple-400" />
+                    // TOP SUGGESTED VOICES TO ORBIT (TOP 10)
+                  </span>
+                  <span className="font-mono text-[10px] text-neutral-500 uppercase">
+                    FEATURED PROFILES
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  {suggestedUsers.map((targetUser) => (
+                    <UserSearchResultCard key={targetUser.uid} targetUser={targetUser} />
+                  ))}
+                </div>
+              </section>
+            )}
 
             {/* Search History */}
             {searchHistory.length > 0 && (
-              <div className="space-y-3">
+              <div className="space-y-3 pt-4 border-t border-neutral-900">
                 <div className="flex items-center justify-between">
                   <p className="font-mono text-xs text-neutral-500 tracking-widest uppercase flex items-center gap-2">
                     <Clock className="w-3.5 h-3.5" /> RECENT SEARCHES
@@ -301,13 +447,13 @@ export default function SearchPage() {
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {searchHistory.map((query, i) => (
+                  {searchHistory.map((queryStr, i) => (
                     <button
                       key={i}
-                      onClick={() => setSearchQuery(query)}
+                      onClick={() => setSearchQuery(queryStr)}
                       className="px-3 py-1.5 border border-neutral-800 font-mono text-xs text-neutral-400 hover:border-white hover:text-white transition-colors cursor-pointer"
                     >
-                      {query}
+                      {queryStr}
                     </button>
                   ))}
                 </div>
@@ -333,7 +479,7 @@ export default function SearchPage() {
         ) : (
           <>
             {/* Result count + tabs */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between border-b border-neutral-900 pb-3">
               <p className="font-mono text-[10px] text-neutral-600 tracking-widest uppercase">
                 {totalResults} RESULT{totalResults !== 1 ? "S" : ""} FOUND
               </p>
@@ -343,7 +489,7 @@ export default function SearchPage() {
                     key={tab}
                     onClick={() => setActiveTab(tab)}
                     className={`uppercase transition-colors cursor-pointer ${
-                      activeTab === tab ? "text-white" : "text-neutral-600 hover:text-white"
+                      activeTab === tab ? "text-white font-bold" : "text-neutral-600 hover:text-white"
                     }`}
                   >
                     {tab}
@@ -359,27 +505,11 @@ export default function SearchPage() {
             {(activeTab === "ALL" || activeTab === "VOICES") && users.length > 0 && (
               <section className="space-y-3">
                 <p className="font-mono text-xs text-neutral-500 tracking-widest uppercase flex items-center gap-2">
-                  <Users className="w-3.5 h-3.5" /> MATCHING VOICES
+                  <Users className="w-3.5 h-3.5" /> MATCHING VOICES ({users.length})
                 </p>
-                <div className="border border-neutral-900 divide-y divide-neutral-900">
-                  {users.map((u) => (
-                    <div key={u.uid} className="flex items-center justify-between p-4">
-                      <div className="space-y-0.5">
-                        <p className="font-mono text-sm text-white tracking-widest">{u.handle}</p>
-                        {u.displayName && (
-                          <p className="font-mono text-[10px] text-neutral-500">{u.displayName}</p>
-                        )}
-                        <p className="font-mono text-[10px] text-neutral-700">
-                          [ AURA ]: {u.auraScore || 0}
-                        </p>
-                      </div>
-                      <Link
-                        href={`/${u.handle.replace("@", "")}`}
-                        className="font-mono text-xs border border-neutral-800 px-3 py-1.5 text-neutral-400 hover:border-white hover:text-white uppercase transition-colors"
-                      >
-                        VIEW →
-                      </Link>
-                    </div>
+                <div className="space-y-2">
+                  {users.map((targetUser) => (
+                    <UserSearchResultCard key={targetUser.uid} targetUser={targetUser} />
                   ))}
                 </div>
               </section>
@@ -389,16 +519,16 @@ export default function SearchPage() {
             {(activeTab === "ALL" || activeTab === "ECHOES") && posts.length > 0 && (
               <section className="space-y-3">
                 <p className="font-mono text-xs text-neutral-500 tracking-widest uppercase flex items-center gap-2">
-                  <Mic2 className="w-3.5 h-3.5" /> MATCHING ECHOES
+                  <Mic2 className="w-3.5 h-3.5" /> MATCHING ECHOES ({posts.length})
                 </p>
-                <div className="border border-neutral-900 divide-y divide-neutral-900">
+                <div className="border border-neutral-900 divide-y divide-neutral-900 bg-neutral-950/40">
                   {posts.map((p) => (
                     <div key={p.id} className="p-4 space-y-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 space-y-1">
-                          <p className="font-mono text-xs text-neutral-500 tracking-widest">
+                          <Link href={`/${p.authorHandle?.replace("@", "")}`} className="font-mono text-xs text-neutral-400 hover:text-white tracking-widest">
                             {p.authorHandle}
-                          </p>
+                          </Link>
                           <p className="font-serif italic text-white text-base leading-snug">
                             "{p.caption}"
                           </p>
@@ -409,7 +539,7 @@ export default function SearchPage() {
                         <span>{p.pulseCount || 0} PULSES</span>
                         <span>{p.duration || "0:00"}</span>
                         {p.reverbOf && <span className="text-neutral-600">[ REPLY ]</span>}
-                        {p.orbitOf  && <span className="text-neutral-600">[ ORBIT ]</span>}
+                        {p.orbitOf  && <span className="text-neutral-600">[ RE-ECHO ]</span>}
                       </div>
                     </div>
                   ))}
