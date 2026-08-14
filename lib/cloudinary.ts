@@ -155,27 +155,20 @@ export async function uploadImage(
  *
  * e.g. https://res.cloudinary.com/x/video/upload/f_mp3,q_auto/v1/foo.webm
  *   → https://res.cloudinary.com/x/video/upload/v1/foo.mp3
+ * 2. Ensuring HTTPS protocol to avoid mixed content errors
  *
  * Also normalises old blob: URLs (local temp URLs from MediaRecorder) to
  * return them as-is since they're already playable locally.
  */
 export function getPlayableUrl(rawUrl: string): string {
   if (!rawUrl) return "";
-  // Blob URLs are local — return as-is
-  if (rawUrl.startsWith("blob:")) return rawUrl;
+  if (rawUrl.startsWith("blob:") || rawUrl.startsWith("data:")) return rawUrl;
   
   // Ensure HTTPS to avoid mixed content errors
   let url = rawUrl.replace(/^http:/, "https:");
   
-  // Fix legacy /raw/upload/ path to /video/upload/
+  // Fix legacy /raw/upload/ path to /video/upload/ for browser audio playback compatibility
   url = url.replace(/\/raw\/upload\//g, "/video/upload/");
-  
-  // Strip Cloudinary transformation segments (e.g. /f_mp3,q_auto/)
-  url = url.replace(/\/[a-z_,;:0-9]+(?:\/[a-z_,;:0-9]+)*\//i, (match) => {
-    // Only strip if match looks like a transformation (contains _ or , )
-    if (match.includes("_") || match.includes(",")) return "/";
-    return match;
-  });
   
   return url;
 }

@@ -16,6 +16,7 @@ import { startOrGetConversation } from "@/lib/wire";
 import { followUser, unfollowUser, subscribeToFollowStatus } from "@/lib/follows";
 import { useAuth } from "@/app/components/AuthProvider";
 import { ChatWidget } from "@/app/components/ChatWidget";
+import { getPlayableUrl } from "@/lib/cloudinary";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -101,13 +102,39 @@ function MiniPlayer({ audioUrl, duration, durationSec }: { audioUrl: string; dur
   }, [audioUrl]);
 
   const toggle = async () => {
-    const a = audioRef.current;
-    if (!a) return;
-    if (playing) { a.pause(); setPlaying(false); }
-    else {
+    let a = audioRef.current;
+    const targetUrl = getPlayableUrl(audioUrl);
+    if (!targetUrl) return;
+
+    if (!a) {
+      a = new Audio(targetUrl);
+      a.preload = "auto";
+      audioRef.current = a;
+      a.addEventListener("loadedmetadata", () => {
+        if (isFinite(a!.duration) && a!.duration > 0) setDur(Math.ceil(a!.duration));
+      });
+      a.addEventListener("timeupdate", () => setCurrent(a!.currentTime));
+      a.addEventListener("ended", () => { setPlaying(false); setCurrent(0); });
+      a.addEventListener("playing", () => { setPlaying(true); setLoading(false); });
+      a.addEventListener("error", () => { setPlaying(false); setLoading(false); });
+    }
+
+    if (playing) {
+      a.pause();
+      setPlaying(false);
+    } else {
       setLoading(true);
-      try { await a.play(); }
-      catch { setLoading(false); }
+      try {
+        if (!a.src || a.src === window.location.href) {
+          a.src = targetUrl;
+        }
+        await a.play();
+        setPlaying(true);
+      } catch (err) {
+        console.error("Audio playback error:", err);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
