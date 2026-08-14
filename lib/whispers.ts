@@ -135,16 +135,43 @@ export async function sendWhisper(
   const uids = conversationId.split("__");
 
   // 1. Ensure parent conversation document exists FIRST so subcollection rules pass
-  await setDoc(
-    convRef,
-    {
-      participants: uids.length === 2 ? uids : [senderUid],
-      [`handles.${senderUid}`]: senderHandle || "@ANON",
-      lastMessage: text || "🎙 Voice message",
-      lastAt: serverTimestamp(),
-    },
-    { merge: true }
-  );
+  try {
+    const snap = await getDoc(convRef);
+    if (!snap.exists()) {
+      await setDoc(
+        convRef,
+        {
+          participants: uids.length === 2 ? uids : [senderUid],
+          handles: {
+            [senderUid]: senderHandle || "@ANON",
+          },
+          lastMessage: text || "🎙 Voice message",
+          lastAt: serverTimestamp(),
+          createdAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+    } else {
+      await updateDoc(convRef, {
+        [`handles.${senderUid}`]: senderHandle || "@ANON",
+        lastMessage: text || "🎙 Voice message",
+        lastAt: serverTimestamp(),
+      });
+    }
+  } catch (err) {
+    await setDoc(
+      convRef,
+      {
+        participants: uids.length === 2 ? uids : [senderUid],
+        handles: {
+          [senderUid]: senderHandle || "@ANON",
+        },
+        lastMessage: text || "🎙 Voice message",
+        lastAt: serverTimestamp(),
+      },
+      { merge: true }
+    ).catch(() => {});
+  }
 
   // 2. Add message document to messages subcollection
   const messagesRef = collection(db, "whispers", conversationId, "messages");
@@ -159,20 +186,15 @@ export async function sendWhisper(
 
   // 3. Notify recipient
   try {
-    const convSnap = await getDoc(convRef);
-    if (convSnap.exists()) {
-      const conv = convSnap.data() as any;
-      const participants: string[] = conv.participants || [];
-      const recipient = participants.find((p: string) => p !== senderUid);
-      if (recipient) {
-        const { createNotification } = await import("@/lib/notifications");
-        await createNotification(recipient, {
-          type: "wire",
-          fromUid: senderUid,
-          fromHandle: senderHandle,
-          text: text || "Sent you a wire",
-        });
-      }
+    const recipient = uids.find((p) => p !== senderUid);
+    if (recipient) {
+      const { createNotification } = await import("@/lib/notifications");
+      await createNotification(recipient, {
+        type: "wire",
+        fromUid: senderUid,
+        fromHandle: senderHandle,
+        text: text || "Sent you a wire",
+      });
     }
   } catch (e) {}
 
