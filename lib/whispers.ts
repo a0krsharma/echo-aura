@@ -132,25 +132,19 @@ export async function sendWhisper(
 ): Promise<string> {
   const db = getFirebaseDb();
   const convRef = doc(db, "whispers", conversationId);
+  const uids = conversationId.split("__");
 
   // 1. Ensure parent conversation document exists FIRST so subcollection rules pass
-  try {
-    const uids = conversationId.split("__");
-    await setDoc(
-      convRef,
-      {
-        participants: uids.length === 2 ? uids : [senderUid],
-        handles: {
-          [senderUid]: senderHandle || "@ANON",
-        },
-        lastMessage: text || "🎙 Voice message",
-        lastAt: serverTimestamp(),
-      },
-      { merge: true }
-    );
-  } catch (err) {
-    console.warn("sendWhisper: setDoc parent update warning:", err);
-  }
+  await setDoc(
+    convRef,
+    {
+      participants: uids.length === 2 ? uids : [senderUid],
+      [`handles.${senderUid}`]: senderHandle || "@ANON",
+      lastMessage: text || "🎙 Voice message",
+      lastAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
 
   // 2. Add message document to messages subcollection
   const messagesRef = collection(db, "whispers", conversationId, "messages");
@@ -169,7 +163,7 @@ export async function sendWhisper(
     if (convSnap.exists()) {
       const conv = convSnap.data() as any;
       const participants: string[] = conv.participants || [];
-      const recipient = participants.find((p) => p !== senderUid);
+      const recipient = participants.find((p: string) => p !== senderUid);
       if (recipient) {
         const { createNotification } = await import("@/lib/notifications");
         await createNotification(recipient, {
