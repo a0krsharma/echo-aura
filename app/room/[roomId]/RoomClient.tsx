@@ -1138,10 +1138,22 @@ function RoomContent({ roomId }: RoomClientProps) {
                 >
                   [ 💬 CHAT ({chatMessages.length}) ]
                 </button>
-                {hasRequestedToSpeak ? (
+                {user?.uid === room?.hostUid ? (
+                  <button
+                    onClick={async () => {
+                      if (user) {
+                        try { await promoteToSpeaker(roomId, user.uid); } catch (e) {}
+                      }
+                    }}
+                    className="px-4 py-2 border border-green-500 text-green-400 hover:bg-green-500 hover:text-black font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center gap-1.5 font-bold"
+                  >
+                    <Mic size={12} />
+                    [ REJOIN STAGE AS HOST 🎙️ ]
+                  </button>
+                ) : hasRequestedToSpeak ? (
                   <button
                     onClick={handleCancelRequest}
-                    className="px-4 py-2 border border-neutral-800 text-neutral-500 hover:text-white font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center gap-1.5"
+                    className="px-4 py-2 border border-yellow-800 text-yellow-400 bg-yellow-950/40 hover:text-white font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center gap-1.5"
                   >
                     <Hand size={12} />
                     [ LOWER HAND ]
