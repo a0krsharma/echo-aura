@@ -12,6 +12,7 @@ import {
   doc,
   addDoc,
   deleteDoc,
+  setDoc,
   query,
   where,
   orderBy,
@@ -51,6 +52,9 @@ export interface PostItem {
   // [ SPIKE ] - Trending metrics
   spikeScore?:     number;
   spikeCategory?:  "RISING" | "HOT" | "VIRAL" | null;
+  // [ VAULT ] - Archiving
+  vaulted?:        boolean;
+  vaultedAt?:      Timestamp | null;
 }
 
 /** Inline voice comment on a post — stored in posts/{id}/reverbs subcollection */
@@ -346,8 +350,82 @@ export async function togglePulsePost(
 }
 
 /**
- * deletePost — delete a post and all its reverbs
+ * vaultPost
+ * Archive a post to the user's vault
  */
+export async function vaultPost(postId: string, uid: string): Promise<void> {
+  const db = getFirebaseDb();
+  const postRef = doc(db, "posts", postId);
+  
+  await updateDoc(postRef, {
+    vaulted: true,
+    vaultedAt: serverTimestamp(),
+  });
+  
+  // Add to user's vault collection
+  const vaultRef = doc(db, "user_vault", `${uid}_${postId}`);
+  await setDoc(vaultRef, {
+    uid,
+    postId,
+    vaultedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * unvaultPost
+ * Remove a post from the user's vault
+ */
+export async function unvaultPost(postId: string, uid: string): Promise<void> {
+  const db = getFirebaseDb();
+  const postRef = doc(db, "posts", postId);
+  
+  await updateDoc(postRef, {
+    vaulted: false,
+    vaultedAt: null,
+  });
+  
+  // Remove from user's vault collection
+  const vaultRef = doc(db, "user_vault", `${uid}_${postId}`);
+  await deleteDoc(vaultRef);
+}
+
+/**
+ * isPostVaulted
+ * Check if a post is vaulted by a user
+ */
+export async function isPostVaulted(postId: string, uid: string): Promise<boolean> {
+  const db = getFirebaseDb();
+  const vaultRef = doc(db, "user_vault", `${uid}_${postId}`);
+  const snap = await getDoc(vaultRef);
+  
+  return snap.exists();
+}
+
+/**
+ * getUserVaultedPosts
+ * Get all posts vaulted by a user
+ */
+export async function getUserVaultedPosts(uid: string): Promise<PostItem[]> {
+  const db = getFirebaseDb();
+  const vaultQuery = query(
+    collection(db, "user_vault"),
+    where("uid", "==", uid)
+  );
+  
+  const vaultSnap = await getDocs(vaultQuery);
+  const postIds = vaultSnap.docs.map(doc => doc.data().postId);
+  
+  if (postIds.length === 0) return [];
+  
+  // Get post details
+  const postsQuery = query(
+    collection(db, "posts"),
+    where("__name__", "in", postIds.slice(0, 10)) // Firestore limit for 'in' queries
+  );
+  
+  const postsSnap = await getDocs(postsQuery);
+  return postsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PostItem[];
+}
 export async function deletePost(postId: string): Promise<void> {
   try {
     const db = getFirebaseDb();
