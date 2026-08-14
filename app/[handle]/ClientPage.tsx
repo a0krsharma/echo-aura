@@ -205,8 +205,10 @@ function PostItem({ post }: { post: UserPost }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // PAGE COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
-export default function HandlePage({ params }: { params: { handle: string } }) {
-  const { handle } = params;
+export default function HandlePage({ params }: { params?: { handle?: string } }) {
+  const routeParams = useParams();
+  const rawHandle = (params?.handle || (routeParams?.handle as string) || "").trim();
+  const handle = rawHandle ? decodeURIComponent(rawHandle) : "";
   const { user } = useAuth();
   const router = useRouter();
   const [userData, setUserData] = useState<FirestoreUser | null>(null);
@@ -217,6 +219,10 @@ export default function HandlePage({ params }: { params: { handle: string } }) {
 
   useEffect(() => {
     async function loadProfile() {
+      if (!handle) {
+        setLoading(false);
+        return;
+      }
       try {
         const db = getFirebaseDb();
         const handleWithAt = handle.startsWith("@") ? handle : `@${handle}`;
