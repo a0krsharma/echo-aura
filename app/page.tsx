@@ -590,17 +590,21 @@ function TextCommentSection({ postId, postAuthorUid, currentUser, onClose }: {
         text: text.trim(),
       });
       if (postAuthorUid && postAuthorUid !== currentUser.uid) {
-        await createNotification(postAuthorUid, {
-          type: "comment" as any,
-          fromUid: currentUser.uid,
-          fromHandle: currentUser.handle || "@ANON",
-          postId,
-          text: `${currentUser.handle || "@ANON"} commented on your echo.`,
-        });
+        try {
+          await createNotification(postAuthorUid, {
+            type: "reverb" as any,
+            fromUid: currentUser.uid,
+            fromHandle: currentUser.handle || "@ANON",
+            postId,
+            text: `${currentUser.handle || "@ANON"} commented on your echo.`,
+          });
+        } catch (notifErr) {
+          console.warn("[TextCommentSection] Notification warning:", notifErr);
+        }
       }
       setText("");
     } catch (err) {
-      console.error("[TextCommentSection] Error:", err);
+      console.warn("[TextCommentSection] Warning creating comment:", err);
     } finally {
       setLoading(false);
     }
