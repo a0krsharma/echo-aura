@@ -163,11 +163,12 @@ export function subscribeToFollowers(
   const q = query(
     collection(db, "follows"),
     where("followingUid", "==", uid),
-    orderBy("createdAt", "desc"),
     limit(100)
   );
   return onSnapshot(q, (snap) => {
-    callback(snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Follow, "id">) })));
+    const list = snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Follow, "id">) }));
+    list.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    callback(list);
   }, (err) => {
     console.error("[subscribeToFollowers] Error:", err);
     callback([]);
@@ -185,11 +186,12 @@ export function subscribeToFollowing(
   const q = query(
     collection(db, "follows"),
     where("followerUid", "==", uid),
-    orderBy("createdAt", "desc"),
     limit(100)
   );
   return onSnapshot(q, (snap) => {
-    callback(snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Follow, "id">) })));
+    const list = snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Follow, "id">) }));
+    list.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    callback(list);
   }, (err) => {
     console.error("[subscribeToFollowing] Error:", err);
     callback([]);

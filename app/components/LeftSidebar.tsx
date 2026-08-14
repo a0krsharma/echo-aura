@@ -7,6 +7,8 @@ import { useAuth } from "@/app/components/AuthProvider";
 import { getStreak } from "@/lib/userDoc";
 import { useEffect, useState } from "react";
 
+import OrbitLogo from "@/app/components/OrbitLogo";
+
 export default function LeftSidebar() {
   const pathname = usePathname();
   const { user, signOut } = useAuth();
@@ -33,9 +35,9 @@ export default function LeftSidebar() {
   return (
     <aside className="hidden md:flex flex-col fixed left-0 top-0 h-screen w-52 bg-black border-r border-neutral-900 px-5 py-8 z-40">
       <div className="flex-1">
-        <Link href="/" className="font-serif text-2xl font-bold text-white block select-none mb-10">
-          Echo.
-        </Link>
+        <div className="mb-8">
+          <OrbitLogo />
+        </div>
         
         <nav className="flex flex-col gap-1">
           {navItems.map((item) => {

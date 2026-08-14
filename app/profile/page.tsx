@@ -27,6 +27,7 @@ import { doc, updateDoc } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 import { addTag, removeTag, getUserTags, getFreqMap, setSignalStatus, getSignalStatus, getVibeRead, analyzeVibeRead, updateVibeRead } from "@/lib/userDoc";
 import { subscribeToFollowers, subscribeToFollowing, type Follow } from "@/lib/follows";
+import OrbitLogo from "@/app/components/OrbitLogo";
 
 // Simple in-profile audio player
 function MiniPlayer({ audioUrl, durationSec }: { audioUrl: string; durationSec: number }) {
@@ -480,7 +481,7 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-black text-white pb-24 md:pb-8 flex flex-col font-sans">
       {/* Top Header */}
       <header className="p-6 flex items-center justify-between border-b border-neutral-900">
-        <span className="font-serif italic text-lg text-white">Echo.</span>
+        <OrbitLogo />
         <div className="flex items-center space-x-3">
           <Link
             href="/terminal"
