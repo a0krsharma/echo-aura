@@ -393,31 +393,32 @@ export default function RoomsPage() {
                       <span className="text-white font-bold">{room.name}</span>
                       {!room.isPublic && <Lock size={12} className="text-neutral-600" />}
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                       <span className="text-neutral-500">{room.participantCount} LISTENERS</span>
                       <span className="px-2 py-0.5 border border-neutral-800 text-neutral-600 text-[10px] uppercase">{room.category}</span>
+                      {user && room.hostUid === user.uid && (
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => handleShareRoom(room.id)} className="text-neutral-500 hover:text-white transition-colors cursor-pointer" title="Share room">
+                            <Share2 size={12} />
+                          </button>
+                          <button onClick={() => handleDeleteRoom(room.id)} className="text-neutral-500 hover:text-red-500 transition-colors cursor-pointer" title="Delete room">
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                   {room.description && (
-                    <p className="font-mono text-neutral-300 text-sm">{room.description}</p>
+                    <p className="font-mono text-neutral-300 text-sm">"{room.description}"</p>
                   )}
-                  <div className="flex items-center gap-2 pt-2">
-                    <button
+                  <div className="pt-1">
+                    <Link
+                      href={`/room/${room.id}`}
                       onClick={() => handleJoinRoom(room.id)}
-                      className="flex-1 font-mono text-xs border border-white px-3 py-1.5 text-white hover:bg-white hover:text-black uppercase transition-colors cursor-pointer"
+                      className="w-full h-10 border border-white bg-black hover:bg-white hover:text-black font-mono text-xs tracking-widest text-white uppercase transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md"
                     >
                       [ 🎧 JOIN ]
-                    </button>
-                    {user && room.hostUid === user.uid && (
-                      <>
-                        <button onClick={() => handleShareRoom(room.id)} title="Share room">
-                          <Share2 size={12} />
-                        </button>
-                        <button onClick={() => handleDeleteRoom(room.id)} title="Delete room">
-                          <Trash2 size={12} />
-                        </button>
-                      </>
-                    )}
+                    </Link>
                   </div>
                 </div>
               ))}
@@ -450,43 +451,40 @@ export default function RoomsPage() {
                         <Users size={12} /> {room.participantCount}/{room.maxParticipants}
                       </span>
                       <span className="text-neutral-600">{room.category}</span>
-                    </div>
-                  </div>
-                  {room.description && (
-                    <p className="font-mono text-neutral-400 text-sm">"{room.description}"</p>
-                  )}
-                  <div className="flex items-center justify-between pt-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-[10px] text-neutral-600">{room.hostHandle}</span>
-                      <span className="font-mono text-[10px] text-neutral-700">HOST</span>
-                    </div>
-                    <div className="flex items-center gap-2">
                       {user && room.hostUid === user.uid && (
-                        <>
+                        <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleShareRoom(room.id)}
-                            className="font-mono text-[10px] text-neutral-500 hover:text-white transition-colors cursor-pointer"
+                            className="text-neutral-500 hover:text-white transition-colors cursor-pointer"
                             title="Share room"
                           >
                             <Share2 size={12} />
                           </button>
                           <button
                             onClick={() => handleDeleteRoom(room.id)}
-                            className="font-mono text-[10px] text-neutral-500 hover:text-red-500 transition-colors cursor-pointer"
+                            className="text-neutral-500 hover:text-red-500 transition-colors cursor-pointer"
                             title="Delete room"
                           >
                             <Trash2 size={12} />
                           </button>
-                        </>
+                        </div>
                       )}
-                      <Link
-                        href={`/room/${room.id}`}
-                        onClick={() => handleJoinRoom(room.id)}
-                        className="font-mono text-xs border border-white px-3 py-1.5 text-white hover:bg-white hover:text-black uppercase transition-colors inline-block"
-                      >
-                        [ 🎧 JOIN ROOM ]
-                      </Link>
                     </div>
+                  </div>
+                  {room.description && (
+                    <p className="font-mono text-neutral-400 text-sm">"{room.description}"</p>
+                  )}
+                  <div className="flex items-center gap-2 font-mono text-[10px] text-neutral-600">
+                    <span>HOST: {room.hostHandle}</span>
+                  </div>
+                  <div className="pt-1">
+                    <Link
+                      href={`/room/${room.id}`}
+                      onClick={() => handleJoinRoom(room.id)}
+                      className="w-full h-10 border border-white bg-black hover:bg-white hover:text-black font-mono text-xs tracking-widest text-white uppercase transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                    >
+                      [ 🎧 JOIN ]
+                    </Link>
                   </div>
                 </div>
               ))}
@@ -524,12 +522,12 @@ export default function RoomsPage() {
                     </span>
                   </div>
                   <p className="font-mono text-neutral-300">"{c.topic}"</p>
-                  <div className="pt-2">
+                  <div className="pt-1">
                     <Link
                       href={`/stage/${c.id}`}
-                      className="font-mono text-xs border border-white px-3 py-1.5 text-white hover:bg-white hover:text-black uppercase transition-colors inline-block"
+                      className="w-full h-10 border border-white bg-black hover:bg-white hover:text-black font-mono text-xs tracking-widest text-white uppercase transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md"
                     >
-                      [ 🎧 JOIN DEBATE ]
+                      [ 🎧 JOIN ]
                     </Link>
                   </div>
                 </div>
