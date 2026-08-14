@@ -972,20 +972,35 @@ function RoomContent({ roomId }: RoomClientProps) {
                   </div>
                   {/* Moderator controls for host */}
                   {user && user.uid === room?.hostUid && participant.uid !== user.uid && (
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 flex-wrap justify-center mt-1">
                       <button
                         onClick={() => participant.isMuted ? handleUnmute(participant.uid) : handleMute(participant.uid)}
-                        className={`font-mono text-[8px] uppercase cursor-pointer transition-colors ${
-                          participant.isMuted ? "text-red-500 hover:text-red-400" : "text-neutral-500 hover:text-white"
+                        className={`font-mono text-[8px] px-1 py-0.5 border uppercase cursor-pointer transition-colors ${
+                          participant.isMuted ? "border-red-900 text-red-400 bg-red-950/40" : "border-neutral-800 text-neutral-400 hover:text-white"
                         }`}
                       >
-                        [{participant.isMuted ? "UNMUTE" : "MUTE"}]
+                        {participant.isMuted ? "UNMUTE" : "MUTE"}
                       </button>
+
                       <button
                         onClick={() => handleDemoteSpeaker(participant.uid)}
-                        className="font-mono text-[8px] text-red-500 hover:text-red-400 uppercase cursor-pointer transition-colors"
+                        className="font-mono text-[8px] px-1 py-0.5 border border-neutral-800 text-neutral-400 hover:text-white uppercase cursor-pointer transition-colors"
                       >
-                        [DEMOTE]
+                        DEMOTE
+                      </button>
+
+                      <button
+                        onClick={() => handleKickUser(participant.uid)}
+                        className="font-mono text-[8px] px-1 py-0.5 border border-red-900 text-red-400 hover:bg-red-950 uppercase cursor-pointer transition-colors"
+                      >
+                        KICK
+                      </button>
+
+                      <button
+                        onClick={() => handleBanUser(participant.uid)}
+                        className="font-mono text-[8px] px-1 py-0.5 border border-red-700 bg-red-950 text-red-400 hover:bg-red-900 font-bold uppercase cursor-pointer transition-colors"
+                      >
+                        BAN
                       </button>
                     </div>
                   )}
@@ -1032,22 +1047,29 @@ function RoomContent({ roomId }: RoomClientProps) {
                   </div>
                   {/* Moderator controls for host */}
                   {user && user.uid === room?.hostUid && participant.uid !== user.uid && (
-                    <div className="flex items-center gap-1">
-                      {participant.raisedHand ? (
-                        <button
-                          onClick={() => handlePromoteSpeaker(participant.uid)}
-                          className="font-mono text-[8px] text-green-500 hover:text-green-400 uppercase cursor-pointer transition-colors"
-                        >
-                          [ACCEPT]
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handlePromoteSpeaker(participant.uid)}
-                          className="font-mono text-[8px] text-neutral-500 hover:text-white uppercase cursor-pointer transition-colors"
-                        >
-                          [PROMOTE]
-                        </button>
-                      )}
+                    <div className="flex items-center gap-1 flex-wrap justify-center mt-1">
+                      <button
+                        onClick={() => handlePromoteSpeaker(participant.uid)}
+                        className={`font-mono text-[8px] px-1 py-0.5 border uppercase cursor-pointer transition-colors ${
+                          participant.raisedHand ? "border-green-700 text-green-400 bg-green-950/40 animate-pulse" : "border-neutral-800 text-neutral-400 hover:text-white"
+                        }`}
+                      >
+                        {participant.raisedHand ? "ACCEPT" : "PROMOTE"}
+                      </button>
+
+                      <button
+                        onClick={() => handleKickUser(participant.uid)}
+                        className="font-mono text-[8px] px-1 py-0.5 border border-red-900 text-red-400 hover:bg-red-950 uppercase cursor-pointer transition-colors"
+                      >
+                        KICK
+                      </button>
+
+                      <button
+                        onClick={() => handleBanUser(participant.uid)}
+                        className="font-mono text-[8px] px-1 py-0.5 border border-red-700 bg-red-950 text-red-400 hover:bg-red-900 font-bold uppercase cursor-pointer transition-colors"
+                      >
+                        BAN
+                      </button>
                     </div>
                   )}
                 </div>
