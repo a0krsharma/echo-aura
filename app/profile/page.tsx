@@ -471,6 +471,13 @@ export default function ProfilePage() {
       <header className="p-6 flex items-center justify-between border-b border-neutral-900">
         <span className="font-serif italic text-lg text-white">Echo.</span>
         <div className="flex items-center space-x-3">
+          <Link
+            href="/terminal"
+            className="px-3 py-1.5 border border-neutral-800 hover:border-white text-neutral-400 hover:text-white font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center gap-1.5"
+            title="System Terminal Console"
+          >
+            <Terminal className="w-3.5 h-3.5 text-white" /> [ TERMINAL ]
+          </Link>
           <button
             onClick={() => setEditProfileOpen(true)}
             className="px-3 py-1.5 border border-white text-white hover:bg-white hover:text-black font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center gap-1.5 font-bold"
@@ -653,36 +660,6 @@ export default function ProfilePage() {
               </div>
             </div>
           )}
-        </div>
-
-        {/* Terminal Console Section */}
-        <div className="p-6 border border-neutral-900 bg-neutral-950/40 mb-8 space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-xs text-neutral-500 tracking-widest uppercase flex items-center gap-2">
-              <Terminal className="w-3.5 h-3.5 text-white" />
-              // [ TERMINAL ] - SYSTEM CONSOLE
-            </span>
-            <span className="font-mono text-[10px] text-green-500 tracking-widest uppercase border border-green-900/60 bg-green-950/40 px-2 py-0.5">
-              CLI READY
-            </span>
-          </div>
-
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
-            <div className="space-y-1">
-              <p className="font-mono text-xs text-white tracking-widest uppercase">
-                SYSTEM OPERATING CONSOLE
-              </p>
-              <p className="font-mono text-[10px] text-neutral-500">
-                Execute commands, view real-time logs, and inspect system frequencies.
-              </p>
-            </div>
-            <Link
-              href="/terminal"
-              className="px-4 py-2 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors cursor-pointer flex items-center justify-center gap-2 shrink-0"
-            >
-              <Terminal className="w-3.5 h-3.5" /> [ OPEN TERMINAL ]
-            </Link>
-          </div>
         </div>
 
         {/* [ VIBE_READ ] Section */}
