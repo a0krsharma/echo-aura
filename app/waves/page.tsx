@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 /**
  * WAVES — Audio Reel Feed (/waves)
  * Full-screen vertical scroll feed, like TikTok/Reels but pure audio.
