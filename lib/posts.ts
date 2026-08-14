@@ -55,6 +55,11 @@ export interface PostItem {
   // [ VAULT ] - Archiving
   vaulted?:        boolean;
   vaultedAt?:      Timestamp | null;
+  // [ DUET ] - Collaborative audio
+  duetOf?:         string;
+  duetOfHandle?:   string;
+  duetPartnerUid?: string;
+  duetPartnerHandle?: string;
 }
 
 /** Inline voice comment on a post — stored in posts/{id}/reverbs subcollection */
@@ -88,6 +93,8 @@ export async function createPost(data: {
   reverbOfHandle?:  string;
   orbitOf?:         string;
   orbitOfHandle?:   string;
+  duetOf?:          string;
+  duetOfHandle?:    string;
 }): Promise<string> {
   try {
     const db = getFirebaseDb();
@@ -108,10 +115,17 @@ export async function createPost(data: {
       reverbOfHandle:  data.reverbOfHandle  || null,
       orbitOf:         data.orbitOf         || null,
       orbitOfHandle:   data.orbitOfHandle   || null,
+      duetOf:          data.duetOf          || null,
+      duetOfHandle:    data.duetOfHandle    || null,
+      duetPartnerUid:  null,
+      duetPartnerHandle: null,
       createdAt:       serverTimestamp(),
       // [ SPIKE ] - Initialize trending metrics
       spikeScore:      0,
       spikeCategory:   null,
+      // [ VAULT ] - Initialize vault status
+      vaulted:         false,
+      vaultedAt:       null,
     });
 
     // Bump aura
@@ -426,6 +440,119 @@ export async function getUserVaultedPosts(uid: string): Promise<PostItem[]> {
   const postsSnap = await getDocs(postsQuery);
   return postsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PostItem[];
 }
+
+/**
+ * createDuet
+ * Create a collaborative duet post
+ */
+export async function createDuet(data: {
+  audioUrl:         string;
+  caption:          string;
+  authorUid:        string;
+  authorHandle:     string;
+  duration?:        string;
+  durationSec?:     number;
+  duetOf:           string;
+  duetOfHandle:     string;
+  duetPartnerUid:   string;
+  duetPartnerHandle: string;
+}): Promise<string> {
+  try {
+    const db = getFirebaseDb();
+    const postsRef = collection(db, "posts");
+    const docRef = await addDoc(postsRef, {
+      audioUrl:        data.audioUrl,
+      caption:         data.caption,
+      authorUid:       data.authorUid,
+      authorHandle:    data.authorHandle,
+      pulseCount:      0,
+      pulsedBy:        [],
+      orbitedBy:       [],
+      orbitCount:      0,
+      reverbCount:     0,
+      duration:        data.duration  || "00:15",
+      durationSec:     data.durationSec || 15,
+      reverbOf:        null,
+      reverbOfHandle:  null,
+      orbitOf:         null,
+      orbitOfHandle:   null,
+      duetOf:          data.duetOf,
+      duetOfHandle:    data.duetOfHandle,
+      duetPartnerUid:  data.duetPartnerUid,
+      duetPartnerHandle: data.duetPartnerHandle,
+      createdAt:       serverTimestamp(),
+      // [ SPIKE ] - Initialize trending metrics
+      spikeScore:      0,
+      spikeCategory:   null,
+      // [ VAULT ] - Initialize vault status
+      vaulted:         false,
+      vaultedAt:       null,
+    });
+
+    // Bump aura
+    try {
+      await updateDoc(doc(db, "users", data.authorUid), { auraScore: increment(10) });
+    } catch {}
+
+    // Create mentions for this duet
+    try {
+      await createPostMentions(docRef.id, data.caption, data.authorUid, data.authorHandle, data.audioUrl);
+    } catch (error) {
+      console.error("[createDuet] Error creating mentions:", error);
+    }
+
+    // Notify duet partner
+    try {
+      const { createNotification } = await import("@/lib/notifications");
+      await createNotification(data.duetPartnerUid, {
+        type: "mention",
+        fromUid: data.authorUid,
+        fromHandle: data.authorHandle,
+        postId: docRef.id,
+        text: `${data.authorHandle} created a [ DUET ] with your audio`,
+      });
+    } catch (error) {
+      console.error("[createDuet] Error notifying partner:", error);
+    }
+
+    return docRef.id;
+  } catch (error) {
+    console.error("Error creating duet:", error);
+    throw error;
+  }
+}
+
+/**
+ * getDuetsForPost
+ * Get all duets for a specific post
+ */
+export async function getDuetsForPost(postId: string): Promise<PostItem[]> {
+  const db = getFirebaseDb();
+  const duetsQuery = query(
+    collection(db, "posts"),
+    where("duetOf", "==", postId)
+  );
+  
+  const snap = await getDocs(duetsQuery);
+  return snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PostItem[];
+}
+
+/**
+ * getDuetsByUser
+ * Get all duets created by a user
+ */
+export async function getDuetsByUser(uid: string): Promise<PostItem[]> {
+  const db = getFirebaseDb();
+  const duetsQuery = query(
+    collection(db, "posts"),
+    where("authorUid", "==", uid),
+    where("duetOf", "!=", null)
+  );
+  
+  const snap = await getDocs(duetsQuery);
+  return snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PostItem[];
+}
+
 export async function deletePost(postId: string): Promise<void> {
   try {
     const db = getFirebaseDb();
