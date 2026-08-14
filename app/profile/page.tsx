@@ -219,6 +219,21 @@ export default function ProfilePage() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.photoURL || user?.avatarUrl || null);
   const [savingProfile, setSavingProfile] = useState(false);
 
+  // Editable Vibe Read metrics
+  const [editPitch, setEditPitch] = useState(100);
+  const [editTempo, setEditTempo] = useState(2);
+  const [editEnergy, setEditEnergy] = useState(35);
+  const [editClarity, setEditClarity] = useState(97);
+
+  useEffect(() => {
+    if (vibeRead) {
+      setEditPitch(vibeRead.pitch);
+      setEditTempo(vibeRead.tempo);
+      setEditEnergy(vibeRead.energy);
+      setEditClarity(vibeRead.clarity);
+    }
+  }, [vibeRead]);
+
   // Real-time listener for user document (voice bio & profile data)
   useEffect(() => {
     if (!user) return;
@@ -270,6 +285,15 @@ export default function ProfilePage() {
         photoURL,
         avatarUrl: photoURL,
       });
+
+      const vibeData = {
+        pitch: editPitch,
+        tempo: editTempo,
+        energy: editEnergy,
+        clarity: editClarity,
+      };
+      await updateVibeRead(user.uid, vibeData);
+      setVibeRead(vibeData);
 
       setEditProfileOpen(false);
     } catch (err) {
@@ -1008,6 +1032,68 @@ export default function ProfilePage() {
                   placeholder="Enter your voice bio or credo..."
                   className="w-full bg-neutral-950 border border-neutral-800 p-2.5 font-mono text-xs text-white placeholder-neutral-700 focus:outline-none focus:border-white"
                 />
+              </div>
+            </div>
+
+            {/* [ LIVE VIBE_READ ] Voice Metrics Section */}
+            <div className="p-4 border border-neutral-900 bg-neutral-950/40 space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-xs text-neutral-400 tracking-widest uppercase block">
+                  // [ LIVE VIBE_READ ] - VOICE METRICS
+                </span>
+              </div>
+              <div className="space-y-3">
+                {/* PITCH */}
+                <div className="space-y-1">
+                  <div className="flex justify-between font-mono text-[10px] uppercase">
+                    <span className="text-neutral-500">PITCH</span>
+                    <span className="text-white font-bold tabular-nums">{editPitch}</span>
+                  </div>
+                  <input
+                    type="range" min="0" max="100" value={editPitch}
+                    onChange={(e) => setEditPitch(parseInt(e.target.value))}
+                    className="w-full accent-white bg-neutral-900 h-2 rounded cursor-pointer"
+                  />
+                </div>
+
+                {/* TEMPO */}
+                <div className="space-y-1">
+                  <div className="flex justify-between font-mono text-[10px] uppercase">
+                    <span className="text-neutral-500">TEMPO</span>
+                    <span className="text-white font-bold tabular-nums">{editTempo}</span>
+                  </div>
+                  <input
+                    type="range" min="0" max="100" value={editTempo}
+                    onChange={(e) => setEditTempo(parseInt(e.target.value))}
+                    className="w-full accent-white bg-neutral-900 h-2 rounded cursor-pointer"
+                  />
+                </div>
+
+                {/* ENERGY */}
+                <div className="space-y-1">
+                  <div className="flex justify-between font-mono text-[10px] uppercase">
+                    <span className="text-neutral-500">ENERGY</span>
+                    <span className="text-white font-bold tabular-nums">{editEnergy}</span>
+                  </div>
+                  <input
+                    type="range" min="0" max="100" value={editEnergy}
+                    onChange={(e) => setEditEnergy(parseInt(e.target.value))}
+                    className="w-full accent-white bg-neutral-900 h-2 rounded cursor-pointer"
+                  />
+                </div>
+
+                {/* CLARITY */}
+                <div className="space-y-1">
+                  <div className="flex justify-between font-mono text-[10px] uppercase">
+                    <span className="text-neutral-500">CLARITY</span>
+                    <span className="text-white font-bold tabular-nums">{editClarity}</span>
+                  </div>
+                  <input
+                    type="range" min="0" max="100" value={editClarity}
+                    onChange={(e) => setEditClarity(parseInt(e.target.value))}
+                    className="w-full accent-white bg-neutral-900 h-2 rounded cursor-pointer"
+                  />
+                </div>
               </div>
             </div>
 
