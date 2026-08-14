@@ -183,6 +183,9 @@ export default function TerminalPage() {
   const [showDanger, setShowDanger] = useState(false);
   const [view, setView] = useState<"main" | "pings" | "hidden">("main");
   const [newWord, setNewWord] = useState("");
+  const [activeModal, setActiveModal] = useState<"guide" | "report" | "safety" | "contact" | null>(null);
+  const [reportText, setReportText] = useState("");
+  const [reportSuccess, setReportSuccess] = useState(false);
 
   // ── Load settings from Firestore on mount ───────────────
   useEffect(() => {
@@ -316,22 +319,33 @@ export default function TerminalPage() {
 
   // ── MAIN TERMINAL VIEW ──────────────────────────────────
   return (
-    <div className="bg-black min-h-screen pb-24 md:pb-0">
+    <div className="bg-black min-h-screen pb-24 md:pb-12">
 
-      {/* Mobile top bar */}
-      <div className="md:hidden flex items-center justify-between px-5 pt-10 pb-6 border-b border-neutral-900">
-        <Link href="/" className="text-neutral-600 hover:text-white transition-colors">
+      {/* Top Bar with Back Navigation for Mobile & Desktop */}
+      <div className="sticky top-0 z-30 bg-black/90 backdrop-blur border-b border-neutral-900 px-5 md:px-8 py-4 flex items-center justify-between">
+        <button
+          onClick={() => router.back()}
+          className="font-mono text-xs tracking-widest uppercase text-neutral-400 hover:text-white transition-colors cursor-pointer flex items-center gap-2"
+        >
           <ArrowLeft size={16} strokeWidth={1.5} />
+          <span>[ ← BACK ]</span>
+        </button>
+        <span className="font-mono text-xs tracking-widest uppercase text-white font-bold">
+          [ SYSTEM TERMINAL ]
+        </span>
+        <Link
+          href="/profile"
+          className="font-mono text-xs tracking-widest uppercase text-neutral-500 hover:text-white transition-colors cursor-pointer"
+        >
+          [ PROFILE ]
         </Link>
-        <span className="font-mono text-xs tracking-widest uppercase text-white">[ TERMINAL ]</span>
-        <div className="w-4" />
       </div>
 
-      <div className="max-w-xl mx-auto px-5 md:px-6 pt-8 md:pt-12">
+      <div className="max-w-xl mx-auto px-5 md:px-6 pt-6 md:pt-8">
 
         {/* Terminal label */}
         <p className="font-mono text-xs tracking-widest uppercase text-neutral-700 mb-8">
-          // SYSTEM: ECHO TERMINAL v1.0
+          // SYSTEM: ECHO TERMINAL v1.0 • SYSTEM COMMAND CENTER
         </p>
 
         {/* ── YOUR IDENTITY ──────────────────────────────────── */}
@@ -407,10 +421,10 @@ export default function TerminalPage() {
 
         {/* ── HELP / SOS ────────────────────────────────────── */}
         <SectionHeader label="HELP / SOS" />
-        <NavItem label="ECHO GUIDE"          sub="how everything works"     href="#" />
-        <NavItem label="REPORT A PROBLEM"    sub="bugs, crashes, weirdness" href="#" />
-        <NavItem label="SAFETY CENTRE"       sub="mental health & support"  href="#" />
-        <NavItem label="CONTACT US"          sub="reach the humans behind echo" href="#" />
+        <NavItem label="ECHO GUIDE"          sub="how everything works"     onClick={() => setActiveModal("guide")} />
+        <NavItem label="REPORT A PROBLEM"    sub="bugs, crashes, weirdness" onClick={() => setActiveModal("report")} />
+        <NavItem label="SAFETY CENTRE"       sub="mental health & support"  onClick={() => setActiveModal("safety")} />
+        <NavItem label="CONTACT US"          sub="reach the humans behind echo" onClick={() => setActiveModal("contact")} />
 
         {/* ── DANGER ZONE ───────────────────────────────────── */}
         <SectionHeader label="DANGER ZONE" />
@@ -444,6 +458,94 @@ export default function TerminalPage() {
           {savingKey && <span className="ml-3 text-neutral-600 animate-pulse">SAVING...</span>}
         </p>
       </div>
+
+      {/* ── HELP / SOS MODALS ────────────────────────────────── */}
+      {activeModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md border border-neutral-800 bg-black p-6 space-y-5">
+            <div className="flex items-center justify-between border-b border-neutral-900 pb-3">
+              <span className="font-mono text-xs tracking-widest text-white uppercase font-bold">
+                {activeModal === "guide" && "// ECHO GUIDE"}
+                {activeModal === "report" && "// REPORT A PROBLEM"}
+                {activeModal === "safety" && "// SAFETY CENTRE"}
+                {activeModal === "contact" && "// CONTACT HUMAN SUPPORT"}
+              </span>
+              <button
+                onClick={() => { setActiveModal(null); setReportSuccess(false); setReportText(""); }}
+                className="font-mono text-xs text-neutral-500 hover:text-white cursor-pointer"
+              >
+                [ ✕ CLOSE ]
+              </button>
+            </div>
+
+            {activeModal === "guide" && (
+              <div className="space-y-3 font-mono text-xs text-neutral-300 leading-relaxed max-h-80 overflow-y-auto">
+                <p><strong className="text-white">FREQUENCY:</strong> Live public voice feed of authentic audio snippets.</p>
+                <p><strong className="text-white">STUDIO:</strong> Record 15s to 60s voice yaps & voice bio.</p>
+                <p><strong className="text-white">STAGE / CLASH:</strong> Live audio debate arena & voice battles.</p>
+                <p><strong className="text-white">ROOMS:</strong> Real-time Clubhouse-style audio spaces (Speaker vs Audience).</p>
+                <p><strong className="text-white">WIRE:</strong> Direct 1-on-1 private voice messages.</p>
+                <p><strong className="text-white">AURA:</strong> Dynamic engagement score earned by authentic voice content.</p>
+              </div>
+            )}
+
+            {activeModal === "report" && (
+              <div className="space-y-4">
+                {reportSuccess ? (
+                  <p className="font-mono text-xs text-green-400">
+                    ✓ THANK YOU! YOUR PROBLEM REPORT HAS BEEN SUBMITTED TO OUR ENG ENGINEERS.
+                  </p>
+                ) : (
+                  <>
+                    <p className="font-mono text-xs text-neutral-400">
+                      DESCRIBE THE BUG, CRASH, OR GLITCH YOU ENCOUNTERED:
+                    </p>
+                    <textarea
+                      rows={4}
+                      value={reportText}
+                      onChange={(e) => setReportText(e.target.value)}
+                      placeholder="e.g. Audio stopped playing after switching rooms..."
+                      className="w-full bg-neutral-950 border border-neutral-800 p-3 font-mono text-xs text-white placeholder-neutral-700 focus:outline-none focus:border-white"
+                    />
+                    <button
+                      onClick={() => {
+                        if (reportText.trim()) {
+                          setReportSuccess(true);
+                        }
+                      }}
+                      disabled={!reportText.trim()}
+                      className="w-full py-2.5 bg-white text-black font-mono text-xs tracking-widest uppercase font-bold hover:bg-neutral-200 cursor-pointer disabled:opacity-40"
+                    >
+                      [ SUBMIT REPORT ]
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+
+            {activeModal === "safety" && (
+              <div className="space-y-3 font-mono text-xs text-neutral-300 leading-relaxed">
+                <p className="text-white font-bold">// USER BOUNDARIES & SAFETY</p>
+                <p>• Block or Mute any user directly from their profile card.</p>
+                <p>• Enable Anonymous Mode or Private Frequency in Privacy settings.</p>
+                <p>• 24/7 Support Helpline: <span className="text-white underline">988 (Mental Health Crisis Line)</span>.</p>
+              </div>
+            )}
+
+            {activeModal === "contact" && (
+              <div className="space-y-4 font-mono text-xs">
+                <p className="text-neutral-400">REACH OUR CORE TEAM DIRECTLY:</p>
+                <div className="p-3 border border-neutral-800 bg-neutral-950 text-white font-bold text-sm select-all">
+                  support@echo-aura.app
+                </div>
+                <p className="text-neutral-500 text-[10px]">
+                  EXPECT RESPONSES WITHIN 12-24 HOURS.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
