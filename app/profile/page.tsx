@@ -22,7 +22,7 @@ import { uploadAudio, getPlayableUrl } from "@/lib/cloudinary";
 import { subscribeToUserPosts, subscribeToUserPulsedPosts, type PostItem } from "@/lib/posts";
 import { doc, updateDoc } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
-import { addTag, removeTag, getUserTags } from "@/lib/userDoc";
+import { addTag, removeTag, getUserTags, getFreqMap } from "@/lib/userDoc";
 
 // Simple in-profile audio player
 function MiniPlayer({ audioUrl, durationSec }: { audioUrl: string; durationSec: number }) {
@@ -99,6 +99,7 @@ export default function ProfilePage() {
   const [copied, setCopied] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState("");
+  const [freqMap, setFreqMap] = useState<Record<string, number>>({});
 
   // Voice Bio states
   const [bioState, setBioState] = useState<"idle" | "recording" | "preview" | "saved">("idle");
@@ -137,6 +138,12 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!user) return;
     getUserTags(user.uid).then(setTags);
+  }, [user]);
+
+  // Fetch user's frequency map
+  useEffect(() => {
+    if (!user) return;
+    getFreqMap(user.uid).then(setFreqMap);
   }, [user]);
 
   // Voice Bio recording timer — auto-stop at max duration
@@ -563,6 +570,43 @@ export default function ProfilePage() {
                 ))
               )}
             </div>
+          </div>
+        </div>
+
+        {/* [ FREQ_MAP ] Section */}
+        <div className="p-6 border border-neutral-900 bg-neutral-950/40 mb-8 space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-xs text-neutral-500 tracking-widest uppercase">
+              // [ FREQ_MAP ] - YOUR SPECTRAL FOOTPRINT
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            {Object.keys(freqMap).length === 0 ? (
+              <p className="font-mono text-[10px] text-neutral-700 tracking-widest uppercase">
+                NO DATA YET. LISTEN TO CONTENT TO BUILD YOUR FOOTPRINT.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {Object.entries(freqMap)
+                  .sort(([, a], [, b]) => b - a)
+                  .slice(0, 10)
+                  .map(([topic, count]) => (
+                    <div key={topic} className="flex items-center gap-3">
+                      <span className="font-mono text-[10px] text-white tracking-widest uppercase w-24">
+                        {topic}
+                      </span>
+                      <div className="flex-1 h-2 bg-neutral-900 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-purple-500 to-blue-500"
+                          style={{ width: `${Math.min(100, (count / Math.max(...Object.values(freqMap))) * 100)}%` }}
+                        />
+                      </div>
+                      <span className="font-mono text-[10px] text-neutral-500 tabular-nums">{count}</span>
+                    </div>
+                  ))}
+              </div>
+            )}
           </div>
         </div>
 

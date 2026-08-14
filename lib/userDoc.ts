@@ -20,6 +20,7 @@ export interface EchoUser {
   tags:        string[];
   streak:      number;
   lastActiveDate: string | null;
+  freqMap:     Record<string, number>; // Topic -> count
 }
 
 /** Generate a random anonymous handle like @ANON_4X7K */
@@ -49,6 +50,7 @@ export async function getOrCreateUserDoc(firebaseUser: FirebaseUser): Promise<Ec
     tags:        [],
     streak:      0,
     lastActiveDate: null,
+    freqMap:     {},
   };
 
   try {
@@ -72,6 +74,7 @@ export async function getOrCreateUserDoc(firebaseUser: FirebaseUser): Promise<Ec
       streak: 0,
       lastActiveDate: null,
       tags: [],
+      freqMap: {},
     });
 
     return fallbackUser;
@@ -79,6 +82,38 @@ export async function getOrCreateUserDoc(firebaseUser: FirebaseUser): Promise<Ec
     console.warn("[Firestore] User doc permission notice (using fallback user):", err.message);
     return fallbackUser;
   }
+}
+
+/**
+ * updateFreqMap
+ * Update user's frequency map when they consume content
+ */
+export async function updateFreqMap(uid: string, topic: string): Promise<void> {
+  const db = getFirebaseDb();
+  const ref = doc(db, "users", uid);
+  const topicKey = topic.toUpperCase();
+  
+  // Increment the topic count in freqMap
+  await updateDoc(ref, {
+    [`freqMap.${topicKey}`]: increment(1),
+  });
+}
+
+/**
+ * getFreqMap
+ * Get user's frequency map
+ */
+export async function getFreqMap(uid: string): Promise<Record<string, number>> {
+  const db = getFirebaseDb();
+  const ref = doc(db, "users", uid);
+  const snap = await getDoc(ref);
+  
+  if (!snap.exists()) {
+    return {};
+  }
+  
+  const userData = snap.data() as EchoUser;
+  return userData.freqMap || {};
 }
 
 /**
