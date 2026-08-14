@@ -226,7 +226,7 @@ export default function RadarPage() {
                     className="flex items-center gap-2 font-mono text-xs border border-neutral-800 px-3 py-2 text-neutral-400 hover:border-white hover:text-white uppercase transition-colors cursor-pointer"
                   >
                     <MessageSquare className="w-3 h-3" />
-                    CONNECT
+                    [ WIRE ]
                   </Link>
                 </div>
               ))}

@@ -182,7 +182,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
             href="/profile"
             className="font-mono text-xs tracking-widest uppercase text-secondary border border-standard px-2.5 py-1 uppercase hover:border-white hover:text-white transition-colors"
           >
-            <span className="font-mono text-xs tracking-widest uppercase text-secondary">LIVE ROOMS</span>
+            <span className="font-mono text-xs tracking-widest uppercase text-secondary">[ ROOMS ]</span>
             {user.handle || "@YOU"}
           </Link>
         </div>

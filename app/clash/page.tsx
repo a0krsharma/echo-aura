@@ -202,7 +202,7 @@ export default function StagePage() {
           {clashes.length === 0 ? (
             <div className="border border-neutral-900 p-8 text-center space-y-4">
               <p className="font-serif italic text-neutral-500 text-lg">
-                No active debates on the Stage right now.
+                No active debates on [ STAGE ] right now.
               </p>
               <button
                 onClick={() => setShowChallenge(true)}

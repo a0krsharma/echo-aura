@@ -28,16 +28,16 @@ const STEPS: OnboardingStep[] = [
     title: "Record Your Voice",
     description: "Create audio posts up to 5 minutes. Add captions, hashtags, and share with the world.",
   },
-  {
-    id: 3,
-    title: "Discover Content",
-    description: "Explore The Frequency, Waves, and The Stage. Find audio that resonates with you.",
-  },
-  {
-    id: 4,
-    title: "Connect with Others",
-    description: "Follow creators, join live rooms, participate in debates, and send whispers.",
-  },
+{
+      id: 3,
+      title: "Discover Content",
+      description: "Explore [ FREQUENCY ], [ WAVES ], and [ STAGE ]. Find audio that resonates with you.",
+    },
+    {
+      id: 4,
+      title: "Connect with Others",
+      description: "Follow creators, join live rooms, participate in debates, and send [ WIRE ] messages.",
+    },
   {
     id: 5,
     title: "You're All Set!",
@@ -238,15 +238,15 @@ export default function OnboardingPage() {
               <div className="bg-white/10 rounded-xl p-6 mb-8">
                 <div className="grid grid-cols-3 gap-4 text-center text-white">
                   <div>
-                    <div className="text-xl font-bold mb-1">The Frequency</div>
+                    <div className="text-xl font-bold mb-1">[ FREQUENCY ]</div>
                     <div className="text-xs">Main Feed</div>
                   </div>
                   <div>
-                    <div className="text-xl font-bold mb-1">Waves</div>
+                    <div className="text-xl font-bold mb-1">[ WAVES ]</div>
                     <div className="text-xs">Vertical Feed</div>
                   </div>
                   <div>
-                    <div className="text-xl font-bold mb-1">The Stage</div>
+                    <div className="text-xl font-bold mb-1">[ STAGE ]</div>
                     <div className="text-xs">Debates</div>
                   </div>
                 </div>
@@ -266,7 +266,7 @@ export default function OnboardingPage() {
                   </div>
                   <div>
                     <div className="text-xl font-bold mb-1">💬</div>
-                    <div className="text-xs">Whispers</div>
+                    <div className="text-xs">[ WIRE ]</div>
                   </div>
                 </div>
               </div>

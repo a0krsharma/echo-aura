@@ -22,12 +22,12 @@ export default function BottomNav() {
   const hasNotifs = unreadCount > 0;
 
   const navItems = [
-    { href: "/",             icon: Radio,          label: "FREQ"   },
-    { href: "/waves",        icon: Waves,          label: "WAVES"  },
-    { href: "/rooms",        icon: Users,          label: "ROOMS"  },
-    { href: "/studio",       icon: Mic2,           label: "STUDIO", isCenter: true },
-    { href: "/whispers",     icon: MessageSquare,  label: "WIRE"   },
-    { href: "/radar",        icon: Compass,        label: "RADAR"  },
+    { href: "/",             icon: Radio,          label: "[ FREQUENCY ]"   },
+    { href: "/waves",        icon: Waves,          label: "[ WAVES ]"  },
+    { href: "/rooms",        icon: Users,          label: "[ ROOMS ]"  },
+    { href: "/studio",       icon: Mic2,           label: "[ STUDIO ]", isCenter: true },
+    { href: "/whispers",     icon: MessageSquare,  label: "[ WIRE ]"   },
+    { href: "/radar",        icon: Compass,        label: "[ RADAR ]"  },
   ];
 
   return (

@@ -1,7 +1,7 @@
 /**
  * lib/echoes.ts
  * ─────────────────────────────────────────────────────
- * Firestore service for Echoes and Reverbs.
+ * Firestore service for Echoes and [ REPLIES ].
  * Collection: "echoes"
  *
  * Echo Document Schema:
@@ -15,7 +15,7 @@
  *   vibeTag       string   — e.g. "HOT TAKE", "RANT"
  *   accentColor   string   — Hex or CSS color
  *   pulses        number   — Vote count
- *   reverbsCount  number   — Reverb count
+ *   reverbsCount  number   — [ REPLIES ] count
  *   listeners     number   — Audience play count
  *   createdAt     Timestamp
  */
@@ -38,6 +38,7 @@ import {
   type Timestamp,
 } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
+import { incrementStreak } from "@/lib/userDoc";
 
 export interface EchoPost {
   id:           string;
@@ -107,6 +108,13 @@ export async function createEcho(data: {
     });
   } catch (e) {
     console.error("Failed to update auraScore:", e);
+  }
+
+  // Increment user's daily streak
+  try {
+    await incrementStreak(data.uid);
+  } catch (e) {
+    console.error("Failed to update streak:", e);
   }
 
   return docRef.id;

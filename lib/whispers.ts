@@ -1,7 +1,7 @@
 /**
  * lib/whispers.ts
  * ─────────────────────────────────────────────────────
- * Firestore service for Whispers (private 1-on-1 DMs).
+ * Firestore service for [ WIRE ] (private 1-on-1 DMs).
  *
  * Collection structure:
  *   whispers/{conversationId}/

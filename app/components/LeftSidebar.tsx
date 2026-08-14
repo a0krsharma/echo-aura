@@ -2,13 +2,22 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Radio, Compass, Mic2, Swords, Search, MessageSquare, Bell, User, Terminal, LogOut, Waves, Users } from "lucide-react";
+import { Radio, Compass, Mic2, Swords, Search, MessageSquare, Bell, User, Terminal, LogOut, Waves, Users, Flame } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
+import { getStreak } from "@/lib/userDoc";
+import { useEffect, useState } from "react";
 
 export default function LeftSidebar() {
   const pathname = usePathname();
   const { user, signOut } = useAuth();
   const hasNotifs = false;
+  const [streak, setStreak] = useState(0);
+
+  useEffect(() => {
+    if (user) {
+      getStreak(user.uid).then(setStreak);
+    }
+  }, [user]);
 
   const navItems = [
     { href: "/",             icon: Radio,         label: "[ FREQUENCY ]", hasNotifDot: false },
@@ -69,7 +78,15 @@ export default function LeftSidebar() {
           </button>
         </div>
         <p className="text-white truncate">{user?.handle || "@ANON_GUEST"}</p>
-        <p className="text-neutral-400">[ AURA ]: {user?.auraScore || 0}</p>
+        <div className="flex items-center gap-2">
+          <p className="text-neutral-400">[ AURA ]: {user?.auraScore || 0}</p>
+          {streak > 0 && (
+            <p className="text-yellow-500 flex items-center gap-1">
+              <Flame size={10} className="fill-yellow-500" />
+              [ STREAK ]: {streak}
+            </p>
+          )}
+        </div>
       </div>
     </aside>
   );

@@ -859,7 +859,7 @@ function RoomContent({ roomId }: RoomClientProps) {
                   </div>
                   <div className="text-center">
                     <p className="font-mono text-lg text-white">{profileData.auraScore || 0}</p>
-                    <p className="font-mono text-[10px] text-neutral-600 uppercase">AURA</p>
+                    <p className="font-mono text-[10px] text-neutral-600 uppercase">[ AURA ]</p>
                   </div>
                   <div className="text-center">
                     <p className="font-mono text-lg text-white">{profileData.badges?.length || 0}</p>

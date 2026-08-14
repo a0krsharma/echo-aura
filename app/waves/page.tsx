@@ -373,11 +373,11 @@ export default function WavesPage() {
       <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 pt-safe pt-4 pointer-events-none">
         <div className="flex items-center gap-2 pointer-events-auto">
           <Link href="/" className="font-mono text-[10px] text-white/60 tracking-widest uppercase hover:text-white transition-colors">
-            ← FREQ
+            ← [ FREQUENCY ]
           </Link>
         </div>
         <div className="flex items-center gap-2 pointer-events-auto">
-          <span className="font-serif italic text-white text-lg drop-shadow-lg">Waves</span>
+          <span className="font-serif italic text-white text-lg drop-shadow-lg">[ WAVES ]</span>
         </div>
         {/* Mute toggle */}
         <button

@@ -248,7 +248,7 @@ export default function NotificationsPage() {
                     className="shrink-0 font-mono text-[10px] border border-neutral-800 px-2 py-1 text-neutral-400 hover:border-white hover:text-white uppercase transition-colors"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    REPLY
+                    [ WIRE ]
                   </Link>
                 )}
               </div>

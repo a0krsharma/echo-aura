@@ -501,7 +501,7 @@ export default function RoomsPage() {
             <div className="border border-neutral-900 p-6 text-center space-y-3">
               <Swords className="w-6 h-6 text-neutral-700 mx-auto" />
               <p className="font-mono text-xs text-neutral-500 tracking-widest uppercase">
-                NO LIVE DEBATES ON STAGE
+                NO LIVE DEBATES ON [ STAGE ]
               </p>
               <Link
                 href="/clash"

@@ -1,7 +1,7 @@
 /**
  * lib/clashes.ts
  * ─────────────────────────────────────────────────────
- * Firestore service for The Stage (Clashes / Debates).
+ * Firestore service for [ STAGE ] (Clashes / Debates).
  * Collection: "clashes"
  */
 

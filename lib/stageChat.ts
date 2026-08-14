@@ -1,7 +1,7 @@
 /**
  * lib/stageChat.ts
  * ─────────────────────────────────────────────────────
- * Firestore real-time service for The Stage Vibe Chat.
+ * Firestore real-time service for [ STAGE ] Vibe Chat.
  * Collection: "clashes/{clashId}/messages"
  */
 
