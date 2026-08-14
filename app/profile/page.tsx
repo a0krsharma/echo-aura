@@ -782,7 +782,7 @@ export default function ProfilePage() {
                   <div className="flex items-center gap-2">
                     <div className="flex-1 h-2 bg-neutral-900 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-purple-500 to-pink-500"
+                        className="h-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.4)] transition-all duration-300"
                         style={{ width: `${vibeRead.pitch}%` }}
                       />
                     </div>
@@ -794,7 +794,7 @@ export default function ProfilePage() {
                   <div className="flex items-center gap-2">
                     <div className="flex-1 h-2 bg-neutral-900 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-blue-500 to-cyan-500"
+                        className="h-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.4)] transition-all duration-300"
                         style={{ width: `${vibeRead.tempo}%` }}
                       />
                     </div>
@@ -806,7 +806,7 @@ export default function ProfilePage() {
                   <div className="flex items-center gap-2">
                     <div className="flex-1 h-2 bg-neutral-900 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-orange-500 to-yellow-500"
+                        className="h-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.4)] transition-all duration-300"
                         style={{ width: `${vibeRead.energy}%` }}
                       />
                     </div>
@@ -818,7 +818,7 @@ export default function ProfilePage() {
                   <div className="flex items-center gap-2">
                     <div className="flex-1 h-2 bg-neutral-900 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-green-500 to-emerald-500"
+                        className="h-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.4)] transition-all duration-300"
                         style={{ width: `${vibeRead.clarity}%` }}
                       />
                     </div>
