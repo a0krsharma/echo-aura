@@ -16,6 +16,7 @@ import {
   ArrowUp,
   RefreshCw,
   Repeat2,
+  Terminal,
 } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
 import { uploadAudio, getPlayableUrl } from "@/lib/cloudinary";
@@ -557,6 +558,36 @@ export default function ProfilePage() {
               </div>
             </div>
           )}
+        </div>
+
+        {/* Terminal Console Section */}
+        <div className="p-6 border border-neutral-900 bg-neutral-950/40 mb-8 space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-xs text-neutral-500 tracking-widest uppercase flex items-center gap-2">
+              <Terminal className="w-3.5 h-3.5 text-white" />
+              // [ TERMINAL ] - SYSTEM CONSOLE
+            </span>
+            <span className="font-mono text-[10px] text-green-500 tracking-widest uppercase border border-green-900/60 bg-green-950/40 px-2 py-0.5">
+              CLI READY
+            </span>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
+            <div className="space-y-1">
+              <p className="font-mono text-xs text-white tracking-widest uppercase">
+                SYSTEM OPERATING CONSOLE
+              </p>
+              <p className="font-mono text-[10px] text-neutral-500">
+                Execute commands, view real-time logs, and inspect system frequencies.
+              </p>
+            </div>
+            <Link
+              href="/terminal"
+              className="px-4 py-2 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors cursor-pointer flex items-center justify-center gap-2 shrink-0"
+            >
+              <Terminal className="w-3.5 h-3.5" /> [ OPEN TERMINAL ]
+            </Link>
+          </div>
         </div>
 
         {/* [ TAGS ] Section */}
