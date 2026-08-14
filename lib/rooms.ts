@@ -44,9 +44,9 @@ export interface Room {
   agoraChannel: string;
   scheduledFor: Timestamp | null;
   openMic: boolean;
-  // Optional HLS metadata set when a broadcast (RTMP->CDN) is active
-  hlsEnabled?: boolean;
-  hlsUrl?: string;
+  // [ TRANSMIT ] - Live broadcasting metadata
+  transmitEnabled?: boolean;
+  transmitUrl?: string;
 }
 
 export interface RoomParticipant {
@@ -721,15 +721,15 @@ export async function updateRoomOpenMic(roomId: string, openMic: boolean): Promi
   });
 }
 
-// ── Update room HLS flag and URL ─────────────────────────────────────────
-export async function updateRoomHls(roomId: string, enabled: boolean, hlsUrl?: string): Promise<void> {
+// ── Update room [ TRANSMIT ] flag and URL ─────────────────────────────────────────
+export async function updateRoomTransmit(roomId: string, enabled: boolean, transmitUrl?: string): Promise<void> {
   const db = getFirebaseDb();
   const roomRef = doc(db, ROOMS_COLLECTION, roomId);
-  const updateObj: any = { hlsEnabled: enabled, updatedAt: serverTimestamp() };
-  if (hlsUrl !== undefined) updateObj.hlsUrl = hlsUrl;
+  const updateObj: any = { transmitEnabled: enabled, updatedAt: serverTimestamp() };
+  if (transmitUrl !== undefined) updateObj.transmitUrl = transmitUrl;
   await updateDoc(roomRef, updateObj);
 
-  // Best-effort notification: when enabling HLS, tell followers the host is broadcasting
+  // Best-effort notification: when enabling [ TRANSMIT ], tell followers the host is broadcasting
   if (enabled) {
     try {
       const roomSnap = await getDoc(roomRef);
@@ -750,15 +750,15 @@ export async function updateRoomHls(roomId: string, enabled: boolean, hlsUrl?: s
             fromHandle: roomData.hostHandle,
             roomId,
             roomName: roomData.name,
-            text: `${roomData.hostHandle} is now broadcasting \"${roomData.name}\" via HLS`,
+            text: `${roomData.hostHandle} is now [ TRANSMIT ]ing "${roomData.name}"`,
           });
         } catch (e) {
           // best-effort per-follower
-          console.warn("[updateRoomHls] notify follower failed for", followerUid, e);
+          console.warn("[updateRoomTransmit] notify follower failed for", followerUid, e);
         }
       }
     } catch (err) {
-      console.warn("[updateRoomHls] notify followers failed:", err);
+      console.warn("[updateRoomTransmit] notify followers failed:", err);
     }
   }
 }
