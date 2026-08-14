@@ -26,6 +26,8 @@ import {
   type WhisperConversation,
   type WhisperMessage,
 } from "@/lib/whispers";
+import { getFirebaseDb } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 // ─── Time helper ─────────────────────────────────────────────────────────────
 function timeStr(ts: any): string {
@@ -202,7 +204,7 @@ function ChatWindow({
 
   useEffect(() => {
     const unsubSig = subscribeToSignaling(conv.id, async (msg: any) => {
-      if (!msg || msg.fromUid === myUid) return;
+      if (!msg || msg.senderUid === myUid) return;
       try {
         const pc = pcRef.current || new RTCPeerConnection({ iceServers: getIceServers() });
         if (!pcRef.current) pcRef.current = pc;
@@ -300,11 +302,11 @@ function ChatWindow({
           messages.map((msg) => (
             <div
               key={msg.id}
-              className={`flex ${msg.fromUid === myUid ? "justify-end" : "justify-start"}`}
+              className={`flex ${msg.senderUid === myUid ? "justify-end" : "justify-start"}`}
             >
               <div
                 className={`max-w-[80%] px-3 py-2 ${
-                  msg.fromUid === myUid
+                  msg.senderUid === myUid
                     ? "bg-white text-black"
                     : "bg-neutral-900 text-white border border-neutral-800"
                 }`}
@@ -369,8 +371,14 @@ export default function WirePage() {
   const handleStartConversation = async (targetUid: string, targetHandle: string) => {
     if (!user) return;
     try {
-      const conv = await startOrGetConversation(user.uid, user.handle || "@ANON", targetUid, targetHandle);
-      setActiveConv(conv);
+      const convId = await startOrGetConversation(user.uid, user.handle || "@ANON", targetUid, targetHandle);
+      // Fetch the full conversation object
+      const db = getFirebaseDb();
+      const convRef = doc(db, "whispers", convId);
+      const convSnap = await getDoc(convRef);
+      if (convSnap.exists()) {
+        setActiveConv({ id: convSnap.id, ...convSnap.data() } as WhisperConversation);
+      }
       setShowNew(false);
       setSearchQuery("");
       setSearchResults([]);
