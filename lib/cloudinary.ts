@@ -145,8 +145,12 @@ export async function uploadImage(
 /**
  * getPlayableUrl
  *
- * Ensures a Cloudinary audio URL is directly playable by stripping any
- * inline transformation segments that break HTTP range requests.
+ * Ensures a Cloudinary audio URL is directly playable by:
+ * 1. Converting /raw/upload/ to /video/upload/ (legacy path fix)
+ * 2. Stripping transformation segments that break HTTP range requests
+ *
+ * e.g. https://res.cloudinary.com/x/raw/upload/v1/foo.webm
+ *   → https://res.cloudinary.com/x/video/upload/v1/foo.webm
  *
  * e.g. https://res.cloudinary.com/x/video/upload/f_mp3,q_auto/v1/foo.webm
  *   → https://res.cloudinary.com/x/video/upload/v1/foo.mp3
@@ -158,12 +162,18 @@ export function getPlayableUrl(rawUrl: string): string {
   if (!rawUrl) return "";
   // Blob URLs are local — return as-is
   if (rawUrl.startsWith("blob:")) return rawUrl;
+  
+  // Fix legacy /raw/upload/ path to /video/upload/
+  let url = rawUrl.replace(/\/raw\/upload\//g, "/video/upload/");
+  
   // Strip Cloudinary transformation segments (e.g. /f_mp3,q_auto/)
-  return rawUrl.replace(/\/[a-z_,;:0-9]+(?:\/[a-z_,;:0-9]+)*\//i, (match) => {
+  url = url.replace(/\/[a-z_,;:0-9]+(?:\/[a-z_,;:0-9]+)*\//i, (match) => {
     // Only strip if match looks like a transformation (contains _ or , )
     if (match.includes("_") || match.includes(",")) return "/";
     return match;
   });
+  
+  return url;
 }
 
 /**
