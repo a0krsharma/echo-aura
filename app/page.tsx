@@ -120,12 +120,22 @@ function Waveform({ playing, small, audioRef }: { playing: boolean; small?: bool
       audioContext.resume();
     }
     
-    // Create analyser and source only once
+    // Create analyser only once
     if (!analyserRef.current) {
       analyserRef.current = audioContext.createAnalyser();
-      sourceRef.current = audioContext.createMediaElementSource(audio);
-      sourceRef.current.connect(analyserRef.current);
-      analyserRef.current.connect(audioContext.destination);
+    }
+    
+    // Only create source if we haven't already connected this specific audio element
+    // Check if the current source is connected to the same audio element
+    if (!sourceRef.current) {
+      try {
+        sourceRef.current = audioContext.createMediaElementSource(audio);
+        sourceRef.current.connect(analyserRef.current);
+        analyserRef.current.connect(audioContext.destination);
+      } catch (error) {
+        // If the audio element is already connected, skip source creation
+        console.warn('Audio element already connected, skipping source creation');
+      }
     }
     
     const analyser = analyserRef.current;
