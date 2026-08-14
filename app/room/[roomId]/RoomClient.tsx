@@ -15,7 +15,7 @@ import AgoraRTC from "agora-rtc-sdk-ng";
 import { useAuth } from "@/app/components/AuthProvider";
 import BroadcastModal from "@/app/components/BroadcastModal";
 import { AGORA_APP_ID } from "@/lib/agora";
-import { getRoom, subscribeToRoom, subscribeToRoomParticipants, removeParticipant, sendRoomChatMessage, subscribeToRoomChat, raiseHand, lowerHand, promoteToSpeaker, demoteFromSpeaker, muteParticipant, unmuteParticipant, sendRoomReaction, subscribeToRoomReactions, bookmarkRoom, removeRoomBookmark, updateRoomOpenMic, updateRoomHls, type Room, type RoomParticipant } from "@/lib/rooms";
+import { getRoom, subscribeToRoom, subscribeToRoomParticipants, removeParticipant, sendRoomChatMessage, subscribeToRoomChat, raiseHand, lowerHand, promoteToSpeaker, demoteFromSpeaker, muteParticipant, unmuteParticipant, sendRoomReaction, subscribeToRoomReactions, bookmarkRoom, removeRoomBookmark, updateRoomOpenMic, updateRoomTransmit, type Room, type RoomParticipant } from "@/lib/rooms";
 import { collection, query, where, getDocs, orderBy, limit, doc, getDoc } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 import { followUser, unfollowUser, isFollowing } from "@/lib/follows";
@@ -253,27 +253,27 @@ function RoomContent({ roomId }: RoomClientProps) {
     // track previous state across renders
     if (typeof (prevHlsRef as any).initialized === 'undefined') {
       (prevHlsRef as any).initialized = true;
-      prevHlsRef.current = !!room?.hlsEnabled;
+      prevHlsRef.current = !!room?.transmitEnabled;
     }
 
-    // If HLS just became enabled, prompt the listener to switch
-    if (room?.hlsEnabled && !prevHlsRef.current) {
+    // If [ TRANSMIT ] just became enabled, prompt the listener to switch
+    if (room?.transmitEnabled && !prevHlsRef.current) {
       try {
-        const switchToHls = window.confirm('Host has started broadcasting via HLS. Switch to low-bandwidth HLS player for best listening experience?');
+        const switchToHls = window.confirm('Host has started [ TRANSMIT ]ing. Switch to low-bandwidth player for best listening experience?');
         if (switchToHls) {
           // Navigate to listen page with room context
-          const hlsParam = room.hlsUrl ? `&hls=${encodeURIComponent(room.hlsUrl)}` : '';
+          const hlsParam = room.transmitUrl ? `&hls=${encodeURIComponent(room.transmitUrl)}` : '';
           router.push(`/listen?room=${encodeURIComponent(roomId)}${hlsParam}`);
           return;
         }
       } catch (e) {
-        console.warn('[Room] Auto-route to HLS prompt failed:', e);
+        console.warn('[Room] Auto-route to [ TRANSMIT ] prompt failed:', e);
       }
     }
 
     // update prev
-    (prevHlsRef as any).current = !!room?.hlsEnabled;
-  }, [room?.hlsEnabled, isSpeaker, user, roomId, router]);
+    (prevHlsRef as any).current = !!room?.transmitEnabled;
+  }, [room?.transmitEnabled, isSpeaker, user, roomId, router]);
 
 
   // Handle leaving room
@@ -525,12 +525,12 @@ function RoomContent({ roomId }: RoomClientProps) {
       setBroadcastInfo(data);
       if (data.ok || data.start) {
         setBroadcasting(true);
-        // Mark room as HLS-enabled so listeners can be auto-routed to HLS
+        // Mark room as [ TRANSMIT ]-enabled so listeners can be auto-routed
         try {
-          const hlsUrl = (process.env.NEXT_PUBLIC_HLS_URL as string) || (window as any)?.NEXT_PUBLIC_HLS_URL || null;
-          await updateRoomHls(roomId, true, hlsUrl || undefined);
+          const transmitUrl = (process.env.NEXT_PUBLIC_HLS_URL as string) || (window as any)?.NEXT_PUBLIC_HLS_URL || null;
+          await updateRoomTransmit(roomId, true, transmitUrl || undefined);
         } catch (e) {
-          console.warn('Failed to update room HLS flag:', e);
+          console.warn('Failed to update room [ TRANSMIT ] flag:', e);
         }
       }
       alert('Start broadcast response:\n' + JSON.stringify(data, null, 2));
@@ -569,9 +569,9 @@ function RoomContent({ roomId }: RoomClientProps) {
       const data = await res.json();
       setBroadcastInfo(null);
       setBroadcasting(false);
-      // Clear HLS flag on room so listeners can be prompted to rejoin RTC if desired
+      // Clear [ TRANSMIT ] flag on room so listeners can be prompted to rejoin RTC if desired
       try {
-        await updateRoomHls(roomId, false);
+        await updateRoomTransmit(roomId, false);
       } catch (e) {
         console.warn('Failed to clear room HLS flag:', e);
       }
@@ -678,22 +678,22 @@ function RoomContent({ roomId }: RoomClientProps) {
                   { (broadcastInfo.start?.sid || broadcastInfo.sid) && (
                     <span className="text-neutral-500">SID: {broadcastInfo.start?.sid || broadcastInfo.sid}</span>
                   )}
-                  {/* HLS URL to copy */}
-                  { (room?.hlsUrl || process.env.NEXT_PUBLIC_HLS_URL) && (
+                  {/* [ TRANSMIT ] URL to copy */}
+                  { (room?.transmitUrl || process.env.NEXT_PUBLIC_HLS_URL) && (
                     <>
-                      <a href={room?.hlsUrl || (process.env.NEXT_PUBLIC_HLS_URL as string)} target="_blank" rel="noreferrer" className="text-[11px] underline text-neutral-300">Open HLS</a>
+                      <a href={room?.transmitUrl || (process.env.NEXT_PUBLIC_HLS_URL as string)} target="_blank" rel="noreferrer" className="text-[11px] underline text-neutral-300">Open [ TRANSMIT ]</a>
                       <button
                         onClick={async () => {
                           try {
-                            const url = room?.hlsUrl || (process.env.NEXT_PUBLIC_HLS_URL as string) || '';
+                            const url = room?.transmitUrl || (process.env.NEXT_PUBLIC_HLS_URL as string) || '';
                             await navigator.clipboard.writeText(url);
-                            alert('HLS URL copied to clipboard');
+                            alert('[ TRANSMIT ] URL copied to clipboard');
                           } catch (e) {
                             console.warn('Copy failed', e);
                           }
                         }}
                         className="ml-2 px-2 py-1 text-[11px] border border-neutral-800 rounded hover:border-white"
-                      >Copy HLS</button>
+                      >Copy [ TRANSMIT ]</button>
                     </>
                   )}
                 </div>
