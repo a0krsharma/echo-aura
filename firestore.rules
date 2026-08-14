@@ -187,5 +187,26 @@ service cloud.firestore {
       allow update, delete: if request.auth != null;
     }
 
+    // ── CLASH QUESTIONS ──────────────────────────────────────────────
+    // Q&A questions for debates
+    match /clash_questions/{questionId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null;
+      allow delete: if false;
+    }
+
+    // ── OPEN USERS ────────────────────────────────────────────────────
+    // Users who are open for talk on Radar
+    match /openUsers/{userId} {
+      allow read: if true;
+      allow create: if request.auth != null
+                    && request.auth.uid == userId;
+      allow update: if request.auth != null
+                    && request.auth.uid == userId;
+      allow delete: if request.auth != null
+                    && request.auth.uid == userId;
+    }
+
   }
 }
