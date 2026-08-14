@@ -20,6 +20,7 @@ import {
   arrayUnion,
   arrayRemove,
   serverTimestamp,
+  getDoc,
   getDocs,
   type Timestamp,
 } from "firebase/firestore";
@@ -66,13 +67,21 @@ export async function createComment(data: {
       updatedAt: serverTimestamp(),
     });
 
-    // Increment post comment count
+    // Increment post comment count (try 'posts' first, then 'echoes')
     try {
-      await updateDoc(doc(db, "posts", data.postId), {
-        commentCount: increment(1),
-      });
+      const postRef = doc(db, "posts", data.postId);
+      const postSnap = await getDoc(postRef);
+      if (postSnap.exists()) {
+        await updateDoc(postRef, { commentCount: increment(1) });
+      } else {
+        const echoRef = doc(db, "echoes", data.postId);
+        const echoSnap = await getDoc(echoRef);
+        if (echoSnap.exists()) {
+          await updateDoc(echoRef, { commentCount: increment(1) });
+        }
+      }
     } catch (error) {
-      console.error("[createComment] Error updating post comment count:", error);
+      console.warn("[createComment] Warning updating post comment count:", error);
     }
 
     return docRef.id;
@@ -112,7 +121,7 @@ export function subscribeToPostComments(
       callback(comments);
     },
     (err) => {
-      console.error("[subscribeToPostComments] Error:", err.message);
+      console.warn("[subscribeToPostComments] Warning:", err.message);
       callback([]);
     }
   );
