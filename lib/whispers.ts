@@ -134,7 +134,7 @@ export async function sendWhisper(
   const convRef = doc(db, "whispers", conversationId);
   const uids = conversationId.split("__").filter(Boolean);
 
-  // 1. Ensure parent conversation document exists & participants array contains sender & receiver
+  // 1. Try updating parent conversation doc (non-blocking)
   try {
     const snap = await getDoc(convRef);
     if (!snap.exists()) {
@@ -159,20 +159,8 @@ export async function sendWhisper(
         lastAt: serverTimestamp(),
       });
     }
-  } catch (err) {
-    console.warn("[sendWhisper] Warning updating conversation doc:", err);
-    await setDoc(
-      convRef,
-      {
-        participants: uids.length > 0 ? uids : [senderUid],
-        handles: {
-          [senderUid]: senderHandle || "@ANON",
-        },
-        lastMessage: text || "🎙 Voice message",
-        lastAt: serverTimestamp(),
-      },
-      { merge: true }
-    ).catch(() => {});
+  } catch (parentErr) {
+    console.warn("[sendWhisper] Non-fatal parent conversation update error:", parentErr);
   }
 
   // 2. Add message document to messages subcollection
@@ -189,8 +177,7 @@ export async function sendWhisper(
     });
     msgRefId = msgRef.id;
   } catch (msgErr) {
-    console.warn("[sendWhisper] Warning adding message to subcollection:", msgErr);
-    // Fallback: try wire subcollection alias
+    console.warn("[sendWhisper] Warning adding message to whispers subcollection:", msgErr);
     try {
       const wireMsgRef = collection(db, "wire", conversationId, "messages");
       const msgRef = await addDoc(wireMsgRef, {
