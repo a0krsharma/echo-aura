@@ -62,7 +62,7 @@ export interface WhisperMessage {
  * getConversationId
  * Deterministic ID for a 1-on-1 conversation.
  */
-function getConversationId(uid1: string, uid2: string): string {
+export function getConversationId(uid1: string, uid2: string): string {
   return [uid1, uid2].sort().join("__");
 }
 
@@ -125,6 +125,28 @@ export async function sendWhisper(
     lastMessage: text || "🎙 Voice message",
     lastAt: serverTimestamp(),
   });
+
+  // Notify the other participant about the new wire message
+  try {
+    const convSnap = await getDoc(convRef);
+    if (convSnap.exists()) {
+      const conv = convSnap.data() as any;
+      const participants: string[] = conv.participants || [];
+      const recipient = participants.find((p) => p !== senderUid);
+      if (recipient) {
+        // Importing here to avoid circular dependency at module load time
+        const { createNotification } = await import("@/lib/notifications");
+        await createNotification(recipient, {
+          type: "wire",
+          fromUid: senderUid,
+          fromHandle: senderHandle,
+          text: text || "Sent you a wire",
+        });
+      }
+    }
+  } catch (e) {
+    console.error("sendWhisper: failed to notify recipient:", e);
+  }
 
   return msgRef.id;
 }
@@ -224,4 +246,37 @@ export async function searchUsersByHandle(handle: string): Promise<Array<{ uid: 
   } catch {
     return [];
   }
+}
+
+/**
+ * Signaling helpers for P2P WebRTC 1v1 (uses a 'signaling' subcollection under whispers/{convId})
+ */
+export async function addSignalingMessage(conversationId: string, fromUid: string, type: string, payload: any) {
+  try {
+    const db = getFirebaseDb();
+    const ref = collection(db, "whispers", conversationId, "signaling");
+    await addDoc(ref, {
+      fromUid,
+      type,
+      payload,
+      createdAt: serverTimestamp(),
+    });
+    return true;
+  } catch (e) {
+    console.error("addSignalingMessage failed:", e);
+    return false;
+  }
+}
+
+export function subscribeToSignaling(conversationId: string, callback: (msg: any) => void) {
+  const db = getFirebaseDb();
+  const q = query(collection(db, "whispers", conversationId, "signaling"), orderBy("createdAt", "asc"));
+  const unsub = onSnapshot(q, (snap) => {
+    snap.docChanges().forEach((change) => {
+      if (change.type === "added") {
+        callback({ id: change.doc.id, ...(change.doc.data() as any) });
+      }
+    });
+  });
+  return unsub;
 }

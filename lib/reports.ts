@@ -25,7 +25,7 @@ import { getFirebaseDb } from "@/lib/firebase";
 
 export interface Report {
   id: string;
-  contentType: "post" | "comment" | "whisper" | "room" | "user";
+  contentType: "post" | "comment" | "whisper" | "wire" | "room" | "user";
   contentId: string;
   reportType: "spam" | "harassment" | "hate_speech" | "explicit" | "misinformation" | "impersonation" | "other";
   status: "pending" | "reviewing" | "resolved" | "dismissed";

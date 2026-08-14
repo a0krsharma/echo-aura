@@ -185,7 +185,7 @@ This plan breaks down the 25+ unimplemented features from the renaming plan into
 **Files to Create/Modify:**
 - `lib/wire.ts` - Add stitch function
 - `app/components/StitchButton.tsx` - Stitch action
-- Update `app/whispers/page.tsx` - Add stitch option
+- Update `app/wire/page.tsx` - Add stitch option
 
 ### [ PROXIMITY ] - BLE/GPS Detection
 **Description:** BLE/GPS proximity detection for nearby users
@@ -338,7 +338,7 @@ This plan breaks down the 25+ unimplemented features from the renaming plan into
 **Files to Create/Modify:**
 - `lib/insights.ts` - Insight aggregation
 - `app/components/InsightDashboard.tsx` - Metrics display
-- Update `app/whispers/page.tsx` - Add insights button
+- Update `app/wire/page.tsx` - Add insights button
 
 ### [ ALPHA ] - Invite-Only Mode
 **Description:** Initial invite-only launch

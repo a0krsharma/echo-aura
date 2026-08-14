@@ -20,6 +20,8 @@ import {
   subscribeToMessages,
   markMessagesRead,
   searchUsersByHandle,
+  addSignalingMessage,
+  subscribeToSignaling,
   type WhisperConversation,
   type WhisperMessage,
 } from "@/lib/whispers";
@@ -33,6 +35,29 @@ function timeStr(ts: any): string {
   if (diffDays === 0) return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   if (diffDays === 1) return "YESTERDAY";
   return d.toLocaleDateString([], { month: "short", day: "numeric" });
+}
+
+// ─── ICE servers helper (STUN + optional TURN) ───────────────────────────────
+function getIceServers() {
+  // Public STUN as fallback
+  const stunUrl = process.env.NEXT_PUBLIC_STUN_URL || "stun:stun.l.google.com:19302";
+  const iceServers: any[] = [{ urls: [stunUrl] }];
+
+  // Optional TURN(s) can be provided as a comma-separated list in NEXT_PUBLIC_TURN_URL
+  // Example: TURN URLs: "turn:turn.example.com:3478?transport=udp,turn:turn.example.com:3478?transport=tcp"
+  const turnUrlsRaw = process.env.NEXT_PUBLIC_TURN_URL;
+  const turnUsername = process.env.NEXT_PUBLIC_TURN_USERNAME;
+  const turnCredential = process.env.NEXT_PUBLIC_TURN_PASSWORD;
+
+  if (turnUrlsRaw) {
+    const urls = turnUrlsRaw.split(",").map(s => s.trim()).filter(Boolean);
+    const turnConfig: any = { urls };
+    if (turnUsername) turnConfig.username = turnUsername;
+    if (turnCredential) turnConfig.credential = turnCredential;
+    iceServers.push(turnConfig);
+  }
+
+  return iceServers;
 }
 
 // ─── Conversation list item ───────────────────────────────────────────────────
@@ -110,6 +135,10 @@ function ChatWindow({
     return () => unsub();
   }, [conv.id, myUid]);
 
+  const [callActive, setCallActive] = useState(false);
+  const pcRef = useRef<RTCPeerConnection | null>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
+
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     const text = input.trim();
@@ -123,6 +152,121 @@ function ChatWindow({
     } finally {
       setSending(false);
     }
+  };
+
+  // P2P WebRTC call controls
+  const startCall = async () => {
+    if (callActive) return;
+    try {
+      const pc = new RTCPeerConnection({ iceServers: getIceServers() });
+      pcRef.current = pc;
+
+      // Get local audio
+      const localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      localStreamRef.current = localStream;
+      localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
+
+      // Play remote audio
+      const remoteAudio = document.createElement("audio");
+      remoteAudio.autoplay = true;
+      remoteAudio.controls = false;
+      pc.ontrack = (ev) => {
+        try {
+          remoteAudio.srcObject = ev.streams[0];
+        } catch (e) {}
+      };
+
+      // ICE candidates -> signaling
+      pc.onicecandidate = (ev) => {
+        if (ev.candidate) {
+          addSignalingMessage(conv.id, myUid, "ice", ev.candidate.toJSON());
+        }
+      };
+
+      // Create offer
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      // Send offer via signaling
+      await addSignalingMessage(conv.id, myUid, "offer", offer);
+
+      setCallActive(true);
+    } catch (err) {
+      console.error("startCall error:", err);
+      cleanupCall();
+    }
+  };
+
+  const cleanupCall = async () => {
+    try {
+      if (pcRef.current) {
+        pcRef.current.close();
+        pcRef.current = null;
+      }
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach((t) => t.stop());
+        localStreamRef.current = null;
+      }
+    } catch (e) {}
+    setCallActive(false);
+  };
+
+  useEffect(() => {
+    // Subscribe to signaling messages for this conversation
+    const unsubSig = subscribeToSignaling(conv.id, async (msg: any) => {
+      if (!msg || msg.fromUid === myUid) return; // ignore our own messages
+      try {
+        const pc = pcRef.current || new RTCPeerConnection({ iceServers: getIceServers() });
+        if (!pcRef.current) pcRef.current = pc;
+
+        if (msg.type === "offer") {
+          // Incoming offer: set remote, add local tracks, create answer
+          await pc.setRemoteDescription(new RTCSessionDescription(msg.payload));
+          const localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          localStreamRef.current = localStream;
+          localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
+
+          pc.ontrack = (ev) => {
+            const remoteAudio = document.createElement("audio");
+            remoteAudio.autoplay = true;
+            remoteAudio.srcObject = ev.streams[0];
+          };
+
+          pc.onicecandidate = (ev) => {
+            if (ev.candidate) addSignalingMessage(conv.id, myUid, "ice", ev.candidate.toJSON());
+          };
+
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          await addSignalingMessage(conv.id, myUid, "answer", answer);
+
+          setCallActive(true);
+        } else if (msg.type === "answer") {
+          // Remote answer to our offer
+          await pc.setRemoteDescription(new RTCSessionDescription(msg.payload));
+        } else if (msg.type === "ice") {
+          // Add ICE candidate
+          try {
+            await pc.addIceCandidate(new RTCIceCandidate(msg.payload));
+          } catch (e) {
+            console.warn('addIceCandidate failed:', e);
+          }
+        }
+      } catch (e) {
+        console.error('Signaling handler error:', e);
+      }
+    });
+
+    return () => {
+      unsubSig();
+      cleanupCall();
+    };
+  }, [conv.id, myUid]);
+
+  // Hang up
+  const hangUp = async () => {
+    // Optionally send a 'hangup' signaling message
+    try { await addSignalingMessage(conv.id, myUid, 'hangup', {}); } catch (e) {}
+    cleanupCall();
   };
 
   return (
@@ -142,8 +286,25 @@ function ChatWindow({
           <p className="font-mono text-xs text-white tracking-widest">{theirHandle}</p>
           <p className="font-mono text-[10px] text-neutral-600">[ PRIVATE WIRE ]</p>
         </div>
-      </div>
 
+        <div className="ml-auto flex items-center gap-2">
+          {!callActive ? (
+            <button
+              onClick={startCall}
+              className="px-3 py-1 border border-white text-white font-mono text-xs hover:bg-white hover:text-black transition-colors cursor-pointer"
+            >
+              [ START CALL ]
+            </button>
+          ) : (
+            <button
+              onClick={hangUp}
+              className="px-3 py-1 border border-red-500 text-red-400 font-mono text-xs hover:bg-red-500 hover:text-black transition-colors cursor-pointer"
+            >
+              [ HANG UP ]
+            </button>
+          )}
+        </div>
+      </div>
       {/* Messages */}
       <div
         ref={scrollRef}

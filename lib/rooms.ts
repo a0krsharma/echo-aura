@@ -44,6 +44,9 @@ export interface Room {
   agoraChannel: string;
   scheduledFor: Timestamp | null;
   openMic: boolean;
+  // Optional HLS metadata set when a broadcast (RTMP->CDN) is active
+  hlsEnabled?: boolean;
+  hlsUrl?: string;
 }
 
 export interface RoomParticipant {
@@ -142,6 +145,31 @@ export async function createRoom(roomData: {
       console.error("[createRoom] Error adding host as participant:", error);
       // Continue anyway - room was created successfully
     }
+
+    // Notify followers that host started a stage/room (best-effort, non-blocking)
+    (async () => {
+      try {
+        const followsRef = collection(getFirebaseDb(), "follows");
+        const q = query(followsRef, where("followingUid", "==", roomData.hostUid));
+        const snap = await getDocs(q);
+        const { createNotification } = await import("@/lib/notifications");
+        for (const f of snap.docs) {
+          const data: any = f.data();
+          const followerUid = data.followerUid;
+          // Create a stage notification for each follower
+          await createNotification(followerUid, {
+            type: "stage",
+            fromUid: roomData.hostUid,
+            fromHandle: roomData.hostHandle,
+            roomId,
+            roomName: roomData.name,
+            text: `${roomData.hostHandle} started a stage: \"${roomData.name}\"`,
+          });
+        }
+      } catch (err) {
+        console.error("[createRoom] notify followers failed:", err);
+      }
+    })();
 
     return roomId;
   } catch (error) {
@@ -691,6 +719,48 @@ export async function updateRoomOpenMic(roomId: string, openMic: boolean): Promi
     openMic,
     updatedAt: serverTimestamp(),
   });
+}
+
+// ── Update room HLS flag and URL ─────────────────────────────────────────
+export async function updateRoomHls(roomId: string, enabled: boolean, hlsUrl?: string): Promise<void> {
+  const db = getFirebaseDb();
+  const roomRef = doc(db, ROOMS_COLLECTION, roomId);
+  const updateObj: any = { hlsEnabled: enabled, updatedAt: serverTimestamp() };
+  if (hlsUrl !== undefined) updateObj.hlsUrl = hlsUrl;
+  await updateDoc(roomRef, updateObj);
+
+  // Best-effort notification: when enabling HLS, tell followers the host is broadcasting
+  if (enabled) {
+    try {
+      const roomSnap = await getDoc(roomRef);
+      if (!roomSnap.exists()) return;
+      const roomData: any = roomSnap.data();
+
+      const followsRef = collection(getFirebaseDb(), "follows");
+      const q = query(followsRef, where("followingUid", "==", roomData.hostUid));
+      const snap = await getDocs(q);
+      for (const f of snap.docs) {
+        const data: any = f.data();
+        const followerUid = data.followerUid;
+        // Fire-and-forget notification
+        try {
+          await createNotification(followerUid, {
+            type: "stage",
+            fromUid: roomData.hostUid,
+            fromHandle: roomData.hostHandle,
+            roomId,
+            roomName: roomData.name,
+            text: `${roomData.hostHandle} is now broadcasting \"${roomData.name}\" via HLS`,
+          });
+        } catch (e) {
+          // best-effort per-follower
+          console.warn("[updateRoomHls] notify follower failed for", followerUid, e);
+        }
+      }
+    } catch (err) {
+      console.warn("[updateRoomHls] notify followers failed:", err);
+    }
+  }
 }
 
 // ── Get all public rooms ────────────────────────────────────────────────

@@ -59,7 +59,8 @@ export function Toast({ notification, onClose, duration = 5000 }: ToastProps) {
       case "reverb": return <Repeat2 className={cls} />;
       case "orbiter": return <RefreshCw className={cls} />;
       case "stage": return <Swords className={cls} />;
-      case "whisper": return <Mic2 className={cls} />;
+      case "whisper":
+      case "wire": return <Mic2 className={cls} />;
       case "raise_hand": return <Hand className={cls} />;
       case "room_join": return <Users className={cls} />;
       case "room_leave": return <LogOut className={cls} />;
@@ -77,7 +78,8 @@ export function Toast({ notification, onClose, duration = 5000 }: ToastProps) {
       case "reverb": return "text-blue-500";
       case "orbiter": return "text-purple-500";
       case "stage": return "text-red-500";
-      case "whisper": return "text-yellow-500";
+      case "whisper":
+      case "wire": return "text-yellow-500";
       case "raise_hand": return "text-orange-500";
       case "room_join": return "text-cyan-500";
       case "room_leave": return "text-gray-500";

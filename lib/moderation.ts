@@ -26,7 +26,7 @@ import { getFirebaseDb } from "@/lib/firebase";
 
 export interface ModerationFlag {
   id: string;
-  contentType: "post" | "comment" | "whisper" | "room";
+  contentType: "post" | "comment" | "whisper" | "wire" | "room";
   contentId: string;
   flagType: "spam" | "harassment" | "hate_speech" | "explicit" | "misinformation" | "other";
   severity: "low" | "medium" | "high";
@@ -174,8 +174,32 @@ async function takeModerationAction(flag: ModerationFlag): Promise<void> {
         break;
       
       case "whisper":
-        // Delete the whisper
-        await deleteDoc(doc(db, "whispers", flag.contentId));
+      case "wire":
+        // Delete the whisper/wire document if present (support both collections during migration)
+        try {
+          const wRef = doc(db, "whispers", flag.contentId);
+          const wSnap = await getDoc(wRef);
+          if (wSnap.exists()) {
+            await deleteDoc(wRef);
+            break;
+          }
+        } catch (e) {
+          console.warn("[takeModerationAction] delete whisper check failed:", e);
+        }
+
+        try {
+          const wireRef = doc(db, "wire", flag.contentId);
+          const wireSnap = await getDoc(wireRef);
+          if (wireSnap.exists()) {
+            await deleteDoc(wireRef);
+            break;
+          }
+        } catch (e) {
+          console.warn("[takeModerationAction] delete wire check failed:", e);
+        }
+
+        // If neither exists, just log
+        console.warn("[takeModerationAction] no whisper/wire doc found for", flag.contentId);
         break;
       
       case "room":

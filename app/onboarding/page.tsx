@@ -28,16 +28,16 @@ const STEPS: OnboardingStep[] = [
     title: "Record Your Voice",
     description: "Create audio posts up to 5 minutes. Add captions, hashtags, and share with the world.",
   },
-{
-      id: 3,
-      title: "Discover Content",
-      description: "Explore [ FREQUENCY ], [ WAVES ], and [ STAGE ]. Find audio that resonates with you.",
-    },
-    {
-      id: 4,
-      title: "Connect with Others",
-      description: "Follow creators, join live rooms, participate in debates, and send [ WIRE ] messages.",
-    },
+  {
+    id: 3,
+    title: "Discover Content",
+    description: "Explore [ FREQUENCY ], [ WAVES ], and [ STAGE ]. Find audio that resonates with you.",
+  },
+  {
+    id: 4,
+    title: "Connect with Others",
+    description: "Follow creators, join live rooms, participate in debates, and send [ WIRE ] messages.",
+  },
   {
     id: 5,
     title: "You're All Set!",

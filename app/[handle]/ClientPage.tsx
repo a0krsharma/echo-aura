@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowUp, Volume2, Lock, Mic2, Users, MessageSquare } from "lucide-react";
 import { collection, query, where, getDocs, orderBy, limit, onSnapshot } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
-import { startOrGetConversation } from "@/lib/whispers";
+import { startOrGetConversation } from "@/lib/wire";
 import { useAuth } from "@/app/components/AuthProvider";
 import { ChatWidget } from "@/app/components/ChatWidget";
 
@@ -212,7 +212,7 @@ export default function HandlePage({ params }: { params: { handle: string } }) {
   const [userPosts, setUserPosts] = useState<UserPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [orbiting, setOrbiting] = useState(false);
-  const [startingWhisper, setStartingWhisper] = useState(false);
+  const [startingWire, setStartingWire] = useState(false);
 
   useEffect(() => {
     async function loadProfile() {
@@ -297,9 +297,9 @@ export default function HandlePage({ params }: { params: { handle: string } }) {
   const aura = profile.auraScore ?? 0;
   const badges = profile.badges ?? [];
 
-  const handleStartWhisper = async () => {
+  const handleStartWire = async () => {
     if (!user || profile.uid === "anon" || profile.uid === user.uid) return;
-    setStartingWhisper(true);
+    setStartingWire(true);
     try {
       const convId = await startOrGetConversation(
         user.uid,
@@ -307,15 +307,15 @@ export default function HandlePage({ params }: { params: { handle: string } }) {
         profile.uid,
         profile.handle
       );
-      router.push("/whispers");
+      router.push("/wire");
     } catch (err) {
-      console.error("Failed to start whisper:", err);
+      console.error("Failed to start wire:", err);
     } finally {
-      setStartingWhisper(false);
+      setStartingWire(false);
     }
   };
 
-  const canStartWhisper = user && profile.uid !== "anon" && profile.uid !== user.uid;
+  const canStartWire = user && profile.uid !== "anon" && profile.uid !== user.uid;
 
   return (
     <div className="bg-black min-h-screen pb-28 md:pb-0 text-white">
@@ -339,14 +339,14 @@ export default function HandlePage({ params }: { params: { handle: string } }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {canStartWhisper && (
+            {canStartWire && (
               <button
-                onClick={handleStartWhisper}
-                disabled={startingWhisper}
+                onClick={handleStartWire}
+                disabled={startingWire}
                 className="flex items-center gap-1.5 font-mono text-xs tracking-widest uppercase border border-neutral-800 px-3 py-2 hover:border-white hover:text-white transition-colors cursor-pointer shrink-0 text-neutral-500 disabled:opacity-30"
               >
                 <MessageSquare size={10} strokeWidth={1.5} />
-                {startingWhisper ? "STARTING..." : "[ WIRE ]"}
+                {startingWire ? "STARTING..." : "[ WIRE ]"}
               </button>
             )}
             <button
@@ -412,7 +412,7 @@ export default function HandlePage({ params }: { params: { handle: string } }) {
         }
 
       </div>
-      {canStartWhisper && (
+      {canStartWire && (
         <ChatWidget targetUid={profile.uid} targetHandle={displayHandle} />
       )}
     </div>

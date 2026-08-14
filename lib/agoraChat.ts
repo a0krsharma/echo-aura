@@ -3,7 +3,7 @@
  * ─────────────────────────────────────────────────────
  * Agora Chat SDK initialization and management.
  * TEMPORARILY DISABLED - SDK compatibility issues persist.
- * Will use Firestore whispers for messaging instead.
+ * Will use Firestore wire (DM) collection for messaging instead.
  */
 
 let chatConnection: any = null;
@@ -13,7 +13,7 @@ let chatConnection: any = null;
  * DISABLED - Using Firestore whispers instead
  */
 export async function initializeChat(firebaseUid: string, handle: string): Promise<any> {
-  console.log("[Chat] Agora Chat disabled - using Firestore whispers for messaging");
+  console.log("[Chat] Agora Chat disabled - using Firestore 'wire' (DM) for messaging");
   return null;
 }
 

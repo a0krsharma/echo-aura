@@ -24,7 +24,7 @@ function NotifIcon({ type }: { type: EchoNotification["type"] }) {
   if (type === "reverb")      return <Repeat2    className={cls} />;
   if (type === "orbiter")     return <RefreshCw  className={cls} />;
   if (type === "stage")       return <Swords     className={cls} />;
-  if (type === "whisper")     return <Mic2       className={cls} />;
+  if (type === "whisper" || type === "wire")     return <Mic2       className={cls} />;
   if (type === "raise_hand")  return <Hand       className={cls} />;
   if (type === "room_join")   return <Users      className={cls} />;
   if (type === "room_leave")  return <LogOut     className={cls} />;
@@ -41,7 +41,7 @@ function typeLabel(type: EchoNotification["type"]): string {
   if (type === "reverb")       return "[ REPLY ] ON YOUR ECHO";
   if (type === "orbiter")      return "[ ORBIT ] YOUR ECHO";
   if (type === "stage")        return "CHALLENGED YOU TO [ STAGE ]";
-  if (type === "whisper")      return "SENT YOU A [ WIRE ]";
+  if (type === "whisper" || type === "wire")      return "SENT YOU A [ WIRE ]";
   if (type === "raise_hand")   return "RAISED HAND IN YOUR ROOM";
   if (type === "room_join")    return "JOINED YOUR ROOM";
   if (type === "room_leave")   return "LEFT YOUR ROOM";
@@ -242,9 +242,9 @@ export default function NotificationsPage() {
                 </div>
 
                 {/* Action for whispers */}
-                {notif.type === "whisper" && (
+                {(notif.type === "whisper" || notif.type === "wire") && (
                   <Link
-                    href="/whispers"
+                  href="/wire"
                     className="shrink-0 font-mono text-[10px] border border-neutral-800 px-2 py-1 text-neutral-400 hover:border-white hover:text-white uppercase transition-colors"
                     onClick={(e) => e.stopPropagation()}
                   >

@@ -20,14 +20,14 @@ export default function LeftSidebar() {
   }, [user]);
 
   const navItems = [
-    { href: "/",             icon: Radio,         label: "[ FREQUENCY ]", hasNotifDot: false },
+    { href: "/",             icon: Radio,         label: "[ ECHO ]",      hasNotifDot: false },
     { href: "/waves",        icon: Waves,         label: "[ WAVES ]",     hasNotifDot: false },
-    { href: "/rooms",        icon: Users,         label: "[ ROOMS ]",     hasNotifDot: false },
     { href: "/studio",       icon: Mic2,          label: "[ STUDIO ]",    hasNotifDot: false },
     { href: "/clash",        icon: Swords,        label: "[ STAGE ]",     hasNotifDot: false },
+    { href: "/wire",         icon: MessageSquare, label: "[ WIRE ]",      hasNotifDot: false },
+    { href: "/rooms",        icon: Users,         label: "[ ROOMS ]",     hasNotifDot: false },
     { href: "/search",       icon: Search,        label: "[ SEARCH ]",    hasNotifDot: false },
-    { href: "/whispers",     icon: MessageSquare, label: "[ WIRE ]",      hasNotifDot: false },
-    { href: "/radar",        icon: Compass,       label: "[ RADAR ]",     hasNotifDot: false },
+    { href: "/radar",        icon: Compass,       label: "[ WHO ]",       hasNotifDot: false },
     { href: "/notifications",icon: Bell,          label: "[ NOTIFS ]",    hasNotifDot: hasNotifs },
     { href: "/profile",      icon: User,          label: "[ PROFILE ]",   hasNotifDot: false },
     { href: "/terminal",     icon: Terminal,      label: "[ TERMINAL ]",  hasNotifDot: false },
