@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { RtcTokenBuilder, RtcRole } from "agora-access-token";
+import { RtcTokenBuilder, RtcRole } from "agora-token";
 
 /**
  * app/api/agora/token/route.ts
  * ─────────────────────────────────────────────────────
- * API route to generate Agora RTC tokens using agora-access-token library.
- * This is the proper library for Agora token generation.
+ * API route to generate Agora RTC tokens using agora-token library (AccessToken2 format).
  * 
  * Usage: GET /api/agora/token?channel=CHANNEL_NAME&uid=USER_ID
  */
@@ -26,9 +25,6 @@ export async function GET(request: NextRequest) {
   const appCertificate = process.env.AGORA_APP_CERTIFICATE;
 
   if (!appId) {
-    // Development-friendly fallback: return a 200 with a stubbed payload so the UI can still render
-    // and show helpful guidance instead of breaking with a 500. This is safe because no token
-    // or secret is returned.
     console.warn("[Agora Token] App ID not configured — returning dev stub payload");
     return NextResponse.json(
       {
@@ -61,29 +57,28 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Token expiration: 24 hours (86400 seconds) for long-running room sessions
-    const expirationTimeInSeconds = 86400;
-    const currentTimestamp = Math.floor(Date.now() / 1000);
-    const privilegeExpiredTs = currentTimestamp + expirationTimeInSeconds;
+    // Token expiration: 24 hours (86400 seconds)
+    // Note: agora-token (AccessToken2) expects expiration as relative seconds from now, NOT absolute timestamp.
+    const expirationInSeconds = 86400;
 
     let token: string;
     let tokenType: string;
 
-    // Try buildTokenWithAccount first (works with string UIDs)
+    // Try buildTokenWithUserAccount (works with string UIDs like Firebase Auth UIDs)
     try {
-      token = RtcTokenBuilder.buildTokenWithAccount(
+      token = RtcTokenBuilder.buildTokenWithUserAccount(
         appId,
         appCertificate,
         channel,
         uid,
         RtcRole.PUBLISHER,
-        privilegeExpiredTs
+        expirationInSeconds,
+        expirationInSeconds
       );
       tokenType = "account";
-      console.log(`[Agora Token] Generated token for channel ${channel}, uid ${uid} using buildTokenWithAccount`);
+      console.log(`[Agora Token] Generated AccessToken2 for channel ${channel}, uid ${uid} using buildTokenWithUserAccount`);
     } catch (accountError) {
-      console.warn(`[Agora Token] buildTokenWithAccount failed: ${accountError}, trying buildTokenWithUid`);
-      // Fallback to buildTokenWithUid with numeric UID
+      console.warn(`[Agora Token] buildTokenWithUserAccount failed: ${accountError}, trying buildTokenWithUid`);
       const uidNumber = parseInt(uid.replace(/\D/g, '')) || Math.floor(Math.random() * 1000000);
       token = RtcTokenBuilder.buildTokenWithUid(
         appId,
@@ -91,10 +86,11 @@ export async function GET(request: NextRequest) {
         channel,
         uidNumber,
         RtcRole.PUBLISHER,
-        privilegeExpiredTs
+        expirationInSeconds,
+        expirationInSeconds
       );
       tokenType = "uid_numeric";
-      console.log(`[Agora Token] Generated token for channel ${channel}, uid ${uidNumber} using buildTokenWithUid`);
+      console.log(`[Agora Token] Generated AccessToken2 for channel ${channel}, uid ${uidNumber} using buildTokenWithUid`);
     }
 
     return NextResponse.json({
@@ -102,7 +98,7 @@ export async function GET(request: NextRequest) {
       uid,
       channel,
       appId,
-      expiresInSeconds: expirationTimeInSeconds,
+      expiresInSeconds: expirationInSeconds,
       mode: "token_authenticated",
       tokenType,
       generatedAt: new Date().toISOString()
