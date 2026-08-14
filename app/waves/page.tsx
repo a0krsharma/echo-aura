@@ -7,13 +7,14 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { ArrowUp, Repeat2, Share2, Volume2, VolumeX, Mic2, Loader2, ChevronUp, ChevronDown, Zap, Trash2 } from "lucide-react";
+import { ArrowUp, Repeat2, Share2, Volume2, VolumeX, Mic2, Loader2, ChevronUp, ChevronDown, Zap, Trash2, Play, Pause } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { subscribeToPosts, togglePulsePost, deletePost } from "@/lib/posts";
 import { useAuth } from "@/app/components/AuthProvider";
 import { createNotification } from "@/lib/notifications";
 import { audioManager } from "@/lib/audioManager";
+import { getPlayableUrl } from "@/lib/cloudinary";
 
 interface WavePost {
   id: string; audioUrl: string; caption: string;
@@ -67,10 +68,14 @@ function useWaveAudio(src: string, durationSec: number, active: boolean, muted: 
     };
   }, [src]);
 
-  // Build audio element once per src
+  // Build audio element once per src with URL fix (/raw/upload/ -> /video/upload/)
   useEffect(() => {
-    const a = new Audio(src);
-    a.preload = "auto"; a.crossOrigin = "anonymous";
+    const playableUrl = getPlayableUrl(src);
+    if (!playableUrl) return;
+
+    const a = new Audio(playableUrl);
+    a.preload = "auto";
+    a.crossOrigin = "anonymous";
     a.onloadedmetadata = () => { if (isFinite(a.duration) && a.duration > 0) setDur(Math.ceil(a.duration)); };
     a.ontimeupdate    = () => setCurrent(a.currentTime);
     a.onplaying       = () => { setPlaying(true); setLoading(false); };
@@ -86,10 +91,9 @@ function useWaveAudio(src: string, durationSec: number, active: boolean, muted: 
     }
     
     return () => { 
-      // Proper cleanup to prevent memory leaks
       a.pause(); 
       a.src = "";
-      a.load(); // Force cleanup of audio resources
+      try { a.load(); } catch {}
       if (audioRef.current === a) {
         audioRef.current = null;
       }
@@ -102,13 +106,21 @@ function useWaveAudio(src: string, durationSec: number, active: boolean, muted: 
   // Sync mute
   useEffect(() => { if (audioRef.current) audioRef.current.muted = muted; }, [muted]);
 
-  // Active = play, inactive = pause
+  // Active = auto play current wave on display, inactive = auto pause previous wave
   useEffect(() => {
     const a = audioRef.current; 
     const id = instanceIdRef.current;
     if (!a || !id) return;
+
     if (active && !failed) {
-      a.volume = 1; a.muted = muted; setLoading(true);
+      const playableUrl = getPlayableUrl(src);
+      if (a.src !== playableUrl && playableUrl) {
+        a.src = playableUrl;
+        a.load();
+      }
+      a.volume = 1;
+      a.muted = muted;
+      setLoading(true);
       audioManager.requestPlay(id).then(() => {
         setLoading(false);
       }).catch(() => {
@@ -116,9 +128,13 @@ function useWaveAudio(src: string, durationSec: number, active: boolean, muted: 
       });
     } else {
       audioManager.pause(id);
-      setCurrent(0);
+      try {
+        a.pause();
+        a.currentTime = 0;
+      } catch {}
+      setPlaying(false);
     }
-  }, [active, failed, muted]);
+  }, [active, failed, muted, src]);
 
   const toggle = async () => {
     const a = audioRef.current;
@@ -126,11 +142,18 @@ function useWaveAudio(src: string, durationSec: number, active: boolean, muted: 
     if (!a || !id) return;
     if (playing) { 
       audioManager.pause(id);
+      a.pause();
+      setPlaying(false);
     }
     else { 
-      setLoading(true); 
+      setLoading(true);
+      const playableUrl = getPlayableUrl(src);
+      if (a.src !== playableUrl && playableUrl) {
+        a.src = playableUrl;
+      }
       audioManager.requestPlay(id).then(() => {
         setLoading(false);
+        setPlaying(true);
       }).catch(() => {
         setLoading(false);
       });
@@ -157,36 +180,38 @@ function WaveCard({ post, index, active, muted, onPulse, onReverb, onShare, onPr
   isPulsed: boolean; isOwner: boolean;
 }) {
   const { bg, wave, tag } = ACCENTS[index % ACCENTS.length];
-  const { playing, pct, loading, failed, toggle } = useWaveAudio(post.audioUrl, post.durationSec, active, muted);
+  const { playing, current, dur, pct, loading, failed, toggle } = useWaveAudio(post.audioUrl, post.durationSec, active, muted);
 
   return (
     <div className={`relative w-full h-screen flex-shrink-0 snap-start overflow-hidden bg-gradient-to-b ${bg}`}>
-      {/* Tap to play/pause overlay */}
-      <button
-        onClick={toggle}
-        className="absolute inset-0 w-full h-full z-10 cursor-pointer"
-        aria-label={playing ? "Pause" : "Play"}
-      />
-
-      {/* Center waveform */}
+      {/* Center waveform & Interactive Play/Pause Controls */}
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 pointer-events-none">
         <BigWaveform playing={playing} color={wave} />
 
-        {/* Play/pause indicator */}
-        <div className={`transition-all duration-300 ${playing ? "opacity-0 scale-75" : "opacity-80 scale-100"}`}>
-          {loading
-            ? <Loader2 className="w-12 h-12 text-white animate-spin" />
-            : failed
-              ? <span className="font-mono text-[10px] text-neutral-500 tracking-widest uppercase">AUDIO UNAVAILABLE</span>
-              : <div className="w-16 h-16 rounded-full border-2 border-white/40 flex items-center justify-center backdrop-blur-sm">
-                  <div className="w-0 h-0 border-t-8 border-b-8 border-l-14 border-t-transparent border-b-transparent border-l-white ml-1" style={{borderLeftWidth:"18px"}} />
-                </div>
-          }
-        </div>
+        {/* Functional Play / Pause Button */}
+        <button
+          onClick={toggle}
+          className="w-16 h-16 rounded-full border-2 border-white/80 bg-black/60 backdrop-blur-md flex items-center justify-center hover:scale-110 active:scale-95 transition-all cursor-pointer shadow-2xl pointer-events-auto z-20"
+          aria-label={playing ? "Pause" : "Play"}
+        >
+          {loading ? (
+            <Loader2 className="w-8 h-8 text-white animate-spin" />
+          ) : playing ? (
+            <Pause className="w-8 h-8 text-white fill-white" />
+          ) : (
+            <Play className="w-8 h-8 text-white fill-white ml-1" />
+          )}
+        </button>
+
+        {failed && (
+          <span className="font-mono text-[10px] text-red-400 tracking-widest uppercase bg-black/60 px-3 py-1 border border-red-500/30">
+            AUDIO FORMAT UNAVAILABLE
+          </span>
+        )}
       </div>
 
       {/* Progress bar at top */}
-      <div className="absolute top-0 left-0 right-0 h-1 bg-white/10 z-20 pointer-events-none">
+      <div className="absolute top-0 left-0 right-0 h-1.5 bg-white/10 z-20 pointer-events-none">
         <div className="h-full transition-none" style={{ width: `${pct}%`, backgroundColor: wave }} />
       </div>
 
