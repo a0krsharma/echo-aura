@@ -5,7 +5,7 @@
  * for an authenticated Firebase user.
  */
 
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp, increment } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, increment, arrayUnion, arrayRemove } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 import type { User as FirebaseUser } from "firebase/auth";
 
@@ -17,6 +17,7 @@ export interface EchoUser {
   photoUrl:    string;
   auraScore:   number;
   badges:      string[];
+  tags:        string[];
   streak:      number;
   lastActiveDate: string | null;
 }
@@ -45,6 +46,7 @@ export async function getOrCreateUserDoc(firebaseUser: FirebaseUser): Promise<Ec
     photoUrl:    firebaseUser.photoURL ?? "",
     auraScore:   0,
     badges:      [],
+    tags:        [],
     streak:      0,
     lastActiveDate: null,
   };
@@ -69,6 +71,7 @@ export async function getOrCreateUserDoc(firebaseUser: FirebaseUser): Promise<Ec
       lastSeen:  serverTimestamp(),
       streak: 0,
       lastActiveDate: null,
+      tags: [],
     });
 
     return fallbackUser;
@@ -76,6 +79,49 @@ export async function getOrCreateUserDoc(firebaseUser: FirebaseUser): Promise<Ec
     console.warn("[Firestore] User doc permission notice (using fallback user):", err.message);
     return fallbackUser;
   }
+}
+
+/**
+ * addTag
+ * Add a tag to user's profile
+ */
+export async function addTag(uid: string, tag: string): Promise<void> {
+  const db = getFirebaseDb();
+  const ref = doc(db, "users", uid);
+  
+  await updateDoc(ref, {
+    tags: arrayUnion(tag.toUpperCase()),
+  });
+}
+
+/**
+ * removeTag
+ * Remove a tag from user's profile
+ */
+export async function removeTag(uid: string, tag: string): Promise<void> {
+  const db = getFirebaseDb();
+  const ref = doc(db, "users", uid);
+  
+  await updateDoc(ref, {
+    tags: arrayRemove(tag.toUpperCase()),
+  });
+}
+
+/**
+ * getUserTags
+ * Get user's tags
+ */
+export async function getUserTags(uid: string): Promise<string[]> {
+  const db = getFirebaseDb();
+  const ref = doc(db, "users", uid);
+  const snap = await getDoc(ref);
+  
+  if (!snap.exists()) {
+    return [];
+  }
+  
+  const userData = snap.data() as EchoUser;
+  return userData.tags || [];
 }
 
 /**

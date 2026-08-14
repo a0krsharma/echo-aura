@@ -22,6 +22,7 @@ import { uploadAudio, getPlayableUrl } from "@/lib/cloudinary";
 import { subscribeToUserPosts, subscribeToUserPulsedPosts, type PostItem } from "@/lib/posts";
 import { doc, updateDoc } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
+import { addTag, removeTag, getUserTags } from "@/lib/userDoc";
 
 // Simple in-profile audio player
 function MiniPlayer({ audioUrl, durationSec }: { audioUrl: string; durationSec: number }) {
@@ -96,6 +97,8 @@ export default function ProfilePage() {
   const [pulsedPosts, setPulsedPosts] = useState<PostItem[]>([]);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [tags, setTags] = useState<string[]>([]);
+  const [newTag, setNewTag] = useState("");
 
   // Voice Bio states
   const [bioState, setBioState] = useState<"idle" | "recording" | "preview" | "saved">("idle");
@@ -128,6 +131,12 @@ export default function ProfilePage() {
       setPulsedPosts(posts);
     });
     return () => unsub();
+  }, [user]);
+
+  // Fetch user's tags
+  useEffect(() => {
+    if (!user) return;
+    getUserTags(user.uid).then(setTags);
   }, [user]);
 
   // Voice Bio recording timer — auto-stop at max duration
@@ -249,6 +258,29 @@ export default function ProfilePage() {
     } else {
       audioRef.current.play().catch(console.error);
       setIsPlayingBio(true);
+    }
+  };
+
+  const handleAddTag = async () => {
+    if (!user || !newTag.trim()) return;
+    const tag = newTag.trim().toUpperCase();
+    if (tags.includes(tag)) return;
+    try {
+      await addTag(user.uid, tag);
+      setTags([...tags, tag]);
+      setNewTag("");
+    } catch (err) {
+      console.error("Failed to add tag:", err);
+    }
+  };
+
+  const handleRemoveTag = async (tag: string) => {
+    if (!user) return;
+    try {
+      await removeTag(user.uid, tag);
+      setTags(tags.filter(t => t !== tag));
+    } catch (err) {
+      console.error("Failed to remove tag:", err);
     }
   };
 
@@ -478,6 +510,60 @@ export default function ProfilePage() {
               </div>
             </div>
           )}
+        </div>
+
+        {/* [ TAGS ] Section */}
+        <div className="p-6 border border-neutral-900 bg-neutral-950/40 mb-8 space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-xs text-neutral-500 tracking-widest uppercase">
+              // [ TAGS ] - YOUR DOMAINS
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            {/* Add Tag Input */}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                maxLength={15}
+                placeholder="ADD TAG..."
+                className="flex-1 bg-transparent border border-neutral-800 px-3 py-2 font-mono text-xs text-white placeholder-neutral-700 focus:outline-none focus:border-white transition-colors uppercase"
+              />
+              <button
+                onClick={handleAddTag}
+                disabled={!newTag.trim()}
+                className="px-4 py-2 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors cursor-pointer disabled:opacity-30"
+              >
+                [ ADD ]
+              </button>
+            </div>
+
+            {/* Tags Display */}
+            <div className="flex flex-wrap gap-2">
+              {tags.length === 0 ? (
+                <p className="font-mono text-[10px] text-neutral-700 tracking-widest uppercase">
+                  NO TAGS YET. ADD YOUR DOMAINS.
+                </p>
+              ) : (
+                tags.map((tag) => (
+                  <div
+                    key={tag}
+                    className="flex items-center gap-2 px-3 py-1.5 border border-neutral-700 bg-neutral-900/50"
+                  >
+                    <span className="font-mono text-[10px] text-white tracking-widest uppercase">{tag}</span>
+                    <button
+                      onClick={() => handleRemoveTag(tag)}
+                      className="text-neutral-600 hover:text-white transition-colors cursor-pointer"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Tabs */}
