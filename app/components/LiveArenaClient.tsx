@@ -37,6 +37,10 @@ import {
   upvoteClashQuestion,
   subscribeToClashQuestions,
   updateStageAudience,
+  kickStageUser,
+  banStageUser,
+  promoteStageDebater,
+  demoteStageDebater,
   type ClashQuestion
 } from "@/lib/clashes";
 import { subscribeToVibeChat, sendVibeMessage, type VibeChatMessage } from "@/lib/stageChat";
@@ -495,9 +499,25 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
             <p className="font-serif italic text-sm text-neutral-400 leading-relaxed">
               "{clash?.sideA?.position || "Position A"}"
             </p>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
-              <span className="font-mono text-[10px] text-neutral-600 uppercase">LIVE</span>
+            <div className="flex items-center justify-between pt-2 border-t border-neutral-900 font-mono text-[9px] gap-2">
+              <button
+                onClick={() => user && promoteStageDebater(clashId, "A", user.handle || "@ANON", clash?.sideA?.position || "Debater A")}
+                className="px-2 py-1 border border-white/40 text-white uppercase hover:bg-white hover:text-black transition-colors cursor-pointer"
+              >
+                [ 🎤 PROMOTE ]
+              </button>
+              <button
+                onClick={() => demoteStageDebater(clashId, "A")}
+                className="px-2 py-1 border border-neutral-800 text-neutral-400 uppercase hover:border-white hover:text-white transition-colors cursor-pointer"
+              >
+                [ 🔻 DEMOTE ]
+              </button>
+              <button
+                onClick={() => user && kickStageUser(clashId, user.uid)}
+                className="px-2 py-1 border border-neutral-800 text-neutral-400 uppercase hover:border-red-500 hover:text-red-500 transition-colors cursor-pointer"
+              >
+                [ 🚫 KICK ]
+              </button>
             </div>
           </div>
 
@@ -521,9 +541,25 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
             <p className="font-serif italic text-sm text-neutral-400 leading-relaxed">
               "{clash?.sideB?.position || "Position B"}"
             </p>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
-              <span className="font-mono text-[10px] text-neutral-600 uppercase">LIVE</span>
+            <div className="flex items-center justify-between pt-2 border-t border-neutral-900 font-mono text-[9px] gap-2">
+              <button
+                onClick={() => user && promoteStageDebater(clashId, "B", user.handle || "@ANON", clash?.sideB?.position || "Debater B")}
+                className="px-2 py-1 border border-white/40 text-white uppercase hover:bg-white hover:text-black transition-colors cursor-pointer"
+              >
+                [ 🎤 PROMOTE ]
+              </button>
+              <button
+                onClick={() => demoteStageDebater(clashId, "B")}
+                className="px-2 py-1 border border-neutral-800 text-neutral-400 uppercase hover:border-white hover:text-white transition-colors cursor-pointer"
+              >
+                [ 🔻 DEMOTE ]
+              </button>
+              <button
+                onClick={() => user && banStageUser(clashId, user.uid)}
+                className="px-2 py-1 border border-neutral-800 text-neutral-400 uppercase hover:border-red-500 hover:text-red-500 transition-colors cursor-pointer"
+              >
+                [ ⛔ BAN ]
+              </button>
             </div>
           </div>
         </div>

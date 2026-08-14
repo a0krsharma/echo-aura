@@ -158,6 +158,78 @@ export async function deleteClash(clashId: string): Promise<void> {
   await deleteDoc(doc(db, "clashes", clashId));
 }
 
+// ── Stage Moderation Functions ─────────────────────────────────────────
+
+/**
+ * kickStageUser - Kick a participant from the Stage debate
+ */
+export async function kickStageUser(clashId: string, uid: string): Promise<void> {
+  try {
+    const db = getFirebaseDb();
+    const ref = doc(db, "clashes", clashId);
+    await updateDoc(ref, {
+      kickedUids: arrayUnion(uid),
+    });
+  } catch (error) {
+    console.error("[kickStageUser] Error:", error);
+  }
+}
+
+/**
+ * banStageUser - Ban a participant permanently from this Stage debate
+ */
+export async function banStageUser(clashId: string, uid: string): Promise<void> {
+  try {
+    const db = getFirebaseDb();
+    const ref = doc(db, "clashes", clashId);
+    await updateDoc(ref, {
+      bannedUids: arrayUnion(uid),
+      kickedUids: arrayUnion(uid),
+    });
+  } catch (error) {
+    console.error("[banStageUser] Error:", error);
+  }
+}
+
+/**
+ * promoteStageDebater - Promote a user to Side A or Side B debater
+ */
+export async function promoteStageDebater(
+  clashId: string,
+  side: "A" | "B",
+  handle: string,
+  position: string
+): Promise<void> {
+  try {
+    const db = getFirebaseDb();
+    const ref = doc(db, "clashes", clashId);
+    const fieldKey = side === "A" ? "sideA" : "sideB";
+    await updateDoc(ref, {
+      [`${fieldKey}.handle`]: handle,
+      [`${fieldKey}.position`]: position,
+    });
+  } catch (error) {
+    console.error("[promoteStageDebater] Error:", error);
+  }
+}
+
+/**
+ * demoteStageDebater - Demote a debater from Stage back to audience
+ */
+export async function demoteStageDebater(clashId: string, side: "A" | "B"): Promise<void> {
+  try {
+    const db = getFirebaseDb();
+    const ref = doc(db, "clashes", clashId);
+    const fieldKey = side === "A" ? "sideA" : "sideB";
+    await updateDoc(ref, {
+      [`${fieldKey}.handle`]: "@VACANT",
+      [`${fieldKey}.position`]: "OPEN SLOT",
+    });
+  } catch (error) {
+    console.error("[demoteStageDebater] Error:", error);
+  }
+}
+
 // ── Debate Timer Functions ───────────────────────────────────────────────────────
 
 /**

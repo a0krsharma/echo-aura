@@ -33,8 +33,14 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Skip Cloudinary URLs to avoid mixed content and caching large audio files
-  if (event.request.url.includes('cloudinary.com')) {
+  // Skip Cloudinary, Agora telemetry, external analytics, and non-GET requests
+  if (
+    event.request.method !== 'GET' ||
+    event.request.url.includes('cloudinary.com') ||
+    event.request.url.includes('agora.io') ||
+    event.request.url.includes('statscollector') ||
+    event.request.url.includes('sd-rtn.com')
+  ) {
     return;
   }
 
@@ -49,22 +55,31 @@ self.addEventListener('fetch', (event) => {
         // Clone the request
         const fetchRequest = event.request.clone();
 
-        return fetch(fetchRequest).then((response) => {
-          // Check if valid response
-          if (!response || response.status !== 200 || response.type !== 'basic') {
+        return fetch(fetchRequest)
+          .then((response) => {
+            // Check if valid response
+            if (!response || response.status !== 200 || response.type !== 'basic') {
+              return response;
+            }
+
+            // Clone the response
+            const responseToCache = response.clone();
+
+            caches.open(CACHE_NAME)
+              .then((cache) => {
+                cache.put(event.request, responseToCache);
+              })
+              .catch(() => {});
+
             return response;
-          }
-
-          // Clone the response
-          const responseToCache = response.clone();
-
-          caches.open(CACHE_NAME)
-            .then((cache) => {
-              cache.put(event.request, responseToCache);
+          })
+          .catch(() => {
+            return new Response('Network error occurred', {
+              status: 503,
+              statusText: 'Service Unavailable',
+              headers: new Headers({ 'Content-Type': 'text/plain' }),
             });
-
-          return response;
-        });
+          });
       })
   );
 });
