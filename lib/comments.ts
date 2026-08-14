@@ -92,8 +92,7 @@ export function subscribeToPostComments(
   const db = getFirebaseDb();
   const q = query(
     collection(db, COMMENTS_COLLECTION),
-    where("postId", "==", postId),
-    orderBy("createdAt", "desc")
+    where("postId", "==", postId)
   );
   
   return onSnapshot(
@@ -102,7 +101,14 @@ export function subscribeToPostComments(
       const comments = snap.docs.map((d) => ({
         id: d.id,
         ...(d.data() as Omit<CommentItem, "id">),
-      }));
+      })) as CommentItem[];
+
+      comments.sort((a, b) => {
+        const tA = (a.createdAt as any)?.toMillis?.() || (a.createdAt as any)?.seconds * 1000 || 0;
+        const tB = (b.createdAt as any)?.toMillis?.() || (b.createdAt as any)?.seconds * 1000 || 0;
+        return tB - tA;
+      });
+
       callback(comments);
     },
     (err) => {

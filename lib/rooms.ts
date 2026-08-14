@@ -836,8 +836,7 @@ export function subscribeToRoomParticipants(roomId: string, callback: (participa
   const db = getFirebaseDb();
   const participantsQuery = query(
     collection(db, PARTICIPANTS_COLLECTION),
-    where("roomId", "==", roomId),
-    orderBy("joinedAt", "desc")
+    where("roomId", "==", roomId)
   );
 
   const unsubscribe = onSnapshot(participantsQuery, (querySnap) => {
@@ -847,14 +846,17 @@ export function subscribeToRoomParticipants(roomId: string, callback: (participa
         ...doc.data() as RoomParticipant,
         id: doc.id, // Include document ID for unique React keys
       }));
+    
+    // Client-side sort by joinedAt descending to eliminate composite index requirement
+    participants.sort((a, b) => {
+      const tA = (a.joinedAt as any)?.toMillis?.() || (a.joinedAt as any)?.seconds * 1000 || 0;
+      const tB = (b.joinedAt as any)?.toMillis?.() || (b.joinedAt as any)?.seconds * 1000 || 0;
+      return tB - tA;
+    });
+
     callback(participants);
   }, (error) => {
     console.error("[subscribeToRoomParticipants] Error:", error);
-    // If error is about missing index, provide helpful message
-    if (error.code === 'failed-precondition') {
-      console.error("[subscribeToRoomParticipants] Missing Firestore composite index. Please create index in Firebase Console:");
-      console.error("[subscribeToRoomParticipants] Collection: room_participants, Fields: roomId (ASC), joinedAt (DESC)");
-    }
   });
 
   return unsubscribe;

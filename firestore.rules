@@ -224,8 +224,7 @@ service cloud.firestore {
     // ── POST COMMENTS ─────────────────────────────────────────────
     match /post_comments/{commentId} {
       allow read: if true;
-      allow create: if request.auth != null
-                    && request.resource.data.authorUid == request.auth.uid;
+      allow create: if request.auth != null;
       allow update: if request.auth != null; // likes/unlike increment
       allow delete: if request.auth != null
                     && resource.data.authorUid == request.auth.uid;
