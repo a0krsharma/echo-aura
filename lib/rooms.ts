@@ -880,10 +880,10 @@ export async function endRoom(roomId: string): Promise<void> {
   });
 }
 
-// ── Room Moderation Functions ─────────────────────────────────────────────────────
+// ── [ HOST_OVERRIDE ] - Host Control Functions ─────────────────────────────────────────────
 
 // ── Ban a user from a room ───────────────────────────────────────────────────────
-export async function banUserFromRoom(
+export async function hostOverrideBan(
   roomId: string,
   targetUid: string,
   moderatorUid: string,
@@ -932,7 +932,7 @@ export async function banUserFromRoom(
 }
 
 // ── Unban a user from a room ─────────────────────────────────────────────────────
-export async function unbanUserFromRoom(roomId: string, targetUid: string): Promise<void> {
+export async function hostOverrideUnban(roomId: string, targetUid: string): Promise<void> {
   try {
     const db = getFirebaseDb();
     
@@ -964,7 +964,7 @@ export async function unbanUserFromRoom(roomId: string, targetUid: string): Prom
 }
 
 // ── Check if user is banned from room ─────────────────────────────────────────────
-export async function isUserBannedFromRoom(roomId: string, uid: string): Promise<boolean> {
+export async function hostOverrideIsBanned(roomId: string, uid: string): Promise<boolean> {
   try {
     const db = getFirebaseDb();
     
@@ -984,7 +984,7 @@ export async function isUserBannedFromRoom(roomId: string, uid: string): Promise
 }
 
 // ── Promote user to moderator ─────────────────────────────────────────────────────
-export async function promoteToModerator(roomId: string, targetUid: string): Promise<void> {
+export async function hostOverridePromoteModerator(roomId: string, targetUid: string): Promise<void> {
   try {
     const db = getFirebaseDb();
     
@@ -1022,7 +1022,7 @@ export async function promoteToModerator(roomId: string, targetUid: string): Pro
 }
 
 // ── Demote user from moderator ───────────────────────────────────────────────────
-export async function demoteFromModerator(roomId: string, targetUid: string): Promise<void> {
+export async function hostOverrideDemoteModerator(roomId: string, targetUid: string): Promise<void> {
   try {
     const db = getFirebaseDb();
     
@@ -1051,7 +1051,7 @@ export async function demoteFromModerator(roomId: string, targetUid: string): Pr
 }
 
 // ── Enable slow mode for room ─────────────────────────────────────────────────────
-export async function enableSlowMode(roomId: string, intervalSeconds: number = 30): Promise<void> {
+export async function hostOverrideEnableSlowMode(roomId: string, intervalSeconds: number = 30): Promise<void> {
   try {
     const db = getFirebaseDb();
     const roomRef = doc(db, ROOMS_COLLECTION, roomId);
@@ -1067,7 +1067,7 @@ export async function enableSlowMode(roomId: string, intervalSeconds: number = 3
 }
 
 // ── Disable slow mode for room ────────────────────────────────────────────────────
-export async function disableSlowMode(roomId: string): Promise<void> {
+export async function hostOverrideDisableSlowMode(roomId: string): Promise<void> {
   try {
     const db = getFirebaseDb();
     const roomRef = doc(db, ROOMS_COLLECTION, roomId);
