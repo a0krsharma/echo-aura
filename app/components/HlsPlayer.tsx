@@ -41,30 +41,30 @@ export default function HlsPlayer({ src }: Props) {
   }, [url]);
 
   return (
-    <div className="border border-neutral-900 bg-neutral-950/60 p-6 space-y-4">
+    <div className="border border-neutral-800 bg-neutral-950/80 p-6 space-y-4 rounded-lg shadow-lg">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Radio className="w-4 h-4 text-white animate-pulse" />
-          <span className="font-mono text-xs text-white tracking-widest uppercase">
-            // [ LISTEN_HLS ] — CDN STREAM
+          <Radio className="w-4 h-4 text-emerald-400 animate-pulse" />
+          <span className="font-mono text-xs text-white tracking-widest uppercase font-semibold">
+            🎧 LIVE AUDIO PLAYER
           </span>
         </div>
-        <span className="font-mono text-[10px] text-neutral-600 tracking-widest uppercase">
-          {url ? "LIVE STREAM ACTIVE" : "OFFLINE"}
+        <span className="font-mono text-[10px] text-emerald-400 border border-emerald-950 bg-emerald-950/50 px-2 py-0.5 rounded tracking-widest uppercase font-mono">
+          {url ? "BROADCAST ONLINE 🟢" : "OFFLINE"}
         </span>
       </div>
 
       {url ? (
         <div className="space-y-3">
-          <audio ref={audioRef} controls className="w-full h-10 accent-white" />
-          <p className="font-mono text-[10px] text-neutral-600 tracking-widest uppercase break-all">
-            STREAM URL: {url}
+          <audio ref={audioRef} controls autoPlay className="w-full h-11 accent-emerald-500 rounded" />
+          <p className="font-mono text-[10px] text-neutral-500 tracking-widest uppercase">
+            STATUS: STREAMING LIVE • CLICK PLAY IF AUDIO DOES NOT AUTO-START
           </p>
         </div>
       ) : (
         <div className="border border-dashed border-neutral-800 p-4 text-center">
-          <p className="font-mono text-xs text-neutral-600 tracking-widest uppercase">
-            NO HLS STREAM CONFIGURED. SET NEXT_PUBLIC_HLS_URL IN .env.local TO ENABLE CDN LISTENERS.
+          <p className="font-mono text-xs text-neutral-500 tracking-widest uppercase">
+            NO BROADCAST STREAM AVAILABLE RIGHT NOW.
           </p>
         </div>
       )}
