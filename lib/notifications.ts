@@ -86,25 +86,40 @@ export async function createNotification(
 export function subscribeToNotifications(
   uid: string,
   callback: (notifs: EchoNotification[]) => void,
-  maxItems = 50
+  maxItems = 100
 ): () => void {
   const db = getFirebaseDb();
   const q = query(
     collection(db, "notifications", uid, "items"),
-    orderBy("createdAt", "desc"),
     limit(maxItems)
   );
 
   return onSnapshot(
     q,
     (snap) => {
-      const notifs: EchoNotification[] = snap.docs.map((d) => ({
-        id: d.id,
-        ...(d.data() as Omit<EchoNotification, "id">),
-      }));
+      const nowSec = Date.now() / 1000;
+      const twentyFourHoursAgo = nowSec - 24 * 60 * 60; // 24 hours in seconds
+
+      const notifs: EchoNotification[] = snap.docs
+        .map((d) => ({
+          id: d.id,
+          ...(d.data() as Omit<EchoNotification, "id">),
+        }))
+        .filter((n) => {
+          // If created recently without seconds timestamp yet, include it
+          if (!n.createdAt?.seconds) return true;
+          // Only keep notifications created in the last 24 hours
+          return n.createdAt.seconds >= twentyFourHoursAgo;
+        });
+
+      // Sort newest first
+      notifs.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
       callback(notifs);
     },
-    () => callback([])
+    (err) => {
+      console.warn("[Notifications] Error:", err.message);
+      callback([]);
+    }
   );
 }
 
