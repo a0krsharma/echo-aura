@@ -79,19 +79,41 @@ export async function startOrGetConversation(
   const db = getFirebaseDb();
   const convId = getConversationId(myUid, theirUid);
   const convRef = doc(db, "whispers", convId);
-  const snap = await getDoc(convRef);
 
-  if (!snap.exists()) {
-    await setDoc(convRef, {
-      participants: [myUid, theirUid],
-      handles: {
-        [myUid]: myHandle,
-        [theirUid]: theirHandle,
-      },
-      lastMessage: "",
-      lastAt: serverTimestamp(),
-      createdAt: serverTimestamp(),
-    });
+  try {
+    const snap = await getDoc(convRef);
+    if (!snap.exists()) {
+      await setDoc(convRef, {
+        participants: [myUid, theirUid],
+        handles: {
+          [myUid]: myHandle || "@ANON",
+          [theirUid]: theirHandle || "@ANON",
+        },
+        lastMessage: "",
+        lastAt: serverTimestamp(),
+        createdAt: serverTimestamp(),
+      });
+    }
+  } catch (err) {
+    // Fallback: If getDoc fails due to security rules on uncreated docs, setDoc directly with merge
+    try {
+      await setDoc(
+        convRef,
+        {
+          participants: [myUid, theirUid],
+          handles: {
+            [myUid]: myHandle || "@ANON",
+            [theirUid]: theirHandle || "@ANON",
+          },
+          lastMessage: "",
+          lastAt: serverTimestamp(),
+          createdAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+    } catch (createErr) {
+      console.warn("[startOrGetConversation] Fallback create error:", createErr);
+    }
   }
 
   return convId;

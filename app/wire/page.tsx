@@ -555,15 +555,28 @@ export default function WirePage() {
       const convId = await startOrGetConversation(user.uid, user.handle || "@ANON", targetUid, targetHandle);
       const db = getFirebaseDb();
       const convRef = doc(db, "whispers", convId);
-      const convSnap = await getDoc(convRef);
-      if (convSnap.exists()) {
-        setActiveConv({ id: convSnap.id, ...convSnap.data() } as WhisperConversation);
-      }
+      const convSnap = await getDoc(convRef).catch(() => null);
+
+      const conversationData: WhisperConversation = convSnap && convSnap.exists()
+        ? ({ id: convSnap.id, ...convSnap.data() } as WhisperConversation)
+        : {
+            id: convId,
+            participants: [user.uid, targetUid],
+            handles: {
+              [user.uid]: user.handle || "@ANON",
+              [targetUid]: targetHandle || "@ANON",
+            },
+            lastMessage: "",
+            lastAt: null,
+            createdAt: null,
+          };
+
+      setActiveConv(conversationData);
       setShowNew(false);
       setSearchQuery("");
       setSearchResults([]);
     } catch (err) {
-      console.error("Failed to start conversation:", err);
+      console.warn("Failed to start conversation:", err);
     }
   };
 
