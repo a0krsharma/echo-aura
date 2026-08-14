@@ -1017,7 +1017,7 @@ function RoomContent({ roomId }: RoomClientProps) {
                   {micMuted ? <MicOff size={12} /> : <Mic size={12} />}
                   {micMuted ? "[ MUTED ]" : "[ LIVE ]"}
                 </button>
-                <span className="font-mono text-xs text-neutral-600 uppercase">YOU ARE SPEAKING</span>
+                <span className="font-mono text-xs text-neutral-400 uppercase">YOU ARE SPEAKING ON STAGE</span>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -1032,15 +1032,20 @@ function RoomContent({ roomId }: RoomClientProps) {
                       try { await demoteFromSpeaker(roomId, user.uid); } catch (e) {}
                     }
                   }}
-                  className="px-4 py-2 border border-neutral-800 text-neutral-500 hover:text-white font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer"
+                  className="px-4 py-2 border border-emerald-800/60 bg-emerald-950/40 text-emerald-400 hover:border-emerald-400 font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center gap-1.5"
+                  title="Switch to low-cost listener mode"
                 >
-                  [ STOP SPEAKING ]
+                  <Volume2 size={12} />
+                  [ SWITCH TO LISTENER 🎧 ]
                 </button>
               </div>
             </div>
           ) : (
             <div className="flex items-center justify-between">
-              <span className="font-mono text-xs text-neutral-600 uppercase">LISTENING MODE</span>
+              <span className="font-mono text-xs text-emerald-400 uppercase flex items-center gap-2 font-medium">
+                <Volume2 size={14} className="animate-pulse" />
+                LISTENING MODE (LOW-COST DECOUPLED AUDIENCE) 🟢
+              </span>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setShowChat(!showChat)}
@@ -1048,35 +1053,18 @@ function RoomContent({ roomId }: RoomClientProps) {
                 >
                   [ 💬 CHAT ({chatMessages.length}) ]
                 </button>
-
-                <button
-                  onClick={() => router.push('/listen')}
-                  className="px-4 py-2 border border-neutral-800 text-neutral-500 hover:text-white font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer"
-                  title="Switch to HLS listener mode"
-                >
-                  [ SWITCH TO HLS ]
-                </button>
-
-                {room.openMic ? (
-                  <button
-                    onClick={handleRequestToSpeak}
-                    className="px-4 py-2 border border-white text-white hover:bg-white hover:text-black font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center gap-2"
-                  >
-                    <Mic size={12} />
-                    [ JOIN AS SPEAKER ]
-                  </button>
-                ) : hasRequestedToSpeak ? (
+                {hasRequestedToSpeak ? (
                   <button
                     onClick={handleCancelRequest}
-                    className="px-4 py-2 border border-yellow-500 text-yellow-500 hover:bg-yellow-500 hover:text-black font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center gap-2"
+                    className="px-4 py-2 border border-neutral-800 text-neutral-500 hover:text-white font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center gap-1.5"
                   >
                     <Hand size={12} />
-                    [ CANCEL REQUEST ]
+                    [ LOWER HAND ]
                   </button>
                 ) : (
                   <button
                     onClick={handleRequestToSpeak}
-                    className="px-4 py-2 border border-white text-white hover:bg-white hover:text-black font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center gap-2"
+                    className="px-4 py-2 border border-neutral-800 text-neutral-500 hover:border-white hover:text-white font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center gap-1.5"
                   >
                     <Hand size={12} />
                     [ REQUEST TO SPEAK ]

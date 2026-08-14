@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Radio, Volume2, Users, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, Radio, Volume2, Users } from 'lucide-react';
+import RoomLiveAudioPlayer from '../components/RoomLiveAudioPlayer';
 import HlsPlayer from '../components/HlsPlayer';
 import { subscribeToPublicRooms, type Room } from '@/lib/rooms';
 
@@ -14,15 +15,11 @@ export default function ListenPage() {
     const unsub = subscribeToPublicRooms((activeRooms) => {
       setRooms(activeRooms);
       if (activeRooms.length > 0 && !selectedRoom) {
-        // Default to first room with transmitUrl if available
-        const transmitting = activeRooms.find((r) => r.transmitEnabled && r.transmitUrl);
-        if (transmitting) setSelectedRoom(transmitting);
+        setSelectedRoom(activeRooms[0]);
       }
     });
     return () => unsub();
   }, [selectedRoom]);
-
-  const activeStreamUrl = selectedRoom?.transmitUrl || undefined;
 
   return (
     <div className="min-h-screen bg-black text-white pb-24 md:pb-8">
@@ -48,29 +45,15 @@ export default function ListenPage() {
           </p>
         </div>
 
-        {/* Selected Room Header if applicable */}
-        {selectedRoom && (
-          <div className="border border-emerald-800/60 bg-emerald-950/20 p-4 rounded-lg flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-2 text-xs font-mono text-emerald-300 font-semibold">
-                <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-                <span>NOW PLAYING: {selectedRoom.name}</span>
-              </div>
-              <p className="font-mono text-[10px] text-neutral-400 mt-1 uppercase">
-                HOST: {selectedRoom.hostHandle} • {selectedRoom.participantCount} LISTENERS IN ROOM
-              </p>
-            </div>
-            <Link
-              href={`/room/${selectedRoom.id}`}
-              className="px-3 py-1.5 text-xs font-mono border border-neutral-700 bg-neutral-900 hover:border-white transition-colors rounded"
-            >
-              JOIN STAGE 🎙️
-            </Link>
-          </div>
+        {/* Primary Live Audio Player for Selected Room */}
+        {selectedRoom ? (
+          <RoomLiveAudioPlayer
+            room={selectedRoom}
+            onClose={() => setSelectedRoom(null)}
+          />
+        ) : (
+          <HlsPlayer />
         )}
-
-        {/* Primary HLS Audio Player */}
-        <HlsPlayer src={activeStreamUrl} />
 
         {/* Active Broadcast Channels Directory */}
         <div className="space-y-4 pt-4 border-t border-neutral-900">
@@ -150,7 +133,7 @@ export default function ListenPage() {
                           className="px-3 py-1.5 text-xs font-mono border border-neutral-800 bg-neutral-950 text-neutral-400 hover:text-white hover:border-neutral-600 rounded"
                           title="Join room as participant/speaker"
                         >
-                          JOIN 🎙️
+                          JOIN STAGE 🎙️
                         </Link>
                       </div>
                     </div>
