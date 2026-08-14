@@ -8,8 +8,10 @@ type Props = {
   src?: string;
 };
 
+const DEFAULT_HLS_STREAM = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8";
+
 export default function HlsPlayer({ src }: Props) {
-  const url = src ?? (process.env.NEXT_PUBLIC_HLS_URL as string) ?? '';
+  const url = src || (process.env.NEXT_PUBLIC_HLS_URL as string) || DEFAULT_HLS_STREAM;
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -18,7 +20,7 @@ export default function HlsPlayer({ src }: Props) {
     let hls: Hls | null = null;
     const audio = audioRef.current;
 
-    if (Hls.isSupported() && url.endsWith('.m3u8')) {
+    if (Hls.isSupported() && url.includes('.m3u8')) {
       hls = new Hls({
         autoStartLoad: true,
         startPosition: -1,
