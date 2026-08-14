@@ -185,7 +185,6 @@ export function subscribeToConversations(
   const q = query(
     collection(db, "whispers"),
     where("participants", "array-contains", uid),
-    orderBy("lastAt", "desc"),
     limit(50)
   );
 
@@ -196,9 +195,13 @@ export function subscribeToConversations(
         id: d.id,
         ...(d.data() as Omit<WhisperConversation, "id">),
       }));
+      convs.sort((a, b) => (b.lastAt?.seconds || 0) - (a.lastAt?.seconds || 0));
       callback(convs);
     },
-    () => callback([])
+    (err) => {
+      console.warn("[subscribeToConversations] Error:", err.message);
+      callback([]);
+    }
   );
 }
 
@@ -213,7 +216,6 @@ export function subscribeToMessages(
   const db = getFirebaseDb();
   const q = query(
     collection(db, "whispers", conversationId, "messages"),
-    orderBy("createdAt", "asc"),
     limit(100)
   );
 
@@ -224,9 +226,16 @@ export function subscribeToMessages(
         id: d.id,
         ...(d.data() as Omit<WhisperMessage, "id">),
       }));
+      msgs.sort((a, b) => {
+        const tA = a.createdAt?.seconds || 0;
+        const tB = b.createdAt?.seconds || 0;
+        return tA - tB;
+      });
       callback(msgs);
     },
-    () => callback([])
+    (err) => {
+      console.warn("[subscribeToMessages] Error:", err.message);
+    }
   );
 }
 

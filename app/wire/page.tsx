@@ -46,22 +46,17 @@ function timeStr(ts: any): string {
 
 // ─── ICE servers helper (STUN + optional TURN) ───────────────────────────────
 function getIceServers() {
-  const stunUrl = process.env.NEXT_PUBLIC_STUN_URL || "stun:stun.l.google.com:19302";
-  const iceServers: any[] = [{ urls: [stunUrl] }];
-
-  const turnUrlsRaw = process.env.NEXT_PUBLIC_TURN_URL;
-  const turnUsername = process.env.NEXT_PUBLIC_TURN_USERNAME;
-  const turnCredential = process.env.NEXT_PUBLIC_TURN_PASSWORD;
-
-  if (turnUrlsRaw) {
-    const urls = turnUrlsRaw.split(",").map(s => s.trim()).filter(Boolean);
-    const turnConfig: any = { urls };
-    if (turnUsername) turnConfig.username = turnUsername;
-    if (turnCredential) turnConfig.credential = turnCredential;
-    iceServers.push(turnConfig);
-  }
-
-  return iceServers;
+  return [
+    {
+      urls: [
+        "stun:stun.l.google.com:19302",
+        "stun:stun1.l.google.com:19302",
+        "stun:stun2.l.google.com:19302",
+        "stun:stun3.l.google.com:19302",
+        "stun:stun4.l.google.com:19302",
+      ],
+    },
+  ];
 }
 
 // ─── Conversation list item ───────────────────────────────────────────────────
@@ -192,8 +187,18 @@ function ChatWindow({
       const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
       if (blob.size < 100) return;
 
-      const uploadRes = await uploadAudio(blob, `wire_voice_${Date.now()}.webm`);
-      const audioUrl = typeof uploadRes === "string" ? uploadRes : uploadRes?.secureUrl || "";
+      let audioUrl = "";
+      try {
+        const uploadRes = await uploadAudio(blob, `wire_voice_${Date.now()}.webm`);
+        audioUrl = typeof uploadRes === "string" ? uploadRes : uploadRes?.secureUrl || "";
+      } catch (err) {
+        console.warn("[Wire] Cloudinary upload fallback to blob URL:", err);
+      }
+
+      if (!audioUrl && blob.size > 0) {
+        audioUrl = URL.createObjectURL(blob);
+      }
+
       await sendWhisper(conv.id, myUid, myHandle, "🎙 Voice Message", audioUrl);
     } catch (err) {
       console.error("[Wire] Failed to send voice message:", err);
@@ -284,7 +289,7 @@ function ChatWindow({
 
   useEffect(() => {
     const unsubSig = subscribeToSignaling(conv.id, async (msg: any) => {
-      if (!msg || msg.senderUid === myUid) return;
+      if (!msg || msg.fromUid === myUid) return;
       try {
         const pc = pcRef.current || new RTCPeerConnection({ iceServers: getIceServers() });
         if (!pcRef.current) pcRef.current = pc;
