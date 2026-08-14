@@ -130,12 +130,13 @@ export async function getBlockedUsers(
     const blocksQuery = query(
       collection(db, BLOCKS_COLLECTION),
       where("blockerUid", "==", uid),
-      orderBy("createdAt", "desc"),
       limit(limitCount)
     );
     
     const blocksSnap = await getDocs(blocksQuery);
-    return blocksSnap.docs.map(doc => doc.data() as Block);
+    const list = blocksSnap.docs.map(doc => doc.data() as Block);
+    list.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    return list;
   } catch (error) {
     console.error("[getBlockedUsers] Error:", error);
     return [];
@@ -153,12 +154,13 @@ export async function getUsersWhoBlocked(
     const blocksQuery = query(
       collection(db, BLOCKS_COLLECTION),
       where("blockedUid", "==", uid),
-      orderBy("createdAt", "desc"),
       limit(limitCount)
     );
     
     const blocksSnap = await getDocs(blocksQuery);
-    return blocksSnap.docs.map(doc => doc.data() as Block);
+    const list = blocksSnap.docs.map(doc => doc.data() as Block);
+    list.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    return list;
   } catch (error) {
     console.error("[getUsersWhoBlocked] Error:", error);
     return [];

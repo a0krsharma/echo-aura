@@ -171,12 +171,13 @@ export async function getUserMentions(userId: string, limitCount: number = 50): 
   const mentionsQuery = query(
     collection(db, MENTIONS_COLLECTION),
     where("mentionedUid", "==", userId),
-    orderBy("mentionedAt", "desc"),
     limit(limitCount)
   );
 
   const mentionsSnap = await getDocs(mentionsQuery);
-  return mentionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Mention[];
+  const list = mentionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Mention[];
+  list.sort((a, b) => (b.mentionedAt?.seconds || 0) - (a.mentionedAt?.seconds || 0));
+  return list;
 }
 
 // ── Subscribe to user mentions (real-time) ─────────────────────────────────────
@@ -186,15 +187,16 @@ export function subscribeToUserMentions(userId: string, callback: (mentions: Men
   const mentionsQuery = query(
     collection(db, MENTIONS_COLLECTION),
     where("mentionedUid", "==", userId),
-    orderBy("mentionedAt", "desc"),
     limit(50)
   );
 
   const unsubscribe = onSnapshot(mentionsQuery, (querySnap) => {
     const mentions = querySnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Mention[];
+    mentions.sort((a, b) => (b.mentionedAt?.seconds || 0) - (a.mentionedAt?.seconds || 0));
     callback(mentions);
   }, (error) => {
     console.error("[subscribeToUserMentions] Error:", error);
+    callback([]);
   });
 
   return unsubscribe;

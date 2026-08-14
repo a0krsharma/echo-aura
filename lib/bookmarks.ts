@@ -95,12 +95,13 @@ export async function getUserBookmarks(userId: string, limitCount: number = 50):
   const bookmarksQuery = query(
     collection(db, BOOKMARKS_COLLECTION),
     where("userId", "==", userId),
-    orderBy("bookmarkedAt", "desc"),
     limit(limitCount)
   );
 
   const bookmarksSnap = await getDocs(bookmarksQuery);
-  return bookmarksSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Bookmark[];
+  const list = bookmarksSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Bookmark[];
+  list.sort((a, b) => (b.bookmarkedAt?.seconds || 0) - (a.bookmarkedAt?.seconds || 0));
+  return list;
 }
 
 // ── Subscribe to user's bookmarks (real-time) ─────────────────────────────────────
@@ -110,15 +111,16 @@ export function subscribeToUserBookmarks(userId: string, callback: (bookmarks: B
   const bookmarksQuery = query(
     collection(db, BOOKMARKS_COLLECTION),
     where("userId", "==", userId),
-    orderBy("bookmarkedAt", "desc"),
     limit(50)
   );
 
   const unsubscribe = onSnapshot(bookmarksQuery, (querySnap) => {
     const bookmarks = querySnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Bookmark[];
+    bookmarks.sort((a, b) => (b.bookmarkedAt?.seconds || 0) - (a.bookmarkedAt?.seconds || 0));
     callback(bookmarks);
   }, (error) => {
     console.error("[subscribeToUserBookmarks] Error:", error);
+    callback([]);
   });
 
   return unsubscribe;
