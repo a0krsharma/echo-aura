@@ -14,7 +14,7 @@ import {
   type PostReverbItem,
 } from "@/lib/posts";
 import { useRouter } from "next/navigation";
-import { uploadAudio } from "@/lib/cloudinary";
+import { uploadAudio, getPlayableUrl } from "@/lib/cloudinary";
 import { createNotification } from "@/lib/notifications";
 import { followUser, unfollowUser, isFollowing } from "@/lib/follows";
 import { audioManager } from "@/lib/audioManager";
@@ -223,13 +223,11 @@ function Waveform({ playing, small, audioRef }: { playing: boolean; small?: bool
 // ─── URL helpers ──────────────────────────────────────────────────────────────
 function buildUrlVariants(rawUrl: string): string[] {
   if (!rawUrl) return [];
-  if (rawUrl.startsWith("blob:")) return [rawUrl];
-  const v: string[] = [rawUrl];
-  const stripped = rawUrl.replace(/\/[a-z][a-z0-9_]+,[a-z0-9_,;:]+\//i, "/");
-  if (stripped !== rawUrl) v.push(stripped);
-  const mp3 = rawUrl.replace(/\/f_[^/]+\//,"/f_mp3,q_auto:good/").replace(/\.[a-z0-9]+$/,".mp3");
-  if (!v.includes(mp3)) v.push(mp3);
-  return [...new Set(v)];
+  const playable = getPlayableUrl(rawUrl);
+  if (playable.startsWith("blob:")) return [playable];
+  const v: string[] = [playable];
+  if (rawUrl !== playable) v.push(rawUrl);
+  return Array.from(new Set(v));
 }
 
 // ─── Audio Player ─────────────────────────────────────────────────────────────
@@ -788,7 +786,7 @@ function PostCard({ post, user, orbitedPosts, activePostId, deletingId, onPulse,
       </div>
 
       {/* Caption */}
-      <h2 className="font-serif italic text-2xl md:text-3xl text-white leading-snug">
+      <h2 className="font-mono text-sm md:text-base font-bold text-white tracking-wide leading-relaxed">
         "{parseCaption(post.caption)}"
       </h2>
 
