@@ -13,8 +13,7 @@ export const dynamic = "force-dynamic";
  * - P2P audio calls via WebRTC
  */
 
-import { useState, useEffect, useRef, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, useEffect, useRef } from "react";
 import { Mic, Mic2, Lock, Plus, Search, X, Send, ChevronLeft, Loader2, Phone, PhoneOff, Play, Pause, Square } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
 import { uploadAudio } from "@/lib/cloudinary";
@@ -471,11 +470,8 @@ function ChatWindow({
   );
 }
 
-function WirePageContent() {
+export default function WirePage() {
   const { user } = useAuth();
-  const searchParams = useSearchParams();
-  const targetConvId = searchParams.get("c");
-
   const [conversations, setConversations] = useState<WhisperConversation[]>([]);
   const [activeConv, setActiveConv] = useState<WhisperConversation | null>(null);
   const [showNew, setShowNew] = useState(false);
@@ -489,9 +485,13 @@ function WirePageContent() {
     return () => unsub && unsub();
   }, [user]);
 
-  // Auto-select conversation from query param ?c=...
+  // Read URL query parameter ?c=... safely on client side without triggering React Error #310
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetConvId = urlParams.get("c");
     if (!targetConvId) return;
+
     const found = conversations.find((c) => c.id === targetConvId);
     if (found) {
       setActiveConv(found);
@@ -503,7 +503,7 @@ function WirePageContent() {
         }
       });
     }
-  }, [targetConvId, conversations]);
+  }, [conversations]);
 
   const handleSearch = async () => {
     if (!searchQuery.trim() || !user) return;
@@ -638,19 +638,5 @@ function WirePageContent() {
         </div>
       </div>
     </div>
-  );
-}
-
-export default function WirePage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-black text-white flex items-center justify-center font-mono text-xs tracking-widest uppercase">
-        <div className="border border-neutral-800 p-6 animate-pulse">
-          [ LOADING WIRE CONSOLE... ]
-        </div>
-      </div>
-    }>
-      <WirePageContent />
-    </Suspense>
   );
 }
