@@ -1,5 +1,5 @@
 // Echo Service Worker for Offline Support
-const CACHE_NAME = 'echo-v1';
+const CACHE_NAME = 'echo-v3';
 const urlsToCache = [
   '/',
   '/rooms',
@@ -15,8 +15,9 @@ const urlsToCache = [
   '/manifest.json'
 ];
 
-// Install event - cache assets
+// Install event - cache assets & skipWaiting
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
@@ -84,18 +85,21 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Activate event - clean up old caches
+// Activate event - clean up old caches & claim clients
 self.addEventListener('activate', (event) => {
-  const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+    Promise.all([
+      self.clients.claim(),
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            if (cacheName !== CACHE_NAME) {
+              console.log('[Service Worker] Deleting old cache:', cacheName);
+              return caches.delete(cacheName);
+            }
+          })
+        );
+      }),
+    ])
   );
 });
