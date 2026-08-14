@@ -584,8 +584,8 @@ export default function ProfilePage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="relative group">
-                <div className={`w-16 h-16 rounded-full border-2 overflow-hidden flex items-center justify-center font-mono text-xl bg-neutral-950 ${
-                  vibeRead ? "border-green-500 shadow-lg shadow-green-500/20" : "border-neutral-700"
+                <div className={`w-20 h-20 rounded-full border-2 overflow-hidden flex items-center justify-center text-2xl font-mono bg-neutral-950 ${
+                  vibeRead ? "border-white shadow-lg shadow-white/20" : "border-neutral-700"
                 }`}>
                   {user?.photoURL || user?.avatarUrl || avatarPreview ? (
                     <img
