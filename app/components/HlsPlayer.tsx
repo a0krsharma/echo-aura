@@ -1,7 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Radio } from 'lucide-react';
+import Hls from 'hls.js';
 
 type Props = {
   src?: string;
@@ -9,6 +10,33 @@ type Props = {
 
 export default function HlsPlayer({ src }: Props) {
   const url = src ?? (process.env.NEXT_PUBLIC_HLS_URL as string) ?? '';
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (!url || !audioRef.current) return;
+
+    let hls: Hls | null = null;
+    const audio = audioRef.current;
+
+    if (Hls.isSupported() && url.endsWith('.m3u8')) {
+      hls = new Hls({
+        autoStartLoad: true,
+        startPosition: -1,
+      });
+      hls.loadSource(url);
+      hls.attachMedia(audio);
+    } else if (audio.canPlayType('application/vnd.apple.mpegurl')) {
+      audio.src = url;
+    } else {
+      audio.src = url;
+    }
+
+    return () => {
+      if (hls) {
+        hls.destroy();
+      }
+    };
+  }, [url]);
 
   return (
     <div className="border border-neutral-900 bg-neutral-950/60 p-6 space-y-4">
@@ -26,8 +54,8 @@ export default function HlsPlayer({ src }: Props) {
 
       {url ? (
         <div className="space-y-3">
-          <audio controls src={url} className="w-full h-10 accent-white" />
-          <p className="font-mono text-[10px] text-neutral-600 tracking-widest uppercase">
+          <audio ref={audioRef} controls className="w-full h-10 accent-white" />
+          <p className="font-mono text-[10px] text-neutral-600 tracking-widest uppercase break-all">
             STREAM URL: {url}
           </p>
         </div>
