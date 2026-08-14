@@ -240,12 +240,11 @@ export default function HandlePage({ params }: { params: { handle: string } }) {
           const data = { uid: doc.id, ...doc.data() } as FirestoreUser;
           setUserData(data);
 
-          // Load their posts
+          // Load their posts with client-side sorting to avoid missing composite index errors
           const postsQ = query(
             collection(db, "posts"),
             where("authorUid", "==", data.uid),
-            orderBy("createdAt", "desc"),
-            limit(20)
+            limit(50)
           );
           const postsSnap = await getDocs(postsQ);
           const posts: UserPost[] = postsSnap.docs.map(d => ({
@@ -257,6 +256,7 @@ export default function HandlePage({ params }: { params: { handle: string } }) {
             pulseCount: (d.data().pulseCount as number) || 0,
             createdAt: d.data().createdAt,
           }));
+          posts.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
           setUserPosts(posts);
         } else {
           // User not in Firestore — show anonymous shell
