@@ -9,10 +9,11 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowUp, Volume2, Lock, Mic2, Users, MessageSquare } from "lucide-react";
+import { ArrowLeft, ArrowUp, Volume2, Lock, Mic2, Users, MessageSquare, UserPlus, UserCheck } from "lucide-react";
 import { collection, query, where, getDocs, orderBy, limit, onSnapshot } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 import { startOrGetConversation } from "@/lib/wire";
+import { followUser, unfollowUser, subscribeToFollowStatus } from "@/lib/follows";
 import { useAuth } from "@/app/components/AuthProvider";
 import { ChatWidget } from "@/app/components/ChatWidget";
 
@@ -293,9 +294,32 @@ export default function HandlePage({ params }: { params: { handle: string } }) {
   }
 
   const profile = userData!;
-  const displayHandle = profile.handle.startsWith("@") ? profile.handle : `@${profile.handle}`;
-  const aura = profile.auraScore ?? 0;
-  const badges = profile.badges ?? [];
+  const displayHandle = profile ? (profile.handle.startsWith("@") ? profile.handle : `@${profile.handle}`) : "";
+  const aura = profile?.auraScore ?? 0;
+  const badges = profile?.badges ?? [];
+
+  useEffect(() => {
+    if (!user?.uid || !userData?.uid || userData.uid === "anon") return;
+    const unsub = subscribeToFollowStatus(user.uid, userData.uid, setOrbiting);
+    return () => unsub();
+  }, [user?.uid, userData?.uid]);
+
+  const handleToggleOrbit = async () => {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    if (!userData || userData.uid === "anon" || userData.uid === user.uid) return;
+    try {
+      if (orbiting) {
+        await unfollowUser(user.uid, userData.uid);
+      } else {
+        await followUser(user.uid, user.handle || "@ANON", userData.uid, userData.handle);
+      }
+    } catch (err) {
+      console.error("[Profile] Toggle orbit error:", err);
+    }
+  };
 
   const handleStartWire = async () => {
     if (!user || profile.uid === "anon" || profile.uid === user.uid) return;
@@ -349,17 +373,19 @@ export default function HandlePage({ params }: { params: { handle: string } }) {
                 {startingWire ? "STARTING..." : "[ WIRE ]"}
               </button>
             )}
-            <button
-              onClick={() => setOrbiting(o => !o)}
-              className={`flex items-center gap-1.5 font-mono text-xs tracking-widest uppercase border px-3 py-2 transition-colors cursor-pointer shrink-0 ${
-                orbiting
-                  ? "border-white text-white"
-                  : "border-neutral-800 text-neutral-500 hover:border-white hover:text-white"
-              }`}
-            >
-              <Lock size={10} strokeWidth={1.5} />
-              {orbiting ? "[ ORBITING ]" : "[ LOCK IN ]"}
-            </button>
+            {user && profile.uid !== "anon" && profile.uid !== user.uid && (
+              <button
+                onClick={handleToggleOrbit}
+                className={`flex items-center gap-1.5 font-mono text-xs tracking-widest uppercase border px-3 py-2 transition-colors cursor-pointer shrink-0 ${
+                  orbiting
+                    ? "border-white text-white font-bold"
+                    : "border-neutral-800 text-neutral-500 hover:border-white hover:text-white"
+                }`}
+              >
+                {orbiting ? <UserCheck size={12} /> : <UserPlus size={12} />}
+                {orbiting ? "[ ORBITING ]" : "[ ORBIT ]"}
+              </button>
+            )}
           </div>
         </div>
 
