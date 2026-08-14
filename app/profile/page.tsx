@@ -25,7 +25,7 @@ import {
 import { useAuth } from "@/app/components/AuthProvider";
 import { uploadAudio, uploadImage, getPlayableUrl } from "@/lib/cloudinary";
 import { subscribeToUserPosts, subscribeToUserPulsedPosts, type PostItem } from "@/lib/posts";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, setDoc, onSnapshot, serverTimestamp } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 import { addTag, removeTag, getUserTags, getFreqMap, setSignalStatus, getSignalStatus, getVibeRead, analyzeVibeRead, updateVibeRead } from "@/lib/userDoc";
 import { subscribeToFollowers, subscribeToFollowing, type Follow } from "@/lib/follows";
@@ -203,6 +203,8 @@ export default function ProfilePage() {
   const [bioAudioUrl, setBioAudioUrl] = useState<string | null>(null);
   const [isSavingBio, setIsSavingBio] = useState(false);
   const [isPlayingBio, setIsPlayingBio] = useState(false);
+  const [savedVoiceBioUrl, setSavedVoiceBioUrl] = useState<string | null>((user as any)?.voiceBioUrl || null);
+  const [savedVoiceBioDuration, setSavedVoiceBioDuration] = useState<string | null>((user as any)?.voiceBioDuration || "30s");
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -217,6 +219,22 @@ export default function ProfilePage() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.photoURL || user?.avatarUrl || null);
   const [savingProfile, setSavingProfile] = useState(false);
+
+  // Real-time listener for user document (voice bio & profile data)
+  useEffect(() => {
+    if (!user) return;
+    const db = getFirebaseDb();
+    const unsub = onSnapshot(doc(db, "users", user.uid), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data.voiceBioUrl) {
+          setSavedVoiceBioUrl(data.voiceBioUrl);
+          setSavedVoiceBioDuration(data.voiceBioDuration || "30s");
+        }
+      }
+    });
+    return () => unsub();
+  }, [user]);
 
   useEffect(() => {
     if (user) {
@@ -377,11 +395,23 @@ export default function ProfilePage() {
     setIsSavingBio(true);
     try {
       const uploaded = await uploadAudio(bioBlob, `voice-bio-${user.uid}`);
+      const voiceBioUrl = typeof uploaded === "string" ? uploaded : uploaded?.secureUrl || "";
+
+      if (!voiceBioUrl) throw new Error("Upload failed to return audio URL");
+
       const db = getFirebaseDb();
-      await updateDoc(doc(db, "users", user.uid), {
-        voiceBioUrl: uploaded.secureUrl,
-        voiceBioDuration: `${bioElapsed}s`,
-      });
+      await setDoc(
+        doc(db, "users", user.uid),
+        {
+          voiceBioUrl,
+          voiceBioDuration: `${bioElapsed}s`,
+          voiceBioAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+      
+      setSavedVoiceBioUrl(voiceBioUrl);
+      setSavedVoiceBioDuration(`${bioElapsed}s`);
       
       // Analyze and save vibe read
       try {
@@ -672,31 +702,44 @@ export default function ProfilePage() {
           </div>
 
           {bioState === "idle" && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
-              <div className="flex items-center space-x-2">
+            <div className="space-y-3 pt-2">
+              {savedVoiceBioUrl && (
+                <div className="p-3 border border-neutral-800 bg-neutral-950/80 mb-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-mono text-[10px] text-white tracking-widest uppercase flex items-center gap-1.5">
+                      <Mic2 className="w-3 h-3" /> ACTIVE VOICE BIO ({savedVoiceBioDuration || "30S"})
+                    </span>
+                    <span className="font-mono text-[10px] text-neutral-500 uppercase">SAVED TO DATABASE</span>
+                  </div>
+                  <MiniPlayer audioUrl={savedVoiceBioUrl} durationSec={bioDuration || 30} />
+                </div>
+              )}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setBioDuration(30)}
+                    className={`px-3 py-1 font-mono text-xs tracking-widest border transition-colors cursor-pointer ${
+                      bioDuration === 30 ? "border-white text-white" : "border-neutral-800 text-neutral-600"
+                    }`}
+                  >
+                    [30S]
+                  </button>
+                  <button
+                    onClick={() => setBioDuration(60)}
+                    className={`px-3 py-1 font-mono text-xs tracking-widest border transition-colors cursor-pointer ${
+                      bioDuration === 60 ? "border-white text-white" : "border-neutral-800 text-neutral-600"
+                    }`}
+                  >
+                    [60S]
+                  </button>
+                </div>
                 <button
-                  onClick={() => setBioDuration(30)}
-                  className={`px-3 py-1 font-mono text-xs tracking-widest border transition-colors cursor-pointer ${
-                    bioDuration === 30 ? "border-white text-white" : "border-neutral-800 text-neutral-600"
-                  }`}
+                  onClick={startBioRecording}
+                  className="w-full sm:w-auto px-4 py-2 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors cursor-pointer flex items-center justify-center gap-2"
                 >
-                  [30S]
-                </button>
-                <button
-                  onClick={() => setBioDuration(60)}
-                  className={`px-3 py-1 font-mono text-xs tracking-widest border transition-colors cursor-pointer ${
-                    bioDuration === 60 ? "border-white text-white" : "border-neutral-800 text-neutral-600"
-                  }`}
-                >
-                  [60S]
+                  <Mic2 className="w-3.5 h-3.5" /> [ RECORD NEW VOICE BIO ]
                 </button>
               </div>
-              <button
-                onClick={startBioRecording}
-                className="w-full sm:w-auto px-4 py-2 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors cursor-pointer flex items-center justify-center gap-2"
-              >
-                <Mic2 className="w-3.5 h-3.5" /> [ RECORD VOICE BIO ]
-              </button>
             </div>
           )}
 
