@@ -114,8 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // ── Google Sign-In ─────────────────────────────────────────────────────────
-  // Always try popup first — it works on mobile when called directly from a
-  // user click. Only fall back to redirect if the popup is actually blocked.
+  // Uses popup on desktop and auto-fallback to redirect on mobile browsers / popup failures
   const signInWithGoogle = useCallback(async () => {
     setError(null);
     const auth     = getFirebaseAuth();
@@ -124,31 +123,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     provider.addScope("email");
     provider.setCustomParameters({ prompt: "select_account" });
 
+    const isMobile =
+      typeof navigator !== "undefined" &&
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      try {
+        await signInWithRedirect(auth, provider);
+        return;
+      } catch (e: any) {
+        console.warn("[Auth] Mobile redirect sign-in error, trying popup:", e);
+      }
+    }
+
     try {
       await signInWithPopup(auth, provider);
-      // onAuthStateChanged will fire and set the user
     } catch (e: any) {
-      const code = String(e?.code ?? "");
+      const code = String(e?.code ?? e?.message ?? "");
+      console.warn("[Auth] Popup sign-in error:", code, e);
 
       if (
-        code === "auth/popup-closed-by-user" ||
-        code === "auth/cancelled-popup-request"
+        code.includes("popup-closed-by-user") ||
+        code.includes("cancelled-popup-request")
       ) {
-        return; // User dismissed — silent
+        return; // User dismissed
       }
 
-      if (code === "auth/popup-blocked") {
-        // Rare case: browser blocked the popup (e.g. aggressive ad blocker)
-        // Fall back to redirect as last resort
-        try {
-          await signInWithRedirect(auth, provider);
-        } catch (re: any) {
-          setError(mapError(re?.code ?? re?.message ?? ""));
-        }
-        return;
+      // Fallback to redirect for mobile/popup restrictions
+      try {
+        await signInWithRedirect(auth, provider);
+      } catch (re: any) {
+        const reCode = String(re?.code ?? re?.message ?? "");
+        console.error("[Auth] Redirect fallback error:", reCode, re);
+        setError(mapError(reCode || code));
       }
-
-      setError(mapError(code || e?.message || ""));
     }
   }, []);
 
@@ -178,10 +186,13 @@ export function useAuth(): AuthContextValue {
 
 // ─── Error messages ───────────────────────────────────────────────────────────
 function mapError(raw: string): string {
-  if (raw.includes("unauthorized-domain")) return "DOMAIN NOT AUTHORIZED — ADD IT IN AUTH CONSOLE → AUTHORIZED DOMAINS.";
-  if (raw.includes("network-request"))     return "NETWORK ERROR — CHECK YOUR CONNECTION.";
-  if (raw.includes("too-many-requests"))   return "TOO MANY ATTEMPTS — WAIT AND TRY AGAIN.";
-  if (raw.includes("user-disabled"))       return "THIS ACCOUNT HAS BEEN DISABLED.";
-  if (raw.includes("account-exists"))      return "ACCOUNT ALREADY EXISTS WITH A DIFFERENT METHOD.";
-  return "SIGN-IN FAILED — PLEASE TRY AGAIN.";
+  const code = String(raw).toLowerCase();
+  if (code.includes("unauthorized-domain")) return "DOMAIN NOT AUTHORIZED — ADD DOMAIN TO FIREBASE CONSOLE → AUTH → AUTHORIZED DOMAINS.";
+  if (code.includes("network-request"))     return "NETWORK ERROR — CHECK YOUR CONNECTION.";
+  if (code.includes("too-many-requests"))   return "TOO MANY ATTEMPTS — WAIT AND TRY AGAIN.";
+  if (code.includes("user-disabled"))       return "THIS ACCOUNT HAS BEEN DISABLED.";
+  if (code.includes("account-exists"))      return "ACCOUNT ALREADY EXISTS WITH A DIFFERENT METHOD.";
+  if (code.includes("disallowed_useragent") || code.includes("disallowed-useragent")) return "IN-APP BROWSER RESTRICTED — OPEN IN BROWSER (CHROME / SAFARI).";
+  if (code.includes("web-storage-unsupported")) return "COOKIES / STORAGE DISABLED IN BROWSER SETTINGS.";
+  return `SIGN-IN FAILED (${raw || "UNKNOWN ERROR"}) — PLEASE TRY AGAIN.`;
 }
