@@ -66,9 +66,15 @@ service cloud.firestore {
       // Vibe Chat messages sub-collection
       match /messages/{messageId} {
         allow read:   if true;
-        allow create: if request.auth != null
-                      && request.resource.data.uid == request.auth.uid;
+        allow create: if request.auth != null;
         allow update, delete: if false;
+      }
+
+      // Q&A questions sub-collection
+      match /questions/{questionId} {
+        allow read:   if true;
+        allow create, update: if request.auth != null;
+        allow delete: if false;
       }
     }
 

@@ -42,13 +42,15 @@ function getFormattedTime(): string {
 export async function sendVibeMessage(
   clashId: string,
   handle:  string,
-  text:    string
+  text:    string,
+  uid?:    string
 ): Promise<string> {
   const db = getFirebaseDb();
   const ref = collection(db, "clashes", clashId, "messages");
   const docRef = await addDoc(ref, {
     clashId,
     handle,
+    uid:       uid || "",
     text:      text.trim(),
     timeStr:   getFormattedTime(),
     createdAt: serverTimestamp(),

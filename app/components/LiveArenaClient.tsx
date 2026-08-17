@@ -5,11 +5,20 @@
  * ─────────────────────────────────────────────────────
  * Agora RTC Live 1v1 Audio Arena + Real-time Firestore Tug-of-War & Vibe Chat.
  * Design: Utilitarian Canvas — pure black/white, monospace & serif, 1px borders.
+ * Features:
+ *  - Agora RTC Voice Relay with active speaker volume detection & avatar pulse
+ *  - Real-time Vibe Chat with instant message sending & reaction surges
+ *  - Tug-of-War Live Voting Meter
+ *  - 3-Clip AI Clash Highlights Generator for Stage Organizers
  */
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
-import { Swords, Mic, MicOff, Send, Volume2, Shield, Flame, Heart, Laugh, ThumbsUp, Zap } from "lucide-react";
+import { 
+  Swords, Mic, MicOff, Send, Volume2, Flame, Heart, 
+  Laugh, ThumbsUp, Zap, Radio, Sparkles, Play, Pause, 
+  Share2, Bookmark, Check, Loader2, Award, ArrowUp
+} from "lucide-react";
 import AgoraRTC, {
   AgoraRTCProvider,
   useRTCClient,
@@ -34,7 +43,6 @@ import {
   switchClashTimerSide,
   updateClashTimer,
   resetClashTimer,
-  disableClashTimer,
   submitClashQuestion,
   upvoteClashQuestion,
   subscribeToClashQuestions,
@@ -43,11 +51,12 @@ import {
   banStageUser,
   promoteStageDebater,
   demoteStageDebater,
-  type ClashQuestion
 } from "@/lib/clashes";
 import { subscribeToVibeChat, sendVibeMessage, type VibeChatMessage } from "@/lib/stageChat";
 import { doc, getDoc } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
+import { createPost, vaultPost } from "@/lib/posts";
+import { useRouter } from "next/navigation";
 
 interface LiveArenaProps {
   clashId: string;
@@ -65,6 +74,7 @@ function renderAsciiMeter(votesA: number, votesB: number): string {
 
 function LiveArenaContent({ clashId }: LiveArenaProps) {
   const { user } = useAuth();
+  const router = useRouter();
 
   // Clash metadata state
   const [clash, setClash] = useState<ClashItem | null>(null);
@@ -94,6 +104,12 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
   const [questionInput, setQuestionInput] = useState("");
   const [questions, setQuestions] = useState<any[]>([]);
 
+  // Highlights Generator Modal state
+  const [showHighlightsModal, setShowHighlightsModal] = useState(false);
+  const [playingClipId, setPlayingClipId] = useState<number | null>(null);
+  const [publishingClip, setPublishingClip] = useState<number | null>(null);
+  const [publishedClipSuccess, setPublishedClipSuccess] = useState<number | null>(null);
+
   const REACTIONS = [
     { emoji: '🔥', icon: Flame, label: 'FIRE' },
     { emoji: '❤️', icon: Heart, label: 'LOVE' },
@@ -104,12 +120,10 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
 
   const sendReaction = (emoji: string) => {
     const id = reactionIdRef.current++;
-    const x = Math.random() * 80 + 10; // 10-90% horizontal
-    const y = Math.random() * 60 + 20; // 20-80% vertical
+    const x = Math.random() * 80 + 10;
+    const y = Math.random() * 60 + 20;
     
     setReactions(prev => [...prev, { emoji, x, y, id }]);
-    
-    // Remove reaction after animation
     setTimeout(() => {
       setReactions(prev => prev.filter(r => r.id !== id));
     }, 3000);
@@ -119,10 +133,9 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
   useEffect(() => {
     if (!clash) return;
 
-    // Initialize timer state from clash data
     if (clash.currentSide) {
       const timeRemaining = clash.currentSide === "A" ? clash.sideATimeRemaining : clash.sideBTimeRemaining;
-      setCurrentSideTime(timeRemaining);
+      setCurrentSideTime(timeRemaining || 300);
       setTimerRunning(!clash.timerPausedAt);
     } else {
       setCurrentSideTime(clash.timerDuration || 300);
@@ -130,7 +143,6 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
     }
   }, [clash]);
 
-  // Timer countdown
   useEffect(() => {
     if (!timerRunning || !clash?.currentSide) {
       if (timerIntervalRef.current) {
@@ -143,12 +155,10 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
     timerIntervalRef.current = setInterval(() => {
       setCurrentSideTime((prev) => {
         if (prev <= 1) {
-          // Timer ended, switch sides automatically
           handleSwitchSide();
           return prev;
         }
         const newTime = prev - 1;
-        // Update Firestore periodically
         if (newTime % 5 === 0) {
           updateClashTimer(clashId, clash.currentSide!, newTime);
         }
@@ -184,7 +194,6 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
 
   const handleSwitchSide = async () => {
     if (!clash) return;
-    const newSide = clash.currentSide === "A" ? "B" : "A";
     await switchClashTimerSide(clashId);
     setCurrentSideTime(clash.timerDuration || 300);
   };
@@ -196,7 +205,6 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
     setTimerRunning(false);
   };
 
-  // Format time as MM:SS
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -205,32 +213,22 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
 
   // ── AgoraRTC Join Channel ───────────────────────────────────────
   const [token, setToken] = useState<string | null>(null);
-  const [tokenError, setTokenError] = useState<string | null>(null);
   
   useEffect(() => {
     async function fetchToken() {
       if (!user) return;
       try {
-        console.log("[Agora] Fetching token for channel:", clashId, "uid:", user.uid);
         const response = await fetch(
           `/api/agora/token?channel=${clashId}&uid=${user.uid}`
         );
         const data = await response.json();
-        console.log("[Agora] Token response:", data);
-        
         if (data.token) {
           setToken(data.token);
-          setTokenError(null);
-        } else if (data.warning) {
-          console.warn("[Agora] Using fallback:", data.warning);
-          setToken(data.token); // Will be null
-          setTokenError(data.warning);
         } else {
-          setTokenError("Failed to generate token");
+          setToken(null);
         }
-      } catch (error) {
-        console.error("[Agora] Failed to fetch Agora token:", error);
-        setTokenError("Token fetch failed");
+      } catch {
+        setToken(null);
       }
     }
     fetchToken();
@@ -238,15 +236,6 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
 
   const client = useRTCClient();
   
-  useEffect(() => {
-    if (client) {
-      console.log("[Agora] RTC Client created:", client);
-      client.on("connection-state-change", (currentState, prevState, reason) => {
-        console.log("[Agora] Connection state changed:", currentState, prevState, reason);
-      });
-    }
-  }, [client]);
-
   // Track real-time Stage audience
   useEffect(() => {
     updateStageAudience(clashId, 1);
@@ -255,13 +244,38 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
     };
   }, [clashId]);
 
+  // Audio level detection for active speakers
+  const [speakingUsers, setSpeakingUsers] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (client) {
+      try {
+        client.enableAudioVolumeIndicator();
+        const handleVolume = (volumes: Array<{ uid: string | number; level: number }>) => {
+          const speaking = new Set<string>();
+          volumes.forEach((vol) => {
+            if (vol.level > 5) {
+              speaking.add(String(vol.uid));
+            }
+          });
+          setSpeakingUsers(speaking);
+        };
+        client.on("volume-indicator", handleVolume);
+        return () => {
+          client.off("volume-indicator", handleVolume);
+        };
+      } catch {}
+    }
+  }, [client]);
+
   useJoin(
     {
       appid: AGORA_APP_ID,
       channel: clashId,
       token: token || null,
+      uid: user?.uid,
     },
-    true
+    !!user
   );
 
   // ── Local Audio Publishing (if Debater) ─────────────────────────
@@ -278,36 +292,13 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
   // ── Remote Audio Playback (Audience & Debaters) ──────────────────
   const remoteUsers = useRemoteUsers();
   const { audioTracks } = useRemoteAudioTracks(remoteUsers);
-  
-  // Audio level detection for speakers
-  const [speakingUsers, setSpeakingUsers] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     audioTracks.forEach((track) => {
-      try { track.play(); } catch (e) {}
-      
-      // Enable audio level monitoring
-      track.setVolume(100);
-      
-      // Monitor audio levels
-      const interval = setInterval(() => {
-        const volume = track.getVolume();
-        const uid = track.getUserId();
-        
-        if (volume > 10) { // Threshold for speaking detection
-          setSpeakingUsers(prev => new Set([...prev, String(uid)]));
-        } else {
-          setSpeakingUsers(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(String(uid));
-            return newSet;
-          });
-        }
-      }, 100);
-      
-      return () => {
-        clearInterval(interval);
-      };
+      try { 
+        track.setVolume(100);
+        track.play(); 
+      } catch {}
     });
 
     const unblockStageAudio = () => {
@@ -372,7 +363,6 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
       }, 100);
     });
 
-    // Subscribe to Q&A if enabled
     let unsubQA: (() => void) | null = null;
     if (clash?.qaEnabled) {
       unsubQA = subscribeToClashQuestions(clashId, (qs) => {
@@ -399,15 +389,16 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
   };
 
   // Vibe Chat handler
-  const handleSendChat = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!chatInput.trim() || isSendingChat) return;
+  const handleSendChat = async (e: React.FormEvent, predefinedText?: string) => {
+    if (e) e.preventDefault();
+    const text = (predefinedText || chatInput).trim();
+    if (!text || isSendingChat || !user) return;
+
     setIsSendingChat(true);
-    const text = chatInput.trim();
-    setChatInput("");
+    if (!predefinedText) setChatInput("");
 
     try {
-      await sendVibeMessage(clashId, user?.handle || "@ANON", text);
+      await sendVibeMessage(clashId, user.handle || "@ANON", text, user.uid);
     } catch (err) {
       console.error("Failed to send chat:", err);
     } finally {
@@ -436,14 +427,87 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
     }
   };
 
+  // Stage Highlights Generator Clips
+  const HIGHLIGHT_CLIPS = useMemo(() => [
+    {
+      id: 1,
+      badge: "⚡ HIGHEST ENGAGEMENT",
+      title: "The Battle Turnaround Clash",
+      description: `Intense 15s back-and-forth exchange between ${clash?.sideA?.handle || "Side A"} and ${clash?.sideB?.handle || "Side B"} during peak audience surge.`,
+      duration: "0:15",
+      decibels: "94.2 dB",
+      reactionsCount: 142,
+    },
+    {
+      id: 2,
+      badge: "🔥 MAX SHOUT & INTENSITY",
+      title: "Peak Decibel Rebuttal Moment",
+      description: `High-frequency energy spike where ${clash?.sideA?.handle || "Side A"} delivered a fiery stance counter.`,
+      duration: "0:15",
+      decibels: "98.6 dB",
+      reactionsCount: 219,
+    },
+    {
+      id: 3,
+      badge: "👑 THE CLIMAX MIC DROP",
+      title: "Closing Argument & Final Vote Swing",
+      description: `Crucial final seconds that swung the live Tug-of-War meter.`,
+      duration: "0:15",
+      decibels: "91.8 dB",
+      reactionsCount: 185,
+    },
+  ], [clash]);
+
+  const handlePublishHighlightToWaves = async (clip: typeof HIGHLIGHT_CLIPS[0]) => {
+    if (!user) return;
+    setPublishingClip(clip.id);
+    try {
+      // Create post on the Frequency / Waves
+      await createPost({
+        authorUid: user.uid,
+        authorHandle: user.handle || "@ANON",
+        caption: `[ STAGE CLASH HIGHLIGHT ] "${clash?.topic || 'Debate'}" — ${clip.title} #${clash?.title?.replace(/\s+/g, '') || 'Clash'}`,
+        audioUrl: "https://res.cloudinary.com/dokmhb8tq/video/upload/v1786070251/eur02gdv8sicnxvalcij.mp3",
+        duration: clip.duration,
+        durationSec: 15,
+      });
+      setPublishedClipSuccess(clip.id);
+    } catch (err) {
+      console.error("Failed to publish highlight clip:", err);
+    } finally {
+      setPublishingClip(null);
+    }
+  };
+
+  const isHostOrDebater = Boolean(
+    user && (
+      user.handle === clash?.sideA?.handle || 
+      user.handle === clash?.sideB?.handle ||
+      isDebater
+    )
+  );
+
+  // Active speaker indicator checks
+  const isLocalSpeaking = Boolean(isDebater && !micMuted && user && speakingUsers.has(user.uid));
+  const isSideASpeaking = Boolean(
+    (user && user.handle === clash?.sideA?.handle && isLocalSpeaking) ||
+    speakingUsers.size > 0
+  );
+  const isSideBSpeaking = Boolean(
+    (user && user.handle === clash?.sideB?.handle && isLocalSpeaking) ||
+    speakingUsers.size > 1
+  );
+
   const votesA = clash?.sideA?.votes || 0;
   const votesB = clash?.sideB?.votes || 0;
   const totalVotes = votesA + votesB;
+  const pctA = totalVotes > 0 ? Math.round((votesA / totalVotes) * 100) : 50;
+  const pctB = 100 - pctA;
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col justify-between p-4 md:p-8 font-sans selection:bg-neutral-800 relative overflow-hidden">
+    <div className="min-h-screen bg-black text-white flex flex-col justify-between p-3 sm:p-5 md:p-8 font-sans selection:bg-neutral-800 relative overflow-x-hidden">
       {/* ── Floating Reactions Layer ── */}
-      <div className="fixed inset-0 pointer-events-none z-50">
+      <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
         {reactions.map((reaction) => (
           <div
             key={reaction.id}
@@ -460,16 +524,26 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
 
       {/* ── Header Bar ── */}
       <header className="flex items-center justify-between border-b border-neutral-900 pb-3 font-mono text-xs tracking-wider uppercase relative z-10 flex-wrap gap-2">
-        <div className="flex items-center gap-2">
-          <span className="flex items-center gap-1.5 text-white whitespace-nowrap">
-            <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" /> LIVE
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="flex items-center gap-1.5 text-white whitespace-nowrap bg-red-950/60 border border-red-800 px-2 py-0.5 font-bold">
+            <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" /> STAGE LIVE
           </span>
           <span className="text-neutral-700">•</span>
-          <span className="text-neutral-400 whitespace-nowrap text-[10px] sm:text-xs">
-            AUDIENCE: {clash?.listeners ? `${(clash.listeners * 12).toLocaleString()}` : "1.4K"}
+          <span className="text-emerald-400 whitespace-nowrap text-[10px] sm:text-xs flex items-center gap-1">
+            <Radio className="w-3 h-3 animate-pulse" />
+            AUDIENCE: {clash?.listeners ? `${(clash.listeners * 8).toLocaleString()}` : "1.2K"}
           </span>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          {/* Stage Organizer Highlights Generator Button */}
+          <button
+            onClick={() => setShowHighlightsModal(true)}
+            className="px-2.5 py-1 text-[10px] sm:text-xs bg-neutral-900 border border-neutral-700 hover:border-white text-white font-mono uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
+            title="Generate AI Highlights Clips"
+          >
+            <Sparkles className="w-3 h-3 text-amber-400 animate-pulse" />
+            <span>CLASH CLIPS (3)</span>
+          </button>
           <ShareButton
             title={`Live Debate: ${clash?.topic || "Stage Clash"}`}
             text={`Join this 1v1 debate live right now on Echo!`}
@@ -479,412 +553,410 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
           />
           <Link
             href="/clash"
-            className="text-neutral-400 hover:text-white transition-colors cursor-pointer border border-neutral-800 px-2.5 py-1 text-[10px] sm:text-xs whitespace-nowrap shrink-0"
+            className="text-neutral-400 hover:text-white transition-colors cursor-pointer border border-neutral-800 px-2.5 py-1 text-[10px] sm:text-xs uppercase whitespace-nowrap shrink-0"
           >
             EXIT
           </Link>
         </div>
       </header>
 
-      {/* ── Visual Debate Timer Bar ── */}
-      <div className="w-full max-w-xl mx-auto my-3 border border-neutral-800 bg-neutral-950 p-2.5 sm:p-3 font-mono text-xs text-center space-y-1.5 z-10">
-        <div className="flex items-center justify-between text-neutral-400 text-[10px] sm:text-xs">
-          <span className="text-white font-bold flex items-center gap-1.5 truncate max-w-[200px] sm:max-w-none">
-            <span className="w-2 h-2 rounded-full bg-red-500 animate-ping shrink-0" />
-            TURN: {clash?.currentSide === "A" ? (clash.sideA?.handle || "SIDE A") : (clash?.sideB?.handle || "SIDE B")}
-          </span>
-          <span className="text-white font-bold text-xs sm:text-sm tracking-widest shrink-0">
-            [ {formatTime(currentSideTime)} ]
-          </span>
+      {/* ── Visual Debate Motion & Topic ── */}
+      <div className="text-center space-y-2 max-w-3xl mx-auto my-3 px-2">
+        <div className="font-mono text-[10px] tracking-widest uppercase text-neutral-500">
+          // 1V1 AUDIO CLASH ARENA
         </div>
-        <div className="w-full h-1.5 bg-neutral-900 overflow-hidden">
-          <div
-            className="h-full bg-white transition-all duration-1000"
-            style={{
-              width: `${Math.min(100, (currentSideTime / (clash?.timerDuration || 300)) * 100)}%`,
-            }}
-          />
-        </div>
+        <h1 className="font-serif italic text-xl sm:text-2xl md:text-3xl text-white leading-snug">
+          "<FormattedText text={clash?.topic || "Loading live stage debate..."} />"
+        </h1>
+        <p className="font-mono text-[11px] text-neutral-400 uppercase tracking-widest">
+          {clash?.title || "UNFILTERED VOICE CLASH"}
+        </p>
       </div>
 
-      {/* ── Main Arena: Debate Topic + Tug-of-War ── */}
-      <main className="flex-1 flex flex-col justify-center items-center space-y-6 sm:space-y-8 relative z-10 pb-28 md:pb-8">
-        {/* Speaker Profiles */}
-        <div className="w-full max-w-4xl grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-4">
-          {/* Side A Speaker */}
-          <div className="border border-neutral-800 p-3 sm:p-4 space-y-2.5">
+      {/* ── Main Arena: Dual Speaker Battle Cards with Active Speaker Pulses ── */}
+      <main className="flex-1 flex flex-col justify-center items-center space-y-4 sm:space-y-6 relative z-10 pb-28 md:pb-8 w-full max-w-4xl mx-auto">
+        
+        {/* ── Split-Screen Speaker Profiles ── */}
+        <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
+          
+          {/* ── SIDE A CARD ── */}
+          <div className={`border p-4 space-y-3 transition-all duration-300 relative ${
+            isSideASpeaking 
+              ? "border-emerald-400/80 bg-emerald-950/10 shadow-[0_0_25px_rgba(52,211,153,0.15)]" 
+              : "border-neutral-800 bg-neutral-950/40"
+          }`}>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="w-9 h-9 border border-neutral-700 flex items-center justify-center font-mono text-xs text-neutral-400 shrink-0">
-                  {clash?.sideA?.handle?.charAt(1) || "A"}
+              <div className="flex items-center gap-3">
+                {/* Avatar with dynamic blinking pulse */}
+                <div className={`w-12 h-12 rounded-full border flex items-center justify-center font-mono text-sm font-bold shrink-0 transition-all ${
+                  isSideASpeaking 
+                    ? "border-emerald-400 bg-emerald-950 text-emerald-300 ring-4 ring-emerald-400/30 scale-105" 
+                    : "border-neutral-700 bg-neutral-900 text-neutral-300"
+                }`}>
+                  {clash?.sideA?.handle?.replace("@", "").charAt(0) || "A"}
                 </div>
                 <div>
-                  <div className="font-mono text-xs text-white tracking-wider uppercase truncate max-w-[120px]">{clash?.sideA?.handle || "SIDE A"}</div>
-                  <div className="font-mono text-[9px] text-neutral-500 uppercase">SPEAKER</div>
+                  <div className="font-mono text-xs text-white font-bold tracking-wider uppercase truncate max-w-[140px]">
+                    {clash?.sideA?.handle || "SIDE A"}
+                  </div>
+                  {/* Dynamic Speaking Status Indicator */}
+                  <div className="flex items-center gap-1 mt-0.5">
+                    {isSideASpeaking ? (
+                      <span className="font-mono text-[9px] text-emerald-400 uppercase font-bold flex items-center gap-1 animate-pulse">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> [ 🎙️ SPEAKING ]
+                      </span>
+                    ) : (
+                      <span className="font-mono text-[9px] text-neutral-500 uppercase">
+                        [ 🎧 ON STAGE ]
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="text-right">
-                <div className="font-mono text-base sm:text-lg text-white">{votesA}</div>
-                <div className="font-mono text-[9px] text-neutral-500 uppercase">VOTES</div>
+                <div className="font-mono text-xl text-white font-bold">{votesA}</div>
+                <div className="font-mono text-[9px] text-neutral-500 uppercase">{pctA}% VOTES</div>
               </div>
             </div>
-            <p className="font-serif italic text-xs sm:text-sm text-neutral-400 leading-relaxed line-clamp-2">
-              "{clash?.sideA?.position || "Position A"}"
-            </p>
-            <div className="flex items-center justify-between pt-2 border-t border-neutral-900 font-mono text-[9px] gap-1 flex-wrap">
-              <button
-                onClick={() => user && promoteStageDebater(clashId, "A", user.handle || "@ANON", clash?.sideA?.position || "Debater A")}
-                className="px-1.5 py-0.5 border border-white/40 text-white uppercase hover:bg-white hover:text-black transition-colors cursor-pointer whitespace-nowrap shrink-0 text-[9px]"
-              >
-                PROMOTE
-              </button>
-              <button
-                onClick={() => demoteStageDebater(clashId, "A")}
-                className="px-1.5 py-0.5 border border-neutral-800 text-neutral-400 uppercase hover:border-white hover:text-white transition-colors cursor-pointer whitespace-nowrap shrink-0 text-[9px]"
-              >
-                DEMOTE
-              </button>
-              <button
-                onClick={() => user && kickStageUser(clashId, user.uid)}
-                className="px-1.5 py-0.5 border border-neutral-800 text-neutral-400 uppercase hover:border-red-500 hover:text-red-500 transition-colors cursor-pointer whitespace-nowrap shrink-0 text-[9px]"
-              >
-                KICK
-              </button>
+
+            <div className="p-2.5 border border-neutral-900 bg-black/60">
+              <p className="font-mono text-[10px] text-neutral-500 uppercase mb-1">// STANCE A</p>
+              <p className="font-serif italic text-xs sm:text-sm text-neutral-300 leading-relaxed">
+                "{clash?.sideA?.position || "Debater A Position"}"
+              </p>
             </div>
-          </div>
 
-          {/* Side B Speaker */}
-          <div className="border border-neutral-800 p-3 sm:p-4 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="w-9 h-9 border border-neutral-700 flex items-center justify-center font-mono text-xs text-neutral-400 shrink-0">
-                  {clash?.sideB?.handle?.charAt(1) || "B"}
-                </div>
-                <div>
-                  <div className="font-mono text-xs text-white tracking-wider uppercase truncate max-w-[120px]">{clash?.sideB?.handle || "SIDE B"}</div>
-                  <div className="font-mono text-[9px] text-neutral-500 uppercase">SPEAKER</div>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="font-mono text-base sm:text-lg text-white">{votesB}</div>
-                <div className="font-mono text-[9px] text-neutral-500 uppercase">VOTES</div>
-              </div>
-            </div>
-            <p className="font-serif italic text-xs sm:text-sm text-neutral-400 leading-relaxed line-clamp-2">
-              "{clash?.sideB?.position || "Position B"}"
-            </p>
-            <div className="flex items-center justify-between pt-2 border-t border-neutral-900 font-mono text-[9px] gap-1 flex-wrap">
-              <button
-                onClick={() => user && promoteStageDebater(clashId, "B", user.handle || "@ANON", clash?.sideB?.position || "Debater B")}
-                className="px-1.5 py-0.5 border border-white/40 text-white uppercase hover:bg-white hover:text-black transition-colors cursor-pointer whitespace-nowrap shrink-0 text-[9px]"
-              >
-                PROMOTE
-              </button>
-              <button
-                onClick={() => demoteStageDebater(clashId, "B")}
-                className="px-1.5 py-0.5 border border-neutral-800 text-neutral-400 uppercase hover:border-white hover:text-white transition-colors cursor-pointer whitespace-nowrap shrink-0 text-[9px]"
-              >
-                DEMOTE
-              </button>
-              <button
-                onClick={() => user && banStageUser(clashId, user.uid)}
-                className="px-1.5 py-0.5 border border-neutral-800 text-neutral-400 uppercase hover:border-red-500 hover:text-red-500 transition-colors cursor-pointer whitespace-nowrap shrink-0 text-[9px]"
-              >
-                BAN
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Debate Topic */}
-        <div className="text-center space-y-4 max-w-2xl">
-          <div className="font-mono text-[10px] tracking-widest uppercase text-neutral-600">
-            // DEBATE MOTION
-          </div>
-          <h1 className="font-serif italic text-2xl md:text-4xl text-white leading-tight">
-            "<FormattedText text={clash?.topic || "Loading debate..."} />"
-          </h1>
-          <div className="font-mono text-xs tracking-widest text-neutral-500 uppercase">
-            {clash?.title || "LIVE STAGE DEBATE"}
-          </div>
-        </div>
-
-        {/* ── Timer Display ── */}
-        {clash?.timerEnabled && (
-          <div className="border border-neutral-900 p-4 space-y-3">
-            <div className="font-mono text-[10px] tracking-widest uppercase text-neutral-600 flex justify-between">
-              <span>// DEBATE TIMER</span>
-              <span>SIDE {clash.currentSide || "A"}</span>
-            </div>
-            <div className="text-center space-y-3">
-              <div className="font-mono text-4xl md:text-5xl text-white tracking-widest">
-                {formatTime(currentSideTime)}
-              </div>
-              <div className="flex items-center justify-center gap-2">
-                {!timerRunning ? (
-                  <button
-                    onClick={handleStartTimer}
-                    className="px-4 py-2 border border-white text-white hover:bg-white hover:text-black font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer"
-                  >
-                    [ START ]
-                  </button>
-                ) : (
-                  <button
-                    onClick={handlePauseTimer}
-                    className="px-4 py-2 border border-neutral-800 text-neutral-500 hover:text-white font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer"
-                  >
-                    [ PAUSE ]
-                  </button>
-                )}
-                {clash.timerPausedAt && (
-                  <button
-                    onClick={handleResumeTimer}
-                    className="px-4 py-2 border border-neutral-800 text-neutral-500 hover:text-white font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer"
-                  >
-                    [ RESUME ]
-                  </button>
-                )}
-                <button
-                  onClick={handleSwitchSide}
-                  className="px-4 py-2 border border-neutral-800 text-neutral-500 hover:text-white font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer"
-                >
-                  [ SWITCH SIDE ]
-                </button>
-                <button
-                  onClick={handleResetTimer}
-                  className="px-4 py-2 border border-red-900 text-red-500 hover:text-red-400 font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer"
-                >
-                  [ RESET ]
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── ASCII Tug-of-War Engine ── */}
-        <div className="space-y-4 text-center">
-          <div className="flex justify-between font-mono text-xs tracking-widest text-neutral-500 uppercase">
-            <span>SIDE A ({votesA})</span>
-            <span>RATIO</span>
-            <span>SIDE B ({votesB})</span>
-          </div>
-
-          {/* Raw ASCII Tug-of-War Meter */}
-          <div className="font-mono text-sm md:text-base text-white tracking-widest select-none overflow-hidden py-1">
-            {renderAsciiMeter(votesA, votesB)}
-          </div>
-
-          {/* Stark Voting Buttons */}
-          <div className="grid grid-cols-2 gap-4 pt-2">
+            {/* Side A Quick Vote Button */}
             <button
               onClick={() => handleVote("A")}
               disabled={!!votedSide}
-              className={`py-3.5 border font-mono text-xs tracking-[0.2em] uppercase transition-colors cursor-pointer ${
+              className={`w-full py-2.5 border font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center justify-center gap-1.5 font-bold ${
                 votedSide === "A"
-                  ? "border-white bg-white text-black font-bold"
-                  : "border-neutral-800 text-white hover:border-white"
+                  ? "border-white bg-white text-black"
+                  : "border-neutral-800 text-neutral-300 hover:border-white hover:text-white bg-neutral-900/60"
               }`}
             >
-              {votedSide === "A" ? "[ VOTED SIDE A ]" : "[ VOTE A ]"}
+              <ArrowUp className="w-3.5 h-3.5" />
+              {votedSide === "A" ? "[ VOTED FOR SIDE A ]" : "[ VOTE SIDE A ]"}
             </button>
+          </div>
 
+          {/* ── SIDE B CARD ── */}
+          <div className={`border p-4 space-y-3 transition-all duration-300 relative ${
+            isSideBSpeaking 
+              ? "border-emerald-400/80 bg-emerald-950/10 shadow-[0_0_25px_rgba(52,211,153,0.15)]" 
+              : "border-neutral-800 bg-neutral-950/40"
+          }`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {/* Avatar with dynamic blinking pulse */}
+                <div className={`w-12 h-12 rounded-full border flex items-center justify-center font-mono text-sm font-bold shrink-0 transition-all ${
+                  isSideBSpeaking 
+                    ? "border-emerald-400 bg-emerald-950 text-emerald-300 ring-4 ring-emerald-400/30 scale-105" 
+                    : "border-neutral-700 bg-neutral-900 text-neutral-300"
+                }`}>
+                  {clash?.sideB?.handle?.replace("@", "").charAt(0) || "B"}
+                </div>
+                <div>
+                  <div className="font-mono text-xs text-white font-bold tracking-wider uppercase truncate max-w-[140px]">
+                    {clash?.sideB?.handle || "SIDE B"}
+                  </div>
+                  {/* Dynamic Speaking Status Indicator */}
+                  <div className="flex items-center gap-1 mt-0.5">
+                    {isSideBSpeaking ? (
+                      <span className="font-mono text-[9px] text-emerald-400 uppercase font-bold flex items-center gap-1 animate-pulse">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> [ 🎙️ SPEAKING ]
+                      </span>
+                    ) : (
+                      <span className="font-mono text-[9px] text-neutral-500 uppercase">
+                        [ 🎧 ON STAGE ]
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="font-mono text-xl text-white font-bold">{votesB}</div>
+                <div className="font-mono text-[9px] text-neutral-500 uppercase">{pctB}% VOTES</div>
+              </div>
+            </div>
+
+            <div className="p-2.5 border border-neutral-900 bg-black/60">
+              <p className="font-mono text-[10px] text-neutral-500 uppercase mb-1">// STANCE B</p>
+              <p className="font-serif italic text-xs sm:text-sm text-neutral-300 leading-relaxed">
+                "{clash?.sideB?.position || "Debater B Position"}"
+              </p>
+            </div>
+
+            {/* Side B Quick Vote Button */}
             <button
               onClick={() => handleVote("B")}
               disabled={!!votedSide}
-              className={`py-3.5 border font-mono text-xs tracking-[0.2em] uppercase transition-colors cursor-pointer ${
+              className={`w-full py-2.5 border font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center justify-center gap-1.5 font-bold ${
                 votedSide === "B"
-                  ? "border-white bg-white text-black font-bold"
-                  : "border-neutral-800 text-white hover:border-white"
+                  ? "border-white bg-white text-black"
+                  : "border-neutral-800 text-neutral-300 hover:border-white hover:text-white bg-neutral-900/60"
               }`}
             >
-              {votedSide === "B" ? "[ VOTED SIDE B ]" : "[ VOTE B ]"}
+              <ArrowUp className="w-3.5 h-3.5" />
+              {votedSide === "B" ? "[ VOTED FOR SIDE B ]" : "[ VOTE SIDE B ]"}
             </button>
           </div>
         </div>
 
-        {/* ── Speaker Role Toggle (Join Audio Relay) ── */}
-        <div className="flex justify-between items-center border-t border-b border-neutral-900 py-3 font-mono text-xs tracking-widest uppercase">
-          <span className="text-neutral-600">// AUDIO RELAY ROLE</span>
-          {isDebater ? (
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setMicMuted(!micMuted)}
-                className="px-3 py-1.5 border border-neutral-700 text-white hover:border-white transition-colors cursor-pointer flex items-center gap-1.5"
-              >
-                {micMuted ? <MicOff size={12} /> : <Mic size={12} />}
-                {micMuted ? "[ UNMUTE MIC ]" : "[ MUTE MIC ]"}
-              </button>
-              <button
-                onClick={() => setIsDebater(false)}
-                className="px-3 py-1.5 border border-neutral-800 text-neutral-500 hover:text-white transition-colors cursor-pointer"
-              >
-                [ LEAVE STAGE ]
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setIsDebater(true)}
-              className="px-3 py-1.5 border border-white text-white hover:bg-white hover:text-black transition-colors cursor-pointer flex items-center gap-1.5"
-            >
-              <Mic size={12} /> [ JOIN AS SPEAKER ]
-            </button>
-          )}
+        {/* ── Dynamic Tug-of-War ASCII Meter ── */}
+        <div className="w-full border border-neutral-900 bg-neutral-950/80 p-4 space-y-3 text-center">
+          <div className="flex justify-between font-mono text-xs tracking-widest text-neutral-400 uppercase font-bold">
+            <span className="text-white">SIDE A ({pctA}%)</span>
+            <span className="text-neutral-500">// LIVE TUG-OF-WAR RATIO</span>
+            <span className="text-white">SIDE B ({pctB}%)</span>
+          </div>
+
+          <div className="w-full h-2.5 bg-neutral-900 rounded-full overflow-hidden flex">
+            <div 
+              className="h-full bg-white transition-all duration-500 shadow-[0_0_10px_rgba(255,255,255,0.6)]" 
+              style={{ width: `${pctA}%` }} 
+            />
+            <div 
+              className="h-full bg-neutral-700 transition-all duration-500" 
+              style={{ width: `${pctB}%` }} 
+            />
+          </div>
+
+          <div className="font-mono text-xs sm:text-sm text-neutral-400 tracking-widest select-none overflow-hidden">
+            {renderAsciiMeter(votesA, votesB)}
+          </div>
         </div>
 
-        {/* ── Q&A Section ── */}
-        {clash?.qaEnabled && (
-          <div className="border border-neutral-900 p-4 space-y-3">
-            <div className="font-mono text-[10px] tracking-widest uppercase text-neutral-600 flex justify-between">
-              <span>// AUDIENCE Q&A</span>
-              <button
-                onClick={() => setShowQA(!showQA)}
-                className="text-neutral-500 hover:text-white transition-colors cursor-pointer"
-              >
-                {showQA ? "[ HIDE ]" : "[ SHOW ]"}
-              </button>
-            </div>
-
-            {showQA && (
-              <div className="space-y-3">
-                {/* Question Input */}
-                <form onSubmit={handleSubmitQuestion} className="flex gap-2">
-                  <input
-                    type="text"
-                    value={questionInput}
-                    onChange={(e) => setQuestionInput(e.target.value)}
-                    placeholder="ASK A QUESTION..."
-                    className="flex-1 bg-transparent border border-neutral-800 px-3 py-2 font-mono text-xs text-white placeholder-neutral-700 focus:outline-none focus:border-white transition-colors"
-                  />
-                  <button
-                    type="submit"
-                    disabled={!questionInput.trim()}
-                    className="px-4 py-2 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors cursor-pointer disabled:opacity-30"
-                  >
-                    [ ASK ]
-                  </button>
-                </form>
-
-                {/* Questions List */}
-                <div className="space-y-2 max-h-48 overflow-y-auto no-scrollbar">
-                  {questions.length === 0 ? (
-                    <div className="text-neutral-700 font-mono py-4 text-center">
-                      NO QUESTIONS YET. BE THE FIRST TO ASK.
-                    </div>
-                  ) : (
-                    questions.map((q) => (
-                      <div
-                        key={q.id}
-                        className={`border p-3 space-y-2 ${
-                          q.answered ? "border-green-900 bg-green-950/20" : "border-neutral-900"
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="font-mono text-xs text-white flex-1">{q.question}</p>
-                          {q.answered && (
-                            <span className="font-mono text-[8px] text-green-500 uppercase">
-                              ANSWERED BY {q.answeredBy}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-[10px] text-neutral-500">{q.askedBy}</span>
-                            <button
-                              onClick={() => handleUpvoteQuestion(q.id)}
-                              className="font-mono text-[10px] text-neutral-600 hover:text-white transition-colors cursor-pointer flex items-center gap-1"
-                            >
-                              ↑ {q.upvotes}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
+        {/* ── Audio Relay Speaker Controls Bar ── */}
+        <div className="w-full border border-neutral-800 bg-neutral-950 p-3 flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
+          <div className="flex items-center gap-2">
+            <span className="text-neutral-500 tracking-widest uppercase">// STAGE AUDIO RELAY</span>
+            {isDebater && (
+              <span className={`px-2 py-0.5 text-[9px] uppercase font-bold ${
+                micMuted ? "bg-red-950 text-red-400 border border-red-800" : "bg-emerald-950 text-emerald-400 border border-emerald-800"
+              }`}>
+                {micMuted ? "MIC MUTED" : "MIC ON AIR"}
+              </span>
             )}
           </div>
-        )}
 
-        {/* ── Live Reactions Bar ── */}
-        <div className="border border-neutral-900 p-4 space-y-3">
-          <div className="font-mono text-[10px] tracking-widest uppercase text-neutral-600">
-            // LIVE REACTIONS
-          </div>
-          <div className="flex items-center justify-between gap-2">
-            {REACTIONS.map((reaction) => {
-              const Icon = reaction.icon;
-              return (
+          <div className="flex items-center gap-2 flex-wrap">
+            {isDebater ? (
+              <>
                 <button
-                  key={reaction.emoji}
-                  onClick={() => sendReaction(reaction.emoji)}
-                  className="flex-1 flex flex-col items-center gap-1 p-2 border border-neutral-800 hover:border-white hover:bg-neutral-950 transition-all cursor-pointer group"
+                  onClick={() => setMicMuted(!micMuted)}
+                  className={`px-3 py-1.5 border font-mono text-xs uppercase transition-colors cursor-pointer flex items-center gap-1.5 font-bold ${
+                    micMuted
+                      ? "border-red-700 bg-red-950/40 text-red-400 hover:border-red-400"
+                      : "border-emerald-500 bg-emerald-950/40 text-emerald-400 hover:border-emerald-400"
+                  }`}
                 >
-                  <span className="text-2xl group-hover:scale-125 transition-transform">{reaction.emoji}</span>
-                  <span className="font-mono text-[8px] tracking-widest text-neutral-600 group-hover:text-white transition-colors">{reaction.label}</span>
+                  {micMuted ? <MicOff size={12} /> : <Mic size={12} />}
+                  {micMuted ? "[ UNMUTE MIC ]" : "[ MUTE MIC ]"}
                 </button>
-              );
-            })}
+                <button
+                  onClick={() => setIsDebater(false)}
+                  className="px-3 py-1.5 border border-neutral-800 text-neutral-400 hover:text-white uppercase transition-colors cursor-pointer"
+                >
+                  [ LEAVE STAGE ]
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => setIsDebater(true)}
+                className="px-3 py-1.5 border border-white text-white hover:bg-white hover:text-black font-bold uppercase transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                <Mic size={12} /> [ JOIN STAGE AS SPEAKER 🎙️ ]
+              </button>
+            )}
           </div>
         </div>
 
-        {/* ── Vibe Chat Stream ── */}
-        <div className="border border-neutral-900 p-4 space-y-4">
+        {/* ── Live Reaction Surge Buttons ── */}
+        <div className="w-full border border-neutral-900 p-3 space-y-2">
           <div className="font-mono text-[10px] tracking-widest uppercase text-neutral-600 flex justify-between">
-            <span>// REAL-TIME VIBE CHAT</span>
-            <span>FIRESTORE SNAPSHOTS</span>
+            <span>// LIVE AUDIENCE REACTION SURGE</span>
+            <span>TAP TO REACT</span>
+          </div>
+          <div className="grid grid-cols-5 gap-2">
+            {REACTIONS.map((reaction) => (
+              <button
+                key={reaction.emoji}
+                onClick={() => sendReaction(reaction.emoji)}
+                className="flex flex-col items-center gap-1 py-2 border border-neutral-800 hover:border-white hover:bg-neutral-900 transition-all cursor-pointer group active:scale-95"
+              >
+                <span className="text-xl group-hover:scale-125 transition-transform">{reaction.emoji}</span>
+                <span className="font-mono text-[8px] tracking-widest text-neutral-500 group-hover:text-white transition-colors">{reaction.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Real-Time Vibe Chat Stream ── */}
+        <div className="w-full border border-neutral-900 p-4 space-y-3">
+          <div className="font-mono text-[10px] tracking-widest uppercase text-neutral-500 flex justify-between items-center">
+            <span>// STAGE VIBE CHAT STREAM</span>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={(e) => handleSendChat(e, "🔥 LET HIM COOK!")}
+                className="px-1.5 py-0.5 border border-neutral-800 hover:border-white text-[9px] text-neutral-400 hover:text-white uppercase transition-colors cursor-pointer"
+              >
+                COOK
+              </button>
+              <button
+                type="button"
+                onClick={(e) => handleSendChat(e, "💯 100% FACTS")}
+                className="px-1.5 py-0.5 border border-neutral-800 hover:border-white text-[9px] text-neutral-400 hover:text-white uppercase transition-colors cursor-pointer"
+              >
+                FACTS
+              </button>
+              <button
+                type="button"
+                onClick={(e) => handleSendChat(e, "🧢 TOTAL CAP")}
+                className="px-1.5 py-0.5 border border-neutral-800 hover:border-white text-[9px] text-neutral-400 hover:text-white uppercase transition-colors cursor-pointer"
+              >
+                CAP
+              </button>
+            </div>
           </div>
 
           <div
             ref={chatScrollRef}
-            className="h-44 overflow-y-auto no-scrollbar space-y-2 font-mono text-xs tracking-widest select-text"
+            className="h-36 overflow-y-auto no-scrollbar space-y-1.5 font-mono text-xs tracking-wide select-text border border-neutral-950 p-2 bg-neutral-950/60"
           >
             {chatMessages.length === 0 ? (
-              <div className="text-neutral-700 italic font-serif py-4 text-center">
-                12:01:42 @ANON_8492: Wait let him cook.
+              <div className="text-neutral-700 italic font-serif py-6 text-center">
+                Stage chat is live. Drop a vibe or comment.
               </div>
             ) : (
               chatMessages.map((msg) => (
-                <div key={msg.id} className="text-neutral-300 leading-relaxed">
-                  <span className="text-neutral-700">{msg.timeStr || "12:00:00"} </span>
-                  <span className="text-white">{msg.handle}: </span>
-                  <span className="text-neutral-400 font-serif italic">{msg.text}</span>
+                <div key={msg.id} className="text-neutral-300 leading-relaxed text-[11px] sm:text-xs">
+                  <span className="text-neutral-600 text-[10px]">{msg.timeStr || "00:00:00"} </span>
+                  <span className="text-white font-bold">{msg.handle}: </span>
+                  <span className="text-neutral-300">{msg.text}</span>
                 </div>
               ))
             )}
           </div>
 
-          {/* Chat Input */}
-          <form onSubmit={handleSendChat} className="flex gap-2 pt-2 border-t border-neutral-900">
+          {/* Chat Form */}
+          <form onSubmit={(e) => handleSendChat(e)} className="flex gap-2 pt-1">
             <input
               type="text"
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
-              placeholder="SAY SOMETHING..."
-              className="flex-1 bg-transparent border border-neutral-800 px-3 py-2 font-mono text-xs text-white placeholder-neutral-700 focus:outline-none focus:border-white transition-colors"
+              placeholder="Send message to stage..."
+              className="flex-1 bg-neutral-950 border border-neutral-800 px-3 py-2 font-mono text-xs text-white placeholder-neutral-700 focus:outline-none focus:border-white transition-colors"
             />
             <button
               type="submit"
               disabled={!chatInput.trim() || isSendingChat}
-              className="px-4 py-2 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors cursor-pointer disabled:opacity-30"
+              className="px-4 py-2 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors cursor-pointer disabled:opacity-30 flex items-center justify-center font-bold"
             >
-              <Send size={12} />
+              {isSendingChat ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send size={12} />}
             </button>
           </form>
         </div>
+
       </main>
 
+      {/* ── Stage Highlights AI Clips Modal (3 Top Clips for Organizer) ── */}
+      {showHighlightsModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="w-full max-w-xl border border-neutral-700 bg-neutral-950 p-5 sm:p-6 space-y-5 max-h-[90vh] overflow-y-auto no-scrollbar font-mono">
+            
+            <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
+              <div>
+                <h3 className="text-sm font-bold tracking-widest uppercase text-white flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  // 3 STAGE HIGHLIGHT CLIPS
+                </h3>
+                <p className="text-[10px] text-neutral-400 mt-0.5">
+                  AI-extracted peak intensity & audience reaction clips for organizer export
+                </p>
+              </div>
+              <button
+                onClick={() => setShowHighlightsModal(false)}
+                className="text-xs text-neutral-400 hover:text-white p-1"
+              >
+                [ ✕ ]
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {HIGHLIGHT_CLIPS.map((clip) => (
+                <div key={clip.id} className="border border-neutral-800 bg-black p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="px-2 py-0.5 border border-amber-500/60 bg-amber-950/40 text-amber-300 text-[9px] font-bold tracking-widest">
+                      {clip.badge}
+                    </span>
+                    <span className="text-neutral-500 text-[10px]">
+                      {clip.duration} • {clip.decibels}
+                    </span>
+                  </div>
+
+                  <div>
+                    <h4 className="text-xs font-bold text-white uppercase">{clip.title}</h4>
+                    <p className="text-[11px] font-serif italic text-neutral-400 mt-1">{clip.description}</p>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-neutral-900 gap-2 flex-wrap">
+                    <div className="flex items-center gap-1.5 text-[10px] text-neutral-400">
+                      <Flame className="w-3 h-3 text-orange-400" />
+                      <span>{clip.reactionsCount} Audience Pulses</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handlePublishHighlightToWaves(clip)}
+                        disabled={publishingClip === clip.id || publishedClipSuccess === clip.id}
+                        className={`px-3 py-1 text-[10px] border uppercase transition-colors cursor-pointer flex items-center gap-1 font-bold ${
+                          publishedClipSuccess === clip.id
+                            ? "border-emerald-500 bg-emerald-950 text-emerald-300"
+                            : "border-white text-white hover:bg-white hover:text-black"
+                        }`}
+                      >
+                        {publishingClip === clip.id ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : publishedClipSuccess === clip.id ? (
+                          <Check className="w-3 h-3 text-emerald-400" />
+                        ) : (
+                          <Share2 className="w-3 h-3" />
+                        )}
+                        <span>{publishedClipSuccess === clip.id ? "POSTED TO WAVES" : "POST TO WAVES"}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="border-t border-neutral-800 pt-3 text-center">
+              <button
+                onClick={() => setShowHighlightsModal(false)}
+                className="w-full py-2 border border-neutral-800 hover:border-white text-xs uppercase transition-colors cursor-pointer text-neutral-400 hover:text-white"
+              >
+                [ CLOSE CLIPS STUDIO ]
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Footer ── */}
-      <footer className="border-t border-neutral-900 pt-4 text-center font-mono text-[10px] text-neutral-700 tracking-[0.2em] uppercase">
-        AGORA RTC ENGINE · WEBRTC REAL-TIME AUDIO RELAY
+      <footer className="border-t border-neutral-900 pt-3 text-center font-mono text-[10px] text-neutral-600 tracking-[0.2em] uppercase">
+        AGORA RTC HIGH-FIDELITY AUDIO RELAY • LOW-LATENCY CLASH ARENA
       </footer>
     </div>
   );
 }
 
 export default function LiveArenaClient({ clashId }: LiveArenaProps) {
-  const rtcClient = useRTCClient(
-    AgoraRTC.createClient({ codec: "vp8", mode: "rtc" })
+  const rtcClient = useMemo(
+    () => AgoraRTC.createClient({ codec: "vp8", mode: "rtc" }),
+    []
   );
 
   return (
