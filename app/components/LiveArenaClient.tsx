@@ -5,8 +5,8 @@
  * ─────────────────────────────────────────────────────
  * Ultra-Low Latency Live 1v1 Audio Arena + Clubhouse-Style Audience Grid.
  * Big Boss-Style Gamified Debate Allegiance & Mid-Debate Side Switching ("Convinced!").
- * Release: v1.4.0 — Production Build
- * Design: Utilitarian Canvas — pure black/white, monospace & serif, 1px borders.
+ * Release: v1.5.0 — Uniform Utilitarian Monochrome (Pure Black & White Canvas)
+ * Design: Pure black (#000), white (#fff), and neutral grayscale borders.
  */
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
@@ -122,11 +122,6 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
   const [timerRunning, setTimerRunning] = useState(false);
   const [currentSideTime, setCurrentSideTime] = useState(0);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Q&A state
-  const [showQA, setShowQA] = useState(false);
-  const [questionInput, setQuestionInput] = useState("");
-  const [questions, setQuestions] = useState<any[]>([]);
 
   // Highlights Generator Modal state
   const [showHighlightsModal, setShowHighlightsModal] = useState(false);
@@ -332,56 +327,6 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
     }
   };
 
-  // ── Timer Logic ─────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!clash) return;
-
-    if (clash.currentSide) {
-      const timeRemaining = clash.currentSide === "A" ? clash.sideATimeRemaining : clash.sideBTimeRemaining;
-      setCurrentSideTime(timeRemaining || 300);
-      setTimerRunning(!clash.timerPausedAt);
-    } else {
-      setCurrentSideTime(clash.timerDuration || 300);
-      setTimerRunning(false);
-    }
-  }, [clash]);
-
-  useEffect(() => {
-    if (!timerRunning || !clash?.currentSide) {
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-        timerIntervalRef.current = null;
-      }
-      return;
-    }
-
-    timerIntervalRef.current = setInterval(() => {
-      setCurrentSideTime((prev) => {
-        if (prev <= 1) {
-          handleSwitchSide();
-          return prev;
-        }
-        const newTime = prev - 1;
-        if (newTime % 5 === 0) {
-          updateClashTimer(clashId, clash.currentSide!, newTime);
-        }
-        return newTime;
-      });
-    }, 1000);
-
-    return () => {
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-      }
-    };
-  }, [timerRunning, clash?.currentSide, clashId]);
-
-  const handleSwitchSide = async () => {
-    if (!clash) return;
-    await switchClashTimerSide(clashId);
-    setCurrentSideTime(clash.timerDuration || 300);
-  };
-
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -549,19 +494,11 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
       }, 100);
     });
 
-    let unsubQA: (() => void) | null = null;
-    if (clash?.qaEnabled) {
-      unsubQA = subscribeToClashQuestions(clashId, (qs) => {
-        setQuestions(qs);
-      });
-    }
-
     return () => {
       unsubClashes();
       unsubChat();
-      if (unsubQA) unsubQA();
     };
-  }, [clashId, clash?.qaEnabled]);
+  }, [clashId]);
 
   // Vibe Chat handler
   const handleSendChat = async (e: React.FormEvent, predefinedText?: string) => {
@@ -608,27 +545,27 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
     return [
       {
         id: 1,
-        badge: "⚡ REAL-TIME HIGHEST ENGAGEMENT",
+        badge: "⚡ HIGHEST ENGAGEMENT",
         title: "The Battle Turnaround Clash",
         description: `Live 15s back-and-forth exchange between ${handleA} and ${handleB} during peak audience vote surge.`,
         duration: "0:15",
-        decibels: `${livePeakDb.toFixed(1)} dB (Peak)`,
+        decibels: `${livePeakDb.toFixed(1)} dB`,
         reactionsCount: totalEngagement,
         audioSample: "https://res.cloudinary.com/dokmhb8tq/video/upload/v1786070251/eur02gdv8sicnxvalcij.mp3",
       },
       {
         id: 2,
-        badge: "🔥 REAL-TIME MAX SHOUT & INTENSITY",
+        badge: "🔥 MAX SHOUT & INTENSITY",
         title: "Peak Decibel Rebuttal Moment",
         description: `High-frequency energy spike where ${handleA} delivered a fiery stance counter under live debate pressure.`,
         duration: "0:15",
-        decibels: `${(livePeakDb + 2.4).toFixed(1)} dB (Spike)`,
+        decibels: `${(livePeakDb + 2.4).toFixed(1)} dB`,
         reactionsCount: Math.round(totalEngagement * 1.35),
         audioSample: "https://res.cloudinary.com/dokmhb8tq/video/upload/v1786070251/eur02gdv8sicnxvalcij.mp3",
       },
       {
         id: 3,
-        badge: "👑 REAL-TIME CLIMAX MIC DROP",
+        badge: "👑 CLIMAX MIC DROP",
         title: "Closing Argument & Final Vote Swing",
         description: `Decisive final seconds that swung the live Tug-of-War meter before the audience.`,
         duration: "0:15",
@@ -646,7 +583,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
       await createPost({
         authorUid: user.uid,
         authorHandle: user.handle || "@ANON",
-        caption: `[ STAGE CLASH HIGHLIGHT ] "${clash?.topic || 'Debate'}" — ${clip.title} (Live Decibels: ${clip.decibels}) #${clash?.title?.replace(/\s+/g, '') || 'StageClash'} #debate`,
+        caption: `[ STAGE CLASH HIGHLIGHT ] "${clash?.topic || 'Debate'}" — ${clip.title} (${clip.decibels}) #${clash?.title?.replace(/\s+/g, '') || 'StageClash'} #debate`,
         audioUrl: clip.audioSample,
         duration: clip.duration,
         durationSec: 15,
@@ -700,26 +637,26 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
         ))}
       </div>
 
-      {/* ── Header Bar with 1-Hr Timer & Inactivity Status ── */}
+      {/* ── Header Bar with 1-Hr Timer & Inactivity Status (Pure Monochrome) ── */}
       <header className="flex items-center justify-between border-b border-neutral-900 pb-3 font-mono text-xs tracking-wider uppercase relative z-10 flex-wrap gap-2">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="flex items-center gap-1.5 text-white whitespace-nowrap bg-red-950/60 border border-red-800 px-2 py-0.5 font-bold">
-            <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" /> STAGE LIVE
+          <span className="flex items-center gap-1.5 text-white whitespace-nowrap bg-neutral-900 border border-neutral-700 px-2 py-0.5 font-bold">
+            <span className="w-2 h-2 rounded-full bg-white animate-pulse" /> STAGE LIVE
           </span>
           <span className="text-neutral-700">•</span>
-          <span className="text-emerald-400 whitespace-nowrap text-[10px] sm:text-xs flex items-center gap-1">
-            <Users className="w-3 h-3" />
+          <span className="text-neutral-300 whitespace-nowrap text-[10px] sm:text-xs flex items-center gap-1">
+            <Users className="w-3 h-3 text-neutral-400" />
             {allStageParticipants.length} IN STAGE
           </span>
           <span className="text-neutral-700">•</span>
           {/* 1-Hour Stage Countdown */}
-          <span className="text-amber-400 whitespace-nowrap text-[10px] sm:text-xs flex items-center gap-1 border border-amber-950/80 bg-amber-950/30 px-1.5 py-0.5">
-            <Clock className="w-3 h-3" />
+          <span className="text-neutral-300 whitespace-nowrap text-[10px] sm:text-xs flex items-center gap-1 border border-neutral-800 bg-neutral-950 px-1.5 py-0.5">
+            <Clock className="w-3 h-3 text-neutral-400" />
             CLOSING IN: {formatTime(stageSecondsRemaining)}
           </span>
           {/* Inactivity Sleep Mode indicator */}
           {isInactivitySleep && (
-            <span className="text-blue-400 whitespace-nowrap text-[10px] flex items-center gap-1 border border-blue-900 bg-blue-950/40 px-1.5 py-0.5">
+            <span className="text-neutral-400 whitespace-nowrap text-[10px] flex items-center gap-1 border border-neutral-800 bg-neutral-950 px-1.5 py-0.5">
               <Moon className="w-3 h-3" /> SLEEP GUARD
             </span>
           )}
@@ -732,7 +669,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
             className="px-2.5 py-1 text-[10px] sm:text-xs bg-neutral-900 border border-neutral-700 hover:border-white text-white font-mono uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
             title="Generate AI Highlights Clips"
           >
-            <Sparkles className="w-3 h-3 text-amber-400 animate-pulse" />
+            <Sparkles className="w-3 h-3 text-white" />
             <span>CLIPS (3)</span>
           </button>
 
@@ -740,7 +677,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
           {isHost && (
             <button
               onClick={handleDeleteStage}
-              className="px-2.5 py-1 text-[10px] sm:text-xs bg-red-950/40 border border-red-800 hover:bg-red-900 text-red-300 font-mono uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+              className="px-2.5 py-1 text-[10px] sm:text-xs bg-neutral-900 border border-neutral-800 hover:border-white text-neutral-300 hover:text-white font-mono uppercase tracking-wider flex items-center gap-1 cursor-pointer"
               title="Delete Stage Debate"
             >
               <Trash2 className="w-3 h-3" />
@@ -777,7 +714,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
         </p>
       </div>
 
-      {/* ── Main Arena: Dual Speaker Battle Cards with Active Speaker Pulses ── */}
+      {/* ── Main Arena: Dual Speaker Battle Cards (Pure Monochrome) ── */}
       <main className="flex-1 flex flex-col justify-center items-center space-y-4 sm:space-y-6 relative z-10 pb-28 md:pb-8 w-full max-w-4xl mx-auto">
         
         {/* ── Split-Screen Speaker Profiles ── */}
@@ -796,20 +733,20 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
             }}
             className={`border p-4 space-y-3 transition-all duration-300 relative cursor-pointer group ${
               isSideASpeaking 
-                ? "border-emerald-400/80 bg-emerald-950/10 shadow-[0_0_25px_rgba(52,211,153,0.15)]" 
+                ? "border-white bg-neutral-900 shadow-[0_0_20px_rgba(255,255,255,0.2)]" 
                 : myAllegiance === "A"
-                ? "border-blue-400/80 bg-blue-950/10"
+                ? "border-white bg-neutral-950"
                 : "border-neutral-800 bg-neutral-950/40 hover:border-neutral-600"
             }`}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                {/* Avatar with dynamic blinking pulse */}
+                {/* Avatar with dynamic speaking pulse */}
                 <div className={`w-12 h-12 rounded-full border flex items-center justify-center font-mono text-sm font-bold shrink-0 transition-all ${
                   isSideASpeaking 
-                    ? "border-emerald-400 bg-emerald-950 text-emerald-300 ring-4 ring-emerald-400/30 scale-105" 
+                    ? "border-white bg-white text-black ring-4 ring-white/30 scale-105" 
                     : myAllegiance === "A"
-                    ? "border-blue-400 bg-blue-950 text-blue-200 ring-2 ring-blue-400/40"
+                    ? "border-white bg-white text-black font-bold"
                     : "border-neutral-700 bg-neutral-900 text-neutral-300 group-hover:border-white"
                 }`}>
                   {clash?.sideA?.handle?.replace("@", "").charAt(0) || "A"}
@@ -821,8 +758,8 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
                   {/* Dynamic Speaking Status Indicator */}
                   <div className="flex items-center gap-1 mt-0.5">
                     {isSideASpeaking ? (
-                      <span className="font-mono text-[9px] text-emerald-400 uppercase font-bold flex items-center gap-1 animate-pulse">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> [ 🎙️ SPEAKING ]
+                      <span className="font-mono text-[9px] text-white uppercase font-bold flex items-center gap-1 animate-pulse">
+                        <span className="w-1.5 h-1.5 rounded-full bg-white" /> [ 🎙️ SPEAKING ]
                       </span>
                     ) : (
                       <span className="font-mono text-[9px] text-neutral-500 uppercase">
@@ -854,13 +791,13 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
               disabled={isCastingVote || myAllegiance === "A"}
               className={`w-full py-2.5 border font-mono text-xs tracking-widest uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5 font-bold ${
                 myAllegiance === "A"
-                  ? "border-blue-400 bg-blue-950 text-blue-200 shadow-[0_0_15px_rgba(96,165,250,0.3)]"
+                  ? "border-white bg-white text-black"
                   : "border-neutral-800 text-neutral-300 hover:border-white hover:text-white bg-neutral-900/60"
               }`}
             >
               {myAllegiance === "A" ? (
                 <>
-                  <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />
+                  <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>[ ✓ YOU BACK SIDE A ]</span>
                 </>
               ) : (
@@ -885,20 +822,20 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
             }}
             className={`border p-4 space-y-3 transition-all duration-300 relative cursor-pointer group ${
               isSideBSpeaking 
-                ? "border-emerald-400/80 bg-emerald-950/10 shadow-[0_0_25px_rgba(52,211,153,0.15)]" 
+                ? "border-white bg-neutral-900 shadow-[0_0_20px_rgba(255,255,255,0.2)]" 
                 : myAllegiance === "B"
-                ? "border-orange-400/80 bg-orange-950/10"
+                ? "border-white bg-neutral-950"
                 : "border-neutral-800 bg-neutral-950/40 hover:border-neutral-600"
             }`}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                {/* Avatar with dynamic blinking pulse */}
+                {/* Avatar with dynamic speaking pulse */}
                 <div className={`w-12 h-12 rounded-full border flex items-center justify-center font-mono text-sm font-bold shrink-0 transition-all ${
                   isSideBSpeaking 
-                    ? "border-emerald-400 bg-emerald-950 text-emerald-300 ring-4 ring-emerald-400/30 scale-105" 
+                    ? "border-white bg-white text-black ring-4 ring-white/30 scale-105" 
                     : myAllegiance === "B"
-                    ? "border-orange-400 bg-orange-950 text-orange-200 ring-2 ring-orange-400/40"
+                    ? "border-white bg-white text-black font-bold"
                     : "border-neutral-700 bg-neutral-900 text-neutral-300 group-hover:border-white"
                 }`}>
                   {clash?.sideB?.handle?.replace("@", "").charAt(0) || "B"}
@@ -910,8 +847,8 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
                   {/* Dynamic Speaking Status Indicator */}
                   <div className="flex items-center gap-1 mt-0.5">
                     {isSideBSpeaking ? (
-                      <span className="font-mono text-[9px] text-emerald-400 uppercase font-bold flex items-center gap-1 animate-pulse">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> [ 🎙️ SPEAKING ]
+                      <span className="font-mono text-[9px] text-white uppercase font-bold flex items-center gap-1 animate-pulse">
+                        <span className="w-1.5 h-1.5 rounded-full bg-white" /> [ 🎙️ SPEAKING ]
                       </span>
                     ) : (
                       <span className="font-mono text-[9px] text-neutral-500 uppercase">
@@ -943,13 +880,13 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
               disabled={isCastingVote || myAllegiance === "B"}
               className={`w-full py-2.5 border font-mono text-xs tracking-widest uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5 font-bold ${
                 myAllegiance === "B"
-                  ? "border-orange-400 bg-orange-950 text-orange-200 shadow-[0_0_15px_rgba(251,146,60,0.3)]"
+                  ? "border-white bg-white text-black"
                   : "border-neutral-800 text-neutral-300 hover:border-white hover:text-white bg-neutral-900/60"
               }`}
             >
               {myAllegiance === "B" ? (
                 <>
-                  <CheckCircle2 className="w-3.5 h-3.5 text-orange-400" />
+                  <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>[ ✓ YOU BACK SIDE B ]</span>
                 </>
               ) : (
@@ -965,18 +902,18 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
         {/* ── Dynamic Tug-of-War ASCII Meter & Live Allegiance Status ── */}
         <div className="w-full border border-neutral-900 bg-neutral-950/80 p-4 space-y-3 text-center">
           <div className="flex justify-between font-mono text-xs tracking-widest text-neutral-400 uppercase font-bold">
-            <span className="text-blue-400">SIDE A ({pctA}%)</span>
+            <span className="text-white">SIDE A ({pctA}%)</span>
             <span className="text-neutral-500">// LIVE TUG-OF-WAR RATIO</span>
-            <span className="text-orange-400">SIDE B ({pctB}%)</span>
+            <span className="text-white">SIDE B ({pctB}%)</span>
           </div>
 
           <div className="w-full h-2.5 bg-neutral-900 rounded-full overflow-hidden flex">
             <div 
-              className="h-full bg-blue-400 transition-all duration-500 shadow-[0_0_10px_rgba(96,165,250,0.6)]" 
+              className="h-full bg-white transition-all duration-500 shadow-[0_0_10px_rgba(255,255,255,0.6)]" 
               style={{ width: `${pctA}%` }} 
             />
             <div 
-              className="h-full bg-orange-400 transition-all duration-500 shadow-[0_0_10px_rgba(251,146,60,0.6)]" 
+              className="h-full bg-neutral-700 transition-all duration-500" 
               style={{ width: `${pctB}%` }} 
             />
           </div>
@@ -991,18 +928,18 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
               <span className="text-neutral-500 uppercase tracking-widest">// YOUR FACTION:</span>
               <span className={`px-2 py-0.5 text-[10px] font-bold uppercase ${
                 myAllegiance === "A" 
-                  ? "bg-blue-950 text-blue-300 border border-blue-800" 
+                  ? "bg-white text-black border border-white" 
                   : myAllegiance === "B" 
-                  ? "bg-orange-950 text-orange-300 border border-orange-800" 
-                  : "bg-neutral-900 text-neutral-400 border border-neutral-700"
+                  ? "bg-neutral-800 text-white border border-neutral-600" 
+                  : "bg-neutral-900 text-neutral-400 border border-neutral-800"
               }`}>
-                {myAllegiance === "A" ? "🔵 TEAM SIDE A" : myAllegiance === "B" ? "🟠 TEAM SIDE B" : "⚖️ UNDECIDED"}
+                {myAllegiance === "A" ? "TEAM SIDE A" : myAllegiance === "B" ? "TEAM SIDE B" : "⚖️ UNDECIDED"}
               </span>
             </div>
 
             <button
               onClick={() => setShowSwitchSideModal(true)}
-              className="px-3 py-1 border border-amber-500/80 bg-amber-950/40 text-amber-300 hover:bg-amber-900 text-[10px] uppercase font-bold tracking-wider flex items-center gap-1.5 transition-all cursor-pointer"
+              className="px-3 py-1 border border-neutral-700 bg-neutral-900 text-white hover:bg-white hover:text-black text-[10px] uppercase font-bold tracking-wider flex items-center gap-1.5 transition-all cursor-pointer"
             >
               <Shuffle className="w-3 h-3" />
               <span>[ 🔄 SWITCH SIDE / CONVINCED! ]</span>
@@ -1014,7 +951,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
         <div className="w-full border border-neutral-800 bg-neutral-950 p-4 space-y-3">
           <div className="flex items-center justify-between font-mono text-xs text-neutral-400 uppercase tracking-widest flex-wrap gap-2">
             <div className="flex items-center gap-2">
-              <Users className="w-3.5 h-3.5 text-emerald-400" />
+              <Users className="w-3.5 h-3.5 text-neutral-300" />
               <span>// STAGE MEMBERS & FACTIONS ({allStageParticipants.length})</span>
             </div>
             
@@ -1023,7 +960,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
               onClick={handleToggleRaiseHand}
               className={`px-2.5 py-1 border text-[10px] uppercase font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                 myHandRaised
-                  ? "border-amber-400 bg-amber-950 text-amber-300 animate-pulse"
+                  ? "border-white bg-white text-black"
                   : "border-neutral-700 text-neutral-300 hover:border-white hover:text-white"
               }`}
             >
@@ -1054,7 +991,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
 
                   {/* Raised Hand Badge */}
                   {m.raisedHand && (
-                    <div className="absolute -top-1 -left-1 bg-amber-500 text-black rounded-full p-0.5 z-20 shadow-md">
+                    <div className="absolute -top-1 -left-1 bg-white text-black rounded-full p-0.5 z-20 shadow-md">
                       <Hand className="w-3 h-3" />
                     </div>
                   )}
@@ -1062,11 +999,11 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
                   {/* Avatar Circle with Faction Ring & Dynamic Speaking Pulse */}
                   <div className={`w-11 h-11 rounded-full border flex items-center justify-center font-mono text-xs font-bold transition-all overflow-hidden relative ${
                     isUserSpeaking 
-                      ? "border-emerald-400 bg-emerald-950 text-emerald-300 ring-4 ring-emerald-400/40 animate-pulse" 
+                      ? "border-white bg-white text-black ring-4 ring-white/30 scale-105" 
                       : allegiance === "A"
-                      ? "border-blue-400 bg-blue-950 text-blue-200 ring-2 ring-blue-500/40"
+                      ? "border-white bg-neutral-900 text-white ring-1 ring-white/40"
                       : allegiance === "B"
-                      ? "border-orange-400 bg-orange-950 text-orange-200 ring-2 ring-orange-500/40"
+                      ? "border-neutral-400 bg-neutral-900 text-neutral-200 ring-1 ring-neutral-400/40"
                       : "border-neutral-700 bg-neutral-900 text-neutral-300 group-hover:border-white group-hover:scale-105"
                   }`}>
                     {m.photoUrl ? (
@@ -1079,7 +1016,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
                   {/* Faction Badge Tag */}
                   {allegiance && allegiance !== "UNDECIDED" ? (
                     <span className={`font-mono text-[7px] px-1 py-0.2 rounded font-bold uppercase ${
-                      allegiance === "A" ? "bg-blue-950 text-blue-300 border border-blue-800" : "bg-orange-950 text-orange-300 border border-orange-800"
+                      allegiance === "A" ? "bg-white text-black border border-white" : "bg-neutral-800 text-white border border-neutral-600"
                     }`}>
                       TEAM {allegiance}
                     </span>
@@ -1090,7 +1027,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
                   )}
 
                   {/* Handle */}
-                  <span className="font-mono text-[9px] text-white tracking-tight truncate max-w-[65px] group-hover:text-amber-300">
+                  <span className="font-mono text-[9px] text-white tracking-tight truncate max-w-[65px] group-hover:text-neutral-300">
                     {m.handle}
                   </span>
                 </div>
@@ -1109,7 +1046,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
             <span className="text-neutral-500 tracking-widest uppercase">// STAGE AUDIO RELAY</span>
             {isDebater && (
               <span className={`px-2 py-0.5 text-[9px] uppercase font-bold ${
-                micMuted ? "bg-red-950 text-red-400 border border-red-800" : "bg-emerald-950 text-emerald-400 border border-emerald-800"
+                micMuted ? "bg-neutral-900 text-neutral-400 border border-neutral-700" : "bg-white text-black border border-white"
               }`}>
                 {micMuted ? "MIC MUTED" : "MIC ON AIR"}
               </span>
@@ -1123,8 +1060,8 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
                   onClick={() => setMicMuted(!micMuted)}
                   className={`px-3 py-1.5 border font-mono text-xs uppercase transition-colors cursor-pointer flex items-center gap-1.5 font-bold ${
                     micMuted
-                      ? "border-red-700 bg-red-950/40 text-red-400 hover:border-red-400"
-                      : "border-emerald-500 bg-emerald-950/40 text-emerald-400 hover:border-emerald-400"
+                      ? "border-neutral-700 bg-neutral-900 text-neutral-400 hover:border-white hover:text-white"
+                      : "border-white bg-white text-black hover:bg-neutral-200"
                   }`}
                 >
                   {micMuted ? <MicOff size={12} /> : <Mic size={12} />}
@@ -1242,7 +1179,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
         <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
           <div className="w-full max-w-md border border-neutral-700 bg-neutral-950 p-6 space-y-5 font-mono text-xs shadow-2xl">
             <div className="text-center space-y-1.5 border-b border-neutral-800 pb-4">
-              <span className="text-[10px] text-amber-400 tracking-widest uppercase font-bold">
+              <span className="text-[10px] text-neutral-400 tracking-widest uppercase font-bold">
                 // ⚔️ JOIN THE BATTLE • CHOOSE YOUR SIDE
               </span>
               <h3 className="font-serif italic text-lg text-white">
@@ -1258,10 +1195,10 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
               <button
                 onClick={() => handleSelectAllegiance("A")}
                 disabled={isCastingVote}
-                className="w-full p-3 border border-blue-900 bg-blue-950/20 hover:bg-blue-900/40 hover:border-blue-400 text-left space-y-1 transition-all cursor-pointer group"
+                className="w-full p-3 border border-neutral-700 bg-black hover:border-white hover:bg-neutral-900 text-left space-y-1 transition-all cursor-pointer group"
               >
-                <div className="flex items-center justify-between text-blue-300 font-bold uppercase">
-                  <span>[ 🔵 BACK {clash?.sideA?.handle || "SIDE A"} ]</span>
+                <div className="flex items-center justify-between text-white font-bold uppercase">
+                  <span>[ BACK {clash?.sideA?.handle || "SIDE A"} ]</span>
                   <span className="text-[10px] text-neutral-500">{votesA} BACKERS</span>
                 </div>
                 <p className="font-serif italic text-xs text-neutral-300">
@@ -1273,10 +1210,10 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
               <button
                 onClick={() => handleSelectAllegiance("B")}
                 disabled={isCastingVote}
-                className="w-full p-3 border border-orange-900 bg-orange-950/20 hover:bg-orange-900/40 hover:border-orange-400 text-left space-y-1 transition-all cursor-pointer group"
+                className="w-full p-3 border border-neutral-700 bg-black hover:border-white hover:bg-neutral-900 text-left space-y-1 transition-all cursor-pointer group"
               >
-                <div className="flex items-center justify-between text-orange-300 font-bold uppercase">
-                  <span>[ 🟠 BACK {clash?.sideB?.handle || "SIDE B"} ]</span>
+                <div className="flex items-center justify-between text-white font-bold uppercase">
+                  <span>[ BACK {clash?.sideB?.handle || "SIDE B"} ]</span>
                   <span className="text-[10px] text-neutral-500">{votesB} BACKERS</span>
                 </div>
                 <p className="font-serif italic text-xs text-neutral-300">
@@ -1304,12 +1241,12 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
           <div className="w-full max-w-sm border border-neutral-700 bg-neutral-950 p-5 space-y-4 font-mono text-xs shadow-2xl">
             <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
               <span className="text-white font-bold tracking-widest uppercase flex items-center gap-1.5">
-                <Shuffle className="w-3.5 h-3.5 text-amber-400" />
+                <Shuffle className="w-3.5 h-3.5 text-white" />
                 // FLIP YOUR ALLEGIANCE
               </span>
               <button
                 onClick={() => setShowSwitchSideModal(false)}
-                className="text-neutral-500 hover:text-white p-1"
+                className="text-neutral-500 hover:text-white p-1 cursor-pointer"
               >
                 [ ✕ ]
               </button>
@@ -1325,11 +1262,11 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
                 disabled={isCastingVote || myAllegiance === "A"}
                 className={`w-full py-2.5 border uppercase font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
                   myAllegiance === "A"
-                    ? "border-blue-500 bg-blue-950 text-blue-300 opacity-60"
-                    : "border-neutral-800 hover:border-blue-400 hover:text-blue-300 text-white"
+                    ? "border-white bg-white text-black opacity-60"
+                    : "border-neutral-800 hover:border-white text-white"
                 }`}
               >
-                <span>🔵 FLIP TO {clash?.sideA?.handle || "SIDE A"}</span>
+                <span>FLIP TO {clash?.sideA?.handle || "SIDE A"}</span>
               </button>
 
               <button
@@ -1337,11 +1274,11 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
                 disabled={isCastingVote || myAllegiance === "B"}
                 className={`w-full py-2.5 border uppercase font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
                   myAllegiance === "B"
-                    ? "border-orange-500 bg-orange-950 text-orange-300 opacity-60"
-                    : "border-neutral-800 hover:border-orange-400 hover:text-orange-300 text-white"
+                    ? "border-white bg-white text-black opacity-60"
+                    : "border-neutral-800 hover:border-white text-white"
                 }`}
               >
-                <span>🟠 FLIP TO {clash?.sideB?.handle || "SIDE B"}</span>
+                <span>FLIP TO {clash?.sideB?.handle || "SIDE B"}</span>
               </button>
 
               <button
@@ -1366,7 +1303,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
           <div className="w-full max-w-sm border border-neutral-700 bg-neutral-950 p-5 space-y-4 font-mono text-xs shadow-2xl">
             <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
               <div className="flex items-center gap-2">
-                <Shield className="w-3.5 h-3.5 text-amber-400" />
+                <Shield className="w-3.5 h-3.5 text-white" />
                 <span className="text-white font-bold tracking-wider uppercase">
                   {selectedUserForModeration.handle}
                 </span>
@@ -1376,11 +1313,19 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
               </div>
               <button
                 onClick={() => setSelectedUserForModeration(null)}
-                className="text-neutral-500 hover:text-white p-1"
+                className="text-neutral-500 hover:text-white p-1 cursor-pointer"
               >
                 [ ✕ ]
               </button>
             </div>
+
+            {/* Active Reaction status */}
+            {selectedUserForModeration.lastReaction && (
+              <div className="p-2 border border-neutral-800 bg-neutral-900/60 flex items-center justify-between">
+                <span className="text-[10px] text-neutral-400 uppercase">// LATEST REACTION:</span>
+                <span className="text-lg">{selectedUserForModeration.lastReaction}</span>
+              </div>
+            )}
 
             <div className="space-y-2">
               {/* Host / Organizer Moderation Controls */}
@@ -1389,7 +1334,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
                   await promoteStageDebater(clashId, "A", selectedUserForModeration.handle, "Debater Side A");
                   setSelectedUserForModeration(null);
                 }}
-                className="w-full py-2 border border-neutral-800 hover:border-emerald-400 hover:text-emerald-300 text-white font-bold uppercase transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-2 border border-neutral-800 hover:border-white text-white font-bold uppercase transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Mic className="w-3.5 h-3.5" />
                 [ PROMOTE TO SIDE A DEBATER ]
@@ -1400,7 +1345,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
                   await promoteStageDebater(clashId, "B", selectedUserForModeration.handle, "Debater Side B");
                   setSelectedUserForModeration(null);
                 }}
-                className="w-full py-2 border border-neutral-800 hover:border-emerald-400 hover:text-emerald-300 text-white font-bold uppercase transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-2 border border-neutral-800 hover:border-white text-white font-bold uppercase transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Mic className="w-3.5 h-3.5" />
                 [ PROMOTE TO SIDE B DEBATER ]
@@ -1423,7 +1368,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
                   await kickStageUser(clashId, selectedUserForModeration.uid);
                   setSelectedUserForModeration(null);
                 }}
-                className="w-full py-2 border border-red-950 bg-red-950/20 hover:bg-red-900 text-red-300 uppercase transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-2 border border-neutral-800 bg-neutral-900 hover:border-white text-neutral-300 uppercase transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
                 <UserX className="w-3.5 h-3.5" />
                 [ KICK FROM STAGE ]
@@ -1434,7 +1379,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
                   await banStageUser(clashId, selectedUserForModeration.uid);
                   setSelectedUserForModeration(null);
                 }}
-                className="w-full py-2 border border-red-900 bg-red-950/40 hover:bg-red-800 text-red-200 uppercase transition-colors flex items-center justify-center gap-2 font-bold cursor-pointer"
+                className="w-full py-2 border border-neutral-800 hover:border-white text-neutral-300 uppercase transition-colors flex items-center justify-center gap-2 font-bold cursor-pointer"
               >
                 <AlertTriangle className="w-3.5 h-3.5" />
                 [ BAN FROM DEBATE ]
@@ -1462,16 +1407,16 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
             <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
               <div>
                 <h3 className="text-sm font-bold tracking-widest uppercase text-white flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  <Sparkles className="w-4 h-4 text-white" />
                   // 3 STAGE HIGHLIGHT CLIPS
                 </h3>
                 <p className="text-[10px] text-neutral-400 mt-0.5">
-                  AI-extracted peak intensity & audience reaction clips for organizer export
+                  Peak intensity & audience reaction clips for organizer export
                 </p>
               </div>
               <button
                 onClick={() => setShowHighlightsModal(false)}
-                className="text-xs text-neutral-400 hover:text-white p-1"
+                className="text-xs text-neutral-400 hover:text-white p-1 cursor-pointer"
               >
                 [ ✕ ]
               </button>
@@ -1481,7 +1426,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
               {HIGHLIGHT_CLIPS.map((clip) => (
                 <div key={clip.id} className="border border-neutral-800 bg-black p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="px-2 py-0.5 border border-amber-500/60 bg-amber-950/40 text-amber-300 text-[9px] font-bold tracking-widest">
+                    <span className="px-2 py-0.5 border border-neutral-700 bg-neutral-900 text-white text-[9px] font-bold tracking-widest">
                       {clip.badge}
                     </span>
                     <span className="text-neutral-500 text-[10px]">
@@ -1496,7 +1441,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
 
                   <div className="flex items-center justify-between pt-2 border-t border-neutral-900 gap-2 flex-wrap">
                     <div className="flex items-center gap-1.5 text-[10px] text-neutral-400">
-                      <Flame className="w-3 h-3 text-orange-400" />
+                      <Flame className="w-3 h-3 text-neutral-300" />
                       <span>{clip.reactionsCount} Audience Pulses</span>
                     </div>
 
@@ -1511,7 +1456,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
                         }}
                         className={`px-2.5 py-1 text-[10px] border font-mono uppercase transition-colors cursor-pointer flex items-center gap-1 ${
                           playingClipId === clip.id
-                            ? "border-emerald-400 text-emerald-400 bg-emerald-950/40"
+                            ? "border-white text-black bg-white"
                             : "border-neutral-700 text-neutral-300 hover:border-white hover:text-white"
                         }`}
                       >
@@ -1524,14 +1469,14 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
                         disabled={publishingClip === clip.id || publishedClipSuccess === clip.id}
                         className={`px-3 py-1 text-[10px] border uppercase transition-colors cursor-pointer flex items-center gap-1 font-bold ${
                           publishedClipSuccess === clip.id
-                            ? "border-emerald-500 bg-emerald-950 text-emerald-300"
+                            ? "border-white bg-white text-black"
                             : "border-white text-white hover:bg-white hover:text-black"
                         }`}
                       >
                         {publishingClip === clip.id ? (
                           <Loader2 className="w-3 h-3 animate-spin" />
                         ) : publishedClipSuccess === clip.id ? (
-                          <Check className="w-3 h-3 text-emerald-400" />
+                          <Check className="w-3 h-3" />
                         ) : (
                           <Share2 className="w-3 h-3" />
                         )}
@@ -1541,7 +1486,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
                       {publishedClipSuccess === clip.id && (
                         <Link
                           href="/waves"
-                          className="px-2.5 py-1 text-[10px] border border-emerald-500/80 bg-emerald-950/60 text-emerald-300 hover:bg-emerald-900 font-mono uppercase font-bold flex items-center gap-1"
+                          className="px-2.5 py-1 text-[10px] border border-neutral-700 bg-neutral-900 text-white hover:bg-neutral-800 font-mono uppercase font-bold flex items-center gap-1"
                         >
                           <span>🌊 VIEW IN WAVES →</span>
                         </Link>
