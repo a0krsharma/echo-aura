@@ -182,3 +182,52 @@ export function subscribeToUnreadCount(
     () => callback(0)
   );
 }
+
+// ── Web Push & Browser Push Notification System ──────────────────────────────
+export async function requestNotificationPermission(): Promise<NotificationPermission> {
+  if (typeof window === "undefined" || !("Notification" in window)) {
+    return "denied";
+  }
+  try {
+    const permission = await Notification.requestPermission();
+    return permission;
+  } catch (err) {
+    console.warn("[Notifications] Request permission error:", err);
+    return "denied";
+  }
+}
+
+export function showNotification(title: string, options?: NotificationOptions): Notification | null {
+  if (typeof window === "undefined" || !("Notification" in window)) {
+    return null;
+  }
+
+  if (Notification.permission === "granted") {
+    try {
+      return new Notification(title, {
+        icon: "/favicon.ico",
+        badge: "/favicon.ico",
+        ...options,
+      });
+    } catch (err) {
+      console.warn("[Notifications] Show notification error:", err);
+      return null;
+    }
+  }
+
+  return null;
+}
+
+export function notifyDebateStart(clashTitle: string, user1: string, user2: string) {
+  showNotification("🔴 LIVE DEBATE STARTED", {
+    body: `${user1} vs ${user2} is live on Stage: "${clashTitle}"`,
+    tag: `clash-${Date.now()}`,
+  });
+}
+
+export function notifyRoomStart(roomTitle: string, hostHandle: string) {
+  showNotification("🎙 LIVE ROOM ACTIVE", {
+    body: `${hostHandle} started a live room: "${roomTitle}"`,
+    tag: `room-${Date.now()}`,
+  });
+}

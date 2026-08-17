@@ -21,6 +21,8 @@ import AgoraRTC, {
 } from "agora-rtc-react";
 
 import { useAuth } from "@/app/components/AuthProvider";
+import { ShareButton } from "@/app/components/ShareButton";
+import { FormattedText } from "@/app/components/FormattedText";
 import { AGORA_APP_ID } from "@/lib/agora";
 import { 
   voteOnClash, 
@@ -467,13 +469,42 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
             AUDIENCE: {clash?.listeners ? `${(clash.listeners * 12).toLocaleString()}` : "1.4K"}
           </span>
         </div>
-        <Link
-          href="/clash"
-          className="text-neutral-500 hover:text-white transition-colors cursor-pointer"
-        >
-          [ 🚪 EXIT STAGE ]
-        </Link>
+        <div className="flex items-center gap-3">
+          <ShareButton
+            title={`Live Debate: ${clash?.topic || "Stage Clash"}`}
+            text={`Join this 1v1 debate live right now on Echo!`}
+            label="[ 🔗 SHARE STAGE ]"
+            variant="button"
+          />
+          <Link
+            href="/clash"
+            className="text-neutral-500 hover:text-white transition-colors cursor-pointer border border-neutral-800 px-3 py-2"
+          >
+            [ 🚪 EXIT STAGE ]
+          </Link>
+        </div>
       </header>
+
+      {/* ── Visual Debate Timer Bar ── */}
+      <div className="w-full max-w-xl mx-auto my-3 border border-neutral-800 bg-neutral-950 p-3 font-mono text-xs text-center space-y-2 z-10">
+        <div className="flex items-center justify-between text-neutral-400">
+          <span className="text-white font-bold flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+            SPEAKER TURN: {clash?.currentSide === "A" ? (clash.sideA?.handle || "SIDE A") : (clash?.sideB?.handle || "SIDE B")}
+          </span>
+          <span className="text-white font-bold text-sm tracking-widest">
+            [ {formatTime(currentSideTime)} ]
+          </span>
+        </div>
+        <div className="w-full h-1.5 bg-neutral-900 overflow-hidden">
+          <div
+            className="h-full bg-white transition-all duration-1000"
+            style={{
+              width: `${Math.min(100, (currentSideTime / (clash?.timerDuration || 300)) * 100)}%`,
+            }}
+          />
+        </div>
+      </div>
 
       {/* ── Main Arena: Debate Topic + Tug-of-War ── */}
       <main className="flex-1 flex flex-col justify-center items-center space-y-8 relative z-10">
@@ -570,7 +601,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
             // DEBATE MOTION
           </div>
           <h1 className="font-serif italic text-2xl md:text-4xl text-white leading-tight">
-            "{clash?.topic || "Loading debate..."}"
+            "<FormattedText text={clash?.topic || "Loading debate..."} />"
           </h1>
           <div className="font-mono text-xs tracking-widest text-neutral-500 uppercase">
             {clash?.title || "LIVE STAGE DEBATE"}

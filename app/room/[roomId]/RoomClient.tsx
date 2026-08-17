@@ -13,6 +13,8 @@ import { Mic, MicOff, Users, Radio, Send, X, Volume2, Hand, Lock } from "lucide-
 import AgoraRTC from "agora-rtc-sdk-ng";
 
 import { useAuth } from "@/app/components/AuthProvider";
+import { ShareButton } from "@/app/components/ShareButton";
+import { FormattedText } from "@/app/components/FormattedText";
 import BroadcastModal from "@/app/components/BroadcastModal";
 import { AGORA_APP_ID } from "@/lib/agora";
 import { getRoom, subscribeToRoom, subscribeToRoomParticipants, addParticipant, removeParticipant, sendRoomChatMessage, subscribeToRoomChat, raiseHand, lowerHand, promoteToSpeaker, demoteFromSpeaker, muteParticipant, unmuteParticipant, sendRoomReaction, subscribeToRoomReactions, bookmarkRoom, removeRoomBookmark, updateRoomOpenMic, updateRoomTransmit, hostOverrideBan, endRoom, type Room, type RoomParticipant } from "@/lib/rooms";
@@ -884,9 +886,15 @@ function RoomContent({ roomId }: RoomClientProps) {
               {isBookmarked ? "★" : "☆"}
             </button>
           )}
+          <ShareButton
+            title={`Live Room: ${room.name}`}
+            text={`Join this live room right now on Echo: "${room.name}"`}
+            label="[ 🔗 SHARE ROOM ]"
+            variant="button"
+          />
           <button
             onClick={handleLeave}
-            className="text-neutral-500 hover:text-white transition-colors cursor-pointer"
+            className="text-neutral-500 hover:text-white transition-colors cursor-pointer border border-neutral-800 px-3 py-1.5 font-mono text-xs uppercase"
           >
             [ 🚪 LEAVE ]
           </button>
@@ -900,11 +908,11 @@ function RoomContent({ roomId }: RoomClientProps) {
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1">
               <h1 className="font-mono text-xl tracking-widest text-white uppercase">
-                "{room.name}"
+                "<FormattedText text={room.name} />"
               </h1>
               {room.description && (
                 <p className="font-mono text-neutral-400 text-sm">
-                  {room.description}
+                  <FormattedText text={room.description} />
                 </p>
               )}
               <div className="flex items-center gap-2 text-neutral-600 font-mono text-xs">
