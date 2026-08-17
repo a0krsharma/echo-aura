@@ -607,16 +607,22 @@ export default function ProfilePage() {
               )}
 
               <div className="flex items-center justify-between pt-1">
-                <div className="flex items-center gap-2 font-mono text-xs text-neutral-500">
-                  <ArrowUp className="w-3.5 h-3.5" />
+                <div className="flex items-center gap-1.5 font-mono text-xs text-neutral-400">
+                  <Heart className="w-3.5 h-3.5 fill-red-500/20 text-red-500" />
                   <span>{post.pulseCount || 0} PULSES</span>
                 </div>
-                <div className="flex items-center gap-4 font-mono text-[10px] text-neutral-600 uppercase">
+                <div className="flex items-center gap-3 font-mono text-[10px] text-neutral-500 uppercase">
                   {(post.reverbCount || 0) > 0 && (
-                    <span>{post.reverbCount} [ REPLIES ]</span>
+                    <span className="flex items-center gap-1">
+                      <MessageSquare className="w-3 h-3 text-neutral-400" />
+                      {post.reverbCount} [ REPLIES ]
+                    </span>
                   )}
                   {(post.orbitCount || 0) > 0 && (
-                    <span>{post.orbitCount} [ RE-ECHOES ]</span>
+                    <span className="flex items-center gap-1">
+                      <Repeat2 className="w-3 h-3 text-neutral-400" />
+                      {post.orbitCount} [ RE-ECHOES ]
+                    </span>
                   )}
                   <span>{post.duration || "0:00"}</span>
                 </div>
@@ -630,9 +636,24 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-black text-white pb-24 md:pb-8 flex flex-col font-sans">
-      <main className="max-w-xl mx-auto px-4 sm:px-6 pt-5 w-full flex-1">
+      <main className="max-w-xl mx-auto px-4 sm:px-6 pt-4 w-full flex-1">
         {/* ── Top Profile Telemetry Section: Avatar + Data Columns ── */}
         <div className="space-y-4 mb-6">
+          {/* Top Bar with Handle & Profile Display Name */}
+          <div className="flex items-center justify-between pb-3 border-b border-neutral-900">
+            <div className="flex items-center gap-2">
+              <h1 className="font-mono text-base sm:text-lg font-bold tracking-wider text-white">
+                {handle}
+              </h1>
+              <span className={`w-2 h-2 rounded-full ${signalStatus === "ONLINE" ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
+            </div>
+            {user?.displayName && (
+              <span className="font-serif italic text-sm text-neutral-400">
+                {user.displayName}
+              </span>
+            )}
+          </div>
+
           <div className="flex items-center justify-between gap-4 sm:gap-6">
             {/* Left: Avatar with Telemetry Waveform Badge */}
             <div className="relative flex flex-col items-center shrink-0">
@@ -738,22 +759,29 @@ export default function ProfilePage() {
 
           {/* Identity & Domain Metadata */}
           <div className="space-y-1 pt-1">
-            <div className="flex items-center gap-2">
-              <h2 className="font-mono text-sm font-bold text-white tracking-wide">
+            <div className="flex items-baseline gap-2">
+              <h2 className="font-mono text-sm sm:text-base font-bold text-white tracking-wide">
                 {user?.displayName || handle}
               </h2>
-              <span className={`w-1.5 h-1.5 rounded-full ${signalStatus === "ONLINE" ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
+              {user?.displayName && (
+                <span className="font-mono text-xs text-neutral-400">
+                  {handle}
+                </span>
+              )}
             </div>
             <p className="font-mono text-xs text-neutral-300 whitespace-pre-line leading-relaxed">
               {user?.bio || "Authenticated Voice Node on Echo"}
             </p>
             {tags.length > 0 && (
               <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                {tags.map((tag) => (
-                  <span key={tag} className="font-mono text-[9px] px-2 py-0.5 border border-neutral-800 bg-neutral-950 text-neutral-400 uppercase tracking-wider">
-                    #{tag}
-                  </span>
-                ))}
+                {tags.map((tag) => {
+                  const cleanTag = tag.replace(/^#+/, "");
+                  return (
+                    <span key={tag} className="font-mono text-[9px] px-2 py-0.5 border border-neutral-800 bg-neutral-950 text-neutral-400 uppercase tracking-wider">
+                      #{cleanTag}
+                    </span>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -822,27 +850,31 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* ── Echo Audio Channel Navigation Tabs ── */}
+        {/* ── Echo Audio Channel Navigation Tabs with Icons ── */}
         <div className="grid grid-cols-4 border-t border-b border-neutral-900 mb-4">
           {(
             [
-              { id: "ECHOES", label: "ECHOES", count: echoePosts.length },
-              { id: "REPLIES", label: "REVERBS", count: reverbPosts.length },
-              { id: "RE-ECHOES", label: "ORBITS", count: orbitPosts.length },
-              { id: "PULSED", label: "PULSES", count: pulsedPosts.length },
+              { id: "ECHOES", icon: Mic2, label: "ECHOES", count: echoePosts.length },
+              { id: "REPLIES", icon: MessageSquare, label: "REVERBS", count: reverbPosts.length },
+              { id: "RE-ECHOES", icon: Repeat2, label: "RE-ECHOES", count: orbitPosts.length },
+              { id: "PULSED", icon: Heart, label: "PULSES", count: pulsedPosts.length },
             ] as const
           ).map((tab) => {
+            const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`py-3 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors border-b-2 font-mono text-xs ${
+                className={`py-3 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors border-b-2 font-mono text-xs ${
                   isActive ? "border-white text-white font-bold" : "border-transparent text-neutral-600 hover:text-neutral-400"
                 }`}
                 title={tab.label}
               >
-                <span className="tracking-widest uppercase text-[11px]">{tab.label}</span>
+                <div className="flex items-center gap-1.5">
+                  <Icon className={`w-3.5 h-3.5 ${isActive && tab.id === "PULSED" ? "fill-red-500 text-red-500" : ""}`} />
+                  <span className="tracking-wider uppercase text-[10px] sm:text-[11px]">{tab.label}</span>
+                </div>
                 <span className="text-[10px] text-neutral-500 tabular-nums">
                   ({tab.count})
                 </span>
