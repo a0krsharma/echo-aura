@@ -370,13 +370,21 @@ export async function togglePulsePost(
  */
 export async function vaultPost(postId: string, uid: string): Promise<void> {
   const db = getFirebaseDb();
-  // Add to user's vault collection
-  const vaultRef = doc(db, "user_vault", `${uid}_${postId}`);
-  await setDoc(vaultRef, {
-    uid,
-    postId,
-    vaultedAt: serverTimestamp(),
-  });
+  try {
+    const userDocVaultRef = doc(db, "users", uid, "vault", postId);
+    await setDoc(userDocVaultRef, {
+      postId,
+      vaultedAt: serverTimestamp(),
+    });
+  } catch {}
+  try {
+    const vaultRef = doc(db, "user_vault", `${uid}_${postId}`);
+    await setDoc(vaultRef, {
+      uid,
+      postId,
+      vaultedAt: serverTimestamp(),
+    });
+  } catch {}
 }
 
 /**
@@ -385,9 +393,14 @@ export async function vaultPost(postId: string, uid: string): Promise<void> {
  */
 export async function unvaultPost(postId: string, uid: string): Promise<void> {
   const db = getFirebaseDb();
-  // Remove from user's vault collection
-  const vaultRef = doc(db, "user_vault", `${uid}_${postId}`);
-  await deleteDoc(vaultRef);
+  try {
+    const userDocVaultRef = doc(db, "users", uid, "vault", postId);
+    await deleteDoc(userDocVaultRef);
+  } catch {}
+  try {
+    const vaultRef = doc(db, "user_vault", `${uid}_${postId}`);
+    await deleteDoc(vaultRef);
+  } catch {}
 }
 
 /**
@@ -397,9 +410,12 @@ export async function unvaultPost(postId: string, uid: string): Promise<void> {
 export async function isPostVaulted(postId: string, uid: string): Promise<boolean> {
   try {
     const db = getFirebaseDb();
+    const userDocVaultRef = doc(db, "users", uid, "vault", postId);
+    const snap = await getDoc(userDocVaultRef);
+    if (snap.exists()) return true;
     const vaultRef = doc(db, "user_vault", `${uid}_${postId}`);
-    const snap = await getDoc(vaultRef);
-    return snap.exists();
+    const snap2 = await getDoc(vaultRef);
+    return snap2.exists();
   } catch {
     return false;
   }

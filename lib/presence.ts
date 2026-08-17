@@ -21,13 +21,16 @@ let _rtdb: Database | null = null;
 export function getFirebaseRtdb(): Database | null {
   if (typeof window === "undefined") return null;
   if (_rtdb) return _rtdb;
+  const dbUrl = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL;
+  if (!dbUrl) {
+    // RTDB not configured in environment — return null to prevent console connection warnings
+    return null;
+  }
   try {
     const app = getFirebaseApp();
-    const dbUrl = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL;
-    _rtdb = dbUrl ? getDatabase(app, dbUrl) : getDatabase(app);
+    _rtdb = getDatabase(app, dbUrl);
     return _rtdb;
-  } catch (err) {
-    console.warn("[Presence] RTDB init warning:", err);
+  } catch {
     return null;
   }
 }
