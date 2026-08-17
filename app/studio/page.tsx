@@ -274,7 +274,7 @@ export default function StudioPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col justify-between p-6 md:p-12 font-sans">
+    <div className="min-h-screen bg-black text-white flex flex-col justify-between p-6 md:p-12 pb-28 md:pb-12 font-sans">
       {/* ── Top Bar ── */}
       <header className="flex items-center justify-between border-b border-neutral-900 pb-4">
         <Link

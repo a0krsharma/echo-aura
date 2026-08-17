@@ -241,26 +241,26 @@ export default function RadarPage() {
           ) : (
             <div className="divide-y divide-neutral-900">
               {filteredUsers.map((u) => (
-                <div key={u.uid} className="flex items-center justify-between py-4">
-                  <div className="flex items-center gap-3">
+                <div key={u.uid} className="flex items-center justify-between py-4 gap-2">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
                     {/* Avatar */}
                     {u.photoUrl ? (
-                      <img src={u.photoUrl} alt="" className="w-8 h-8 rounded-full object-cover border border-neutral-800" />
+                      <img src={u.photoUrl} alt="" className="w-8 h-8 rounded-full object-cover border border-neutral-800 shrink-0" />
                     ) : (
-                      <div className="w-8 h-8 rounded-full border border-neutral-800 flex items-center justify-center bg-neutral-900">
+                      <div className="w-8 h-8 rounded-full border border-neutral-800 flex items-center justify-center bg-neutral-900 shrink-0">
                         <span className="font-mono text-[10px] text-neutral-500">{u.handle.replace('@','').slice(0,2).toUpperCase()}</span>
                       </div>
                     )}
-                    <div className="space-y-1">
+                    <div className="space-y-1 min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <MapPin className="w-3 h-3 text-neutral-600" />
-                        <p className="font-mono text-xs text-white tracking-widest">{u.handle}</p>
+                        <MapPin className="w-3 h-3 text-neutral-600 shrink-0" />
+                        <p className="font-mono text-xs text-white tracking-widest truncate">{u.handle}</p>
                       </div>
-                      <p className="font-mono text-[10px] text-neutral-400 ml-5">TOPIC: {u.topic}</p>
+                      <p className="font-mono text-[10px] text-neutral-400 ml-5 truncate">TOPIC: {u.topic}</p>
                       <p className="font-mono text-[10px] text-neutral-600 ml-5">[ AURA ]: {u.auraScore || 0}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
                     {user && u.uid !== user.uid && (
                       <button
                         onClick={() => handleInviteToRoom(u.uid, u.handle)}

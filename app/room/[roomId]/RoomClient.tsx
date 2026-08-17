@@ -1020,11 +1020,11 @@ function RoomContent({ roomId }: RoomClientProps) {
           </div>
           
           {isSpeaker ? (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+            <div className="flex items-start justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-2 flex-wrap">
                 <button
                   onClick={() => setMicMuted(!micMuted)}
-                  className={`px-4 py-2 border font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center gap-2 ${
+                  className={`px-3 sm:px-4 py-2 border font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center gap-2 ${
                     micMuted
                       ? "border-neutral-800 text-neutral-500 hover:border-white hover:text-white"
                       : "border-white text-white"
@@ -1033,9 +1033,9 @@ function RoomContent({ roomId }: RoomClientProps) {
                   {micMuted ? <MicOff size={12} /> : <Mic size={12} />}
                   {micMuted ? "[ MUTED ]" : "[ LIVE ]"}
                 </button>
-                <span className="font-mono text-xs text-neutral-400 uppercase">YOU ARE SPEAKING ON STAGE</span>
+                <span className="font-mono text-xs text-neutral-400 uppercase hidden sm:inline">YOU ARE SPEAKING</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <button
                   onClick={() => setShowChat(!showChat)}
                   className="px-4 py-2 border border-neutral-800 text-neutral-500 hover:text-white font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer"
@@ -1057,10 +1057,10 @@ function RoomContent({ roomId }: RoomClientProps) {
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-between">
+            <div className="flex items-start justify-between flex-wrap gap-3">
               <span className="font-mono text-xs text-emerald-400 uppercase flex items-center gap-2 font-medium">
-                <Volume2 size={14} className="animate-pulse" />
-                LISTENING MODE (LOW-COST DECOUPLED AUDIENCE) 🟢
+                <Volume2 size={14} className="animate-pulse shrink-0" />
+                <span className="leading-tight">LISTENING MODE 🟢</span>
               </span>
               <div className="flex items-center gap-2">
                 <button

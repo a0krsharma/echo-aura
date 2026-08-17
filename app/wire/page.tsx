@@ -64,7 +64,7 @@ function WireVoicePlayer({ audioUrl, isMe }: { audioUrl: string; isMe: boolean }
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
-    <div className="space-y-1.5 min-w-[200px] max-w-xs py-1">
+    <div className="space-y-1.5 w-full max-w-[220px] min-w-0 py-1">
       <audio
         ref={audioRef}
         src={getPlayableUrl(audioUrl)}
@@ -784,8 +784,8 @@ export default function WirePage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white font-mono">
-      <div className="max-w-4xl mx-auto h-[calc(100dvh-3.5rem-4rem)] md:h-screen flex flex-col md:flex-row overflow-hidden">
+    <div className="bg-black text-white font-mono" style={{height: '100dvh', display: 'flex', flexDirection: 'column'}}>
+      <div className="max-w-4xl mx-auto flex-1 flex flex-col md:flex-row overflow-hidden min-h-0" style={{height: '100%'}}>
         {/* Conversation List */}
         <div className={`w-full md:w-80 border-r border-neutral-900 flex flex-col h-full ${activeConv ? 'hidden md:flex' : 'flex'}`}>
           <div className="p-3 sm:p-4 border-b border-neutral-900 shrink-0">

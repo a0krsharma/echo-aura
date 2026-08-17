@@ -85,7 +85,7 @@ function ChallengeModal({ onClose }: { onClose: () => void }) {
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="font-mono text-[9px] tracking-widest text-neutral-600 block mb-1">SIDE A STANCE</label>
             <textarea
@@ -221,8 +221,8 @@ export default function StagePage() {
                 return (
                   <div key={c.id} className="border border-neutral-800 p-6 space-y-5">
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs text-white tracking-widest">{c.title}</span>
-                      <span className="font-mono text-[10px] text-neutral-600 uppercase">{fmt(totalVotes)} VOTES</span>
+                      <span className="font-mono text-xs text-white tracking-widest truncate mr-2 min-w-0 flex-1">{c.title}</span>
+                      <span className="font-mono text-[10px] text-neutral-600 uppercase shrink-0 whitespace-nowrap">{fmt(totalVotes)} VOTES</span>
                     </div>
 
                     <h3 className="font-serif italic text-xl text-white">
@@ -290,9 +290,9 @@ export default function StagePage() {
                         </div>
                         <Link
                           href={`/stage/${c.id}`}
-                          className="font-mono text-xs text-white border border-white px-3 py-1.5 hover:bg-white hover:text-black uppercase transition-colors"
+                          className="font-mono text-xs text-white border border-white px-3 py-1.5 hover:bg-white hover:text-black uppercase transition-colors whitespace-nowrap shrink-0"
                         >
-                          [ 🎧 ENTER LIVE AUDIO RELAY ]
+                          [ 🎧 RELAY ]
                         </Link>
                       </div>
                     </div>

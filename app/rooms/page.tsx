@@ -360,14 +360,14 @@ export default function RoomsPage() {
 
         {/* Trending Rooms Section */}
         <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="font-mono text-xs tracking-widest text-neutral-700 uppercase">// 🔥 TRENDING</p>
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <p className="font-mono text-xs tracking-widest text-neutral-700 uppercase shrink-0">// 🔥 TRENDING</p>
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 flex-nowrap max-w-full">
               {CATEGORIES.map(cat => (
                 <button
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
-                  className={`font-mono text-[10px] tracking-widest uppercase px-2 py-1 border transition-colors cursor-pointer ${
+                  className={`font-mono text-[10px] tracking-widest uppercase px-2 py-1 border transition-colors cursor-pointer shrink-0 whitespace-nowrap ${
                     selectedCategory === cat
                       ? "border-white text-white"
                       : "border-neutral-800 text-neutral-500 hover:border-white hover:text-white"

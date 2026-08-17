@@ -154,7 +154,7 @@ export default function NotificationsPage() {
         </div>
 
         {/* Filter Tabs */}
-        <div className="overflow-x-auto scrollbar-none">
+        <div className="overflow-x-auto no-scrollbar">
           <div className="flex gap-0 border-b border-neutral-900 min-w-max font-mono text-xs tracking-widest">
             {TABS.map((tab) => {
               const count = tab === "ALL"
