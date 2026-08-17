@@ -780,107 +780,29 @@ function RoomContent({ roomId }: RoomClientProps) {
   return (
     <div className="min-h-screen bg-black text-white flex flex-col font-sans">
       {/* Header */}
-      <header className="flex items-center justify-between border-b border-neutral-900 p-4 font-mono text-xs tracking-widest uppercase">
-        <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1.5">
-                      <span className="live-dot-green" /> <span className="text-white font-mono text-[11px] tracking-widest">[ ● LIVE ]</span>
+      <header className="flex items-center justify-between border-b border-neutral-900 p-3 sm:p-4 font-mono text-xs tracking-wider uppercase flex-wrap gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="flex items-center gap-1.5 whitespace-nowrap">
+            <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+            <span className="text-white font-mono text-[10px] sm:text-[11px] font-bold">LIVE</span>
           </span>
           <span className="text-neutral-700">•</span>
-          <span className="text-neutral-500">{room.name}</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <span className="text-neutral-500 flex items-center gap-1">
+          <span className="text-neutral-400 truncate max-w-[140px] sm:max-w-xs">{room.name}</span>
+          <span className="text-neutral-700">•</span>
+          <span className="text-neutral-500 flex items-center gap-1 text-[10px] sm:text-xs shrink-0">
             <Users size={12} /> {participants.length}/{room.maxParticipants}
           </span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
           {user && user.uid === room?.hostUid && pendingRequests > 0 && (
             <span className="flex items-center gap-1 text-yellow-500 font-mono text-[10px] uppercase animate-pulse">
-              <Hand size={10} /> {pendingRequests} REQUEST{pendingRequests > 1 ? "S" : ""}
+              <Hand size={10} /> {pendingRequests} REQ
             </span>
-          )}
-          {user && user.uid === room?.hostUid && (
-            <>
-              <button
-                onClick={handleToggleOpenMic}
-                className={`font-mono text-[10px] uppercase px-2 py-1 border transition-colors cursor-pointer ${
-                  room.openMic ? "border-white text-white" : "border-neutral-800 text-neutral-500"
-                }`}
-                title={room.openMic ? "Switch to raise hand mode" : "Switch to open mic mode"}
-              >
-                {room.openMic ? "OPEN MIC" : "RAISE HAND"}
-              </button>
-
-              <button
-                onClick={() => setShowBroadcastModal(true)}
-                className={`font-mono text-[10px] uppercase px-2 py-1 border transition-colors cursor-pointer ${
-                  broadcasting ? "border-red-500 text-red-400" : "border-green-500 text-green-400"
-                }`}
-                title={broadcasting ? "Stop broadcast (RTMP->CDN)" : "Start broadcast (RTMP->CDN)"}
-              >
-                {broadcasting ? "STOP BROADCAST" : "START BROADCAST"}
-              </button>
-
-              {/* Admin key input (optional) */}
-              <input
-                type="password"
-                placeholder="admin key"
-                value={adminKeyInput}
-                onChange={(e) => setAdminKeyInput(e.target.value)}
-                className="ml-2 px-2 py-1 text-xs font-mono bg-neutral-900 border border-neutral-800 placeholder-neutral-600 text-neutral-200"
-                title="Optional: supply x-admin-key header for protected endpoints"
-              />
-
-              {/* Broadcast info panel for hosts */}
-              {broadcastInfo && (
-                <div className="ml-4 p-2 border border-neutral-800 bg-[#070707] rounded text-xs font-mono flex items-center gap-3">
-                  <span className="text-[11px] text-green-400">Broadcasting</span>
-                  { (broadcastInfo.resourceId || broadcastInfo.acquire?.resourceId) && (
-                    <span className="text-neutral-500">RID: {broadcastInfo.resourceId || broadcastInfo.acquire?.resourceId}</span>
-                  )}
-                  { (broadcastInfo.start?.sid || broadcastInfo.sid) && (
-                    <span className="text-neutral-500">SID: {broadcastInfo.start?.sid || broadcastInfo.sid}</span>
-                  )}
-                  {/* [ TRANSMIT ] URL to copy */}
-                  { (room?.transmitUrl || process.env.NEXT_PUBLIC_HLS_URL) && (
-                    <>
-                      <a href={room?.transmitUrl || (process.env.NEXT_PUBLIC_HLS_URL as string)} target="_blank" rel="noreferrer" className="text-[11px] underline text-neutral-300">Open [ TRANSMIT ]</a>
-                      <button
-                        onClick={async () => {
-                          try {
-                            const url = room?.transmitUrl || (process.env.NEXT_PUBLIC_HLS_URL as string) || '';
-                            await navigator.clipboard.writeText(url);
-                            alert('[ TRANSMIT ] URL copied to clipboard');
-                          } catch (e) {
-                            console.warn('Copy failed', e);
-                          }
-                        }}
-                        className="ml-2 px-2 py-1 text-[11px] border border-neutral-800 rounded hover:border-white"
-                      >Copy [ TRANSMIT ]</button>
-                    </>
-                  )}
-                </div>
-              )}
-
-              {/* Broadcast modal */}
-              {showBroadcastModal && (
-                <BroadcastModal
-                  visible={showBroadcastModal}
-                  onClose={() => setShowBroadcastModal(false)}
-                  onStart={async (opts) => {
-                    // If already broadcasting, stop instead
-                    if (broadcasting) {
-                      await handleStopBroadcast();
-                      return;
-                    }
-                    await handleStartBroadcast(opts);
-                  }}
-                />
-              )}
-            </>
           )}
           {user && (
             <button
               onClick={handleBookmarkRoom}
-              className="text-neutral-500 hover:text-yellow-500 transition-colors cursor-pointer"
+              className="p-1 text-neutral-500 hover:text-yellow-500 transition-colors cursor-pointer text-sm"
               title={isBookmarked ? "Remove bookmark" : "Bookmark room"}
             >
               {isBookmarked ? "★" : "☆"}
@@ -889,20 +811,21 @@ function RoomContent({ roomId }: RoomClientProps) {
           <ShareButton
             title={`Live Room: ${room.name}`}
             text={`Join this live room right now on Echo: "${room.name}"`}
-            label="[ 🔗 SHARE ROOM ]"
+            label="SHARE"
             variant="button"
+            className="px-2.5 py-1 text-[10px] sm:text-xs whitespace-nowrap"
           />
           <button
             onClick={handleLeave}
-            className="text-neutral-500 hover:text-white transition-colors cursor-pointer border border-neutral-800 px-3 py-1.5 font-mono text-xs uppercase"
+            className="text-neutral-400 hover:text-white transition-colors cursor-pointer border border-neutral-800 px-2.5 py-1 text-[10px] sm:text-xs uppercase whitespace-nowrap shrink-0"
           >
-            [ 🚪 LEAVE ]
+            LEAVE
           </button>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col p-4 md:p-8 max-w-5xl mx-auto w-full gap-6">
+      <main className="flex-1 flex flex-col p-3 sm:p-4 md:p-8 max-w-5xl mx-auto w-full gap-5 pb-28 md:pb-8">
         {/* Room Info - Compact Header */}
         <div className="border border-neutral-800 p-4 space-y-3">
           <div className="flex items-start justify-between gap-4">

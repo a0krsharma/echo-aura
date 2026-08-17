@@ -459,40 +459,41 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
       </div>
 
       {/* ── Header Bar ── */}
-      <header className="flex items-center justify-between border-b border-neutral-900 pb-4 font-mono text-xs tracking-widest uppercase relative z-10">
-        <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1.5 text-white">
-            <span className="w-2 h-2 rounded-full bg-white animate-ping" /> [ ● LIVE ]
+      <header className="flex items-center justify-between border-b border-neutral-900 pb-3 font-mono text-xs tracking-wider uppercase relative z-10 flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <span className="flex items-center gap-1.5 text-white whitespace-nowrap">
+            <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" /> LIVE
           </span>
           <span className="text-neutral-700">•</span>
-          <span className="text-neutral-500">
+          <span className="text-neutral-400 whitespace-nowrap text-[10px] sm:text-xs">
             AUDIENCE: {clash?.listeners ? `${(clash.listeners * 12).toLocaleString()}` : "1.4K"}
           </span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 shrink-0">
           <ShareButton
             title={`Live Debate: ${clash?.topic || "Stage Clash"}`}
             text={`Join this 1v1 debate live right now on Echo!`}
-            label="[ 🔗 SHARE STAGE ]"
+            label="SHARE"
             variant="button"
+            className="px-2.5 py-1 text-[10px] sm:text-xs whitespace-nowrap"
           />
           <Link
             href="/clash"
-            className="text-neutral-500 hover:text-white transition-colors cursor-pointer border border-neutral-800 px-3 py-2"
+            className="text-neutral-400 hover:text-white transition-colors cursor-pointer border border-neutral-800 px-2.5 py-1 text-[10px] sm:text-xs whitespace-nowrap shrink-0"
           >
-            [ 🚪 EXIT STAGE ]
+            EXIT
           </Link>
         </div>
       </header>
 
       {/* ── Visual Debate Timer Bar ── */}
-      <div className="w-full max-w-xl mx-auto my-3 border border-neutral-800 bg-neutral-950 p-3 font-mono text-xs text-center space-y-2 z-10">
-        <div className="flex items-center justify-between text-neutral-400">
-          <span className="text-white font-bold flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
-            SPEAKER TURN: {clash?.currentSide === "A" ? (clash.sideA?.handle || "SIDE A") : (clash?.sideB?.handle || "SIDE B")}
+      <div className="w-full max-w-xl mx-auto my-3 border border-neutral-800 bg-neutral-950 p-2.5 sm:p-3 font-mono text-xs text-center space-y-1.5 z-10">
+        <div className="flex items-center justify-between text-neutral-400 text-[10px] sm:text-xs">
+          <span className="text-white font-bold flex items-center gap-1.5 truncate max-w-[200px] sm:max-w-none">
+            <span className="w-2 h-2 rounded-full bg-red-500 animate-ping shrink-0" />
+            TURN: {clash?.currentSide === "A" ? (clash.sideA?.handle || "SIDE A") : (clash?.sideB?.handle || "SIDE B")}
           </span>
-          <span className="text-white font-bold text-sm tracking-widest">
+          <span className="text-white font-bold text-xs sm:text-sm tracking-widest shrink-0">
             [ {formatTime(currentSideTime)} ]
           </span>
         </div>
@@ -507,89 +508,89 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
       </div>
 
       {/* ── Main Arena: Debate Topic + Tug-of-War ── */}
-      <main className="flex-1 flex flex-col justify-center items-center space-y-8 relative z-10">
+      <main className="flex-1 flex flex-col justify-center items-center space-y-6 sm:space-y-8 relative z-10 pb-28 md:pb-8">
         {/* Speaker Profiles */}
-        <div className="w-full max-w-4xl grid grid-cols-2 gap-6 mb-4">
+        <div className="w-full max-w-4xl grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-4">
           {/* Side A Speaker */}
-          <div className="border border-neutral-800 p-4 space-y-3">
+          <div className="border border-neutral-800 p-3 sm:p-4 space-y-2.5">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 border border-neutral-700 flex items-center justify-center font-mono text-xs text-neutral-400">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-9 h-9 border border-neutral-700 flex items-center justify-center font-mono text-xs text-neutral-400 shrink-0">
                   {clash?.sideA?.handle?.charAt(1) || "A"}
                 </div>
                 <div>
-                  <div className="font-mono text-xs text-white tracking-widest uppercase">{clash?.sideA?.handle || "SIDE A"}</div>
-                  <div className="font-mono text-[10px] text-neutral-600 uppercase">SPEAKER</div>
+                  <div className="font-mono text-xs text-white tracking-wider uppercase truncate max-w-[120px]">{clash?.sideA?.handle || "SIDE A"}</div>
+                  <div className="font-mono text-[9px] text-neutral-500 uppercase">SPEAKER</div>
                 </div>
               </div>
               <div className="text-right">
-                <div className="font-mono text-lg text-white">{votesA}</div>
-                <div className="font-mono text-[10px] text-neutral-600 uppercase">VOTES</div>
+                <div className="font-mono text-base sm:text-lg text-white">{votesA}</div>
+                <div className="font-mono text-[9px] text-neutral-500 uppercase">VOTES</div>
               </div>
             </div>
-            <p className="font-serif italic text-sm text-neutral-400 leading-relaxed">
+            <p className="font-serif italic text-xs sm:text-sm text-neutral-400 leading-relaxed line-clamp-2">
               "{clash?.sideA?.position || "Position A"}"
             </p>
-            <div className="flex items-center justify-between pt-2 border-t border-neutral-900 font-mono text-[9px] gap-2">
+            <div className="flex items-center justify-between pt-2 border-t border-neutral-900 font-mono text-[9px] gap-1 flex-wrap">
               <button
                 onClick={() => user && promoteStageDebater(clashId, "A", user.handle || "@ANON", clash?.sideA?.position || "Debater A")}
-                className="px-2 py-1 border border-white/40 text-white uppercase hover:bg-white hover:text-black transition-colors cursor-pointer"
+                className="px-1.5 py-0.5 border border-white/40 text-white uppercase hover:bg-white hover:text-black transition-colors cursor-pointer whitespace-nowrap shrink-0 text-[9px]"
               >
-                [ 🎤 PROMOTE ]
+                PROMOTE
               </button>
               <button
                 onClick={() => demoteStageDebater(clashId, "A")}
-                className="px-2 py-1 border border-neutral-800 text-neutral-400 uppercase hover:border-white hover:text-white transition-colors cursor-pointer"
+                className="px-1.5 py-0.5 border border-neutral-800 text-neutral-400 uppercase hover:border-white hover:text-white transition-colors cursor-pointer whitespace-nowrap shrink-0 text-[9px]"
               >
-                [ 🔻 DEMOTE ]
+                DEMOTE
               </button>
               <button
                 onClick={() => user && kickStageUser(clashId, user.uid)}
-                className="px-2 py-1 border border-neutral-800 text-neutral-400 uppercase hover:border-red-500 hover:text-red-500 transition-colors cursor-pointer"
+                className="px-1.5 py-0.5 border border-neutral-800 text-neutral-400 uppercase hover:border-red-500 hover:text-red-500 transition-colors cursor-pointer whitespace-nowrap shrink-0 text-[9px]"
               >
-                [ 🚫 KICK ]
+                KICK
               </button>
             </div>
           </div>
 
           {/* Side B Speaker */}
-          <div className="border border-neutral-800 p-4 space-y-3">
+          <div className="border border-neutral-800 p-3 sm:p-4 space-y-2.5">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 border border-neutral-700 flex items-center justify-center font-mono text-xs text-neutral-400">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-9 h-9 border border-neutral-700 flex items-center justify-center font-mono text-xs text-neutral-400 shrink-0">
                   {clash?.sideB?.handle?.charAt(1) || "B"}
                 </div>
                 <div>
-                  <div className="font-mono text-xs text-white tracking-widest uppercase">{clash?.sideB?.handle || "SIDE B"}</div>
-                  <div className="font-mono text-[10px] text-neutral-600 uppercase">SPEAKER</div>
+                  <div className="font-mono text-xs text-white tracking-wider uppercase truncate max-w-[120px]">{clash?.sideB?.handle || "SIDE B"}</div>
+                  <div className="font-mono text-[9px] text-neutral-500 uppercase">SPEAKER</div>
                 </div>
               </div>
               <div className="text-right">
-                <div className="font-mono text-lg text-white">{votesB}</div>
-                <div className="font-mono text-[10px] text-neutral-600 uppercase">VOTES</div>
+                <div className="font-mono text-base sm:text-lg text-white">{votesB}</div>
+                <div className="font-mono text-[9px] text-neutral-500 uppercase">VOTES</div>
               </div>
             </div>
-            <p className="font-serif italic text-sm text-neutral-400 leading-relaxed">
+            <p className="font-serif italic text-xs sm:text-sm text-neutral-400 leading-relaxed line-clamp-2">
               "{clash?.sideB?.position || "Position B"}"
             </p>
-            <div className="flex items-center justify-between pt-2 border-t border-neutral-900 font-mono text-[9px] gap-2">
+            <div className="flex items-center justify-between pt-2 border-t border-neutral-900 font-mono text-[9px] gap-1 flex-wrap">
               <button
                 onClick={() => user && promoteStageDebater(clashId, "B", user.handle || "@ANON", clash?.sideB?.position || "Debater B")}
-                className="px-2 py-1 border border-white/40 text-white uppercase hover:bg-white hover:text-black transition-colors cursor-pointer"
+                className="px-1.5 py-0.5 border border-white/40 text-white uppercase hover:bg-white hover:text-black transition-colors cursor-pointer whitespace-nowrap shrink-0 text-[9px]"
               >
-                [ 🎤 PROMOTE ]
+                PROMOTE
               </button>
               <button
                 onClick={() => demoteStageDebater(clashId, "B")}
-                className="px-2 py-1 border border-neutral-800 text-neutral-400 uppercase hover:border-white hover:text-white transition-colors cursor-pointer"
+                className="px-1.5 py-0.5 border border-neutral-800 text-neutral-400 uppercase hover:border-white hover:text-white transition-colors cursor-pointer whitespace-nowrap shrink-0 text-[9px]"
               >
-                [ 🔻 DEMOTE ]
+                DEMOTE
               </button>
               <button
                 onClick={() => user && banStageUser(clashId, user.uid)}
-                className="px-2 py-1 border border-neutral-800 text-neutral-400 uppercase hover:border-red-500 hover:text-red-500 transition-colors cursor-pointer"
+                className="px-1.5 py-0.5 border border-neutral-800 text-neutral-400 uppercase hover:border-red-500 hover:text-red-500 transition-colors cursor-pointer whitespace-nowrap shrink-0 text-[9px]"
               >
-                [ ⛔ BAN ]
+                BAN
               </button>
             </div>
           </div>

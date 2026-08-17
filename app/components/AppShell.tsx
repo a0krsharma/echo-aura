@@ -257,17 +257,19 @@ function ShellContent({ children }: { children: React.ReactNode }) {
       {/* RIGHT SIDEBAR — desktop lg+ */}
       <RightSidebar />
 
-      {/* FLOATING WIRE CHAT LAUNCHER (Bottom Right Corner) */}
-      <Link
-        href="/wire"
-        className="fixed bottom-20 md:bottom-6 right-6 z-40 bg-white text-black hover:bg-neutral-200 border border-neutral-800 p-3.5 rounded-full shadow-2xl transition-all duration-200 hover:scale-110 flex items-center justify-center gap-2 group cursor-pointer"
-        title="Open Wire Direct Messages"
-      >
-        <MessageSquare className="w-5 h-5 fill-black text-black" />
-        <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 ease-in-out whitespace-nowrap font-mono text-xs font-bold tracking-widest uppercase">
-          [ WIRE ]
-        </span>
-      </Link>
+      {/* FLOATING WIRE CHAT LAUNCHER (Bottom Right Corner - hidden on wire, room, stage) */}
+      {!pathname.startsWith("/wire") && !pathname.startsWith("/room") && !pathname.startsWith("/stage") && (
+        <Link
+          href="/wire"
+          className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-40 bg-white text-black hover:bg-neutral-200 border border-neutral-800 p-3.5 rounded-full shadow-2xl transition-all duration-200 hover:scale-110 flex items-center justify-center gap-2 group cursor-pointer"
+          title="Open Wire Direct Messages"
+        >
+          <MessageSquare className="w-5 h-5 fill-black text-black" />
+          <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 ease-in-out whitespace-nowrap font-mono text-xs font-bold tracking-widest uppercase">
+            [ WIRE ]
+          </span>
+        </Link>
+      )}
 
       {/* BOTTOM NAV — mobile only */}
       <BottomNav />

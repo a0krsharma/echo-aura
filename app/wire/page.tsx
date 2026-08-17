@@ -525,14 +525,14 @@ function ChatWindow({
         </div>
       )}
 
-      <form onSubmit={handleSend} className="p-4 border-t border-neutral-900 flex gap-2">
+      <form onSubmit={handleSend} className="p-2.5 sm:p-4 border-t border-neutral-900 flex items-center gap-1.5 sm:gap-2 bg-black shrink-0">
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Send a wire..."
           disabled={isRecording}
-          className="flex-1 bg-neutral-900 border border-neutral-800 px-3 py-2 font-mono text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white transition-colors disabled:opacity-40"
+          className="flex-1 bg-neutral-900 border border-neutral-800 px-3 py-2 font-mono text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white transition-colors disabled:opacity-40 min-w-0"
         />
 
         {/* Voice Echo Mic Button */}
@@ -541,21 +541,22 @@ function ChatWindow({
             type="button"
             onClick={startVoiceRecording}
             disabled={sending}
-            className="px-3 py-2 border border-neutral-700 text-neutral-300 hover:border-white hover:text-white font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
+            className="px-2.5 py-2 border border-neutral-700 text-neutral-300 hover:border-white hover:text-white font-mono text-[11px] sm:text-xs tracking-wider uppercase transition-colors cursor-pointer flex items-center gap-1 shrink-0 whitespace-nowrap"
             title="Record Voice Echo"
           >
             <Mic className="w-3.5 h-3.5 text-red-400" />
-            [ 🎙 VOICE ]
+            <span className="hidden xs:inline">[ 🎙 VOICE ]</span>
+            <span className="xs:hidden">VOICE</span>
           </button>
         )}
 
         <button
           type="submit"
           disabled={!input.trim() || sending || isRecording}
-          className="px-4 py-2 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors cursor-pointer disabled:opacity-30 flex items-center gap-2 shrink-0 font-bold"
+          className="px-3 sm:px-4 py-2 border border-white text-white font-mono text-[11px] sm:text-xs tracking-wider uppercase hover:bg-white hover:text-black transition-colors cursor-pointer disabled:opacity-30 flex items-center gap-1.5 shrink-0 font-bold whitespace-nowrap"
         >
           {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-          SEND
+          <span>SEND</span>
         </button>
       </form>
     </div>
@@ -691,10 +692,10 @@ export default function WirePage() {
 
   return (
     <div className="min-h-screen bg-black text-white font-mono">
-      <div className="max-w-4xl mx-auto h-screen flex flex-col md:flex-row">
+      <div className="max-w-4xl mx-auto h-[calc(100dvh-3.5rem-4rem)] md:h-screen flex flex-col md:flex-row overflow-hidden">
         {/* Conversation List */}
-        <div className={`w-full md:w-80 border-r border-neutral-900 flex flex-col ${activeConv ? 'hidden md:flex' : 'flex'}`}>
-          <div className="p-4 border-b border-neutral-900">
+        <div className={`w-full md:w-80 border-r border-neutral-900 flex flex-col h-full ${activeConv ? 'hidden md:flex' : 'flex'}`}>
+          <div className="p-3 sm:p-4 border-b border-neutral-900 shrink-0">
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-sm font-bold tracking-widest uppercase flex items-center gap-1.5">
                 <Lock className="w-3.5 h-3.5 text-neutral-400" /> [ WIRE ]
