@@ -114,7 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // ── Google Sign-In ─────────────────────────────────────────────────────────
-  // Uses popup on desktop and auto-fallback to redirect on mobile browsers / popup failures
+  // Tries popup first on all platforms (same-origin iframe), falling back to same-origin redirect
   const signInWithGoogle = useCallback(async () => {
     setError(null);
     const auth     = getFirebaseAuth();
@@ -123,24 +123,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     provider.addScope("email");
     provider.setCustomParameters({ prompt: "select_account" });
 
-    const isMobile =
-      typeof navigator !== "undefined" &&
-      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-    if (isMobile) {
-      try {
-        await signInWithRedirect(auth, provider);
-        return;
-      } catch (e: any) {
-        console.warn("[Auth] Mobile redirect sign-in error, trying popup:", e);
-      }
-    }
-
     try {
       await signInWithPopup(auth, provider);
     } catch (e: any) {
       const code = String(e?.code ?? e?.message ?? "");
-      console.warn("[Auth] Popup sign-in error:", code, e);
+      console.warn("[Auth] Primary popup sign-in note:", code, e);
 
       if (
         code.includes("popup-closed-by-user") ||
@@ -149,7 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return; // User dismissed
       }
 
-      // Fallback to redirect for mobile/popup restrictions
+      // Fallback to same-origin proxy redirect
       try {
         await signInWithRedirect(auth, provider);
       } catch (re: any) {

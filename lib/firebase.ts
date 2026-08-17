@@ -21,9 +21,16 @@ function cleanEnv(val: string | undefined): string | undefined {
   return val.replace(/[\r\n]/g, "").trim();
 }
 
+function getAuthDomain(): string {
+  if (typeof window !== "undefined" && window.location && window.location.host) {
+    return window.location.host;
+  }
+  return cleanEnv(process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN) || "echo-aura.firebaseapp.com";
+}
+
 const firebaseConfig = {
   apiKey:            cleanEnv(process.env.NEXT_PUBLIC_FIREBASE_API_KEY),
-  authDomain:        cleanEnv(process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN),
+  authDomain:        getAuthDomain(),
   projectId:         cleanEnv(process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID),
   storageBucket:     cleanEnv(process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET),
   messagingSenderId: cleanEnv(process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID),

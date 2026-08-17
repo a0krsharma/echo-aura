@@ -30,10 +30,17 @@ const nextConfig: NextConfig = {
           { key: "X-XSS-Protection",        value: "1; mode=block"   },
           { key: "Referrer-Policy",         value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy",      value: "microphone=(self)" },
-          // NOTE: Cross-Origin-Opener-Policy intentionally NOT set here.
-          // COOP: same-origin breaks Firebase signInWithPopup — the OAuth popup
-          // cannot call window.closed on the opener, so auth never completes.
         ],
+      },
+    ];
+  },
+
+  // Firebase Auth proxy handler to solve cross-origin storage partitioning on Mobile Chrome / Safari
+  async rewrites() {
+    return [
+      {
+        source: "/__/auth/:path*",
+        destination: "https://echo-aura.firebaseapp.com/__/auth/:path*",
       },
     ];
   },
