@@ -725,78 +725,100 @@ export default function TerminalPage() {
           onClick={() => setView("pings")}
         />
 
-        {/* ── AUDIO SETTINGS ────────────────────────────────── */}
-        <SectionHeader label="AUDIO SETTINGS" />
+        {/* ── AUDIO TRANSMISSION SETTINGS ───────────────────── */}
+        <SectionHeader label="AUDIO TRANSMISSION SETTINGS" />
         <SelectItem
           label="STREAM QUALITY"
-          sub="data usage vs fidelity"
+          sub="data usage vs audio fidelity"
           options={["HIGH", "STANDARD", "LOW"]}
           value={settings.audioQuality}
           onChange={(v) => select("audioQuality", v)}
         />
-        <ToggleItem id="auto-transcribe" label="AUTO-TRANSCRIBE [ REPLIES ]"  sub="convert yaps to text"         value={settings.autoTranscribe} onToggle={() => toggle("autoTranscribe")} saving={savingKey === "autoTranscribe"} />
-        <ToggleItem id="auto-play"       label="AUTO-PLAY ON FREQUENCY"   sub="start playing on scroll"       value={settings.autoPlay}       onToggle={() => toggle("autoPlay")}       saving={savingKey === "autoPlay"} />
+        <ToggleItem id="auto-transcribe" label="AUTO-TRANSCRIBE ECHOES" sub="convert voice takes to text" value={settings.autoTranscribe} onToggle={() => toggle("autoTranscribe")} saving={savingKey === "autoTranscribe"} />
+        <ToggleItem id="auto-play"       label="AUTO-PLAY ON FREQUENCY" sub="start playing on scroll"      value={settings.autoPlay}       onToggle={() => toggle("autoPlay")}       saving={savingKey === "autoPlay"} />
 
-        {/* ── YAP CONTROL ───────────────────────────────────── */}
-        <SectionHeader label="YAP CONTROL — [ REPLY ] PERMISSIONS" />
+        {/* ── REVERB & RE-ECHO PERMISSIONS ────────────────────── */}
+        <SectionHeader label="REVERB & RE-ECHO PERMISSIONS" />
         <SelectItem
-          label="WHO CAN DROP [ REPLY ]"
+          label="WHO CAN DROP REVERBS"
           sub="who can voice-reply to your echoes"
-          options={["EVERYONE", "[ ORBIT ]", "DAY ONES", "NOBODY"]}
+          options={["EVERYONE", "[ ORBIT ]", "NOBODY"]}
           value={settings.yapControl}
           onChange={(v) => select("yapControl", v)}
         />
         <SelectItem
-          label="WHO CAN PUT ON / ECHO"
-          sub="who can repost your voice"
+          label="WHO CAN RE-ECHO"
+          sub="who can reshare your voice"
           options={["EVERYONE", "[ ORBIT ]", "NOBODY"]}
           value={settings.echoControl}
           onChange={(v) => select("echoControl", v)}
         />
         <SelectItem
-          label="WHO CAN [ WIRE ] YOU"
-          sub="private audio messages"
-          options={["EVERYONE", "[ ORBIT ]", "DAY ONES"]}
+          label="WHO CAN WIRE (DM) YOU"
+          sub="private direct voice messaging"
+          options={["EVERYONE", "[ ORBIT ]", "NOBODY"]}
           value={settings.whoCanWire}
           onChange={(v) => select("whoCanWire", v)}
         />
 
         {/* ── PRIVACY & BOUNDARIES ──────────────────────────── */}
-        <SectionHeader label="PRIVACY & BOUNDARIES" />
+        <SectionHeader label="PRIVACY & FREQUENCY BOUNDARIES" />
         <ToggleItem id="private-acc"   label="PRIVATE FREQUENCY"       sub="approve orbiters manually"     value={settings.privateAcc}   onToggle={() => toggle("privateAcc")}   saving={savingKey === "privateAcc"} />
         <ToggleItem id="aura-visible"  label="SHOW AURA SCORE"         sub="visible on your profile"       value={settings.auraVisible}  onToggle={() => toggle("auraVisible")}  saving={savingKey === "auraVisible"} />
         <ToggleItem id="anon-mode"     label="ANONYMOUS MODE"          sub="mask handle in public feed"    value={settings.anonMode}     onToggle={() => toggle("anonMode")}     saving={savingKey === "anonMode"} />
-        <ToggleItem id="lock-approval" label="APPROVE LOCK-INS"        sub="manually approve orbiters"     value={settings.lockApproval} onToggle={() => toggle("lockApproval")} saving={savingKey === "lockApproval"} />
-        <NavItem label="HIDDEN WORDS" sub="words filtered from reverbs" onClick={() => setView("hidden")} />
+        <ToggleItem id="lock-approval" label="APPROVE ORBITS"          sub="manually approve orbiters"     value={settings.lockApproval} onToggle={() => toggle("lockApproval")} saving={savingKey === "lockApproval"} />
+        <NavItem label="HIDDEN WORDS" sub="filter specific words from reverbs" onClick={() => setView("hidden")} />
 
         {/* ── HELP / SOS ────────────────────────────────────── */}
-        <SectionHeader label="HELP / SOS" />
-        <NavItem label="ECHO GUIDE"          sub="how everything works"     onClick={() => setActiveModal("guide")} />
-        <NavItem label="REPORT A PROBLEM"    sub="bugs, crashes, weirdness" onClick={() => setActiveModal("report")} />
-        <NavItem label="SAFETY CENTRE"       sub="mental health & support"  onClick={() => setActiveModal("safety")} />
-        <NavItem label="CONTACT US"          sub="reach the humans behind echo" onClick={() => setActiveModal("contact")} />
+        <SectionHeader label="SYSTEM DIAGNOSTICS & SOS" />
+        <NavItem label="ECHO GUIDE"          sub="how audio features work"  onClick={() => setActiveModal("guide")} />
+        <NavItem label="REPORT A PROBLEM"    sub="submit bugs directly"     onClick={() => setActiveModal("report")} />
+        <NavItem label="SAFETY CENTRE"       sub="security & moderation"    onClick={() => setActiveModal("safety")} />
+        <NavItem label="CONTACT US"          sub="reach platform engineers" onClick={() => setActiveModal("contact")} />
 
         {/* ── DANGER ZONE ───────────────────────────────────── */}
         <SectionHeader label="DANGER ZONE" />
-        <div className="border border-dashed border-neutral-800 p-5 mb-10">
+        <div className="border border-dashed border-neutral-800 p-5 mb-10 space-y-4">
           {!showDanger ? (
             <button
               id="danger-zone-btn"
               onClick={() => setShowDanger(true)}
-              className="font-mono text-xs tracking-widest uppercase text-neutral-600 hover:text-white transition-colors cursor-pointer"
+              className="font-mono text-xs tracking-widest uppercase text-neutral-500 hover:text-white transition-colors cursor-pointer"
             >
-              [ SHOW DANGER ZONE ]
+              [ + SHOW DANGER ZONE COMMANDS ]
             </button>
           ) : (
-            <div className="space-y-4">
-              <p className="font-mono text-xs text-neutral-700 tracking-widest">
-                THESE ACTIONS ARE IRREVERSIBLE.
+            <div className="space-y-3">
+              <p className="font-mono text-xs text-neutral-600 tracking-widest uppercase">
+                // CRITICAL COMMANDS & DATA ACTIONS
               </p>
-              <button className="w-full text-left font-mono text-xs tracking-widest uppercase text-neutral-500 hover:text-white border border-neutral-800 hover:border-neutral-600 px-4 py-3 transition-colors cursor-pointer">
-                DEACTIVATE ACCOUNT  →  EXILE YOURSELF
+              <button
+                onClick={() => {
+                  try {
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    alert("Local audio cache cleared.");
+                  } catch (e) {}
+                }}
+                className="w-full text-left font-mono text-xs tracking-widest uppercase text-neutral-400 hover:text-white border border-neutral-800 hover:border-neutral-600 px-4 py-3 transition-colors cursor-pointer"
+              >
+                CLEAR LOCAL AUDIO CACHE
               </button>
-              <button className="w-full text-left font-mono text-xs tracking-widest uppercase text-red-900 hover:text-red-500 border border-neutral-900 hover:border-red-900 px-4 py-3 transition-colors cursor-pointer">
-                DELETE ACCOUNT  →  PURGE EVERYTHING
+              <button
+                onClick={handleSignOut}
+                className="w-full text-left font-mono text-xs tracking-widest uppercase text-neutral-400 hover:text-white border border-neutral-800 hover:border-neutral-600 px-4 py-3 transition-colors cursor-pointer"
+              >
+                SIGN OUT OF ALL SESSIONS
+              </button>
+              <button
+                onClick={() => {
+                  if (confirm("Are you sure you want to deactivate your node?")) {
+                    handleSignOut();
+                  }
+                }}
+                className="w-full text-left font-mono text-xs tracking-widest uppercase text-red-500 hover:text-red-400 border border-neutral-900 hover:border-red-900 px-4 py-3 transition-colors cursor-pointer"
+              >
+                DEACTIVATE NODE  →  EXILE YOURSELF
               </button>
             </div>
           )}
@@ -805,7 +827,7 @@ export default function TerminalPage() {
         {/* Version tag */}
         <p className="font-mono text-xs text-neutral-800 tracking-widest pb-10">
           ECHO v0.1.0 — AUG 2026 — UTILITARIAN CANVAS
-          {savingKey && <span className="ml-3 text-neutral-600 animate-pulse">SAVING...</span>}
+          {savingKey && <span className="ml-3 text-neutral-500 animate-pulse">SAVING...</span>}
         </p>
       </div>
 
@@ -831,11 +853,12 @@ export default function TerminalPage() {
             {activeModal === "guide" && (
               <div className="space-y-3 font-mono text-xs text-neutral-300 leading-relaxed max-h-80 overflow-y-auto">
                 <p><strong className="text-white">FREQUENCY:</strong> Live public voice feed of authentic audio snippets.</p>
-                <p><strong className="text-white">STUDIO:</strong> Record 15s to 60s voice yaps & voice bio.</p>
+                <p><strong className="text-white">WAVES:</strong> 30s TikTok-style vertical audio cards with interactive waveforms.</p>
+                <p><strong className="text-white">STUDIO:</strong> Record 15s to 60s voice takes, filters & voice bio.</p>
                 <p><strong className="text-white">STAGE / CLASH:</strong> Live audio debate arena & voice battles.</p>
-                <p><strong className="text-white">ROOMS:</strong> Real-time Clubhouse-style audio spaces (Speaker vs Audience).</p>
+                <p><strong className="text-white">ROOMS:</strong> Real-time Clubhouse-style audio spaces with live speakers.</p>
                 <p><strong className="text-white">WIRE:</strong> Direct 1-on-1 private voice messages.</p>
-                <p><strong className="text-white">AURA:</strong> Dynamic engagement score earned by authentic voice content.</p>
+                <p><strong className="text-white">AURA:</strong> Dynamic engagement score earned by authentic voice drops.</p>
               </div>
             )}
 
@@ -843,23 +866,33 @@ export default function TerminalPage() {
               <div className="space-y-4">
                 {reportSuccess ? (
                   <p className="font-mono text-xs text-green-400">
-                    ✓ THANK YOU! YOUR PROBLEM REPORT HAS BEEN SUBMITTED TO OUR ENG ENGINEERS.
+                    ✓ THANK YOU! YOUR PROBLEM REPORT HAS BEEN RECORDED AND ROUTED TO ENGINEERING.
                   </p>
                 ) : (
                   <>
                     <p className="font-mono text-xs text-neutral-400">
-                      DESCRIBE THE BUG, CRASH, OR GLITCH YOU ENCOUNTERED:
+                      DESCRIBE THE ISSUE OR GLITCH:
                     </p>
                     <textarea
                       rows={4}
                       value={reportText}
                       onChange={(e) => setReportText(e.target.value)}
-                      placeholder="e.g. Audio stopped playing after switching rooms..."
+                      placeholder="e.g. Mic input cut out during Stage clash..."
                       className="w-full bg-neutral-950 border border-neutral-800 p-3 font-mono text-xs text-white placeholder-neutral-700 focus:outline-none focus:border-white"
                     />
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         if (reportText.trim()) {
+                          try {
+                            const db = getFirebaseDb();
+                            const { addDoc, collection, serverTimestamp } = await import("firebase/firestore");
+                            await addDoc(collection(db, "reports"), {
+                              uid: user?.uid || "anon",
+                              handle: (user as any)?.handle || "@ANON",
+                              report: reportText.trim(),
+                              createdAt: serverTimestamp(),
+                            });
+                          } catch (e) {}
                           setReportSuccess(true);
                         }
                       }}
@@ -878,13 +911,13 @@ export default function TerminalPage() {
                 <p className="text-white font-bold">// USER BOUNDARIES & SAFETY</p>
                 <p>• Block or Mute any user directly from their profile card.</p>
                 <p>• Enable Anonymous Mode or Private Frequency in Privacy settings.</p>
-                <p>• 24/7 Support Helpline: <span className="text-white underline">988 (Mental Health Crisis Line)</span>.</p>
+                <p>• 24/7 Support Helpline: <span className="text-white underline">988 (Crisis Line)</span>.</p>
               </div>
             )}
 
             {activeModal === "contact" && (
               <div className="space-y-4 font-mono text-xs">
-                <p className="text-neutral-400">REACH OUR CORE TEAM DIRECTLY:</p>
+                <p className="text-neutral-400">REACH OUR PLATFORM TEAM:</p>
                 <div className="p-3 border border-neutral-800 bg-neutral-950 text-white font-bold text-sm select-all">
                   support@echo-aura.app
                 </div>
