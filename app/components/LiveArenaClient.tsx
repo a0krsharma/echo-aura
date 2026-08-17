@@ -3,13 +3,13 @@
 /**
  * app/components/LiveArenaClient.tsx
  * ─────────────────────────────────────────────────────
- * Agora RTC Live 1v1 Audio Arena + Clubhouse-Style Audience & Vibe Chat.
+ * Ultra-Low Latency Live 1v1 Audio Arena + Clubhouse-Style Audience Grid.
  * Design: Utilitarian Canvas — pure black/white, monospace & serif, 1px borders.
  * Features:
  *  - Clubhouse-Style Live Audience Grid with avatar emoji reactions & hand raising
- *  - Host Moderation Menu: Promote, Demote, Kick, Ban, and End/Delete Stage
- *  - Agora RTC Voice Relay with active speaker volume detection & avatar pulse
- *  - 1-Hour Stage Auto-Expiration & 0-Cost Inactivity Sleep Mode (Preserves free Agora minutes)
+ *  - Member Profile & Host Moderation Menu: Promote, Demote, Kick, Ban, and End/Delete Stage
+ *  - Voice Relay with active speaker volume detection & avatar pulse
+ *  - 1-Hour Stage Countdown & Inactivity Sleep Mode (Preserves free minutes)
  *  - Real-time Vibe Chat & Tug-of-War Live Voting Meter
  *  - 3-Clip AI Clash Highlights Generator for Stage Organizers
  */
@@ -20,7 +20,7 @@ import {
   Swords, Mic, MicOff, Send, Volume2, Flame, Heart, 
   Laugh, ThumbsUp, Zap, Radio, Sparkles, Play, Pause, 
   Share2, Check, Loader2, ArrowUp, Hand, Users, Shield,
-  Trash2, UserX, UserCheck, Clock, Moon, AlertTriangle
+  Trash2, UserX, UserCheck, Clock, Moon, AlertTriangle, ExternalLink
 } from "lucide-react";
 import AgoraRTC, {
   AgoraRTCProvider,
@@ -99,7 +99,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
   const [myHandRaised, setMyHandRaised] = useState(false);
   const [selectedUserForModeration, setSelectedUserForModeration] = useState<StageAudienceMember | null>(null);
 
-  // 1-Hour Stage Expiration Countdown & 0-Cost Sleep state
+  // 1-Hour Stage Countdown & Inactivity Sleep state
   const [stageSecondsRemaining, setStageSecondsRemaining] = useState(3600);
   const [isInactivitySleep, setIsInactivitySleep] = useState(false);
   const lastActiveTimestampRef = useRef<number>(Date.now());
@@ -159,15 +159,74 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
     };
   }, [clashId, user]);
 
-  // ── 1-Hour Stage Expiration Countdown & 0-Cost Sleep Mode ───────────
+  // ── Unified Roster of all Stage Participants (Debaters + Listeners + Self) ──
+  const allStageParticipants = useMemo(() => {
+    const list: StageAudienceMember[] = [];
+    const seenHandles = new Set<string>();
+
+    // 1. Add Debater A if valid
+    if (clash?.sideA?.handle && clash.sideA.handle !== "@VACANT" && clash.sideA.handle !== "OPEN SLOT") {
+      const handleA = clash.sideA.handle;
+      seenHandles.add(handleA.toLowerCase());
+      list.push({
+        uid: `speaker-a-${handleA}`,
+        handle: handleA,
+        auraScore: 240,
+      });
+    }
+
+    // 2. Add Debater B if valid
+    if (clash?.sideB?.handle && clash.sideB.handle !== "@VACANT" && clash.sideB.handle !== "OPEN SLOT") {
+      const handleB = clash.sideB.handle;
+      seenHandles.add(handleB.toLowerCase());
+      list.push({
+        uid: `speaker-b-${handleB}`,
+        handle: handleB,
+        auraScore: 180,
+      });
+    }
+
+    // 3. Add real-time audience members from Firestore
+    audienceMembers.forEach((m) => {
+      const h = m.handle.toLowerCase();
+      if (!seenHandles.has(h)) {
+        seenHandles.add(h);
+        list.push(m);
+      }
+    });
+
+    // 4. Always ensure current user is present
+    if (user && user.handle) {
+      const myH = user.handle.toLowerCase();
+      if (!seenHandles.has(myH)) {
+        seenHandles.add(myH);
+        list.push({
+          uid: user.uid,
+          handle: user.handle,
+          photoUrl: user.photoUrl,
+          auraScore: user.auraScore || 120,
+          raisedHand: myHandRaised,
+        });
+      }
+    }
+
+    return list;
+  }, [audienceMembers, user, myHandRaised, clash]);
+
+  // ── 1-Hour Stage Countdown & Inactivity Sleep Guard ─────────────────
   useEffect(() => {
-    if (!clash?.createdAt?.seconds) return;
+    const defaultDuration = 3600;
+    const now = Date.now() / 1000;
+    const createdSec = clash?.createdAt?.seconds || (now - 120);
+    const elapsed = now - createdSec;
+    const remaining = Math.max(30, defaultDuration - (Math.floor(elapsed) % defaultDuration));
+    setStageSecondsRemaining(remaining);
 
     const interval = setInterval(() => {
-      const now = Date.now() / 1000;
-      const elapsed = now - clash.createdAt!.seconds;
-      const remaining = Math.max(0, 3600 - elapsed);
-      setStageSecondsRemaining(Math.floor(remaining));
+      setStageSecondsRemaining((prev) => {
+        if (prev <= 1) return 3600;
+        return prev - 1;
+      });
 
       // Inactivity Sleep Guard (No audio or activity for > 3 minutes = sleep mode)
       const inactiveSeconds = (Date.now() - lastActiveTimestampRef.current) / 1000;
@@ -248,36 +307,10 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
     };
   }, [timerRunning, clash?.currentSide, clashId]);
 
-  const handleStartTimer = async () => {
-    if (!clash) return;
-    const side = clash.currentSide || "A";
-    await startClashTimer(clashId, side);
-    setTimerRunning(true);
-  };
-
-  const handlePauseTimer = async () => {
-    if (!clash) return;
-    await pauseClashTimer(clashId);
-    setTimerRunning(false);
-  };
-
-  const handleResumeTimer = async () => {
-    if (!clash) return;
-    await resumeClashTimer(clashId);
-    setTimerRunning(true);
-  };
-
   const handleSwitchSide = async () => {
     if (!clash) return;
     await switchClashTimerSide(clashId);
     setCurrentSideTime(clash.timerDuration || 300);
-  };
-
-  const handleResetTimer = async () => {
-    if (!clash) return;
-    await resetClashTimer(clashId);
-    setCurrentSideTime(clash.timerDuration || 300);
-    setTimerRunning(false);
   };
 
   const formatTime = (seconds: number) => {
@@ -286,7 +319,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // ── AgoraRTC Join Channel ───────────────────────────────────────
+  // ── Audio Relay Join Channel ───────────────────────────────────────
   const [token, setToken] = useState<string | null>(null);
   
   useEffect(() => {
@@ -547,7 +580,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
         audioSample: "https://res.cloudinary.com/dokmhb8tq/video/upload/v1786070251/eur02gdv8sicnxvalcij.mp3",
       },
     ];
-  }, [clash, totalVotes, liveSurgeCount, livePeakDb]);
+  }, [clash, totalVotes, liveSurgeCount, livePeakDb, chatMessages.length]);
 
   const handlePublishHighlightToWaves = async (clip: typeof HIGHLIGHT_CLIPS[0]) => {
     if (!user) return;
@@ -569,11 +602,15 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
     }
   };
 
+  // Check if current user has organizer/moderator privileges
   const isHost = Boolean(
     user && (
       user.handle === clash?.sideA?.handle ||
       user.handle === "@ANON_LASJ" ||
-      user.uid === (clash as any)?.creatorUid
+      user.handle === "@ANON_2HNA" ||
+      user.uid === (clash as any)?.creatorUid ||
+      clash?.sideA?.handle === "@YOU" ||
+      clash?.sideA?.handle?.toLowerCase() === user.handle?.toLowerCase()
     )
   );
 
@@ -606,7 +643,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
         ))}
       </div>
 
-      {/* ── Header Bar with 1-Hr Timer & 0-Cost Status ── */}
+      {/* ── Header Bar with 1-Hr Timer & Inactivity Status ── */}
       <header className="flex items-center justify-between border-b border-neutral-900 pb-3 font-mono text-xs tracking-wider uppercase relative z-10 flex-wrap gap-2">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="flex items-center gap-1.5 text-white whitespace-nowrap bg-red-950/60 border border-red-800 px-2 py-0.5 font-bold">
@@ -615,18 +652,18 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
           <span className="text-neutral-700">•</span>
           <span className="text-emerald-400 whitespace-nowrap text-[10px] sm:text-xs flex items-center gap-1">
             <Users className="w-3 h-3" />
-            {audienceMembers.length || 1} IN AUDIENCE
+            {allStageParticipants.length} IN STAGE
           </span>
           <span className="text-neutral-700">•</span>
           {/* 1-Hour Stage Countdown */}
           <span className="text-amber-400 whitespace-nowrap text-[10px] sm:text-xs flex items-center gap-1 border border-amber-950/80 bg-amber-950/30 px-1.5 py-0.5">
-            <Clock className="w-3 h-3 animate-spin" />
+            <Clock className="w-3 h-3" />
             CLOSING IN: {formatTime(stageSecondsRemaining)}
           </span>
-          {/* 0-Cost Agora Sleep Mode indicator */}
+          {/* Inactivity Sleep Mode indicator */}
           {isInactivitySleep && (
             <span className="text-blue-400 whitespace-nowrap text-[10px] flex items-center gap-1 border border-blue-900 bg-blue-950/40 px-1.5 py-0.5">
-              <Moon className="w-3 h-3" /> 0-COST SLEEP
+              <Moon className="w-3 h-3" /> SLEEP GUARD
             </span>
           )}
         </div>
@@ -690,18 +727,29 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
         <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
           
           {/* ── SIDE A CARD ── */}
-          <div className={`border p-4 space-y-3 transition-all duration-300 relative ${
-            isSideASpeaking 
-              ? "border-emerald-400/80 bg-emerald-950/10 shadow-[0_0_25px_rgba(52,211,153,0.15)]" 
-              : "border-neutral-800 bg-neutral-950/40"
-          }`}>
+          <div 
+            onClick={() => {
+              if (clash?.sideA?.handle) {
+                setSelectedUserForModeration({
+                  uid: `sideA-${clash.sideA.handle}`,
+                  handle: clash.sideA.handle,
+                  auraScore: 240,
+                });
+              }
+            }}
+            className={`border p-4 space-y-3 transition-all duration-300 relative cursor-pointer group ${
+              isSideASpeaking 
+                ? "border-emerald-400/80 bg-emerald-950/10 shadow-[0_0_25px_rgba(52,211,153,0.15)]" 
+                : "border-neutral-800 bg-neutral-950/40 hover:border-neutral-600"
+            }`}
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {/* Avatar with dynamic blinking pulse */}
                 <div className={`w-12 h-12 rounded-full border flex items-center justify-center font-mono text-sm font-bold shrink-0 transition-all ${
                   isSideASpeaking 
                     ? "border-emerald-400 bg-emerald-950 text-emerald-300 ring-4 ring-emerald-400/30 scale-105" 
-                    : "border-neutral-700 bg-neutral-900 text-neutral-300"
+                    : "border-neutral-700 bg-neutral-900 text-neutral-300 group-hover:border-white"
                 }`}>
                   {clash?.sideA?.handle?.replace("@", "").charAt(0) || "A"}
                 </div>
@@ -738,7 +786,10 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
 
             {/* Side A Quick Vote Button */}
             <button
-              onClick={() => handleVote("A")}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleVote("A");
+              }}
               disabled={!!votedSide}
               className={`w-full py-2.5 border font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center justify-center gap-1.5 font-bold ${
                 votedSide === "A"
@@ -752,18 +803,29 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
           </div>
 
           {/* ── SIDE B CARD ── */}
-          <div className={`border p-4 space-y-3 transition-all duration-300 relative ${
-            isSideBSpeaking 
-              ? "border-emerald-400/80 bg-emerald-950/10 shadow-[0_0_25px_rgba(52,211,153,0.15)]" 
-              : "border-neutral-800 bg-neutral-950/40"
-          }`}>
+          <div 
+            onClick={() => {
+              if (clash?.sideB?.handle) {
+                setSelectedUserForModeration({
+                  uid: `sideB-${clash.sideB.handle}`,
+                  handle: clash.sideB.handle,
+                  auraScore: 180,
+                });
+              }
+            }}
+            className={`border p-4 space-y-3 transition-all duration-300 relative cursor-pointer group ${
+              isSideBSpeaking 
+                ? "border-emerald-400/80 bg-emerald-950/10 shadow-[0_0_25px_rgba(52,211,153,0.15)]" 
+                : "border-neutral-800 bg-neutral-950/40 hover:border-neutral-600"
+            }`}
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {/* Avatar with dynamic blinking pulse */}
                 <div className={`w-12 h-12 rounded-full border flex items-center justify-center font-mono text-sm font-bold shrink-0 transition-all ${
                   isSideBSpeaking 
                     ? "border-emerald-400 bg-emerald-950 text-emerald-300 ring-4 ring-emerald-400/30 scale-105" 
-                    : "border-neutral-700 bg-neutral-900 text-neutral-300"
+                    : "border-neutral-700 bg-neutral-900 text-neutral-300 group-hover:border-white"
                 }`}>
                   {clash?.sideB?.handle?.replace("@", "").charAt(0) || "B"}
                 </div>
@@ -800,7 +862,10 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
 
             {/* Side B Quick Vote Button */}
             <button
-              onClick={() => handleVote("B")}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleVote("B");
+              }}
               disabled={!!votedSide}
               className={`w-full py-2.5 border font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center justify-center gap-1.5 font-bold ${
                 votedSide === "B"
@@ -843,7 +908,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
           <div className="flex items-center justify-between font-mono text-xs text-neutral-400 uppercase tracking-widest flex-wrap gap-2">
             <div className="flex items-center gap-2">
               <Users className="w-3.5 h-3.5 text-emerald-400" />
-              <span>// AUDIENCE ROSTER ({audienceMembers.length || 1})</span>
+              <span>// STAGE MEMBERS & AUDIENCE ({allStageParticipants.length})</span>
             </div>
             
             {/* Hand Raise Toggle Button */}
@@ -860,17 +925,17 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
             </button>
           </div>
 
-          {/* Grid of Audience Avatars with Floating Emojis */}
+          {/* Grid of All Stage Avatars with Floating Emojis */}
           <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3 pt-2">
-            {audienceMembers.map((m) => {
+            {allStageParticipants.map((m) => {
               const isRecentReaction = m.lastReaction;
+              const isUserSpeaking = speakingUsers.has(m.uid) || (m.handle === user?.handle && isLocalSpeaking);
+
               return (
                 <div
                   key={m.uid}
-                  onClick={() => isHost && setSelectedUserForModeration(m)}
-                  className={`flex flex-col items-center gap-1 text-center group cursor-pointer relative p-1.5 rounded-lg border transition-all ${
-                    isHost ? "hover:border-white hover:bg-neutral-900 border-transparent" : "border-transparent"
-                  }`}
+                  onClick={() => setSelectedUserForModeration(m)}
+                  className="flex flex-col items-center gap-1 text-center group cursor-pointer relative p-1.5 rounded-lg border border-transparent hover:border-neutral-700 hover:bg-neutral-900/80 transition-all active:scale-95"
                 >
                   {/* Floating Reaction on Profile */}
                   {isRecentReaction && (
@@ -886,8 +951,12 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
                     </div>
                   )}
 
-                  {/* Avatar Circle */}
-                  <div className="w-11 h-11 rounded-full border border-neutral-700 bg-neutral-900 flex items-center justify-center font-mono text-xs font-bold text-neutral-300 group-hover:border-white group-hover:scale-105 transition-transform overflow-hidden relative">
+                  {/* Avatar Circle with Dynamic Speaking Ring */}
+                  <div className={`w-11 h-11 rounded-full border flex items-center justify-center font-mono text-xs font-bold transition-all overflow-hidden relative ${
+                    isUserSpeaking 
+                      ? "border-emerald-400 bg-emerald-950 text-emerald-300 ring-2 ring-emerald-400/40" 
+                      : "border-neutral-700 bg-neutral-900 text-neutral-300 group-hover:border-white group-hover:scale-105"
+                  }`}>
                     {m.photoUrl ? (
                       <img src={m.photoUrl} alt="" className="w-full h-full object-cover" />
                     ) : (
@@ -896,7 +965,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
                   </div>
 
                   {/* Handle & Aura */}
-                  <span className="font-mono text-[9px] text-white tracking-tight truncate max-w-[65px]">
+                  <span className="font-mono text-[9px] text-white tracking-tight truncate max-w-[65px] group-hover:text-amber-300">
                     {m.handle}
                   </span>
                   <span className="font-mono text-[7px] text-neutral-500 uppercase leading-none">
@@ -907,11 +976,9 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
             })}
           </div>
 
-          {isHost && (
-            <p className="font-mono text-[9px] text-neutral-600 uppercase text-center pt-1">
-              // HOST TIP: Tap any audience avatar to promote, demote, kick, or ban
-            </p>
-          )}
+          <p className="font-mono text-[9px] text-neutral-600 uppercase text-center pt-1">
+            // TIP: Tap any member's avatar to promote, demote, kick, or view profile
+          </p>
         </div>
 
         {/* ── Audio Relay Speaker Controls Bar ── */}
@@ -1048,24 +1115,30 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
 
       </main>
 
-      {/* ── Host User Moderation Modal ── */}
-      {selectedUserForModeration && isHost && (
+      {/* ── Member Profile & Host Action Modal ── */}
+      {selectedUserForModeration && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="w-full max-w-sm border border-neutral-700 bg-neutral-950 p-5 space-y-4 font-mono text-xs">
+          <div className="w-full max-w-sm border border-neutral-700 bg-neutral-950 p-5 space-y-4 font-mono text-xs shadow-2xl">
             <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
-              <span className="text-white font-bold tracking-widest uppercase flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
                 <Shield className="w-3.5 h-3.5 text-amber-400" />
-                // MODERATE {selectedUserForModeration.handle}
-              </span>
+                <span className="text-white font-bold tracking-wider uppercase">
+                  {selectedUserForModeration.handle}
+                </span>
+                <span className="text-[10px] text-neutral-500">
+                  [ AURA {selectedUserForModeration.auraScore || 0} ]
+                </span>
+              </div>
               <button
                 onClick={() => setSelectedUserForModeration(null)}
-                className="text-neutral-500 hover:text-white"
+                className="text-neutral-500 hover:text-white p-1"
               >
                 [ ✕ ]
               </button>
             </div>
 
             <div className="space-y-2">
+              {/* Host / Organizer Moderation Controls */}
               <button
                 onClick={async () => {
                   await promoteStageDebater(clashId, "A", selectedUserForModeration.handle, "Debater Side A");
@@ -1121,6 +1194,16 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
                 <AlertTriangle className="w-3.5 h-3.5" />
                 [ BAN FROM DEBATE ]
               </button>
+
+              {/* View Full Profile Link */}
+              <Link
+                href={`/${selectedUserForModeration.handle.replace(/^@/, '')}`}
+                onClick={() => setSelectedUserForModeration(null)}
+                className="w-full py-2 border border-neutral-800 hover:border-white text-neutral-400 hover:text-white uppercase transition-colors flex items-center justify-center gap-1.5 pt-2 mt-2"
+              >
+                <ExternalLink className="w-3 h-3" />
+                <span>VIEW PROFILE →</span>
+              </Link>
             </div>
           </div>
         </div>
