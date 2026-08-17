@@ -358,6 +358,12 @@ export default function HandlePage({ params }: { params?: { handle?: string } })
     loadProfile();
   }, [handle]);
 
+  useEffect(() => {
+    if (!user?.uid || !userData?.uid || userData.uid === "anon") return;
+    const unsub = subscribeToFollowStatus(user.uid, userData.uid, setOrbiting);
+    return () => unsub();
+  }, [user?.uid, userData?.uid]);
+
   if (loading) {
     return (
       <div className="bg-black min-h-screen flex items-center justify-center">
@@ -372,12 +378,6 @@ export default function HandlePage({ params }: { params?: { handle?: string } })
   const displayHandle = profile ? (profile.handle.startsWith("@") ? profile.handle : `@${profile.handle}`) : "";
   const aura = profile?.auraScore ?? 0;
   const badges = profile?.badges ?? [];
-
-  useEffect(() => {
-    if (!user?.uid || !userData?.uid || userData.uid === "anon") return;
-    const unsub = subscribeToFollowStatus(user.uid, userData.uid, setOrbiting);
-    return () => unsub();
-  }, [user?.uid, userData?.uid]);
 
   const handleToggleOrbit = async () => {
     if (!user) {
