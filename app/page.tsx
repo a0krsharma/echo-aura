@@ -11,6 +11,7 @@ import { useAuth } from "@/app/components/AuthProvider";
 import {
   subscribeToPosts, togglePulsePost, createPost, deletePost,
   subscribeToPostReverbs, addPostReverb, togglePulsePostReverb,
+  toggleReverbReaction,
   type PostReverbItem,
 } from "@/lib/posts";
 import { useRouter } from "next/navigation";
@@ -494,14 +495,18 @@ function ReplyRecordModal({ postId, postCaption, postAuthorHandle, postAuthorUid
   );
 }
 
-// ─── Reply Thread (inline comments) ─────────────────────────────────────────
-function ReplyThread({ post, currentUser, onReplyClick, onProfileClick }: {
-  post: FeedPost; currentUser: any;
+// ─── Post Reverb (Audio Comments) Section with Emoji Reaction Log ─────────────
+function PostReverbSection({ post, currentUser, onReplyClick, onProfileClick }: {
+  post: FeedPost;
+  currentUser: any;
   onReplyClick: (rid?: string, rh?: string) => void;
   onProfileClick: (h: string) => void;
 }) {
   const [reverbs, setReverbs]   = useState<PostReverbItem[]>([]);
   const [expanded, setExpanded] = useState(false);
+  const [selectedReverbForLog, setSelectedReverbForLog] = useState<PostReverbItem | null>(null);
+
+  const REACTION_OPTIONS = ["😂", "🔥", "❤️", "👍", "⚡", "💀", "🧢", "💯"];
 
   useEffect(()=>{
     if(!expanded)return;
@@ -512,6 +517,21 @@ function ReplyThread({ post, currentUser, onReplyClick, onProfileClick }: {
   const handlePulse=async(rv:PostReverbItem)=>{
     if(!currentUser)return;
     await togglePulsePostReverb(post.id,rv.id,currentUser.uid,!!(rv.pulsedBy||[]).includes(currentUser.uid));
+  };
+
+  const handleReact = async (rv: PostReverbItem, emoji: string) => {
+    if (!currentUser) return;
+    try {
+      await toggleReverbReaction(
+        post.id,
+        rv.id,
+        { uid: currentUser.uid, handle: currentUser.handle || "@ANON" },
+        emoji,
+        rv.handle
+      );
+    } catch (err) {
+      console.error("Failed to react to reverb:", err);
+    }
   };
 
   const total=post.reverbCount||0;
@@ -531,25 +551,86 @@ function ReplyThread({ post, currentUser, onReplyClick, onProfileClick }: {
           )}
           {reverbs.map(rv=>{
             const pulsed=currentUser?(rv.pulsedBy||[]).includes(currentUser.uid):false;
+            const reactionsMap = rv.reactions || {};
+            const reactionList = Object.values(reactionsMap);
+            
+            // Group counts
+            const emojiCounts: Record<string, number> = {};
+            reactionList.forEach((r) => {
+              emojiCounts[r.emoji] = (emojiCounts[r.emoji] || 0) + 1;
+            });
+            const userReactedEmoji = currentUser ? reactionsMap[currentUser.uid]?.emoji : null;
+
             return(
-              <div key={rv.id} className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <button onClick={()=>onProfileClick(rv.handle)} className="font-mono text-[10px] tracking-widest text-neutral-400 hover:text-white uppercase cursor-pointer">
-                    {rv.handle}
-                  </button>
-                  {rv.reverbOfHandle&&<span className="font-mono text-[10px] text-neutral-700">↩ {rv.reverbOfHandle}</span>}
+              <div key={rv.id} className="space-y-2 border-b border-neutral-900/60 pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <button onClick={()=>onProfileClick(rv.handle)} className="font-mono text-[10px] tracking-widest text-neutral-400 hover:text-white uppercase cursor-pointer">
+                      {rv.handle}
+                    </button>
+                    {rv.reverbOfHandle&&<span className="font-mono text-[10px] text-neutral-700">↩ {rv.reverbOfHandle}</span>}
+                  </div>
+                  {userReactedEmoji && (
+                    <span className="text-[10px] bg-neutral-900 border border-neutral-800 rounded px-1.5 py-0.2">
+                      {userReactedEmoji}
+                    </span>
+                  )}
                 </div>
+
                 {rv.caption&&<p className="font-mono text-[10px] text-neutral-500 tracking-wide">{rv.caption}</p>}
-                <AudioPlayer audioUrl={rv.audioUrl} fallbackDurationSec={rv.durationSec||5} small/>
-                <div className="flex items-center gap-4">
-                  <button onClick={()=>handlePulse(rv)} className={`flex items-center gap-1 font-mono text-[10px] tracking-widest uppercase cursor-pointer transition-colors ${pulsed?"text-white":"text-neutral-600 hover:text-white"}`}>
-                    <Heart className={`w-3 h-3 ${pulsed?"fill-white":""}`}/>
-                    {rv.pulseCount>0?formatNum(rv.pulseCount):"[ PULSE ]"}
-                  </button>
-                  <button onClick={()=>onReplyClick(rv.id,rv.handle)} className="flex items-center gap-1 font-mono text-[10px] tracking-widest uppercase text-neutral-600 hover:text-white cursor-pointer transition-colors">
-                    <Repeat2 className="w-3 h-3"/>[ REPLY ]
-                  </button>
+
+                {rv.audioUrl && (
+                  <AudioPlayer audioUrl={rv.audioUrl} fallbackDurationSec={rv.durationSec||5} small/>
+                )}
+
+                <div className="flex items-center justify-between gap-3 pt-1 flex-wrap">
+                  <div className="flex items-center gap-3">
+                    <button onClick={()=>handlePulse(rv)} className={`flex items-center gap-1 font-mono text-[10px] tracking-widest uppercase cursor-pointer transition-colors ${pulsed?"text-white":"text-neutral-600 hover:text-white"}`}>
+                      <Heart className={`w-3 h-3 ${pulsed?"fill-white":""}`}/>
+                      {rv.pulseCount>0?formatNum(rv.pulseCount):"[ PULSE ]"}
+                    </button>
+                    <button onClick={()=>onReplyClick(rv.id,rv.handle)} className="flex items-center gap-1 font-mono text-[10px] tracking-widest uppercase text-neutral-600 hover:text-white cursor-pointer transition-colors">
+                      <Repeat2 className="w-3 h-3"/>[ REPLY ]
+                    </button>
+                  </div>
+
+                  {/* Emoji Reactions Bar */}
+                  <div className="flex items-center gap-1 bg-black/60 border border-neutral-900 rounded-full px-2 py-0.5">
+                    {REACTION_OPTIONS.map((emoji) => {
+                      const isSelected = userReactedEmoji === emoji;
+                      return (
+                        <button
+                          key={emoji}
+                          onClick={() => handleReact(rv, emoji)}
+                          className={`text-xs hover:scale-130 transition-transform p-0.5 cursor-pointer ${
+                            isSelected ? "scale-125 bg-neutral-800 rounded" : "opacity-70 hover:opacity-100"
+                          }`}
+                          title={`React with ${emoji}`}
+                        >
+                          {emoji}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
+
+                {/* Reaction Log Trigger */}
+                {reactionList.length > 0 && (
+                  <div className="pt-1 flex items-center gap-2">
+                    <button
+                      onClick={() => setSelectedReverbForLog(rv)}
+                      className="flex items-center gap-1.5 font-mono text-[9px] text-neutral-400 hover:text-white bg-neutral-900 border border-neutral-800 hover:border-neutral-700 rounded-full px-2.5 py-0.5 transition-all cursor-pointer"
+                    >
+                      {Object.entries(emojiCounts).map(([emoji, count]) => (
+                        <span key={emoji} className="flex items-center gap-0.5">
+                          <span>{emoji}</span>
+                          <span className="font-bold text-white">{count}</span>
+                        </span>
+                      ))}
+                      <span className="text-neutral-500 text-[8px] uppercase ml-1">• WHO REACTED</span>
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -558,6 +639,68 @@ function ReplyThread({ post, currentUser, onReplyClick, onProfileClick }: {
               <Mic2 className="w-3 h-3"/>[ + ADD YOUR REPLY ]
             </button>
           )}
+        </div>
+      )}
+
+      {/* ── Reaction Log Modal: Shows who laughed / reacted at whom ── */}
+      {selectedReverbForLog && (
+        <div className="fixed inset-0 z-60 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-neutral-950 border border-neutral-700 p-5 space-y-4 font-mono text-xs shadow-2xl rounded-xl">
+            <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
+              <span className="text-white font-bold tracking-wider uppercase flex items-center gap-1.5">
+                <span>📜 REACTION LOG</span>
+              </span>
+              <button
+                onClick={() => setSelectedReverbForLog(null)}
+                className="text-neutral-500 hover:text-white p-1 cursor-pointer"
+              >
+                [ ✕ ]
+              </button>
+            </div>
+
+            <div className="p-2 border border-neutral-900 bg-black/60 rounded">
+              <p className="font-mono text-[9px] text-neutral-500 uppercase">// VOICE TAKE</p>
+              <p className="font-serif italic text-xs text-neutral-300">
+                "{selectedReverbForLog.caption}"
+              </p>
+            </div>
+
+            <div className="space-y-2 max-h-60 overflow-y-auto no-scrollbar">
+              {Object.values(selectedReverbForLog.reactions || {}).map((item, idx) => (
+                <div key={idx} className="flex items-center justify-between p-2 border border-neutral-900 bg-neutral-900/40 rounded">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">{item.emoji}</span>
+                    <div>
+                      <span className="text-white font-bold">{item.userHandle}</span>
+                      <p className="text-[10px] text-neutral-400">
+                        {item.emoji === "😂"
+                          ? `laughed at ${item.targetHandle}'s voice take`
+                          : item.emoji === "🔥"
+                          ? `dropped fire on ${item.targetHandle}'s take`
+                          : item.emoji === "🧢"
+                          ? `called cap on ${item.targetHandle}'s take`
+                          : item.emoji === "💯"
+                          ? `agreed 100% with ${item.targetHandle}`
+                          : item.emoji === "💀"
+                          ? `found ${item.targetHandle}'s take dead funny`
+                          : `reacted ${item.emoji} to ${item.targetHandle}'s take`}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[9px] text-neutral-600">
+                    {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setSelectedReverbForLog(null)}
+              className="w-full py-2 border border-neutral-800 hover:border-white text-neutral-300 hover:text-white uppercase transition-colors rounded cursor-pointer"
+            >
+              [ CLOSE LOG ]
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -836,7 +979,7 @@ function PostCard({ post, user, orbitedPosts, activePostId, deletingId, onPulse,
       </div>
 
       {/* Inline reply thread */}
-      <ReplyThread post={post} currentUser={user}
+      <PostReverbSection post={post} currentUser={user}
         onReplyClick={onReplyClick}
         onProfileClick={onProfileClick} />
     </article>

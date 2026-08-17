@@ -48,7 +48,9 @@ import {
   createPost,
   subscribeToPostReverbs,
   addPostReverb,
+  toggleReverbReaction,
   type PostReverbItem,
+  type ReverbReactionRecord,
 } from "@/lib/posts";
 import { followUser, unfollowUser, subscribeToFollowing } from "@/lib/follows";
 import { useAuth } from "@/app/components/AuthProvider";
@@ -514,7 +516,7 @@ function WaveCard({
   );
 }
 
-// ── Slide-up Comments / Reverbs Drawer ────────────────────────────────────────
+// ── Slide-up Comments / Reverbs Drawer with Emoji Reaction Log ───────────────
 function CommentsDrawer({
   post,
   onClose,
@@ -528,6 +530,9 @@ function CommentsDrawer({
   const [loading, setLoading] = useState(true);
   const [newText, setNewText] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [selectedReverbForLog, setSelectedReverbForLog] = useState<PostReverbItem | null>(null);
+
+  const REACTION_OPTIONS = ["😂", "🔥", "❤️", "👍", "⚡", "💀", "🧢", "💯"];
 
   useEffect(() => {
     const unsub = subscribeToPostReverbs(post.id, (list) => {
@@ -567,10 +572,25 @@ function CommentsDrawer({
     }
   };
 
+  const handleReact = async (reverb: PostReverbItem, emoji: string) => {
+    if (!currentUser) return;
+    try {
+      await toggleReverbReaction(
+        post.id,
+        reverb.id,
+        { uid: currentUser.uid, handle: currentUser.handle || "@ANON" },
+        emoji,
+        reverb.handle
+      );
+    } catch (err) {
+      console.error("Failed to react to comment:", err);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/70 backdrop-blur-sm animate-fade-in">
       <div className="fixed inset-0" onClick={onClose} />
-      <div className="relative w-full max-w-lg mx-auto bg-neutral-950 border-t border-neutral-800 rounded-t-2xl flex flex-col max-h-[75vh] z-10 animate-slide-up shadow-2xl">
+      <div className="relative w-full max-w-lg mx-auto bg-neutral-950 border-t border-neutral-800 rounded-t-2xl flex flex-col max-h-[80vh] z-10 animate-slide-up shadow-2xl">
         {/* Handle Bar & Header */}
         <div className="p-4 border-b border-neutral-900 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -604,24 +624,82 @@ function CommentsDrawer({
               </p>
             </div>
           ) : (
-            reverbs.map((rev) => (
-              <div key={rev.id} className="border-b border-neutral-900 pb-3 space-y-1">
-                <div className="flex items-center justify-between">
-                  <Link
-                    href={`/${rev.handle.replace("@", "")}`}
-                    className="font-mono text-xs font-bold text-white hover:underline"
-                  >
-                    {rev.handle}
-                  </Link>
-                  <span className="font-mono text-[9px] text-neutral-600 uppercase">
-                    {rev.createdAt?.toDate ? new Date(rev.createdAt.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now"}
-                  </span>
+            reverbs.map((rev) => {
+              const reactionsMap = rev.reactions || {};
+              const reactionList = Object.values(reactionsMap);
+              
+              // Group reactions by emoji
+              const emojiCounts: Record<string, number> = {};
+              reactionList.forEach((r) => {
+                emojiCounts[r.emoji] = (emojiCounts[r.emoji] || 0) + 1;
+              });
+
+              const userReactedEmoji = currentUser ? reactionsMap[currentUser.uid]?.emoji : null;
+
+              return (
+                <div key={rev.id} className="border-b border-neutral-900 pb-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Link
+                      href={`/${rev.handle.replace("@", "")}`}
+                      className="font-mono text-xs font-bold text-white hover:underline flex items-center gap-1.5"
+                    >
+                      <span>{rev.handle}</span>
+                      {userReactedEmoji && (
+                        <span className="text-xs bg-neutral-900 border border-neutral-800 rounded px-1 py-0.2">
+                          {userReactedEmoji}
+                        </span>
+                      )}
+                    </Link>
+                    <span className="font-mono text-[9px] text-neutral-600 uppercase">
+                      {rev.createdAt?.toDate ? new Date(rev.createdAt.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now"}
+                    </span>
+                  </div>
+
+                  <p className="font-serif italic text-sm text-neutral-300 leading-snug">
+                    "<FormattedText text={rev.caption} />"
+                  </p>
+
+                  {/* Emoji Reactions & Reaction Log Row */}
+                  <div className="flex items-center justify-between gap-2 pt-1 flex-wrap">
+                    {/* Quick Emojis to React */}
+                    <div className="flex items-center gap-1 bg-black/60 border border-neutral-900 rounded-full px-2 py-0.5">
+                      {REACTION_OPTIONS.map((emoji) => {
+                        const isSelected = userReactedEmoji === emoji;
+                        return (
+                          <button
+                            key={emoji}
+                            onClick={() => handleReact(rev, emoji)}
+                            className={`text-xs hover:scale-130 transition-transform p-0.5 cursor-pointer ${
+                              isSelected ? "scale-125 bg-neutral-800 rounded" : "opacity-70 hover:opacity-100"
+                            }`}
+                            title={`React with ${emoji}`}
+                          >
+                            {emoji}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Summary Badge & Log Trigger */}
+                    {reactionList.length > 0 && (
+                      <button
+                        onClick={() => setSelectedReverbForLog(rev)}
+                        className="flex items-center gap-1.5 font-mono text-[10px] text-neutral-400 hover:text-white bg-neutral-900 border border-neutral-800 hover:border-neutral-600 rounded-full px-2.5 py-0.5 transition-all cursor-pointer"
+                        title="View who reacted"
+                      >
+                        {Object.entries(emojiCounts).map(([emoji, count]) => (
+                          <span key={emoji} className="flex items-center gap-0.5">
+                            <span>{emoji}</span>
+                            <span className="font-bold text-white">{count}</span>
+                          </span>
+                        ))}
+                        <span className="text-neutral-500 text-[9px] uppercase ml-1">• LOG</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <p className="font-serif italic text-sm text-neutral-300 leading-snug">
-                  "<FormattedText text={rev.caption} />"
-                </p>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
 
@@ -643,6 +721,68 @@ function CommentsDrawer({
           </button>
         </form>
       </div>
+
+      {/* ── Reaction Log Modal: Shows who laughed / reacted at whom ── */}
+      {selectedReverbForLog && (
+        <div className="fixed inset-0 z-60 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-neutral-950 border border-neutral-700 p-5 space-y-4 font-mono text-xs shadow-2xl rounded-xl">
+            <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
+              <span className="text-white font-bold tracking-wider uppercase flex items-center gap-1.5">
+                <span>📜 REACTION LOG</span>
+              </span>
+              <button
+                onClick={() => setSelectedReverbForLog(null)}
+                className="text-neutral-500 hover:text-white p-1 cursor-pointer"
+              >
+                [ ✕ ]
+              </button>
+            </div>
+
+            <div className="p-2 border border-neutral-900 bg-black/60 rounded">
+              <p className="font-mono text-[9px] text-neutral-500 uppercase">// VOICE TAKE</p>
+              <p className="font-serif italic text-xs text-neutral-300">
+                "{selectedReverbForLog.caption}"
+              </p>
+            </div>
+
+            <div className="space-y-2 max-h-60 overflow-y-auto no-scrollbar">
+              {Object.values(selectedReverbForLog.reactions || {}).map((item, idx) => (
+                <div key={idx} className="flex items-center justify-between p-2 border border-neutral-900 bg-neutral-900/40 rounded">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">{item.emoji}</span>
+                    <div>
+                      <span className="text-white font-bold">{item.userHandle}</span>
+                      <p className="text-[10px] text-neutral-400">
+                        {item.emoji === "😂"
+                          ? `laughed at ${item.targetHandle}'s voice take`
+                          : item.emoji === "🔥"
+                          ? `dropped fire on ${item.targetHandle}'s take`
+                          : item.emoji === "🧢"
+                          ? `called cap on ${item.targetHandle}'s take`
+                          : item.emoji === "💯"
+                          ? `agreed 100% with ${item.targetHandle}`
+                          : item.emoji === "💀"
+                          ? `found ${item.targetHandle}'s take dead funny`
+                          : `reacted ${item.emoji} to ${item.targetHandle}'s take`}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[9px] text-neutral-600">
+                    {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setSelectedReverbForLog(null)}
+              className="w-full py-2 border border-neutral-800 hover:border-white text-neutral-300 hover:text-white uppercase transition-colors rounded cursor-pointer"
+            >
+              [ CLOSE LOG ]
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -115,6 +115,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
 
   // Live Reactions state
   const [reactions, setReactions] = useState<Array<{emoji: string; x: number; y: number; id: number}>>([]);
+  const [myActiveReaction, setMyActiveReaction] = useState<string | null>(null);
   const reactionIdRef = useRef(0);
 
   // Timer state
@@ -226,13 +227,19 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
           photoUrl: user.photoUrl,
           auraScore: user.auraScore || 120,
           raisedHand: myHandRaised,
+          lastReaction: myActiveReaction || undefined,
           allegiance: myAllegiance || "UNDECIDED",
         });
+      } else {
+        const item = list.find((x) => x.handle.toLowerCase() === myH);
+        if (item && myActiveReaction) {
+          item.lastReaction = myActiveReaction;
+        }
       }
     }
 
     return list;
-  }, [audienceMembers, user, myHandRaised, myAllegiance, clash]);
+  }, [audienceMembers, user, myHandRaised, myAllegiance, myActiveReaction, clash]);
 
   // ── 1-Hour Stage Countdown & Inactivity Sleep Guard ─────────────────
   useEffect(() => {
@@ -267,6 +274,12 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
     const x = Math.random() * 80 + 10;
     const y = Math.random() * 60 + 20;
     
+    // Instant local reaction on avatar
+    setMyActiveReaction(emoji);
+    setTimeout(() => {
+      setMyActiveReaction((curr) => (curr === emoji ? null : curr));
+    }, 4000);
+
     setReactions(prev => [...prev, { emoji, x, y, id }]);
     setTimeout(() => {
       setReactions(prev => prev.filter(r => r.id !== id));

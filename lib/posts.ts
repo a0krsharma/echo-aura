@@ -25,11 +25,20 @@ import {
   serverTimestamp,
   getDocs,
   getDoc,
+  deleteField,
   type Timestamp,
 } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 import { createPostMentions, removePostMentions } from "@/lib/mentions";
 import { addBookmark, removeBookmark, isPostBookmarked } from "@/lib/bookmarks";
+
+export interface ReverbReactionRecord {
+  emoji: string;
+  userUid: string;
+  userHandle: string;
+  targetHandle: string;
+  timestamp: number;
+}
 
 export interface PostItem {
   id:              string;
@@ -74,6 +83,7 @@ export interface PostReverbItem {
   durationSec:       number;
   pulseCount:        number;
   pulsedBy:          string[];
+  reactions?:        Record<string, ReverbReactionRecord>;
   reverbCount:       number;
   reverbOfReverbId?: string;
   reverbOfHandle?:   string;
@@ -663,3 +673,44 @@ export async function togglePulsePostReverb(
     pulsedBy: currentlyPulsed ? arrayRemove(uid) : arrayUnion(uid),
   });
 }
+
+/**
+ * toggleReverbReaction — add / toggle an emoji reaction on a comment/reverb with reaction log tracking
+ */
+export async function toggleReverbReaction(
+  postId: string,
+  reverbId: string,
+  user: { uid: string; handle: string },
+  emoji: string,
+  targetHandle: string
+): Promise<void> {
+  try {
+    const db = getFirebaseDb();
+    const reverbRef = doc(db, "posts", postId, "reverbs", reverbId);
+    const snap = await getDoc(reverbRef);
+    if (!snap.exists()) return;
+    const data = snap.data();
+    const existing = (data?.reactions || {})[user.uid];
+
+    if (existing && existing.emoji === emoji) {
+      // Remove reaction if tapping same emoji
+      await updateDoc(reverbRef, {
+        [`reactions.${user.uid}`]: deleteField(),
+      });
+    } else {
+      // Set new reaction with full log attribution
+      await updateDoc(reverbRef, {
+        [`reactions.${user.uid}`]: {
+          emoji,
+          userUid: user.uid,
+          userHandle: user.handle,
+          targetHandle,
+          timestamp: Date.now(),
+        },
+      });
+    }
+  } catch (err) {
+    console.debug("[toggleReverbReaction] notice:", err);
+  }
+}
+
