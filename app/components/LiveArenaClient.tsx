@@ -5,6 +5,7 @@
  * ─────────────────────────────────────────────────────
  * Ultra-Low Latency Live 1v1 Audio Arena + Clubhouse-Style Audience Grid.
  * Big Boss-Style Gamified Debate Allegiance & Mid-Debate Side Switching ("Convinced!").
+ * Release: v1.4.0 — Production Build
  * Design: Utilitarian Canvas — pure black/white, monospace & serif, 1px borders.
  */
 
