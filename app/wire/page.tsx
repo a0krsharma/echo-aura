@@ -611,15 +611,17 @@ export default function WirePage() {
     };
   }, [user]);
 
-  // Read URL query parameters ?c=... or ?with=... safely on client side
+  // Read URL query parameters ?c=... or ?with=... safely on client side ONCE
+  const initializedUrlRef = useRef(false);
   useEffect(() => {
-    if (typeof window === "undefined" || !user) return;
+    if (typeof window === "undefined" || !user || initializedUrlRef.current) return;
     const urlParams = new URLSearchParams(window.location.search);
     const targetConvId = urlParams.get("c");
     const targetWith = urlParams.get("with");
     const targetHandle = urlParams.get("handle");
 
     if (targetConvId) {
+      initializedUrlRef.current = true;
       setActiveConvId(targetConvId);
       const found = conversations.find((c) => c.id === targetConvId);
       if (!found) {
@@ -631,6 +633,7 @@ export default function WirePage() {
         });
       }
     } else if (targetWith) {
+      initializedUrlRef.current = true;
       handleStartConversation(targetWith, targetHandle || "@ANON");
     }
   }, [user, conversations]);
@@ -675,6 +678,9 @@ export default function WirePage() {
       setShowNew(false);
       setSearchQuery("");
       setSearchResults([]);
+      if (typeof window !== "undefined") {
+        window.history.replaceState({}, "", `/wire?c=${convId}`);
+      }
     } catch (err) {
       console.warn("Failed to start conversation:", err);
     }
@@ -808,7 +814,13 @@ export default function WirePage() {
                   key={conv.id}
                   conv={conv}
                   myUid={user.uid}
-                  onClick={() => setActiveConvId(conv.id)}
+                  onClick={() => {
+                    setActiveConvId(conv.id);
+                    setDraftConv(null);
+                    if (typeof window !== "undefined") {
+                      window.history.replaceState({}, "", `/wire?c=${conv.id}`);
+                    }
+                  }}
                   active={activeConvId === conv.id}
                 />
               ))
