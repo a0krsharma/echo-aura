@@ -632,7 +632,7 @@ export async function joinStageAudience(
       { merge: true }
     );
   } catch (err) {
-    console.warn("[joinStageAudience] Error:", err);
+    console.debug("[joinStageAudience] notice:", err);
   }
 }
 
@@ -646,7 +646,7 @@ export async function leaveStageAudience(clashId: string, uid: string): Promise<
     const audienceRef = doc(db, "clashes", clashId, "audience", uid);
     await deleteDoc(audienceRef);
   } catch (err) {
-    console.warn("[leaveStageAudience] Error:", err);
+    console.debug("[leaveStageAudience] notice:", err);
   }
 }
 
@@ -694,7 +694,7 @@ export async function sendStageAudienceReaction(
       reactionAt: serverTimestamp(),
     });
   } catch (err) {
-    console.warn("[sendStageAudienceReaction] Error:", err);
+    console.debug("[sendStageAudienceReaction] notice:", err);
   }
 }
 
@@ -714,7 +714,7 @@ export async function toggleStageRaiseHand(
       raisedHand: raised,
     });
   } catch (err) {
-    console.warn("[toggleStageRaiseHand] Error:", err);
+    console.debug("[toggleStageRaiseHand] notice:", err);
   }
 }
 
