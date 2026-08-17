@@ -8,7 +8,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
-import { ArrowLeft, ChevronRight, Loader2, LogOut, Bookmark, Play, Pause, Trash2, Volume2 } from "lucide-react";
+import { ArrowLeft, ChevronRight, Loader2, LogOut, Bookmark, Play, Pause, Trash2, Volume2, Mic, Activity, Zap, CheckCircle2 } from "lucide-react";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { getFirebaseAuth, getFirebaseDb } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
@@ -16,12 +16,11 @@ import { useAuth } from "@/app/components/AuthProvider";
 import { useRouter } from "next/navigation";
 import { getUserVaultedPosts, unvaultPost, type PostItem } from "@/lib/posts";
 import { getPlayableUrl } from "@/lib/cloudinary";
+import { type UserSettings as Settings, DEFAULT_SETTINGS, getVibeRead, updateVibeRead, analyzeVibeRead } from "@/lib/userDoc";
+
 
 // ─── Types ────────────────────────────────────────────────
 type ToggleState = boolean;
-
-import { type UserSettings as Settings, DEFAULT_SETTINGS } from "@/lib/userDoc";
-
 
 // ─── Persist a single setting to Firestore ────────────────
 async function persistSetting(uid: string, key: keyof Settings, value: any) {
@@ -187,7 +186,7 @@ export default function TerminalPage() {
   const [loading, setLoading] = useState(true);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [showDanger, setShowDanger] = useState(false);
-  const [view, setView] = useState<"main" | "pings" | "hidden" | "vault">("main");
+  const [view, setView] = useState<"main" | "pings" | "hidden" | "vault" | "vibe">("main");
   const [newWord, setNewWord] = useState("");
   const [vaultPosts, setVaultPosts] = useState<PostItem[]>([]);
   const [playingPostId, setPlayingPostId] = useState<string | null>(null);
@@ -196,7 +195,18 @@ export default function TerminalPage() {
   const [reportSuccess, setReportSuccess] = useState(false);
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
 
-  // ── Load settings & Vault from Firestore on mount ───────────────
+  // Vibe Read Biometrics & DSP Pitch Analyzer
+  const [vibeRead, setVibeRead] = useState<{
+    pitch: number;
+    tempo: number;
+    energy: number;
+    clarity: number;
+  } | null>(null);
+  const [isAnalyzingPitch, setIsAnalyzingPitch] = useState(false);
+  const [analysisCountdown, setAnalysisCountdown] = useState(0);
+  const [analysisStatus, setAnalysisStatus] = useState<string | null>(null);
+
+  // ── Load settings, Vault, and Vibe Read from Firestore on mount ───────────────
   useEffect(() => {
     if (!user?.uid) { setLoading(false); return; }
     const load = async () => {
@@ -210,6 +220,8 @@ export default function TerminalPage() {
         }
         const vaulted = await getUserVaultedPosts(user.uid);
         setVaultPosts(vaulted);
+        const liveVibe = await getVibeRead(user.uid);
+        setVibeRead(liveVibe);
       } catch (e) {
         console.error("[Terminal] Failed to load settings:", e);
       } finally {
@@ -218,6 +230,57 @@ export default function TerminalPage() {
     };
     load();
   }, [user?.uid]);
+
+  // ── Live DSP Pitch & Audio Biometrics Analyzer ────────────
+  const handleRunVibeAnalysis = async () => {
+    if (!user?.uid) return;
+    try {
+      setIsAnalyzingPitch(true);
+      setAnalysisStatus("LISTENING TO AUDIO FREQUENCY (5S)...");
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      const chunks: BlobPart[] = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+
+      let remaining = 5;
+      setAnalysisCountdown(remaining);
+      const interval = setInterval(() => {
+        remaining -= 1;
+        setAnalysisCountdown(remaining);
+        if (remaining <= 0) clearInterval(interval);
+      }, 1000);
+
+      mediaRecorder.start();
+
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+      mediaRecorder.stop();
+      stream.getTracks().forEach((t) => t.stop());
+
+      setAnalysisStatus("COMPUTING DSP PITCH & HARMONICS...");
+
+      await new Promise<void>((resolve) => {
+        mediaRecorder.onstop = async () => {
+          const blob = new Blob(chunks, { type: "audio/webm" });
+          const result = await analyzeVibeRead(blob);
+          await updateVibeRead(user.uid, result);
+          setVibeRead(result);
+          setAnalysisStatus("DSP PITCH ANALYSIS COMPLETE!");
+          setTimeout(() => setAnalysisStatus(null), 3000);
+          resolve();
+        };
+      });
+    } catch (err: any) {
+      console.error("Vibe analysis failed:", err);
+      setAnalysisStatus("MIC ACCESS REQUIRED FOR PITCH ANALYSIS");
+      setTimeout(() => setAnalysisStatus(null), 3000);
+    } finally {
+      setIsAnalyzingPitch(false);
+      setAnalysisCountdown(0);
+    }
+  };
 
   // ── Generic toggle handler — updates state + Firestore ──
   const toggle = useCallback(<K extends keyof Settings>(key: K) => {
@@ -428,6 +491,111 @@ export default function TerminalPage() {
     );
   }
 
+  // ── VIBE READ BIOMETRICS sub-view ───────────────────────
+  if (view === "vibe") {
+    return (
+      <SubView title="AUDIO BIOMETRICS" onBack={() => setView("main")}>
+        <div className="space-y-6">
+          <p className="font-mono text-xs text-neutral-400 tracking-widest uppercase">
+            // [ LIVE VIBE_READ ] — VOCAL FREQUENCY DSP BIOMETRICS
+          </p>
+
+          <p className="font-mono text-xs text-neutral-600 leading-relaxed">
+            YOUR VIBE READ IS COMPUTED ALGORITHMICALLY FROM YOUR VOCAL HARMONICS, PITCH ZERO-CROSSING RATE, RMS ENERGY POWER, AND SIGNAL-TO-NOISE RATIO.
+          </p>
+
+          {/* Analysis Status / Countdown Banner */}
+          {analysisStatus && (
+            <div className="p-3 border border-white bg-neutral-950 font-mono text-xs text-white tracking-wider flex items-center justify-between animate-pulse">
+              <span>{analysisStatus}</span>
+              {analysisCountdown > 0 && <span className="font-bold text-base">{analysisCountdown}S</span>}
+            </div>
+          )}
+
+          {/* Biometric Meters */}
+          {!vibeRead ? (
+            <div className="p-6 border border-dashed border-neutral-900 text-center space-y-3">
+              <Activity className="w-8 h-8 text-neutral-700 mx-auto" />
+              <p className="font-serif italic text-neutral-400 text-sm">
+                No vocal biometrics analyzed yet.
+              </p>
+              <p className="font-mono text-[10px] text-neutral-600 uppercase tracking-widest">
+                Record a 5-second voice sample below to calibrate your live pitch & frequency.
+              </p>
+            </div>
+          ) : (
+            <div className="border border-neutral-900 bg-neutral-950/60 p-5 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                {/* Pitch */}
+                <div className="space-y-1">
+                  <div className="flex justify-between font-mono text-[10px] uppercase">
+                    <span className="text-neutral-500">PITCH (FREQ)</span>
+                    <span className="text-white font-bold tabular-nums">{vibeRead.pitch}%</span>
+                  </div>
+                  <div className="h-2 bg-neutral-900 rounded-full overflow-hidden">
+                    <div className="h-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.4)]" style={{ width: `${vibeRead.pitch}%` }} />
+                  </div>
+                </div>
+
+                {/* Tempo */}
+                <div className="space-y-1">
+                  <div className="flex justify-between font-mono text-[10px] uppercase">
+                    <span className="text-neutral-500">TEMPO (CADENCE)</span>
+                    <span className="text-white font-bold tabular-nums">{vibeRead.tempo}%</span>
+                  </div>
+                  <div className="h-2 bg-neutral-900 rounded-full overflow-hidden">
+                    <div className="h-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.4)]" style={{ width: `${vibeRead.tempo}%` }} />
+                  </div>
+                </div>
+
+                {/* Energy */}
+                <div className="space-y-1">
+                  <div className="flex justify-between font-mono text-[10px] uppercase">
+                    <span className="text-neutral-500">ENERGY (RMS)</span>
+                    <span className="text-white font-bold tabular-nums">{vibeRead.energy}%</span>
+                  </div>
+                  <div className="h-2 bg-neutral-900 rounded-full overflow-hidden">
+                    <div className="h-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.4)]" style={{ width: `${vibeRead.energy}%` }} />
+                  </div>
+                </div>
+
+                {/* Clarity */}
+                <div className="space-y-1">
+                  <div className="flex justify-between font-mono text-[10px] uppercase">
+                    <span className="text-neutral-500">CLARITY (SNR)</span>
+                    <span className="text-white font-bold tabular-nums">{vibeRead.clarity}%</span>
+                  </div>
+                  <div className="h-2 bg-neutral-900 rounded-full overflow-hidden">
+                    <div className="h-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.4)]" style={{ width: `${vibeRead.clarity}%` }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Action button */}
+          <button
+            onClick={handleRunVibeAnalysis}
+            disabled={isAnalyzingPitch}
+            className="w-full py-3.5 px-4 border border-white bg-white text-black font-mono text-xs font-bold tracking-widest uppercase hover:bg-neutral-200 transition-colors cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {isAnalyzingPitch ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>ANALYZING PITCH ({analysisCountdown}S)...</span>
+              </>
+            ) : (
+              <>
+                <Mic className="w-4 h-4" />
+                <span>[ 🎙️ ANALYZE LIVE VOCAL PITCH ]</span>
+              </>
+            )}
+          </button>
+        </div>
+      </SubView>
+    );
+  }
+
   // ── MAIN TERMINAL VIEW ──────────────────────────────────
   return (
     <div className="bg-black min-h-screen pb-24 md:pb-12">
@@ -486,6 +654,68 @@ export default function TerminalPage() {
           onClick={() => setView("vault")}
           badge={vaultPosts.length > 0 ? `${vaultPosts.length}` : undefined}
         />
+
+        {/* ── AUDIO FREQUENCY BIOMETRICS: LIVE VIBE_READ ────── */}
+        <SectionHeader label="VOCAL FREQUENCY BIOMETRICS" />
+        <div className="py-4 border-b border-neutral-900 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-mono text-xs tracking-widest uppercase text-white">LIVE VIBE_READ</p>
+              <p className="font-mono text-xs text-neutral-700 tracking-widest mt-0.5">
+                algorithmic pitch & harmonic frequency analysis
+              </p>
+            </div>
+            <button
+              onClick={() => setView("vibe")}
+              className="font-mono text-[11px] border border-neutral-800 text-neutral-400 hover:border-white hover:text-white px-2.5 py-1 uppercase tracking-wider transition-colors cursor-pointer"
+            >
+              [ CALIBRATE ]
+            </button>
+          </div>
+
+          {vibeRead ? (
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <div className="border border-neutral-900 bg-neutral-950 p-2.5 space-y-1">
+                <span className="font-mono text-[9px] text-neutral-500 uppercase tracking-widest block">PITCH (FREQ)</span>
+                <span className="font-mono text-xs font-bold text-white tabular-nums">{vibeRead.pitch}%</span>
+              </div>
+              <div className="border border-neutral-900 bg-neutral-950 p-2.5 space-y-1">
+                <span className="font-mono text-[9px] text-neutral-500 uppercase tracking-widest block">TEMPO (CADENCE)</span>
+                <span className="font-mono text-xs font-bold text-white tabular-nums">{vibeRead.tempo}%</span>
+              </div>
+              <div className="border border-neutral-900 bg-neutral-950 p-2.5 space-y-1">
+                <span className="font-mono text-[9px] text-neutral-500 uppercase tracking-widest block">ENERGY (RMS)</span>
+                <span className="font-mono text-xs font-bold text-white tabular-nums">{vibeRead.energy}%</span>
+              </div>
+              <div className="border border-neutral-900 bg-neutral-950 p-2.5 space-y-1">
+                <span className="font-mono text-[9px] text-neutral-500 uppercase tracking-widest block">CLARITY (SNR)</span>
+                <span className="font-mono text-xs font-bold text-white tabular-nums">{vibeRead.clarity}%</span>
+              </div>
+            </div>
+          ) : (
+            <p className="font-mono text-[10px] text-neutral-700 uppercase tracking-widest">
+              NO BIOMETRICS YET. CALIBRATE VIA PITCH ANALYSIS OR RECORD A VOICE BIO.
+            </p>
+          )}
+
+          <button
+            onClick={handleRunVibeAnalysis}
+            disabled={isAnalyzingPitch}
+            className="w-full py-2.5 px-3 border border-neutral-800 hover:border-white text-white font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center justify-center gap-2 bg-neutral-950 disabled:opacity-50"
+          >
+            {isAnalyzingPitch ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>ANALYZING PITCH ({analysisCountdown}S)...</span>
+              </>
+            ) : (
+              <>
+                <Mic className="w-3.5 h-3.5 text-white" />
+                <span>[ 🎙️ ANALYZE LIVE VOCAL PITCH ]</span>
+              </>
+            )}
+          </button>
+        </div>
 
         {/* ── PINGS ─────────────────────────────────────────── */}
         <SectionHeader label="PINGS — NOTIFICATIONS" />
