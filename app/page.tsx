@@ -806,29 +806,31 @@ function PostCard({ post, user, orbitedPosts, activePostId, deletingId, onPulse,
         onPlayToggle={p => { if (p) onActiveChange(post.id); else if (activePostId === post.id) onActiveChange(null); }} />
 
       {/* Actions */}
-      <div className="flex items-center justify-between pt-1">
-        <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between pt-2 flex-wrap sm:flex-nowrap gap-2">
+        <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
           <button onClick={() => onPulse(post)}
-            className={`flex items-center gap-2 font-mono text-xs tracking-widest uppercase cursor-pointer transition-colors ${isPulsed ? "text-white" : "text-neutral-500 hover:text-white"}`}>
+            className={`flex items-center gap-1.5 font-mono text-[11px] sm:text-xs tracking-widest uppercase cursor-pointer transition-colors whitespace-nowrap shrink-0 ${isPulsed ? "text-white font-bold" : "text-neutral-400 hover:text-white"}`}>
             <ArrowUp className={`w-3.5 h-3.5 ${isPulsed ? "fill-white" : ""}`} />
-            {formatNum(post.pulseCount)} [ PULSE ]
+            <span>{formatNum(post.pulseCount)} PULSE</span>
           </button>
           <button onClick={() => onComment(post)}
-            className="flex items-center gap-2 font-mono text-xs tracking-widest uppercase cursor-pointer transition-colors text-neutral-500 hover:text-white">
+            className="flex items-center gap-1.5 font-mono text-[11px] sm:text-xs tracking-widest uppercase cursor-pointer transition-colors text-neutral-400 hover:text-white whitespace-nowrap shrink-0">
             <MessageSquare className="w-3.5 h-3.5" />
-            {post.commentCount > 0 ? formatNum(post.commentCount) : ""} [ COMMENT ]
+            <span>{post.commentCount > 0 ? formatNum(post.commentCount) : ""} COMMENT</span>
           </button>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
           {!isOwn && (
             <button onClick={() => onOrbit(post)} disabled={isOrbited}
-              className={`flex items-center gap-1.5 font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer ${isOrbited ? "text-white" : "text-neutral-500 hover:text-white"}`}>
-              <RefreshCw className="w-3.5 h-3.5" />{isOrbited ? "[ ORBITED ]" : "[ ORBIT ]"}
+              className={`flex items-center gap-1.5 font-mono text-[11px] sm:text-xs tracking-widest uppercase transition-colors cursor-pointer whitespace-nowrap shrink-0 ${isOrbited ? "text-white font-bold" : "text-neutral-400 hover:text-white"}`}>
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>{isOrbited ? "ORBITED" : "ORBIT"}</span>
             </button>
           )}
           <button onClick={() => onShare(post)}
-            className="flex items-center gap-1.5 font-mono text-xs tracking-widest text-neutral-500 uppercase hover:text-white transition-colors cursor-pointer">
-            <Share2 className="w-3.5 h-3.5" />SHARE
+            className="flex items-center gap-1.5 font-mono text-[11px] sm:text-xs tracking-widest text-neutral-400 uppercase hover:text-white transition-colors cursor-pointer whitespace-nowrap shrink-0">
+            <Share2 className="w-3.5 h-3.5" />
+            <span>SHARE</span>
           </button>
         </div>
       </div>

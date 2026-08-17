@@ -605,28 +605,30 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-black text-white pb-24 md:pb-8 flex flex-col font-sans">
       {/* Top Header */}
-      <header className="p-6 flex items-center justify-between border-b border-neutral-900">
+      <header className="px-4 py-4 md:px-6 flex items-center justify-between border-b border-neutral-900 gap-2 flex-wrap sm:flex-nowrap">
         <OrbitLogo />
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center gap-2 flex-wrap shrink-0">
           <Link
             href="/terminal"
-            className="px-3 py-1.5 border border-neutral-800 hover:border-white text-neutral-400 hover:text-white font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center gap-1.5"
+            className="px-2.5 py-1.5 border border-neutral-800 hover:border-white text-neutral-400 hover:text-white font-mono text-[11px] sm:text-xs tracking-wider uppercase transition-colors cursor-pointer flex items-center gap-1 whitespace-nowrap shrink-0"
             title="System Terminal Console"
           >
-            <Terminal className="w-3.5 h-3.5 text-white" /> [ TERMINAL ]
+            <Terminal className="w-3.5 h-3.5 text-white" />
+            <span>TERMINAL</span>
           </Link>
           <button
             onClick={() => setEditProfileOpen(true)}
-            className="px-3 py-1.5 border border-white text-white hover:bg-white hover:text-black font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center gap-1.5 font-bold"
+            className="px-2.5 py-1.5 border border-white text-white hover:bg-white hover:text-black font-mono text-[11px] sm:text-xs tracking-wider uppercase transition-colors cursor-pointer flex items-center gap-1 font-bold whitespace-nowrap shrink-0"
           >
-            <Edit3 className="w-3.5 h-3.5" /> [ EDIT PROFILE ]
+            <Edit3 className="w-3.5 h-3.5" />
+            <span>EDIT PROFILE</span>
           </button>
           <button
             onClick={() => setShareModalOpen(true)}
-            className="p-2 text-neutral-500 hover:text-white transition-colors cursor-pointer"
+            className="p-1.5 text-neutral-400 hover:text-white transition-colors cursor-pointer border border-neutral-800 shrink-0"
             aria-label="Share profile"
           >
-            <Share2 className="w-4 h-4" />
+            <Share2 className="w-3.5 h-3.5" />
           </button>
         </div>
       </header>

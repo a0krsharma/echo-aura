@@ -170,9 +170,11 @@ function ShellContent({ children }: { children: React.ReactNode }) {
           </Link>
           <Link
             href="/profile"
-            className="font-mono text-xs tracking-widest uppercase text-secondary border border-standard px-2.5 py-1 hover:border-white hover:text-white transition-colors"
+            className="p-2 border border-neutral-800 text-white hover:border-white transition-colors cursor-pointer flex items-center justify-center"
+            aria-label="Profile"
+            title="Profile"
           >
-            {user.handle || "@YOU"}
+            <User className="w-4 h-4" />
           </Link>
         </div>
       </header>
