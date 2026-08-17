@@ -18,6 +18,7 @@ import BottomNav from "@/app/components/BottomNav";
 import LeftSidebar from "@/app/components/LeftSidebar";
 import { RightSidebar } from "@/app/components/RightSidebar";
 import { ToastContainer } from "@/app/components/Toast";
+import { PWAInstallPrompt } from "@/app/components/PWAInstallPrompt";
 import { subscribeToNotifications, markNotificationRead, subscribeToUnreadCount, type EchoNotification } from "@/lib/notifications";
 import {
   Loader2,
@@ -270,6 +271,9 @@ function ShellContent({ children }: { children: React.ReactNode }) {
 
       {/* BOTTOM NAV — mobile only */}
       <BottomNav />
+
+      {/* PWA INSTALL PROMPT */}
+      <PWAInstallPrompt />
 
       {/* TOAST NOTIFICATIONS */}
       <ToastContainer

@@ -25,6 +25,12 @@ export const metadata: Metadata = {
   title: "Echo // Unfiltered Audio",
   description: "Audio-first social platform. Raw audio, real people, no filters. Drop an Echo. Lock in.",
   metadataBase: new URL("https://echo.fm"),
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Echo",
+  },
   authors: [{ name: "Echo Audio Network" }],
   keywords: ["audio social network", "voice notes", "unfiltered audio", "podcasts", "live audio debates", "echo fm"],
   openGraph: {

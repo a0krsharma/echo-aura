@@ -1,0 +1,47 @@
+{
+  "name": "Echo — Audio-First Platform",
+  "short_name": "Echo",
+  "description": "Audio-First, Unfiltered, Real. Voice posts, live 1v1 debates, audio rooms, and wire messaging.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["social", "entertainment", "music", "audio"],
+  "shortcuts": [
+    {
+      "name": "Frequency Feed",
+      "url": "/",
+      "description": "Open live audio feed"
+    },
+    {
+      "name": "Live Rooms",
+      "url": "/rooms",
+      "description": "Join live audio rooms"
+    },
+    {
+      "name": "The Stage",
+      "url": "/clash",
+      "description": "Live 1v1 audio debates"
+    },
+    {
+      "name": "Wire DMs",
+      "url": "/wire",
+      "description": "Direct voice & text messages"
+    }
+  ]
+}
