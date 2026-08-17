@@ -16,7 +16,8 @@ import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft, ArrowUp, Volume2, Lock, Mic2, Users,
   MessageSquare, UserPlus, UserCheck, Share2, Radio,
-  Play, Pause, Flame, X, Sparkles, Shield, Check
+  Play, Pause, Flame, X, Sparkles, Shield, Check,
+  Grid, Repeat2, Heart
 } from "lucide-react";
 import { collection, query, where, getDocs, limit, onSnapshot } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
@@ -685,9 +686,23 @@ export default function HandlePage({ params }: { params?: { handle?: string } })
             </button>
           </div>
         ) : (
-          /* Echoes Feed */
-          <div className="space-y-2">
-            <p className="font-mono text-xs tracking-widest uppercase text-neutral-600 mb-2">// THEIR ECHOES</p>
+          /* Echoes Feed with Instagram Grid Tabs Bar */
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 border-t border-b border-neutral-900 mb-4">
+              <button
+                className="py-3 flex items-center justify-center gap-2 cursor-pointer border-b-2 border-white text-white font-bold transition-colors font-mono text-xs tracking-wider"
+              >
+                <Grid className="w-4 h-4" />
+                <span>ECHOES ({userPosts.length})</span>
+              </button>
+              <button
+                className="py-3 flex items-center justify-center gap-2 cursor-pointer border-b-2 border-transparent text-neutral-600 hover:text-neutral-400 transition-colors font-mono text-xs tracking-wider"
+              >
+                <Repeat2 className="w-4 h-4" />
+                <span>REPOSTS</span>
+              </button>
+            </div>
+
             {userPosts.length > 0 ? (
               userPosts.map(p => <PostItem key={p.id} post={p} />)
             ) : (
