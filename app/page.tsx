@@ -953,7 +953,7 @@ function PostCard({ post, user, orbitedPosts, activePostId, deletingId, onPulse,
         <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
           <button onClick={() => onPulse(post)}
             className={`flex items-center gap-1.5 font-mono text-[11px] sm:text-xs tracking-widest uppercase cursor-pointer transition-colors whitespace-nowrap shrink-0 ${isPulsed ? "text-white font-bold" : "text-neutral-400 hover:text-white"}`}>
-            <ArrowUp className={`w-3.5 h-3.5 ${isPulsed ? "fill-white" : ""}`} />
+            <Heart className={`w-3.5 h-3.5 ${isPulsed ? "fill-white text-white" : ""}`} />
             <span>{formatNum(post.pulseCount)} PULSE</span>
           </button>
           <button onClick={() => onComment(post)}

@@ -299,23 +299,23 @@ function WaveCard({
   const shortTitle = isLong ? `${cleanCaption.slice(0, 55)}...` : cleanCaption;
 
   return (
-    <div className={`relative w-full h-screen flex-shrink-0 snap-start overflow-hidden bg-gradient-to-b ${bg} select-none`}>
+    <div className={`relative w-full h-[calc(100dvh-4rem)] md:h-screen flex-shrink-0 snap-start overflow-hidden bg-gradient-to-b ${bg} select-none`}>
       {/* Center waveform & Interactive Play/Pause Controls */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 pointer-events-none">
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 sm:gap-6 pointer-events-none">
         <BigWaveform playing={playing} color={wave} />
 
         {/* Functional Play / Pause Button */}
         <button
           onClick={toggle}
-          className="w-16 h-16 rounded-full border border-white/40 bg-black/60 backdrop-blur-md flex items-center justify-center hover:scale-110 active:scale-95 transition-all cursor-pointer shadow-2xl pointer-events-auto z-20 hover:border-white"
+          className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border border-white/40 bg-black/60 backdrop-blur-md flex items-center justify-center hover:scale-110 active:scale-95 transition-all cursor-pointer shadow-2xl pointer-events-auto z-20 hover:border-white"
           aria-label={playing ? "Pause" : "Play"}
         >
           {loading ? (
-            <Loader2 className="w-8 h-8 text-white animate-spin" />
+            <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 text-white animate-spin" />
           ) : playing ? (
-            <Pause className="w-7 h-7 text-white fill-white" />
+            <Pause className="w-6 h-6 sm:w-7 sm:h-7 text-white fill-white" />
           ) : (
-            <Play className="w-7 h-7 text-white fill-white ml-1" />
+            <Play className="w-6 h-6 sm:w-7 sm:h-7 text-white fill-white ml-1" />
           )}
         </button>
 
@@ -332,19 +332,19 @@ function WaveCard({
       </div>
 
       {/* ── BOTTOM CREATOR INFO & EXPANDABLE DESCRIPTION ── */}
-      <div className="absolute bottom-20 left-4 right-18 z-20 space-y-2 pointer-events-none max-w-sm sm:max-w-md">
+      <div className="absolute bottom-3 sm:bottom-4 left-3 right-15 sm:left-4 sm:right-18 z-20 space-y-1.5 pointer-events-none max-w-[calc(100%-4rem)]">
         {/* Creator Row: Avatar, Handle, and Orbit Follow Button */}
-        <div className="flex items-center gap-2.5 pointer-events-auto">
+        <div className="flex items-center gap-2 pointer-events-auto">
           <button
             onClick={onProfile}
-            className="w-8 h-8 rounded-full border border-white/60 bg-neutral-900 flex items-center justify-center text-white font-mono text-xs font-bold shrink-0 hover:border-white transition-colors cursor-pointer"
+            className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-white/60 bg-neutral-900 flex items-center justify-center text-white font-mono text-xs font-bold shrink-0 hover:border-white transition-colors cursor-pointer"
           >
             {post.authorHandle.replace("@", "").slice(0, 1).toUpperCase()}
           </button>
           
           <button
             onClick={onProfile}
-            className="font-mono text-xs font-bold tracking-wider text-white hover:underline uppercase cursor-pointer"
+            className="font-mono text-xs font-bold tracking-wider text-white hover:underline uppercase cursor-pointer truncate max-w-[130px] sm:max-w-none"
           >
             {post.authorHandle}
           </button>
@@ -352,7 +352,7 @@ function WaveCard({
           {!isOwner && (
             <button
               onClick={onToggleOrbit}
-              className={`px-2.5 py-0.5 rounded-full font-mono text-[10px] tracking-widest uppercase border transition-all cursor-pointer flex items-center gap-1 ${
+              className={`px-2 py-0.5 rounded-full font-mono text-[9px] sm:text-[10px] tracking-widest uppercase border transition-all cursor-pointer flex items-center gap-1 shrink-0 ${
                 isOrbiting
                   ? "border-neutral-700 bg-neutral-900 text-neutral-400 hover:border-white hover:text-white"
                   : "border-white bg-white text-black font-bold hover:bg-neutral-200"
@@ -372,65 +372,74 @@ function WaveCard({
         </div>
 
         {/* Caption / Description Box */}
-        <div className="pointer-events-auto bg-black/40 backdrop-blur-sm p-2 rounded-lg border border-white/10">
+        <div className="pointer-events-auto bg-black/50 backdrop-blur-sm p-2 rounded-lg border border-white/10 space-y-1">
           {!expandedDesc ? (
             <div className="space-y-1">
-              <p className="font-serif italic text-white text-sm sm:text-base leading-snug drop-shadow">
+              <p className="font-serif italic text-white text-xs sm:text-sm leading-snug drop-shadow line-clamp-2">
                 "{shortTitle}"
               </p>
               {isLong && (
                 <button
                   onClick={() => setExpandedDesc(true)}
-                  className="font-mono text-[10px] text-neutral-400 hover:text-white uppercase tracking-widest underline decoration-neutral-600 transition-colors cursor-pointer"
+                  className="font-mono text-[9px] text-neutral-400 hover:text-white uppercase tracking-widest underline decoration-neutral-600 transition-colors cursor-pointer"
                 >
                   ... [ VIEW DESCRIPTION ]
                 </button>
               )}
             </div>
           ) : (
-            <div className="space-y-1.5 max-h-40 overflow-y-auto no-scrollbar">
-              <p className="font-serif italic text-white text-sm sm:text-base leading-snug drop-shadow">
+            <div className="space-y-1 max-h-32 overflow-y-auto no-scrollbar">
+              <p className="font-serif italic text-white text-xs sm:text-sm leading-snug drop-shadow">
                 "<FormattedText text={cleanCaption} />"
               </p>
               <button
                 onClick={() => setExpandedDesc(false)}
-                className="font-mono text-[10px] text-neutral-400 hover:text-white uppercase tracking-widest underline decoration-neutral-600 transition-colors cursor-pointer"
+                className="font-mono text-[9px] text-neutral-400 hover:text-white uppercase tracking-widest underline decoration-neutral-600 transition-colors cursor-pointer"
               >
                 [ LESS ]
               </button>
             </div>
           )}
+          
+          <div className="flex items-center gap-2 pt-0.5">
+            <span className="font-mono text-[8px] sm:text-[9px] px-1.5 py-0.2 rounded border border-neutral-700 bg-neutral-900 text-white font-bold uppercase tracking-wider">
+              [ WAVES ]
+            </span>
+            <span className="font-mono text-[9px] text-neutral-400">
+              {post.durationSec || 15}s
+            </span>
+          </div>
         </div>
 
         {/* Audio Track Tag */}
-        <div className="flex items-center gap-1.5 font-mono text-[10px] text-neutral-400 tracking-wider uppercase pointer-events-auto">
-          <Music2 className="w-3 h-3 text-white animate-pulse" />
+        <div className="flex items-center gap-1.5 font-mono text-[9px] text-neutral-400 tracking-wider uppercase pointer-events-auto">
+          <Music2 className="w-2.5 h-2.5 text-white animate-pulse" />
           <span className="truncate">ORIGINAL VOICE ECHO — {post.authorHandle}</span>
         </div>
       </div>
 
       {/* ── RIGHT ACTION STACK (INSTAGRAM REELS INSPIRED) ── */}
-      <div className="absolute bottom-20 right-3 z-20 flex flex-col items-center gap-4.5 pointer-events-auto">
+      <div className="absolute bottom-3 sm:bottom-4 right-1.5 sm:right-3 z-20 flex flex-col items-center gap-2 sm:gap-2.5 pointer-events-auto">
         {/* 1. Heart / Pulse (Like) */}
         <button
           onClick={onPulse}
-          className="flex flex-col items-center gap-1 cursor-pointer group"
+          className="flex flex-col items-center gap-0.5 cursor-pointer group"
           title="Pulse / Like"
         >
           <div
-            className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all ${
+            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border transition-all ${
               isPulsed
                 ? "bg-white border-white scale-110 shadow-lg"
                 : "border-white/30 group-hover:border-white bg-black/40 backdrop-blur-sm group-active:scale-90"
             }`}
           >
             <Heart
-              className={`w-5 h-5 transition-transform ${
+              className={`w-4.5 h-4.5 transition-transform ${
                 isPulsed ? "text-black fill-black" : "text-white group-hover:scale-110"
               }`}
             />
           </div>
-          <span className="font-mono text-[10px] text-white/90 font-bold tracking-widest drop-shadow">
+          <span className="font-mono text-[9px] text-white/90 font-bold tracking-widest drop-shadow">
             {fmtNum(post.pulseCount)}
           </span>
         </button>
@@ -438,13 +447,13 @@ function WaveCard({
         {/* 2. Comments / Reverb */}
         <button
           onClick={onOpenComments}
-          className="flex flex-col items-center gap-1 cursor-pointer group"
+          className="flex flex-col items-center gap-0.5 cursor-pointer group"
           title="View Reverbs / Comments"
         >
-          <div className="w-10 h-10 rounded-full flex items-center justify-center border border-white/30 group-hover:border-white bg-black/40 backdrop-blur-sm transition-all group-active:scale-90">
-            <MessageCircle className="w-5 h-5 text-white group-hover:scale-110 transition-transform" />
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border border-white/30 group-hover:border-white bg-black/40 backdrop-blur-sm transition-all group-active:scale-90">
+            <MessageCircle className="w-4.5 h-4.5 text-white group-hover:scale-110 transition-transform" />
           </div>
-          <span className="font-mono text-[10px] text-white/90 font-bold tracking-widest drop-shadow">
+          <span className="font-mono text-[9px] text-white/90 font-bold tracking-widest drop-shadow">
             {fmtNum(post.reverbCount || 0)}
           </span>
         </button>
@@ -452,19 +461,19 @@ function WaveCard({
         {/* 3. Re-Echo / Repost */}
         <button
           onClick={onReEcho}
-          className="flex flex-col items-center gap-1 cursor-pointer group"
+          className="flex flex-col items-center gap-0.5 cursor-pointer group"
           title="Re-Echo Post"
         >
           <div
-            className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all ${
+            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border transition-all ${
               isReEchoed
                 ? "bg-white border-white text-black"
                 : "border-white/30 group-hover:border-white bg-black/40 backdrop-blur-sm"
             } group-active:scale-90`}
           >
-            <Repeat2 className={`w-5 h-5 ${isReEchoed ? "text-black" : "text-white"} group-hover:scale-110 transition-transform`} />
+            <Repeat2 className={`w-4.5 h-4.5 ${isReEchoed ? "text-black" : "text-white"} group-hover:scale-110 transition-transform`} />
           </div>
-          <span className="font-mono text-[9px] text-white/80 tracking-widest">
+          <span className="font-mono text-[8px] sm:text-[9px] text-white/80 tracking-widest">
             {isReEchoed ? "ECHOED" : "REPOST"}
           </span>
         </button>
@@ -472,31 +481,31 @@ function WaveCard({
         {/* 4. Share */}
         <button
           onClick={onShare}
-          className="flex flex-col items-center gap-1 cursor-pointer group"
+          className="flex flex-col items-center gap-0.5 cursor-pointer group"
           title="Share Wave"
         >
-          <div className="w-10 h-10 rounded-full flex items-center justify-center border border-white/30 group-hover:border-white bg-black/40 backdrop-blur-sm transition-all group-active:scale-90">
-            <Send className="w-4.5 h-4.5 text-white ml-0.5 group-hover:scale-110 transition-transform" />
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border border-white/30 group-hover:border-white bg-black/40 backdrop-blur-sm transition-all group-active:scale-90">
+            <Send className="w-4 h-4 text-white ml-0.5 group-hover:scale-110 transition-transform" />
           </div>
-          <span className="font-mono text-[9px] text-white/80 tracking-widest">SHARE</span>
+          <span className="font-mono text-[8px] sm:text-[9px] text-white/80 tracking-widest">SHARE</span>
         </button>
 
         {/* 5. Bookmark / Save */}
         <button
           onClick={onSaveToggle}
-          className="flex flex-col items-center gap-1 cursor-pointer group"
+          className="flex flex-col items-center gap-0.5 cursor-pointer group"
           title={isSaved ? "Saved to Vault" : "Save to Vault"}
         >
           <div
-            className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all ${
+            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border transition-all ${
               isSaved
                 ? "bg-white border-white"
                 : "border-white/30 group-hover:border-white bg-black/40 backdrop-blur-sm"
             } group-active:scale-90`}
           >
-            <Bookmark className={`w-4.5 h-4.5 ${isSaved ? "text-black fill-black" : "text-white"} group-hover:scale-110 transition-transform`} />
+            <Bookmark className={`w-4 h-4 ${isSaved ? "text-black fill-black" : "text-white"} group-hover:scale-110 transition-transform`} />
           </div>
-          <span className="font-mono text-[9px] text-white/80 tracking-widest">
+          <span className="font-mono text-[8px] sm:text-[9px] text-white/80 tracking-widest">
             {isSaved ? "SAVED" : "SAVE"}
           </span>
         </button>
@@ -504,11 +513,11 @@ function WaveCard({
         {/* 6. Three Dots (More Options) */}
         <button
           onClick={onOpenMore}
-          className="flex flex-col items-center gap-1 cursor-pointer group"
+          className="flex flex-col items-center gap-0.5 cursor-pointer group"
           title="More Options"
         >
-          <div className="w-10 h-10 rounded-full flex items-center justify-center border border-white/30 group-hover:border-white bg-black/40 backdrop-blur-sm transition-all group-active:scale-90">
-            <MoreHorizontal className="w-5 h-5 text-white group-hover:scale-110 transition-transform" />
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border border-white/30 group-hover:border-white bg-black/40 backdrop-blur-sm transition-all group-active:scale-90">
+            <MoreHorizontal className="w-4.5 h-4.5 text-white group-hover:scale-110 transition-transform" />
           </div>
         </button>
       </div>
@@ -1170,7 +1179,7 @@ export default function WavesPage() {
     );
 
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-black">
+    <div className="relative w-full h-[calc(100dvh-4.5rem)] md:h-screen overflow-hidden bg-black">
       {/* Toast Notification Banner */}
       {toastMessage && (
         <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 bg-white text-black font-mono text-xs px-4 py-2 rounded-full shadow-2xl tracking-widest uppercase animate-slide-down">
@@ -1181,11 +1190,11 @@ export default function WavesPage() {
       {/* Snap Scroll Container */}
       <div
         ref={containerRef}
-        className="w-full h-screen overflow-y-scroll no-scrollbar"
+        className="w-full h-full overflow-y-scroll no-scrollbar"
         style={{ scrollSnapType: "y mandatory" }}
       >
         {posts.map((post, i) => (
-          <div key={post.id} ref={(el) => setCardRef(i, el)} data-wave-idx={i}>
+          <div key={post.id} ref={(el) => setCardRef(i, el)} data-wave-idx={i} className="w-full h-full snap-start">
             <WaveCard
               post={post}
               index={i}
@@ -1210,7 +1219,7 @@ export default function WavesPage() {
       </div>
 
       {/* Top Header Bar */}
-      <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 pt-safe pt-3 pointer-events-none">
+      <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 pt-safe pt-3 pb-2 bg-gradient-to-b from-black/80 via-black/40 to-transparent pointer-events-none">
         <div className="flex items-center gap-2 pointer-events-auto">
           <Link
             href="/"
