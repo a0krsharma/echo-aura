@@ -824,7 +824,7 @@ function PostCard({ post, user, orbitedPosts, activePostId, deletingId, onPulse,
             <button onClick={() => onOrbit(post)} disabled={isOrbited}
               className={`flex items-center gap-1.5 font-mono text-[11px] sm:text-xs tracking-widest uppercase transition-colors cursor-pointer whitespace-nowrap shrink-0 ${isOrbited ? "text-white font-bold" : "text-neutral-400 hover:text-white"}`}>
               <RefreshCw className="w-3.5 h-3.5" />
-              <span>{isOrbited ? "ORBITED" : "ORBIT"}</span>
+              <span>{isOrbited ? "RE-ECHOED" : "RE-ECHO"}</span>
             </button>
           )}
           <button onClick={() => onShare(post)}
@@ -908,8 +908,8 @@ export default function HomeFeedPage() {
     if(!user){router.push("/login");return;}
     if(orbitedPosts.has(post.id))return;
     setOrbited(prev=>new Set([...prev,post.id]));
-    await createPost({audioUrl:post.audioUrl,caption:`[ ORBIT ] "${post.caption.slice(0,60)}${post.caption.length>60?"…":""}" — ${post.authorHandle}`,authorUid:user.uid,authorHandle:user.handle||"@ANON",duration:post.duration,durationSec:post.durationSec,orbitOf:post.id,orbitOfHandle:post.authorHandle} as any);
-    await createNotification(post.authorUid,{type:"orbiter",fromUid:user.uid,fromHandle:user.handle||"@ANON",postId:post.id,postCaption:post.caption,text:`${user.handle} orbited your echo.`});
+    await createPost({audioUrl:post.audioUrl,caption:`[ RE-ECHO ] "${post.caption.slice(0,60)}${post.caption.length>60?"…":""}" — ${post.authorHandle}`,authorUid:user.uid,authorHandle:user.handle||"@ANON",duration:post.duration,durationSec:post.durationSec,orbitOf:post.id,orbitOfHandle:post.authorHandle} as any);
+    await createNotification(post.authorUid,{type:"reverb",fromUid:user.uid,fromHandle:user.handle||"@ANON",postId:post.id,postCaption:post.caption,text:`${user.handle} re-echoed your post.`});
   };
 
   const handleShare=async(post:FeedPost)=>{
