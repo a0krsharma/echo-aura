@@ -16,6 +16,8 @@ export const addSignalingMessage = whispers.addSignalingMessage;
 export const subscribeToSignaling = whispers.subscribeToSignaling;
 export const deleteWhisperMessage = whispers.deleteWhisperMessage;
 export const deleteWireMessage = whispers.deleteWireMessage;
+export const updateThreadLastRead = whispers.updateThreadLastRead;
+export const getTelemetryStatus = whispers.getTelemetryStatus;
 
 // Re-export with 'wire' naming for clarity
 export const startOrGetWire = startOrGetConversation;

@@ -46,6 +46,7 @@ export interface WhisperConversation {
   handles:      Record<string, string>;
   lastMessage:  string;
   lastAt:       Timestamp | null;
+  lastRead?:    Record<string, Timestamp | null>;
   createdAt:    Timestamp | null;
 }
 
@@ -56,7 +57,64 @@ export interface WhisperMessage {
   text:         string;
   audioUrl?:    string;
   readBy:       string[];
+  status?:      "SENT" | "DELIVERED" | "SEEN" | "IGNORED" | "DISMISSED";
   createdAt:    Timestamp | null;
+}
+
+/**
+ * updateThreadLastRead
+ * Updates conversation lastRead timestamp for thread-level read receipts.
+ */
+export async function updateThreadLastRead(conversationId: string, uid: string): Promise<void> {
+  if (!conversationId || !uid) return;
+  const db = getFirebaseDb();
+  try {
+    const convRef = doc(db, "whispers", conversationId);
+    await updateDoc(convRef, {
+      [`lastRead.${uid}`]: serverTimestamp(),
+    });
+  } catch {
+    try {
+      const wireRef = doc(db, "wire", conversationId);
+      await updateDoc(wireRef, {
+        [`lastRead.${uid}`]: serverTimestamp(),
+      });
+    } catch {}
+  }
+}
+
+/**
+ * getTelemetryStatus
+ * Calculates message telemetry status dynamically based on thread lastRead and message status.
+ */
+export function getTelemetryStatus(
+  message: WhisperMessage,
+  peerLastReadTS?: any
+): "SENT" | "DELIVERED" | "SEEN" | "DISMISSED" {
+  if (message.status === "IGNORED" || message.status === "DISMISSED") {
+    return "DISMISSED";
+  }
+
+  const getSec = (ts: any): number => {
+    if (!ts) return 0;
+    if (typeof ts.seconds === "number") return ts.seconds;
+    if (typeof ts.toDate === "function") return ts.toDate().getTime() / 1000;
+    if (typeof ts === "number") return ts / 1000;
+    return 0;
+  };
+
+  const msgSec = getSec(message.createdAt);
+  const readSec = getSec(peerLastReadTS);
+
+  if (readSec > 0 && readSec >= msgSec) {
+    return "SEEN";
+  }
+
+  if (message.status === "DELIVERED") {
+    return "DELIVERED";
+  }
+
+  return "SENT";
 }
 
 /**

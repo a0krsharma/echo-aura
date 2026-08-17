@@ -24,12 +24,15 @@ import {
   subscribeToConversations,
   subscribeToMessages,
   markMessagesRead,
+  updateThreadLastRead,
+  getTelemetryStatus,
   searchUsersByHandle,
   addSignalingMessage,
   subscribeToSignaling,
   type WhisperConversation,
   type WhisperMessage,
 } from "@/lib/whispers";
+import { subscribeToUserPresence, type UserPresence } from "@/lib/presence";
 import { getFirebaseDb } from "@/lib/firebase";
 import { doc, getDoc, collection, getDocs, query, limit } from "firebase/firestore";
 import { subscribeToFollowing, type Follow } from "@/lib/follows";
@@ -147,8 +150,23 @@ function ChatWindow({
       }, 80);
     });
     markMessagesRead(conv.id, myUid).catch(() => {});
+    updateThreadLastRead(conv.id, myUid).catch(() => {});
     return () => unsub();
   }, [conv.id, myUid]);
+
+  const [peerPresence, setPeerPresence] = useState<UserPresence>({ state: "offline" });
+
+  useEffect(() => {
+    if (!otherUid) return;
+    const unsub = subscribeToUserPresence(otherUid, setPeerPresence);
+    return () => unsub();
+  }, [otherUid]);
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      updateThreadLastRead(conv.id, myUid).catch(() => {});
+    }
+  }, [messages.length, conv.id, myUid]);
 
   const [callActive, setCallActive] = useState(false);
   const pcRef = useRef<RTCPeerConnection | null>(null);
@@ -381,7 +399,19 @@ function ChatWindow({
           {theirHandle.replace("@", "").charAt(0)}
         </div>
         <div>
-          <p className="font-mono text-xs text-white tracking-widest">{theirHandle}</p>
+          <div className="flex items-center gap-2">
+            <p className="font-mono text-xs text-white tracking-widest">{theirHandle}</p>
+            {peerPresence.state === "online" ? (
+              <span className="flex items-center gap-1 font-mono text-[9px] text-green-400 bg-green-950/60 border border-green-900/80 px-1.5 py-0.5 uppercase tracking-widest shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                ONLINE
+              </span>
+            ) : (
+              <span className="font-mono text-[9px] text-neutral-600 bg-neutral-950 border border-neutral-900 px-1.5 py-0.5 uppercase tracking-widest shrink-0">
+                OFFLINE
+              </span>
+            )}
+          </div>
           <p className="font-mono text-[10px] text-neutral-600">[ PRIVATE WIRE ]</p>
         </div>
 
@@ -410,41 +440,52 @@ function ChatWindow({
             NO MESSAGES YET. START THE CONVERSATION.
           </div>
         ) : (
-          messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex items-center gap-2 group ${msg.senderUid === myUid ? "justify-end" : "justify-start"}`}
-            >
-              {msg.senderUid === myUid && (
-                <button
-                  onClick={() => handleDeleteMessage(msg.id)}
-                  title="Delete message"
-                  className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-neutral-600 hover:text-red-400 p-1.5 transition-opacity cursor-pointer shrink-0"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              )}
+          messages.map((msg) => {
+            const isMe = msg.senderUid === myUid;
+            const peerLastReadTS = conv.lastRead?.[otherUid];
+            const teleStatus = isMe ? getTelemetryStatus(msg, peerLastReadTS) : null;
+            return (
               <div
-                className={`max-w-[85%] px-3.5 py-2.5 space-y-1.5 ${
-                  msg.senderUid === myUid
-                    ? "bg-white text-black"
-                    : "bg-neutral-900 text-white border border-neutral-800"
-                }`}
+                key={msg.id}
+                className={`flex items-center gap-2 group ${isMe ? "justify-end" : "justify-start"}`}
               >
-                {msg.audioUrl ? (
-                  <div className="space-y-1.5 min-w-[200px]">
-                    <p className="font-mono text-xs font-bold flex items-center gap-1.5">
-                      <Mic className="w-3.5 h-3.5" /> VOICE ECHO
-                    </p>
-                    <audio src={msg.audioUrl} controls className="w-full h-8 accent-black" />
-                  </div>
-                ) : (
-                  <p className="font-mono text-xs">{msg.text}</p>
+                {isMe && (
+                  <button
+                    onClick={() => handleDeleteMessage(msg.id)}
+                    title="Delete message"
+                    className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-neutral-600 hover:text-red-400 p-1.5 transition-opacity cursor-pointer shrink-0"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 )}
-                <p className="font-mono text-[9px] text-neutral-500 tracking-widest uppercase">
-                  {timeStr(msg.createdAt)}
-                </p>
-              </div>
+                <div
+                  className={`max-w-[85%] px-3.5 py-2.5 space-y-1.5 ${
+                    isMe
+                      ? "bg-white text-black"
+                      : "bg-neutral-900 text-white border border-neutral-800"
+                  }`}
+                >
+                  {msg.audioUrl ? (
+                    <div className="space-y-1.5 min-w-[200px]">
+                      <p className="font-mono text-xs font-bold flex items-center gap-1.5">
+                        <Mic className="w-3.5 h-3.5" /> VOICE ECHO
+                      </p>
+                      <audio src={msg.audioUrl} controls className="w-full h-8 accent-black" />
+                    </div>
+                  ) : (
+                    <p className="font-mono text-xs">{msg.text}</p>
+                  )}
+                  <div className="flex items-center justify-between gap-3 pt-0.5">
+                    <p className="font-mono text-[9px] text-neutral-500 tracking-widest uppercase">
+                      {timeStr(msg.createdAt)}
+                    </p>
+                    {isMe && (
+                      <p className="font-mono text-[9px] text-neutral-500 tracking-widest uppercase">
+                        {`>> [ ${teleStatus} ]`}
+                      </p>
+                    )}
+                  </div>
+                </div>
               {msg.senderUid !== myUid && (
                 <button
                   onClick={() => handleDeleteMessage(msg.id)}
@@ -455,8 +496,9 @@ function ChatWindow({
                 </button>
               )}
             </div>
-          ))
-        )}
+          );
+        })
+      )}
       </div>
 
       {/* Voice Echo Recording Indicator Bar */}

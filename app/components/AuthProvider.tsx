@@ -32,9 +32,10 @@ import {
   GoogleAuthProvider,
   type User as FirebaseUser,
 } from "firebase/auth";
-import { getFirebaseAuth } from "@/lib/firebase";
+import { getFirebaseAuth, googleProvider } from "@/lib/firebase";
 import { getOrCreateUserDoc, type EchoUser, type UserSettings, DEFAULT_SETTINGS } from "@/lib/userDoc";
 import { initializeChat, closeChat } from "@/lib/agoraChat";
+import { initializePresence } from "@/lib/presence";
 
 // ─── Context ─────────────────────────────────────────────────────────────────
 interface AuthContextValue {
@@ -86,13 +87,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(echoUser);
           setSettings(echoUser.settings || { ...DEFAULT_SETTINGS });
           
+          // Initialize RTDB presence with auto-disconnect
+          initializePresence(fbUser.uid);
+
           // Initialize Chat engine with Auth UID
           try {
             await initializeChat(fbUser.uid, echoUser.handle || "@ANON");
             console.log("[Auth] Audio engine initialized");
           } catch (chatError) {
             console.error("[Auth] Audio engine init note:", chatError);
-            // Don't block auth if Chat fails
           }
         } catch (e) {
           console.error("[Auth] getOrCreateUserDoc failed:", e);
