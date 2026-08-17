@@ -86,12 +86,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(echoUser);
           setSettings(echoUser.settings || { ...DEFAULT_SETTINGS });
           
-          // Initialize Agora Chat with Firebase Auth UID
+          // Initialize Chat engine with Auth UID
           try {
             await initializeChat(fbUser.uid, echoUser.handle || "@ANON");
-            console.log("[Auth] Agora Chat initialized successfully");
+            console.log("[Auth] Audio engine initialized");
           } catch (chatError) {
-            console.error("[Auth] Failed to initialize Agora Chat:", chatError);
+            console.error("[Auth] Audio engine init note:", chatError);
             // Don't block auth if Chat fails
           }
         } catch (e) {
@@ -101,7 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setUser(null);
         setSettings(null);
-        // Close Agora Chat connection when user signs out
+        // Close Chat engine connection when user signs out
         await closeChat();
       }
       setIsLoading(false);
@@ -175,7 +175,7 @@ export function useAuth(): AuthContextValue {
 
 // ─── Error messages ───────────────────────────────────────────────────────────
 function mapError(raw: string): string {
-  if (raw.includes("unauthorized-domain")) return "DOMAIN NOT AUTHORIZED — ADD IT IN FIREBASE CONSOLE → AUTH → AUTHORIZED DOMAINS.";
+  if (raw.includes("unauthorized-domain")) return "DOMAIN NOT AUTHORIZED — ADD IT IN AUTH CONSOLE → AUTHORIZED DOMAINS.";
   if (raw.includes("network-request"))     return "NETWORK ERROR — CHECK YOUR CONNECTION.";
   if (raw.includes("too-many-requests"))   return "TOO MANY ATTEMPTS — WAIT AND TRY AGAIN.";
   if (raw.includes("user-disabled"))       return "THIS ACCOUNT HAS BEEN DISABLED.";

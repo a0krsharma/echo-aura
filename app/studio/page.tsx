@@ -245,7 +245,7 @@ export default function StudioPage() {
     }
     setIsPreviewPlaying(false);
     setStudioState("uploading");
-    setStatusMessage("UPLOADING YOUR VOICE TO CLOUDINARY...");
+    setStatusMessage("UPLOADING YOUR VOICE TO THE FREQUENCY...");
 
     try {
       const secSec = Math.max(1, Math.floor(elapsedMs / 1000));
@@ -433,7 +433,7 @@ export default function StudioPage() {
         <span>
           {studioState === "recording"
             ? `${formatSeconds(elapsedMs)} RECORDED`
-            : "CLOUDINARY + FIRESTORE"}
+            : "AUDIO CLOUD ENGINE"}
         </span>
       </footer>
     </div>

@@ -209,7 +209,7 @@ function ChatWindow({
         const uploadRes = await uploadAudio(blob, `wire_voice_${Date.now()}.webm`);
         audioUrl = typeof uploadRes === "string" ? uploadRes : uploadRes?.secureUrl || "";
       } catch (err) {
-        console.warn("[Wire] Cloudinary upload fallback to blob URL:", err);
+        console.warn("[Wire] Audio upload fallback to blob URL:", err);
       }
 
       if (!audioUrl && blob.size > 0) {

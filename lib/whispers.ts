@@ -294,7 +294,7 @@ export function subscribeToMessages(
       callback(msgs);
     },
     (err) => {
-      console.warn("[subscribeToMessages] Fallback check for wire subcollection due to err:", err);
+      console.warn("[subscribeToMessages] Fallback check due to err:", err);
       try {
         const qWire = query(
           collection(db, "wire", conversationId, "messages"),

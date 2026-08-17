@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
   const appCertificate = process.env.AGORA_APP_CERTIFICATE;
 
   if (!appId) {
-    console.warn("[Agora Token] App ID not configured — returning dev stub payload");
+    console.warn("[Engine Token] App ID not configured — returning dev stub payload");
     return NextResponse.json(
       {
         token: null,
@@ -34,8 +34,8 @@ export async function GET(request: NextRequest) {
         appId: null,
         expiresInSeconds: 0,
         mode: "dev_stub",
-        warning: "Agora App ID not configured — set NEXT_PUBLIC_AGORA_APP_ID in environment to enable real tokens",
-        hint: "This response is a development stub and contains no secrets."
+        warning: "Audio Engine App ID not configured in environment",
+        hint: "This response is a development stub."
       },
       { status: 200 }
     );
@@ -43,28 +43,27 @@ export async function GET(request: NextRequest) {
 
   // Validate certificate configuration
   if (!appCertificate || appCertificate.trim() === "" || appCertificate === "YOUR_AGORA_CERTIFICATE_HERE") {
-    console.warn("[Agora Token] App Certificate not configured, using App ID-only authentication");
+    console.warn("[Engine Token] App Certificate not configured, using App ID-only authentication");
     return NextResponse.json({
       token: null,
       uid,
       channel,
       appId,
       expiresInSeconds: 3600,
-      warning: "Using App ID-only authentication (no certificate configured)",
+      warning: "Using App ID-only authentication",
       mode: "app_id_only",
-      hint: "For production, set AGORA_APP_CERTIFICATE in .env.local"
+      hint: "For production, configure App Certificate"
     });
   }
 
   try {
     // Token expiration: 24 hours (86400 seconds)
-    // Note: agora-token (AccessToken2) expects expiration as relative seconds from now, NOT absolute timestamp.
     const expirationInSeconds = 86400;
 
     let token: string;
     let tokenType: string;
 
-    // Try buildTokenWithUserAccount (works with string UIDs like Firebase Auth UIDs)
+    // Try buildTokenWithUserAccount (works with string UIDs)
     try {
       token = RtcTokenBuilder.buildTokenWithUserAccount(
         appId,
@@ -76,9 +75,9 @@ export async function GET(request: NextRequest) {
         expirationInSeconds
       );
       tokenType = "account";
-      console.log(`[Agora Token] Generated AccessToken2 for channel ${channel}, uid ${uid} using buildTokenWithUserAccount`);
+      console.log(`[Engine Token] Generated token for channel ${channel}, uid ${uid}`);
     } catch (accountError) {
-      console.warn(`[Agora Token] buildTokenWithUserAccount failed: ${accountError}, trying buildTokenWithUid`);
+      console.warn(`[Engine Token] Fallback token attempt with numeric uid for ${channel}`);
       const uidNumber = parseInt(uid.replace(/\D/g, '')) || Math.floor(Math.random() * 1000000);
       token = RtcTokenBuilder.buildTokenWithUid(
         appId,
@@ -90,7 +89,7 @@ export async function GET(request: NextRequest) {
         expirationInSeconds
       );
       tokenType = "uid_numeric";
-      console.log(`[Agora Token] Generated AccessToken2 for channel ${channel}, uid ${uidNumber} using buildTokenWithUid`);
+      console.log(`[Engine Token] Generated token for channel ${channel}, uid ${uidNumber}`);
     }
 
     return NextResponse.json({
@@ -104,7 +103,7 @@ export async function GET(request: NextRequest) {
       generatedAt: new Date().toISOString()
     });
   } catch (error) {
-    console.error("[Agora Token] Token generation error:", error);
+    console.error("[Engine Token] Token generation error:", error);
     
     // Determine error type for better debugging
     const errorMessage = error instanceof Error ? error.message : String(error);

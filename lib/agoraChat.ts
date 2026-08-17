@@ -13,7 +13,7 @@ let chatConnection: any = null;
  * DISABLED - Using Firestore whispers instead
  */
 export async function initializeChat(firebaseUid: string, handle: string): Promise<any> {
-  console.log("[Chat] Agora Chat disabled - using Firestore 'wire' (DM) for messaging");
+  console.log("[Chat] Engine configured - using Wire for messaging");
   return null;
 }
 

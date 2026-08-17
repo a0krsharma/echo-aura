@@ -24,7 +24,7 @@ export async function fetchAgoraToken(channelName: string, uid: string): Promise
     const data = await response.json();
     return data.token || null;
   } catch (error) {
-    console.error("Failed to fetch Agora token:", error);
+    console.error("Failed to fetch engine token:", error);
     return null;
   }
 }
