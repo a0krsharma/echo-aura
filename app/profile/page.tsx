@@ -191,6 +191,8 @@ export default function ProfilePage() {
   const [followingList, setFollowingList] = useState<Follow[]>([]);
   const [followsModal, setFollowsModal] = useState<"ORBITERS" | "ORBITING" | null>(null);
 
+  const [liveAura, setLiveAura] = useState<number | null>(null);
+
   useEffect(() => {
     if (initialTab === "VAULT") {
       setActiveTab("VAULT");
@@ -202,11 +204,19 @@ export default function ProfilePage() {
     getUserVaultedPosts(user.uid).then(setVaultPosts).catch(() => {});
   }, [user, activeTab]);
 
+  // Real-time subscriptions for posts, pulses, followers, following
   useEffect(() => {
     if (!user) return;
     const unsub1 = subscribeToFollowers(user.uid, setFollowersList);
     const unsub2 = subscribeToFollowing(user.uid, setFollowingList);
-    return () => { unsub1(); unsub2(); };
+    const unsubPosts = subscribeToUserPosts(user.uid, setUserPosts);
+    const unsubPulsed = subscribeToUserPulsedPosts(user.uid, setPulsedPosts);
+    return () => {
+      unsub1();
+      unsub2();
+      unsubPosts();
+      unsubPulsed();
+    };
   }, [user]);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -247,7 +257,7 @@ export default function ProfilePage() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.photoURL || user?.avatarUrl || null);
   const [savingProfile, setSavingProfile] = useState(false);
 
-  // Real-time listener for user document (voice bio & profile data)
+  // Real-time listener for user document (aura, voice bio, vibe read & profile data)
   useEffect(() => {
     if (!user) return;
     const db = getFirebaseDb();
@@ -260,6 +270,15 @@ export default function ProfilePage() {
         }
         if (data.vibeRead) {
           setVibeRead(data.vibeRead);
+        }
+        if (data.auraScore !== undefined) {
+          setLiveAura(data.auraScore);
+        }
+        if (data.signalStatus) {
+          setSignalStatusState(data.signalStatus);
+        }
+        if (data.tags && Array.isArray(data.tags)) {
+          setTags(data.tags);
         }
       }
     });
@@ -531,7 +550,7 @@ export default function ProfilePage() {
   };
 
   const handle    = user?.handle    || "@ANON_0000";
-  const auraScore = user?.auraScore || 0;
+  const auraScore = liveAura !== null ? liveAura : (user?.auraScore || 0);
 
   // Filtered tab data
   const echoePosts  = userPosts.filter(p => !p.reverbOf && !p.orbitOf);
@@ -611,45 +630,6 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-black text-white pb-24 md:pb-8 flex flex-col font-sans">
-      {/* ── Instagram-Style Top Header Bar ── */}
-      <header className="px-4 py-3 md:px-6 flex items-center justify-between border-b border-neutral-900 w-full bg-black/90 backdrop-blur sticky top-0 z-30">
-        <div className="flex items-center gap-2">
-          <Link
-            href="/studio"
-            className="p-1.5 text-neutral-300 hover:text-white transition-colors cursor-pointer"
-            title="Create Voice Echo / Studio"
-          >
-            <Plus className="w-5 h-5" />
-          </Link>
-        </div>
-
-        {/* Center: Handle with Live Status */}
-        <div className="flex items-center gap-1.5">
-          <h1 className="font-mono text-sm sm:text-base font-bold tracking-wider text-white">
-            {handle}
-          </h1>
-          <span className={`w-2 h-2 rounded-full ${signalStatus === "ONLINE" ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
-        </div>
-
-        {/* Top Right: Notifications & Terminal Settings Menu */}
-        <div className="flex items-center gap-1">
-          <Link
-            href="/notifications"
-            className="p-1.5 text-neutral-300 hover:text-white transition-colors cursor-pointer"
-            title="Notifications"
-          >
-            <Bell className="w-5 h-5" />
-          </Link>
-          <Link
-            href="/terminal"
-            className="p-1.5 text-neutral-300 hover:text-white transition-colors cursor-pointer"
-            title="System Terminal & Settings"
-          >
-            <Menu className="w-5 h-5" />
-          </Link>
-        </div>
-      </header>
-
       <main className="max-w-xl mx-auto px-4 sm:px-6 pt-5 w-full flex-1">
         {/* ── Top Profile Row: Avatar + 4 Stat Counts ── */}
         <div className="space-y-4 mb-5">

@@ -141,9 +141,33 @@ function ShellContent({ children }: { children: React.ReactNode }) {
           >
             <Menu className="w-4 h-4" />
           </button>
-          <Link href="/" className="font-serif italic text-xl tracking-tight text-white">
-            Echo.
-          </Link>
+          {pathname === "/" ? (
+            <Link href="/" className="font-serif italic text-xl tracking-tight text-white">
+              Echo.
+            </Link>
+          ) : (
+            <span className="font-mono text-xs uppercase tracking-widest text-white font-bold">
+              {pathname === "/profile"
+                ? (user?.handle || "PROFILE")
+                : pathname === "/waves"
+                ? "WAVES"
+                : pathname === "/studio"
+                ? "STUDIO"
+                : pathname === "/clash"
+                ? "STAGE"
+                : pathname === "/rooms"
+                ? "ROOMS"
+                : pathname === "/radar"
+                ? "RADAR"
+                : pathname === "/terminal"
+                ? "TERMINAL"
+                : pathname === "/notifications"
+                ? "NOTIFICATIONS"
+                : pathname === "/search"
+                ? "SEARCH"
+                : pathname.replace(/^\//, "").toUpperCase()}
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
