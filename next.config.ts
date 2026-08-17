@@ -34,16 +34,6 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-
-  // Firebase Auth proxy handler to solve cross-origin storage partitioning on Mobile Chrome / Safari
-  async rewrites() {
-    return [
-      {
-        source: "/__/auth/:path*",
-        destination: "https://echo-aura.firebaseapp.com/__/auth/:path*",
-      },
-    ];
-  },
 };
 
 export default nextConfig;

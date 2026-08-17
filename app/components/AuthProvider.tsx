@@ -114,29 +114,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // ── Google Sign-In ─────────────────────────────────────────────────────────
-  // Tries popup first on all platforms (same-origin iframe), falling back to same-origin redirect
+  // Primary: signInWithPopup directly on user gesture. Fallback: signInWithRedirect
   const signInWithGoogle = useCallback(async () => {
     setError(null);
     const auth     = getFirebaseAuth();
     const provider = new GoogleAuthProvider();
     provider.addScope("profile");
     provider.addScope("email");
-    provider.setCustomParameters({ prompt: "select_account" });
 
     try {
       await signInWithPopup(auth, provider);
     } catch (e: any) {
       const code = String(e?.code ?? e?.message ?? "");
-      console.warn("[Auth] Primary popup sign-in note:", code, e);
+      console.warn("[Auth] Popup sign-in note:", code, e);
 
       if (
         code.includes("popup-closed-by-user") ||
         code.includes("cancelled-popup-request")
       ) {
-        return; // User dismissed
+        return; // User dismissed window
       }
 
-      // Fallback to same-origin proxy redirect
       try {
         await signInWithRedirect(auth, provider);
       } catch (re: any) {
