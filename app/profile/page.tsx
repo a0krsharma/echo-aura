@@ -488,8 +488,12 @@ export default function ProfilePage() {
   };
 
   const handleToggleBioPlay = () => {
-    if (!bioAudioUrl) return;
-    const playableUrl = getPlayableUrl(bioAudioUrl);
+    const targetUrl = bioAudioUrl || savedVoiceBioUrl;
+    if (!targetUrl) {
+      setBioModalOpen(true);
+      return;
+    }
+    const playableUrl = getPlayableUrl(targetUrl);
     if (!audioRef.current) {
       const a = new Audio(playableUrl);
       a.volume = 1.0;
@@ -607,8 +611,8 @@ export default function ProfilePage() {
               )}
 
               <div className="flex items-center justify-between pt-1">
-                <div className="flex items-center gap-1.5 font-mono text-xs text-neutral-400">
-                  <Heart className="w-3.5 h-3.5 fill-red-500/20 text-red-500" />
+                <div className="flex items-center gap-1.5 font-mono text-xs text-neutral-300">
+                  <Heart className="w-3.5 h-3.5 fill-white text-white" />
                   <span>{post.pulseCount || 0} PULSES</span>
                 </div>
                 <div className="flex items-center gap-3 font-mono text-[10px] text-neutral-500 uppercase">
@@ -636,42 +640,21 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-black text-white pb-24 md:pb-8 flex flex-col font-sans">
-      <main className="max-w-xl mx-auto px-4 sm:px-6 pt-4 w-full flex-1">
+      <main className="max-w-xl mx-auto px-4 sm:px-6 pt-5 w-full flex-1">
         {/* ── Top Profile Telemetry Section: Avatar + Data Columns ── */}
         <div className="space-y-4 mb-6">
-          {/* Top Bar with Handle & Profile Display Name */}
-          <div className="flex items-center justify-between pb-3 border-b border-neutral-900">
-            <div className="flex items-center gap-2">
-              <h1 className="font-mono text-base sm:text-lg font-bold tracking-wider text-white">
-                {handle}
-              </h1>
-              <span className={`w-2 h-2 rounded-full ${signalStatus === "ONLINE" ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
-            </div>
-            {user?.displayName && (
-              <span className="font-serif italic text-sm text-neutral-400">
-                {user.displayName}
-              </span>
-            )}
-          </div>
-
           <div className="flex items-center justify-between gap-4 sm:gap-6">
-            {/* Left: Avatar with Telemetry Waveform Badge */}
+            {/* Left: Avatar with Telemetry Quote Audio Badge */}
             <div className="relative flex flex-col items-center shrink-0">
-              {/* Telemetry Waveform Capsule */}
+              {/* Telemetry Audio Quote Capsule */}
               <button
-                onClick={() => {
-                  if (savedVoiceBioUrl) {
-                    handleToggleBioPlay();
-                  } else {
-                    setBioModalOpen(true);
-                  }
-                }}
-                className="absolute -top-6 left-1/2 -translate-x-1/2 bg-black border border-neutral-700 text-white font-mono text-[9px] px-2.5 py-0.5 whitespace-nowrap flex items-center gap-1.5 z-10 hover:border-white transition-colors cursor-pointer shadow-md"
-                title="Voice Bio Telemetry"
+                onClick={handleToggleBioPlay}
+                className="absolute -top-6 left-1/2 -translate-x-1/2 bg-black border border-neutral-700 hover:border-white text-white font-mono text-[9px] px-2.5 py-0.5 whitespace-nowrap flex items-center gap-1.5 z-10 transition-colors cursor-pointer shadow-md"
+                title="Audio Quote Telemetry"
               >
-                <span className={`w-1.5 h-1.5 rounded-full ${isPlayingBio ? "bg-white animate-ping" : "bg-green-400"}`} />
-                <span className="tracking-widest uppercase">
-                  {savedVoiceBioUrl ? (isPlayingBio ? "PLAYING BIO" : "VOICE BIO 🎙️") : "+ SET BIO"}
+                <span className={`w-1.5 h-1.5 rounded-full ${isPlayingBio ? "bg-white animate-ping" : "bg-white"}`} />
+                <span className="tracking-widest uppercase font-bold">
+                  {savedVoiceBioUrl ? (isPlayingBio ? "PLAYING QUOTE ∿" : "“QUOTE” 🎙️") : "+ SET QUOTE"}
                 </span>
               </button>
 
@@ -759,15 +742,16 @@ export default function ProfilePage() {
 
           {/* Identity & Domain Metadata */}
           <div className="space-y-1 pt-1">
-            <div className="flex items-baseline gap-2">
-              <h2 className="font-mono text-sm sm:text-base font-bold text-white tracking-wide">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="font-mono text-base font-bold text-white tracking-wide">
                 {user?.displayName || handle}
-              </h2>
+              </h1>
               {user?.displayName && (
                 <span className="font-mono text-xs text-neutral-400">
                   {handle}
                 </span>
               )}
+              <span className={`w-2 h-2 rounded-full ${signalStatus === "ONLINE" ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
             </div>
             <p className="font-mono text-xs text-neutral-300 whitespace-pre-line leading-relaxed">
               {user?.bio || "Authenticated Voice Node on Echo"}
@@ -872,7 +856,7 @@ export default function ProfilePage() {
                 title={tab.label}
               >
                 <div className="flex items-center gap-1.5">
-                  <Icon className={`w-3.5 h-3.5 ${isActive && tab.id === "PULSED" ? "fill-red-500 text-red-500" : ""}`} />
+                  <Icon className={`w-3.5 h-3.5 ${isActive && tab.id === "PULSED" ? "fill-white text-white" : ""}`} />
                   <span className="tracking-wider uppercase text-[10px] sm:text-[11px]">{tab.label}</span>
                 </div>
                 <span className="text-[10px] text-neutral-500 tabular-nums">
