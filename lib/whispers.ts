@@ -25,6 +25,7 @@ import {
   doc,
   addDoc,
   setDoc,
+  deleteDoc,
   query,
   where,
   orderBy,
@@ -212,6 +213,26 @@ export async function sendWhisper(
 
   return msgRefId;
 }
+
+/**
+ * deleteWhisperMessage / deleteWireMessage
+ * Delete a text or voice message from a conversation thread.
+ */
+export async function deleteWhisperMessage(conversationId: string, messageId: string): Promise<void> {
+  const db = getFirebaseDb();
+  try {
+    const msgRef = doc(db, "whispers", conversationId, "messages", messageId);
+    await deleteDoc(msgRef);
+  } catch (err) {
+    console.warn("[deleteWhisperMessage] Error deleting message:", err);
+  }
+  try {
+    const wireMsgRef = doc(db, "wire", conversationId, "messages", messageId);
+    await deleteDoc(wireMsgRef);
+  } catch {}
+}
+
+export const deleteWireMessage = deleteWhisperMessage;
 
 /**
  * subscribeToConversations

@@ -8,11 +8,12 @@
  */
 
 import { useState, useRef, useEffect } from "react";
-import { MessageSquare, X, Send, Loader2 } from "lucide-react";
+import { MessageSquare, X, Send, Loader2, Trash2 } from "lucide-react";
 import { useAuth } from "./AuthProvider";
 import {
   startOrGetConversation,
   sendWhisper,
+  deleteWhisperMessage,
   subscribeToMessages,
   type WhisperMessage,
 } from "@/lib/whispers";
@@ -99,6 +100,15 @@ export function ChatWidget({ targetUid, targetHandle }: ChatWidgetProps) {
     }
   };
 
+  const handleDeleteMessage = async (msgId: string) => {
+    if (!convId) return;
+    try {
+      await deleteWhisperMessage(convId, msgId);
+    } catch (err) {
+      console.error("[ChatWidget] Delete message error:", err);
+    }
+  };
+
   if (!user || targetUid === "anon" || targetUid === user.uid) return null;
 
   return (
@@ -144,8 +154,17 @@ export function ChatWidget({ targetUid, targetHandle }: ChatWidgetProps) {
                 return (
                   <div
                     key={msg.id}
-                    className={`flex ${isMe ? "justify-end" : "justify-start"}`}
+                    className={`flex items-center gap-1.5 group ${isMe ? "justify-end" : "justify-start"}`}
                   >
+                    {isMe && (
+                      <button
+                        onClick={() => handleDeleteMessage(msg.id)}
+                        title="Delete message"
+                        className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-neutral-600 hover:text-red-400 p-1 transition-opacity cursor-pointer shrink-0"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
                     <div
                       className={`max-w-[85%] px-3 py-2 text-xs leading-relaxed ${
                         isMe
@@ -155,6 +174,15 @@ export function ChatWidget({ targetUid, targetHandle }: ChatWidgetProps) {
                     >
                       {msg.text}
                     </div>
+                    {!isMe && (
+                      <button
+                        onClick={() => handleDeleteMessage(msg.id)}
+                        title="Delete message"
+                        className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-neutral-600 hover:text-red-400 p-1 transition-opacity cursor-pointer shrink-0"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
                   </div>
                 );
               })

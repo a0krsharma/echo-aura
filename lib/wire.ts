@@ -14,6 +14,8 @@ export const markMessagesRead = whispers.markMessagesRead;
 export const searchUsersByHandle = whispers.searchUsersByHandle;
 export const addSignalingMessage = whispers.addSignalingMessage;
 export const subscribeToSignaling = whispers.subscribeToSignaling;
+export const deleteWhisperMessage = whispers.deleteWhisperMessage;
+export const deleteWireMessage = whispers.deleteWireMessage;
 
 // Re-export with 'wire' naming for clarity
 export const startOrGetWire = startOrGetConversation;

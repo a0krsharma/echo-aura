@@ -102,8 +102,7 @@ service cloud.firestore {
 
       // Whisper messages sub-collection
       match /messages/{messageId} {
-        allow read, create, update: if true;
-        allow delete: if false;
+        allow read, create, update, delete: if true;
       }
 
       // Signaling sub-collection for WebRTC (offer/answer/ice)
@@ -117,8 +116,7 @@ service cloud.firestore {
       allow read, create, update, delete: if true;
 
       match /messages/{messageId} {
-        allow read, create, update: if true;
-        allow delete: if false;
+        allow read, create, update, delete: if true;
       }
 
       match /signaling/{sigId} {

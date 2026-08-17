@@ -14,12 +14,13 @@ export const dynamic = "force-dynamic";
  */
 
 import { useState, useEffect, useRef } from "react";
-import { Mic, Mic2, Lock, Plus, Search, X, Send, ChevronLeft, Loader2, Phone, PhoneOff, Play, Pause, Square } from "lucide-react";
+import { Mic, Mic2, Lock, Plus, Search, X, Send, ChevronLeft, Loader2, Phone, PhoneOff, Play, Pause, Square, Trash2 } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
 import { uploadAudio } from "@/lib/cloudinary";
 import {
   startOrGetConversation,
   sendWhisper,
+  deleteWhisperMessage,
   subscribeToConversations,
   subscribeToMessages,
   markMessagesRead,
@@ -254,6 +255,14 @@ function ChatWindow({
     }
   };
 
+  const handleDeleteMessage = async (msgId: string) => {
+    try {
+      await deleteWhisperMessage(conv.id, msgId);
+    } catch (err) {
+      console.error("[Wire] Delete message error:", err);
+    }
+  };
+
   const startCall = async () => {
     if (callActive) return;
     try {
@@ -404,8 +413,17 @@ function ChatWindow({
           messages.map((msg) => (
             <div
               key={msg.id}
-              className={`flex ${msg.senderUid === myUid ? "justify-end" : "justify-start"}`}
+              className={`flex items-center gap-2 group ${msg.senderUid === myUid ? "justify-end" : "justify-start"}`}
             >
+              {msg.senderUid === myUid && (
+                <button
+                  onClick={() => handleDeleteMessage(msg.id)}
+                  title="Delete message"
+                  className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-neutral-600 hover:text-red-400 p-1.5 transition-opacity cursor-pointer shrink-0"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
               <div
                 className={`max-w-[85%] px-3.5 py-2.5 space-y-1.5 ${
                   msg.senderUid === myUid
@@ -427,6 +445,15 @@ function ChatWindow({
                   {timeStr(msg.createdAt)}
                 </p>
               </div>
+              {msg.senderUid !== myUid && (
+                <button
+                  onClick={() => handleDeleteMessage(msg.id)}
+                  title="Delete message"
+                  className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-neutral-600 hover:text-red-400 p-1.5 transition-opacity cursor-pointer shrink-0"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           ))
         )}
