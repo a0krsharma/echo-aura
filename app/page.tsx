@@ -16,7 +16,7 @@ import {
 import { useRouter } from "next/navigation";
 import { uploadAudio, getPlayableUrl } from "@/lib/cloudinary";
 import { createNotification } from "@/lib/notifications";
-import { followUser, unfollowUser, isFollowing } from "@/lib/follows";
+import { followUser, unfollowUser, isFollowing, subscribeToFollowing } from "@/lib/follows";
 import { audioManager } from "@/lib/audioManager";
 import { subscribeToPostComments, createComment, toggleLikeComment, deleteComment, type CommentItem } from "@/lib/comments";
 
@@ -879,6 +879,17 @@ export default function HomeFeedPage() {
     });
     return()=>unsub();
   },[]);
+
+  useEffect(()=>{
+    if (!user?.uid) {
+      setFollowing(new Set());
+      return;
+    }
+    const unsub = subscribeToFollowing(user.uid, (list) => {
+      setFollowing(new Set(list.map((f) => f.followingUid)));
+    });
+    return () => unsub();
+  }, [user?.uid]);
 
   const setRef=useCallback((id:string,el:HTMLElement|null)=>{
     if(el)articleRefs.current.set(id,el);else articleRefs.current.delete(id);
