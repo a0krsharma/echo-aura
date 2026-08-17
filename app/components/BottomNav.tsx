@@ -19,6 +19,15 @@ import { Radio, Waves, Users, Swords, Mic2 } from "lucide-react";
 export default function BottomNav() {
   const pathname = usePathname();
 
+  // Hide BottomNav on active chat / wire screens, stage clash arena, and live rooms
+  if (
+    pathname.startsWith("/room/") ||
+    pathname.startsWith("/stage/") ||
+    pathname.startsWith("/wire")
+  ) {
+    return null;
+  }
+
   const navItems = [
     { href: "/",        icon: Radio,  label: "FREQUENCY", isCenter: false },
     { href: "/waves",   icon: Waves,  label: "WAVES font",isCenter: false },

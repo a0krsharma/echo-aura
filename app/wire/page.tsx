@@ -612,7 +612,7 @@ function ChatWindow({
         </div>
       )}
 
-      <form onSubmit={handleSend} className="p-2.5 sm:p-4 border-t border-neutral-900 flex items-center gap-1.5 sm:gap-2 bg-black shrink-0">
+      <form onSubmit={handleSend} className="p-2.5 sm:p-4 border-t border-neutral-900 flex items-center gap-1.5 sm:gap-2 bg-black shrink-0 sticky bottom-0 z-30 pb-safe sm:pb-4">
         <input
           type="text"
           value={input}
@@ -631,7 +631,7 @@ function ChatWindow({
             className="px-2.5 py-2 border border-neutral-700 text-neutral-300 hover:border-white hover:text-white font-mono text-[11px] sm:text-xs tracking-wider uppercase transition-colors cursor-pointer flex items-center gap-1 shrink-0 whitespace-nowrap"
             title="Record Voice Echo"
           >
-            <Mic className="w-3.5 h-3.5 text-red-400" />
+            <Mic className="w-3.5 h-3.5 text-white" />
             <span className="hidden xs:inline">[ 🎙 VOICE ]</span>
             <span className="xs:hidden">VOICE</span>
           </button>
@@ -784,8 +784,8 @@ export default function WirePage() {
   }
 
   return (
-    <div className="bg-black text-white font-mono" style={{height: '100dvh', display: 'flex', flexDirection: 'column'}}>
-      <div className="max-w-4xl mx-auto flex-1 flex flex-col md:flex-row overflow-hidden min-h-0" style={{height: '100%'}}>
+    <div className="bg-black text-white font-mono h-[calc(100dvh-53px)] md:h-[calc(100vh-60px)] flex flex-col">
+      <div className="max-w-4xl mx-auto flex-1 flex flex-col md:flex-row overflow-hidden min-h-0 w-full h-full">
         {/* Conversation List */}
         <div className={`w-full md:w-80 border-r border-neutral-900 flex flex-col h-full ${activeConv ? 'hidden md:flex' : 'flex'}`}>
           <div className="p-3 sm:p-4 border-b border-neutral-900 shrink-0">
