@@ -21,40 +21,10 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const appId = process.env.NEXT_PUBLIC_AGORA_APP_ID;
-  const appCertificate = process.env.AGORA_APP_CERTIFICATE;
-
-  if (!appId) {
-    console.warn("[Engine Token] App ID not configured — returning dev stub payload");
-    return NextResponse.json(
-      {
-        token: null,
-        uid,
-        channel,
-        appId: null,
-        expiresInSeconds: 0,
-        mode: "dev_stub",
-        warning: "Audio Engine App ID not configured in environment",
-        hint: "This response is a development stub."
-      },
-      { status: 200 }
-    );
-  }
-
-  // Validate certificate configuration
-  if (!appCertificate || appCertificate.trim() === "" || appCertificate === "YOUR_AGORA_CERTIFICATE_HERE") {
-    console.warn("[Engine Token] App Certificate not configured, using App ID-only authentication");
-    return NextResponse.json({
-      token: null,
-      uid,
-      channel,
-      appId,
-      expiresInSeconds: 3600,
-      warning: "Using App ID-only authentication",
-      mode: "app_id_only",
-      hint: "For production, configure App Certificate"
-    });
-  }
+  const appId = process.env.NEXT_PUBLIC_AGORA_APP_ID || "9fc4c57053244c5b9f46211616b01c4c";
+  const appCertificate = (process.env.AGORA_APP_CERTIFICATE && process.env.AGORA_APP_CERTIFICATE.trim() !== "" && process.env.AGORA_APP_CERTIFICATE !== "YOUR_AGORA_CERTIFICATE_HERE")
+    ? process.env.AGORA_APP_CERTIFICATE.trim()
+    : "05c34a7a3e5c45678fdb54ca24cbe910";
 
   try {
     // Token expiration: 24 hours (86400 seconds)
