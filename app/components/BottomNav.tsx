@@ -1,69 +1,50 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Radio, Waves, Mic2, Bell, MessageSquare, Users, Compass, Swords } from "lucide-react";
-import { useAuth } from "@/app/components/AuthProvider";
-import { subscribeToUnreadCount } from "@/lib/notifications";
+import { Radio, Waves, Users, Swords, Compass } from "lucide-react";
 
+/**
+ * BottomNav.tsx
+ * ─────────────────────────────────────────────────────
+ * Mobile 5-button bottom navigation bar.
+ * Clean, perfectly aligned padding & typography. No text wrapping.
+ * 1. FREQUENCY (Home)
+ * 2. WAVES
+ * 3. ROOMS
+ * 4. STAGE
+ * 5. RADAR
+ */
 export default function BottomNav() {
   const pathname = usePathname();
-  const { user } = useAuth();
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  // Real unread notification count — replaces hardcoded `true`
-  useEffect(() => {
-    if (!user) { setUnreadCount(0); return; }
-    const unsub = subscribeToUnreadCount(user.uid, (count) => setUnreadCount(count));
-    return () => unsub();
-  }, [user]);
-
-  const hasNotifs = unreadCount > 0;
 
   const navItems = [
-    { href: "/",             icon: Radio,          label: "[ FREQUENCY ]"   },
-    { href: "/waves",        icon: Waves,          label: "[ WAVES ]"  },
-    { href: "/rooms",        icon: Users,          label: "[ ROOMS ]"  },
-    { href: "/studio",       icon: Mic2,           label: "[ STUDIO ]", isCenter: true },
-    { href: "/wire",         icon: MessageSquare,  label: "[ WIRE ]"   },
-    { href: "/radar",        icon: Compass,        label: "[ RADAR ]"  },
-  ];
+    { href: "/",       icon: Radio,   label: "FREQUENCY" },
+    { href: "/waves",  icon: Waves,   label: "WAVES font" },
+    { href: "/rooms",  icon: Users,   label: "ROOMS"     },
+    { href: "/clash",  icon: Swords,  label: "STAGE"     },
+    { href: "/radar",  icon: Compass, label: "RADAR"     },
+  ] as const;
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 w-full bg-black border-t border-neutral-900 pb-safe z-50">
-      <div className="flex items-center justify-around h-16">
+    <nav className="md:hidden fixed bottom-0 left-0 w-full bg-black border-t border-neutral-900 z-40 pb-safe">
+      <div className="flex items-center justify-between h-14 max-w-md mx-auto px-2">
         {navItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
           const Icon     = item.icon;
-
-          if (item.isCenter) {
-            return (
-              <div key={item.href} className="relative flex flex-col items-center justify-center -top-3">
-                <Link
-                  href={item.href}
-                  className="w-12 h-12 bg-white text-black rounded-full flex items-center justify-center shadow-lg border border-neutral-900 active:scale-95 transition-transform"
-                >
-                  <Icon size={20} />
-                </Link>
-                <span className="text-[10px] font-mono tracking-widest uppercase mt-1 text-neutral-400">
-                  {item.label}
-                </span>
-              </div>
-            );
-          }
 
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center justify-center w-16 gap-1 transition-colors ${
-                isActive ? "text-white" : "text-neutral-500 hover:text-neutral-400"
+              className={`flex-1 flex flex-col items-center justify-center py-1 transition-colors ${
+                isActive ? "text-white font-bold" : "text-neutral-500 hover:text-neutral-300"
               }`}
             >
-              <Icon size={20} strokeWidth={isActive ? 2 : 1.5} />
-              <span className="text-[10px] font-mono tracking-widest uppercase">
-                {item.label}
+              <Icon size={18} strokeWidth={isActive ? 2 : 1.5} className="shrink-0" />
+              <span className="text-[9px] font-mono tracking-wider uppercase mt-1 truncate max-w-[64px] text-center leading-none">
+                {item.label === "WAVES font" ? "WAVES" : item.label}
               </span>
             </Link>
           );

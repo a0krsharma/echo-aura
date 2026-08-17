@@ -120,17 +120,14 @@ function ShellContent({ children }: { children: React.ReactNode }) {
   if (!user) return null;
 
   const mobileNavItems = [
-    { label: "[ FREQUENCY ]", href: "/", icon: Radio },
-    { label: "[ WAVES ]", href: "/waves", icon: Waves },
-    { label: "[ ROOMS ]", href: "/rooms", icon: Users },
-    { label: "[ STUDIO ]", href: "/studio", icon: Mic2 },
-    { label: "[ STAGE ]", href: "/clash", icon: Swords },
-    { label: "[ SEARCH ]", href: "/search", icon: Search },
-    { label: "[ WIRE ]", href: "/wire", icon: MessageSquare },
-    { label: "[ RADAR ]", href: "/radar", icon: Compass },
-    { label: "[ NOTIFS ]", href: "/notifications", icon: Bell },
-    { label: "[ PROFILE ]", href: "/profile", icon: User },
-    { label: "[ TERMINAL ]", href: "/terminal", icon: Terminal },
+    { label: "[ FREQUENCY ]", href: "/",       icon: Radio   },
+    { label: "[ WAVES ]",     href: "/waves",  icon: Waves   },
+    { label: "[ STUDIO ]",    href: "/studio", icon: Mic2    },
+    { label: "[ STAGE ]",     href: "/clash",  icon: Swords  },
+    { label: "[ ROOMS ]",     href: "/rooms",  icon: Users   },
+    { label: "[ SEARCH ]",    href: "/search", icon: Search  },
+    { label: "[ RADAR ]",     href: "/radar",  icon: Compass },
+    { label: "[ PROFILE ]",   href: "/profile",icon: User    },
   ];
 
   return (
