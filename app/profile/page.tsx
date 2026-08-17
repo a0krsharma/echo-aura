@@ -622,48 +622,45 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-black text-white pb-24 md:pb-8 flex flex-col font-sans">
-      {/* Top Header */}
-      <header className="px-4 py-4 md:px-6 flex items-center justify-between border-b border-neutral-900 gap-2 flex-wrap sm:flex-nowrap">
-        <OrbitLogo />
-        <div className="flex items-center gap-2 flex-wrap shrink-0">
-          <button
-            onClick={() => setActiveTab("VAULT")}
-            className={`px-2.5 py-1.5 border font-mono text-[11px] sm:text-xs tracking-wider uppercase transition-colors cursor-pointer flex items-center gap-1 shrink-0 ${
-              activeTab === "VAULT"
-                ? "border-white bg-white text-black font-bold"
-                : "border-neutral-800 text-neutral-400 hover:border-white hover:text-white"
-            }`}
-            title="Saved Echo Vault"
-          >
-            <Bookmark className="w-3.5 h-3.5" />
-            <span>VAULT ({vaultPosts.length})</span>
-          </button>
+      {/* Top Header Bar with Clean Top-Right Icon Controls */}
+      <header className="px-4 py-3 md:px-6 flex items-center justify-between border-b border-neutral-900 w-full bg-black/90 backdrop-blur sticky top-0 z-30">
+        <Link href="/" className="font-serif italic text-lg font-bold text-white hover:opacity-80 transition-opacity">
+          Echo.
+        </Link>
+
+        {/* Top Right Corner Icon Action Buttons */}
+        <div className="flex items-center gap-2">
           <Link
             href="/terminal"
-            className="px-2.5 py-1.5 border border-neutral-800 hover:border-white text-neutral-400 hover:text-white font-mono text-[11px] sm:text-xs tracking-wider uppercase transition-colors cursor-pointer flex items-center gap-1 whitespace-nowrap shrink-0"
-            title="System Terminal Console"
+            className="p-2 border border-neutral-800 hover:border-white text-neutral-300 hover:text-white transition-colors flex items-center justify-center cursor-pointer bg-neutral-950"
+            title="System Terminal & Vault"
           >
-            <Terminal className="w-3.5 h-3.5 text-white" />
-            <span>TERMINAL</span>
+            <Terminal className="w-4 h-4" />
           </Link>
+
           <button
             onClick={() => setEditProfileOpen(true)}
-            className="px-2.5 py-1.5 border border-white text-white hover:bg-white hover:text-black font-mono text-[11px] sm:text-xs tracking-wider uppercase transition-colors cursor-pointer flex items-center gap-1 font-bold whitespace-nowrap shrink-0"
+            className="p-2 border border-neutral-800 hover:border-white text-neutral-300 hover:text-white transition-colors flex items-center justify-center cursor-pointer bg-neutral-950"
+            title="Edit Profile"
           >
-            <Edit3 className="w-3.5 h-3.5" />
-            <span>EDIT PROFILE</span>
+            <Edit3 className="w-4 h-4" />
           </button>
+
           <button
             onClick={() => setShareModalOpen(true)}
-            className="p-1.5 text-neutral-400 hover:text-white transition-colors cursor-pointer border border-neutral-800 shrink-0"
-            aria-label="Share profile"
+            className="p-2 border border-neutral-800 hover:border-white text-neutral-300 hover:text-white transition-colors flex items-center justify-center cursor-pointer bg-neutral-950"
+            title="Share Profile"
           >
-            <Share2 className="w-3.5 h-3.5" />
+            <Share2 className="w-4 h-4" />
           </button>
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-5 md:px-6 pt-8 w-full flex-1">
+      <main className="max-w-2xl mx-auto px-4 sm:px-5 md:px-6 pt-4 w-full flex-1">
+        {/* ── Revolving Echo Planet Orbit Hero Display ── */}
+        <div className="flex flex-col items-center justify-center py-3 mb-4 border-b border-neutral-900/80">
+          <OrbitLogo size="md" />
+        </div>
         {/* User Handle & Avatar Picture Section */}
         <div className="space-y-4 mb-8">
           <div className="flex items-center justify-between">
@@ -930,7 +927,7 @@ export default function ProfilePage() {
 
         {/* Tabs */}
         <div className="flex border-b border-neutral-900 mb-6 font-mono text-xs tracking-widest overflow-x-auto no-scrollbar">
-          {(["ECHOES", "REPLIES", "RE-ECHOES", "PULSED", "VAULT"] as const).map((tab) => (
+          {(["ECHOES", "REPLIES", "RE-ECHOES", "PULSED"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -940,10 +937,9 @@ export default function ProfilePage() {
                   : "text-neutral-600 hover:text-white"
               }`}
             >
-              {tab === "VAULT" && <Bookmark className="w-3 h-3" />}
-              <span>{tab === "VAULT" ? "SAVED VAULT" : tab}</span>
+              <span>{tab}</span>
               <span className="ml-0.5 text-neutral-700">
-                ({tab === "ECHOES" ? echoePosts.length : tab === "REPLIES" ? reverbPosts.length : tab === "RE-ECHOES" ? orbitPosts.length : tab === "PULSED" ? pulsedPosts.length : vaultPosts.length})
+                ({tab === "ECHOES" ? echoePosts.length : tab === "REPLIES" ? reverbPosts.length : tab === "RE-ECHOES" ? orbitPosts.length : pulsedPosts.length})
               </span>
             </button>
           ))}

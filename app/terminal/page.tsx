@@ -6,14 +6,16 @@
  * [ ON ] / [ OFF ] — bracketed text is the only UI control.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
-import { ArrowLeft, ChevronRight, Loader2, LogOut } from "lucide-react";
+import { ArrowLeft, ChevronRight, Loader2, LogOut, Bookmark, Play, Pause, Trash2, Volume2 } from "lucide-react";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { getFirebaseAuth, getFirebaseDb } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { useAuth } from "@/app/components/AuthProvider";
 import { useRouter } from "next/navigation";
+import { getUserVaultedPosts, unvaultPost, type PostItem } from "@/lib/posts";
+import { getPlayableUrl } from "@/lib/cloudinary";
 
 // ─── Types ────────────────────────────────────────────────
 type ToggleState = boolean;
@@ -185,13 +187,16 @@ export default function TerminalPage() {
   const [loading, setLoading] = useState(true);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [showDanger, setShowDanger] = useState(false);
-  const [view, setView] = useState<"main" | "pings" | "hidden">("main");
+  const [view, setView] = useState<"main" | "pings" | "hidden" | "vault">("main");
   const [newWord, setNewWord] = useState("");
+  const [vaultPosts, setVaultPosts] = useState<PostItem[]>([]);
+  const [playingPostId, setPlayingPostId] = useState<string | null>(null);
   const [activeModal, setActiveModal] = useState<"guide" | "report" | "safety" | "contact" | null>(null);
   const [reportText, setReportText] = useState("");
   const [reportSuccess, setReportSuccess] = useState(false);
+  const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
 
-  // ── Load settings from Firestore on mount ───────────────
+  // ── Load settings & Vault from Firestore on mount ───────────────
   useEffect(() => {
     if (!user?.uid) { setLoading(false); return; }
     const load = async () => {
@@ -203,6 +208,8 @@ export default function TerminalPage() {
           const saved = data.settings || {};
           setSettings({ ...DEFAULT_SETTINGS, ...saved });
         }
+        const vaulted = await getUserVaultedPosts(user.uid);
+        setVaultPosts(vaulted);
       } catch (e) {
         console.error("[Terminal] Failed to load settings:", e);
       } finally {
@@ -321,6 +328,106 @@ export default function TerminalPage() {
     );
   }
 
+  // ── VAULT sub-view ───────────────────────────────────────
+  if (view === "vault") {
+    const handleTogglePlay = (postId: string, rawUrl: string) => {
+      const playable = getPlayableUrl(rawUrl);
+      if (playingPostId === postId) {
+        if (audioPlayerRef.current) {
+          audioPlayerRef.current.pause();
+        }
+        setPlayingPostId(null);
+      } else {
+        if (audioPlayerRef.current) {
+          audioPlayerRef.current.pause();
+        }
+        const audio = new Audio(playable);
+        audio.onended = () => setPlayingPostId(null);
+        audioPlayerRef.current = audio;
+        audio.play().catch(console.error);
+        setPlayingPostId(postId);
+      }
+    };
+
+    const handleUnvault = async (postId: string) => {
+      if (!user) return;
+      try {
+        await unvaultPost(user.uid, postId);
+        setVaultPosts((prev) => prev.filter((p) => p.id !== postId));
+      } catch (err) {
+        console.error("Failed to unvault post:", err);
+      }
+    };
+
+    return (
+      <SubView title="SAVED VAULT" onBack={() => {
+        if (audioPlayerRef.current) audioPlayerRef.current.pause();
+        setPlayingPostId(null);
+        setView("main");
+      }}>
+        <div className="space-y-4">
+          <p className="font-mono text-xs text-neutral-500 tracking-widest uppercase">
+            // BOOKMARKED AUDIO CLIPS ({vaultPosts.length})
+          </p>
+
+          {vaultPosts.length === 0 ? (
+            <div className="py-16 text-center space-y-3 border border-dashed border-neutral-900">
+              <Bookmark className="w-6 h-6 text-neutral-700 mx-auto" />
+              <p className="font-serif italic text-neutral-500 text-sm">
+                Your vault is empty.
+              </p>
+              <p className="font-mono text-[10px] text-neutral-700 uppercase tracking-widest">
+                Bookmark echoes from Frequency or Waves to save them here.
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-neutral-900">
+              {vaultPosts.map((post) => (
+                <div key={post.id} className="py-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs font-bold text-white">
+                      {post.authorHandle || "@ANON"}
+                    </span>
+                    <button
+                      onClick={() => handleUnvault(post.id)}
+                      className="font-mono text-[10px] text-neutral-500 hover:text-red-400 uppercase tracking-widest flex items-center gap-1 cursor-pointer"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>[ REMOVE ]</span>
+                    </button>
+                  </div>
+
+                  <p className="font-serif italic text-sm text-neutral-300">
+                    "{post.caption}"
+                  </p>
+
+                  {post.audioUrl && (
+                    <div className="flex items-center gap-3 pt-1">
+                      <button
+                        onClick={() => handleTogglePlay(post.id, post.audioUrl)}
+                        className={`font-mono text-xs px-3 py-1 border uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer ${
+                          playingPostId === post.id
+                            ? "border-white bg-white text-black font-bold"
+                            : "border-neutral-700 text-neutral-300 hover:border-white hover:text-white"
+                        }`}
+                      >
+                        {playingPostId === post.id ? <Pause size={10} /> : <Play size={10} />}
+                        <span>{playingPostId === post.id ? "PAUSE" : "PLAY VOICE"}</span>
+                      </button>
+                      <span className="font-mono text-[10px] text-neutral-600">
+                        {post.duration || `${post.durationSec || 15}s`}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </SubView>
+    );
+  }
+
   // ── MAIN TERMINAL VIEW ──────────────────────────────────
   return (
     <div className="bg-black min-h-screen pb-24 md:pb-12">
@@ -376,8 +483,8 @@ export default function TerminalPage() {
         <NavItem
           label="SAVED ECHO VAULT"
           sub="access all your bookmarked audio clips & saved waves"
-          href="/profile?tab=VAULT"
-          badge="VAULT"
+          onClick={() => setView("vault")}
+          badge={vaultPosts.length > 0 ? `${vaultPosts.length}` : undefined}
         />
 
         {/* ── PINGS ─────────────────────────────────────────── */}

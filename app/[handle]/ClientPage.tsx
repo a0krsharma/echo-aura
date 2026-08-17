@@ -28,6 +28,7 @@ import {
 import { useAuth } from "@/app/components/AuthProvider";
 import { ChatWidget } from "@/app/components/ChatWidget";
 import { getPlayableUrl } from "@/lib/cloudinary";
+import OrbitLogo from "@/app/components/OrbitLogo";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -482,7 +483,12 @@ export default function HandlePage({ params }: { params?: { handle?: string } })
         </button>
       </div>
 
-      <div className="max-w-xl mx-auto px-5 md:px-6 pt-6 md:pt-10">
+      <div className="max-w-xl mx-auto px-4 sm:px-5 md:px-6 pt-4 md:pt-6">
+
+        {/* ── Revolving Echo Planet Orbit Hero Display ── */}
+        <div className="flex flex-col items-center justify-center py-3 mb-4 border-b border-neutral-900/80">
+          <OrbitLogo size="md" />
+        </div>
 
         {/* Live Room Banner (Clubhouse style) */}
         {liveRoom && (
