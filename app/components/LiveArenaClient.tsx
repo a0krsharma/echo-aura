@@ -513,7 +513,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
   const HIGHLIGHT_CLIPS = useMemo(() => {
     const handleA = clash?.sideA?.handle || "@ANON_A";
     const handleB = clash?.sideB?.handle || "@ANON_B";
-    const totalEngagement = totalVotes * 10 + liveSurgeCount * 6 + 140;
+    const totalEngagement = totalVotes + liveSurgeCount + (chatMessages.length || 0);
 
     return [
       {
@@ -1238,7 +1238,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
 
       {/* ── Footer ── */}
       <footer className="border-t border-neutral-900 pt-3 text-center font-mono text-[10px] text-neutral-600 tracking-[0.2em] uppercase">
-        AGORA RTC HIGH-FIDELITY AUDIO RELAY • LOW-LATENCY CLASH ARENA
+        ULTRA-LOW LATENCY AUDIO RELAY • LIVE CLASH ARENA
       </footer>
     </div>
   );

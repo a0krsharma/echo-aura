@@ -33,9 +33,9 @@ export default function RoomLiveAudioPlayer({ room, onClose }: Props) {
     const connectAudience = async () => {
       try {
         setErrorText(null);
-        setStatusText('CONNECTING LOW-COST AUDIENCE CHANNEL...');
+        setStatusText('CONNECTING AUDIO RELAY...');
 
-        // 1. Fetch Agora App ID and token for room's channel
+        // 1. Fetch token for room's channel
         const tokenRes = await fetch(
           `/api/agora/token?channel=${encodeURIComponent(room.agoraChannel)}&uid=0`
         );
@@ -47,10 +47,10 @@ export default function RoomLiveAudioPlayer({ room, onClose }: Props) {
         const token = tokenData.token || null;
 
         if (!appId) {
-          throw new Error('Agora App ID not configured');
+          throw new Error('Audio engine not configured');
         }
 
-        // 2. Initialize Agora Client in Live Audience Mode
+        // 2. Initialize Client in Live Audience Mode
         client = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
         clientRef.current = client;
 
@@ -88,12 +88,12 @@ export default function RoomLiveAudioPlayer({ room, onClose }: Props) {
           setSpeakerCount(remoteTracksRef.current.size);
         });
 
-        // 3. Join the Agora Channel
+        // 3. Join Channel
         await client.join(appId, room.agoraChannel, token, null);
 
         if (mounted) {
           setIsPlaying(true);
-          setStatusText(`CONNECTED TO ${room.name} (LOW-COST AUDIENCE MODE) 🟢`);
+          setStatusText(`CONNECTED TO ${room.name} 🟢`);
         }
       } catch (err: any) {
         console.error('[RoomLiveAudioPlayer] Connection error:', err);
@@ -167,7 +167,7 @@ export default function RoomLiveAudioPlayer({ room, onClose }: Props) {
                 : 'text-neutral-400 hover:text-white'
             }`}
           >
-            RTC LOW-COST AUDIENCE ⚡
+            LOW-LATENCY STREAM ⚡
           </button>
           <button
             onClick={() => setActiveMode('hls')}
@@ -177,7 +177,7 @@ export default function RoomLiveAudioPlayer({ room, onClose }: Props) {
                 : 'text-neutral-400 hover:text-white'
             }`}
           >
-            HLS CDN BROADCAST 📡
+            BROADCAST RELAY 📡
           </button>
         </div>
       )}
