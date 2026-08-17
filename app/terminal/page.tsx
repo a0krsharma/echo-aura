@@ -26,7 +26,11 @@ async function persistSetting(uid: string, key: keyof Settings, value: any) {
   try {
     const db = getFirebaseDb();
     const ref = doc(db, "users", uid);
-    await updateDoc(ref, { [`settings.${key}`]: value });
+    const updates: Record<string, any> = { [`settings.${key}`]: value };
+    if (key === "privateAcc") {
+      updates.isPrivate = value;
+    }
+    await updateDoc(ref, updates);
   } catch (e) {
     console.error("[Terminal] Failed to persist setting:", key, e);
   }
