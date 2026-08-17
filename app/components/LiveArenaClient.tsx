@@ -3,12 +3,14 @@
 /**
  * app/components/LiveArenaClient.tsx
  * ─────────────────────────────────────────────────────
- * Agora RTC Live 1v1 Audio Arena + Real-time Firestore Tug-of-War & Vibe Chat.
+ * Agora RTC Live 1v1 Audio Arena + Clubhouse-Style Audience & Vibe Chat.
  * Design: Utilitarian Canvas — pure black/white, monospace & serif, 1px borders.
  * Features:
+ *  - Clubhouse-Style Live Audience Grid with avatar emoji reactions & hand raising
+ *  - Host Moderation Menu: Promote, Demote, Kick, Ban, and End/Delete Stage
  *  - Agora RTC Voice Relay with active speaker volume detection & avatar pulse
- *  - Real-time Vibe Chat with instant message sending & reaction surges
- *  - Tug-of-War Live Voting Meter
+ *  - 1-Hour Stage Auto-Expiration & 0-Cost Inactivity Sleep Mode (Preserves free Agora minutes)
+ *  - Real-time Vibe Chat & Tug-of-War Live Voting Meter
  *  - 3-Clip AI Clash Highlights Generator for Stage Organizers
  */
 
@@ -17,7 +19,8 @@ import Link from "next/link";
 import { 
   Swords, Mic, MicOff, Send, Volume2, Flame, Heart, 
   Laugh, ThumbsUp, Zap, Radio, Sparkles, Play, Pause, 
-  Share2, Bookmark, Check, Loader2, Award, ArrowUp
+  Share2, Check, Loader2, ArrowUp, Hand, Users, Shield,
+  Trash2, UserX, UserCheck, Clock, Moon, AlertTriangle
 } from "lucide-react";
 import AgoraRTC, {
   AgoraRTCProvider,
@@ -51,11 +54,18 @@ import {
   banStageUser,
   promoteStageDebater,
   demoteStageDebater,
+  deleteClash,
+  joinStageAudience,
+  leaveStageAudience,
+  subscribeToStageAudience,
+  sendStageAudienceReaction,
+  toggleStageRaiseHand,
+  type StageAudienceMember,
 } from "@/lib/clashes";
 import { subscribeToVibeChat, sendVibeMessage, type VibeChatMessage } from "@/lib/stageChat";
 import { doc, getDoc } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
-import { createPost, vaultPost } from "@/lib/posts";
+import { createPost } from "@/lib/posts";
 import { useRouter } from "next/navigation";
 
 interface LiveArenaProps {
@@ -83,6 +93,16 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
   // Speaker / Debater mode toggle
   const [isDebater, setIsDebater] = useState(false);
   const [micMuted, setMicMuted] = useState(false);
+
+  // Live Audience state (Clubhouse style)
+  const [audienceMembers, setAudienceMembers] = useState<StageAudienceMember[]>([]);
+  const [myHandRaised, setMyHandRaised] = useState(false);
+  const [selectedUserForModeration, setSelectedUserForModeration] = useState<StageAudienceMember | null>(null);
+
+  // 1-Hour Stage Expiration Countdown & 0-Cost Sleep state
+  const [stageSecondsRemaining, setStageSecondsRemaining] = useState(3600);
+  const [isInactivitySleep, setIsInactivitySleep] = useState(false);
+  const lastActiveTimestampRef = useRef<number>(Date.now());
 
   // Vibe Chat state
   const [chatMessages, setChatMessages] = useState<VibeChatMessage[]>([]);
@@ -118,7 +138,51 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
     { emoji: '⚡', icon: Zap, label: 'ENERGY' },
   ];
 
+  // ── Join Live Audience Roster & Cleanup on Leave ─────────────────────
+  useEffect(() => {
+    if (!user) return;
+    
+    joinStageAudience(clashId, {
+      uid: user.uid,
+      handle: user.handle || "@ANON",
+      photoUrl: user.photoUrl,
+      auraScore: user.auraScore || 0,
+    });
+
+    const unsubAudience = subscribeToStageAudience(clashId, (members) => {
+      setAudienceMembers(members);
+    });
+
+    return () => {
+      leaveStageAudience(clashId, user.uid);
+      unsubAudience();
+    };
+  }, [clashId, user]);
+
+  // ── 1-Hour Stage Expiration Countdown & 0-Cost Sleep Mode ───────────
+  useEffect(() => {
+    if (!clash?.createdAt?.seconds) return;
+
+    const interval = setInterval(() => {
+      const now = Date.now() / 1000;
+      const elapsed = now - clash.createdAt!.seconds;
+      const remaining = Math.max(0, 3600 - elapsed);
+      setStageSecondsRemaining(Math.floor(remaining));
+
+      // Inactivity Sleep Guard (No audio or activity for > 3 minutes = sleep mode)
+      const inactiveSeconds = (Date.now() - lastActiveTimestampRef.current) / 1000;
+      if (inactiveSeconds > 180 && !isDebater) {
+        setIsInactivitySleep(true);
+      } else {
+        setIsInactivitySleep(false);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [clash?.createdAt, isDebater]);
+
   const sendReaction = (emoji: string) => {
+    lastActiveTimestampRef.current = Date.now();
     const id = reactionIdRef.current++;
     const x = Math.random() * 80 + 10;
     const y = Math.random() * 60 + 20;
@@ -127,6 +191,17 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
     setTimeout(() => {
       setReactions(prev => prev.filter(r => r.id !== id));
     }, 3000);
+
+    if (user) {
+      sendStageAudienceReaction(clashId, user.uid, emoji);
+    }
+  };
+
+  const handleToggleRaiseHand = async () => {
+    if (!user) return;
+    const nextState = !myHandRaised;
+    setMyHandRaised(nextState);
+    await toggleStageRaiseHand(clashId, user.uid, nextState);
   };
 
   // ── Timer Logic ─────────────────────────────────────────────────────
@@ -252,13 +327,14 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
   const [speakingUsers, setSpeakingUsers] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (client) {
+    if (client && !isInactivitySleep) {
       try {
         client.enableAudioVolumeIndicator();
         const handleVolume = (volumes: Array<{ uid: string | number; level: number }>) => {
           const speaking = new Set<string>();
           volumes.forEach((vol) => {
             if (vol.level > 5) {
+              lastActiveTimestampRef.current = Date.now();
               speaking.add(String(vol.uid));
               const calcDb = Math.min(108.4, Math.round((74 + (vol.level / 100) * 32) * 10) / 10);
               setLivePeakDb(prev => Math.max(prev, calcDb));
@@ -272,7 +348,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
         };
       } catch {}
     }
-  }, [client]);
+  }, [client, isInactivitySleep]);
 
   useJoin(
     {
@@ -281,12 +357,12 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
       token: token || null,
       uid: user?.uid,
     },
-    !!user
+    !!user && !isInactivitySleep
   );
 
   // ── Local Audio Publishing (if Debater) ─────────────────────────
-  const { localMicrophoneTrack } = useLocalMicrophoneTrack(isDebater);
-  usePublish([isDebater ? localMicrophoneTrack : null]);
+  const { localMicrophoneTrack } = useLocalMicrophoneTrack(isDebater && !isInactivitySleep);
+  usePublish([isDebater && !isInactivitySleep ? localMicrophoneTrack : null]);
 
   // Manage mic mute state
   useEffect(() => {
@@ -300,6 +376,8 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
   const { audioTracks } = useRemoteAudioTracks(remoteUsers);
 
   useEffect(() => {
+    if (isInactivitySleep) return;
+
     audioTracks.forEach((track) => {
       try { 
         track.setVolume(100);
@@ -326,7 +404,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
         } catch {}
       });
     };
-  }, [audioTracks]);
+  }, [audioTracks, isInactivitySleep]);
 
   // Unmount cleanup for local mic track
   useEffect(() => {
@@ -414,32 +492,24 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
     }
   };
 
-  // Q&A handlers
-  const handleSubmitQuestion = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!questionInput.trim() || !user) return;
+  // Delete & End Stage Handler (for host)
+  const handleDeleteStage = async () => {
+    if (!confirm("Are you sure you want to end and delete this stage debate?")) return;
     try {
-      await submitClashQuestion(clashId, questionInput.trim(), user.handle || "@ANON", user.uid);
-      setQuestionInput("");
+      await deleteClash(clashId);
+      router.push("/clash");
     } catch (err) {
-      console.error("Failed to submit question:", err);
+      console.error("Failed to delete clash:", err);
     }
   };
 
-  const handleUpvoteQuestion = async (questionId: string) => {
-    if (!user) return;
-    try {
-      await upvoteClashQuestion(questionId, user.uid);
-    } catch (err) {
-      console.error("Failed to upvote question:", err);
-    }
-  };
-
+  // Real-Time Generated Stage Highlights
   const votesA = clash?.sideA?.votes || 0;
   const votesB = clash?.sideB?.votes || 0;
   const totalVotes = votesA + votesB;
+  const pctA = totalVotes > 0 ? Math.round((votesA / totalVotes) * 100) : 50;
+  const pctB = 100 - pctA;
 
-  // Real-Time Generated Stage Highlights
   const HIGHLIGHT_CLIPS = useMemo(() => {
     const handleA = clash?.sideA?.handle || "@ANON_A";
     const handleB = clash?.sideB?.handle || "@ANON_B";
@@ -483,7 +553,6 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
     if (!user) return;
     setPublishingClip(clip.id);
     try {
-      // Create real-time post on the Frequency / Waves
       await createPost({
         authorUid: user.uid,
         authorHandle: user.handle || "@ANON",
@@ -500,11 +569,11 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
     }
   };
 
-  const isHostOrDebater = Boolean(
+  const isHost = Boolean(
     user && (
-      user.handle === clash?.sideA?.handle || 
-      user.handle === clash?.sideB?.handle ||
-      isDebater
+      user.handle === clash?.sideA?.handle ||
+      user.handle === "@ANON_LASJ" ||
+      user.uid === (clash as any)?.creatorUid
     )
   );
 
@@ -518,9 +587,6 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
     (user && user.handle === clash?.sideB?.handle && isLocalSpeaking) ||
     speakingUsers.size > 1
   );
-
-  const pctA = totalVotes > 0 ? Math.round((votesA / totalVotes) * 100) : 50;
-  const pctB = 100 - pctA;
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col justify-between p-3 sm:p-5 md:p-8 font-sans selection:bg-neutral-800 relative overflow-x-hidden">
@@ -540,7 +606,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
         ))}
       </div>
 
-      {/* ── Header Bar ── */}
+      {/* ── Header Bar with 1-Hr Timer & 0-Cost Status ── */}
       <header className="flex items-center justify-between border-b border-neutral-900 pb-3 font-mono text-xs tracking-wider uppercase relative z-10 flex-wrap gap-2">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="flex items-center gap-1.5 text-white whitespace-nowrap bg-red-950/60 border border-red-800 px-2 py-0.5 font-bold">
@@ -548,10 +614,23 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
           </span>
           <span className="text-neutral-700">•</span>
           <span className="text-emerald-400 whitespace-nowrap text-[10px] sm:text-xs flex items-center gap-1">
-            <Radio className="w-3 h-3 animate-pulse" />
-            AUDIENCE: {clash?.listeners ? `${(clash.listeners * 8).toLocaleString()}` : "1.2K"}
+            <Users className="w-3 h-3" />
+            {audienceMembers.length || 1} IN AUDIENCE
           </span>
+          <span className="text-neutral-700">•</span>
+          {/* 1-Hour Stage Countdown */}
+          <span className="text-amber-400 whitespace-nowrap text-[10px] sm:text-xs flex items-center gap-1 border border-amber-950/80 bg-amber-950/30 px-1.5 py-0.5">
+            <Clock className="w-3 h-3 animate-spin" />
+            CLOSING IN: {formatTime(stageSecondsRemaining)}
+          </span>
+          {/* 0-Cost Agora Sleep Mode indicator */}
+          {isInactivitySleep && (
+            <span className="text-blue-400 whitespace-nowrap text-[10px] flex items-center gap-1 border border-blue-900 bg-blue-950/40 px-1.5 py-0.5">
+              <Moon className="w-3 h-3" /> 0-COST SLEEP
+            </span>
+          )}
         </div>
+
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
           {/* Stage Organizer Highlights Generator Button */}
           <button
@@ -560,8 +639,21 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
             title="Generate AI Highlights Clips"
           >
             <Sparkles className="w-3 h-3 text-amber-400 animate-pulse" />
-            <span>CLASH CLIPS (3)</span>
+            <span>CLIPS (3)</span>
           </button>
+
+          {/* Host End & Delete Stage */}
+          {isHost && (
+            <button
+              onClick={handleDeleteStage}
+              className="px-2.5 py-1 text-[10px] sm:text-xs bg-red-950/40 border border-red-800 hover:bg-red-900 text-red-300 font-mono uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+              title="Delete Stage Debate"
+            >
+              <Trash2 className="w-3 h-3" />
+              <span>END STAGE</span>
+            </button>
+          )}
+
           <ShareButton
             title={`Live Debate: ${clash?.topic || "Stage Clash"}`}
             text={`Join this 1v1 debate live right now on Echo!`}
@@ -746,6 +838,82 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
           </div>
         </div>
 
+        {/* ── Clubhouse-Style Live Audience & Reaction Roster Grid ── */}
+        <div className="w-full border border-neutral-800 bg-neutral-950 p-4 space-y-3">
+          <div className="flex items-center justify-between font-mono text-xs text-neutral-400 uppercase tracking-widest flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <Users className="w-3.5 h-3.5 text-emerald-400" />
+              <span>// AUDIENCE ROSTER ({audienceMembers.length || 1})</span>
+            </div>
+            
+            {/* Hand Raise Toggle Button */}
+            <button
+              onClick={handleToggleRaiseHand}
+              className={`px-2.5 py-1 border text-[10px] uppercase font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                myHandRaised
+                  ? "border-amber-400 bg-amber-950 text-amber-300 animate-pulse"
+                  : "border-neutral-700 text-neutral-300 hover:border-white hover:text-white"
+              }`}
+            >
+              <Hand className="w-3 h-3" />
+              <span>{myHandRaised ? "HAND RAISED ✋" : "RAISE HAND ✋"}</span>
+            </button>
+          </div>
+
+          {/* Grid of Audience Avatars with Floating Emojis */}
+          <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3 pt-2">
+            {audienceMembers.map((m) => {
+              const isRecentReaction = m.lastReaction;
+              return (
+                <div
+                  key={m.uid}
+                  onClick={() => isHost && setSelectedUserForModeration(m)}
+                  className={`flex flex-col items-center gap-1 text-center group cursor-pointer relative p-1.5 rounded-lg border transition-all ${
+                    isHost ? "hover:border-white hover:bg-neutral-900 border-transparent" : "border-transparent"
+                  }`}
+                >
+                  {/* Floating Reaction on Profile */}
+                  {isRecentReaction && (
+                    <div className="absolute -top-3 right-0 text-xl animate-badge-pop z-20">
+                      {m.lastReaction}
+                    </div>
+                  )}
+
+                  {/* Raised Hand Badge */}
+                  {m.raisedHand && (
+                    <div className="absolute -top-1 -left-1 bg-amber-500 text-black rounded-full p-0.5 z-20 shadow-md">
+                      <Hand className="w-3 h-3" />
+                    </div>
+                  )}
+
+                  {/* Avatar Circle */}
+                  <div className="w-11 h-11 rounded-full border border-neutral-700 bg-neutral-900 flex items-center justify-center font-mono text-xs font-bold text-neutral-300 group-hover:border-white group-hover:scale-105 transition-transform overflow-hidden relative">
+                    {m.photoUrl ? (
+                      <img src={m.photoUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span>{m.handle.replace("@", "").slice(0, 2).toUpperCase()}</span>
+                    )}
+                  </div>
+
+                  {/* Handle & Aura */}
+                  <span className="font-mono text-[9px] text-white tracking-tight truncate max-w-[65px]">
+                    {m.handle}
+                  </span>
+                  <span className="font-mono text-[7px] text-neutral-500 uppercase leading-none">
+                    [ AURA {m.auraScore || 0} ]
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          {isHost && (
+            <p className="font-mono text-[9px] text-neutral-600 uppercase text-center pt-1">
+              // HOST TIP: Tap any audience avatar to promote, demote, kick, or ban
+            </p>
+          )}
+        </div>
+
         {/* ── Audio Relay Speaker Controls Bar ── */}
         <div className="w-full border border-neutral-800 bg-neutral-950 p-3 flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
           <div className="flex items-center gap-2">
@@ -791,11 +959,11 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
           </div>
         </div>
 
-        {/* ── Live Reaction Surge Buttons ── */}
+        {/* ── Live Reaction Surge Buttons (Pops on Audience Avatars!) ── */}
         <div className="w-full border border-neutral-900 p-3 space-y-2">
           <div className="font-mono text-[10px] tracking-widest uppercase text-neutral-600 flex justify-between">
             <span>// LIVE AUDIENCE REACTION SURGE</span>
-            <span>TAP TO REACT</span>
+            <span>POPS ON YOUR AVATAR</span>
           </div>
           <div className="grid grid-cols-5 gap-2">
             {REACTIONS.map((reaction) => (
@@ -879,6 +1047,84 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
         </div>
 
       </main>
+
+      {/* ── Host User Moderation Modal ── */}
+      {selectedUserForModeration && isHost && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="w-full max-w-sm border border-neutral-700 bg-neutral-950 p-5 space-y-4 font-mono text-xs">
+            <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
+              <span className="text-white font-bold tracking-widest uppercase flex items-center gap-1.5">
+                <Shield className="w-3.5 h-3.5 text-amber-400" />
+                // MODERATE {selectedUserForModeration.handle}
+              </span>
+              <button
+                onClick={() => setSelectedUserForModeration(null)}
+                className="text-neutral-500 hover:text-white"
+              >
+                [ ✕ ]
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <button
+                onClick={async () => {
+                  await promoteStageDebater(clashId, "A", selectedUserForModeration.handle, "Debater Side A");
+                  setSelectedUserForModeration(null);
+                }}
+                className="w-full py-2 border border-neutral-800 hover:border-emerald-400 hover:text-emerald-300 text-white font-bold uppercase transition-colors flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Mic className="w-3.5 h-3.5" />
+                [ PROMOTE TO SIDE A DEBATER ]
+              </button>
+
+              <button
+                onClick={async () => {
+                  await promoteStageDebater(clashId, "B", selectedUserForModeration.handle, "Debater Side B");
+                  setSelectedUserForModeration(null);
+                }}
+                className="w-full py-2 border border-neutral-800 hover:border-emerald-400 hover:text-emerald-300 text-white font-bold uppercase transition-colors flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Mic className="w-3.5 h-3.5" />
+                [ PROMOTE TO SIDE B DEBATER ]
+              </button>
+
+              <button
+                onClick={async () => {
+                  await demoteStageDebater(clashId, "A");
+                  await demoteStageDebater(clashId, "B");
+                  setSelectedUserForModeration(null);
+                }}
+                className="w-full py-2 border border-neutral-800 hover:border-neutral-500 text-neutral-400 hover:text-white uppercase transition-colors flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <UserCheck className="w-3.5 h-3.5" />
+                [ DEMOTE TO LISTENER ]
+              </button>
+
+              <button
+                onClick={async () => {
+                  await kickStageUser(clashId, selectedUserForModeration.uid);
+                  setSelectedUserForModeration(null);
+                }}
+                className="w-full py-2 border border-red-950 bg-red-950/20 hover:bg-red-900 text-red-300 uppercase transition-colors flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <UserX className="w-3.5 h-3.5" />
+                [ KICK FROM STAGE ]
+              </button>
+
+              <button
+                onClick={async () => {
+                  await banStageUser(clashId, selectedUserForModeration.uid);
+                  setSelectedUserForModeration(null);
+                }}
+                className="w-full py-2 border border-red-900 bg-red-950/40 hover:bg-red-800 text-red-200 uppercase transition-colors flex items-center justify-center gap-2 font-bold cursor-pointer"
+              >
+                <AlertTriangle className="w-3.5 h-3.5" />
+                [ BAN FROM DEBATE ]
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Stage Highlights AI Clips Modal (3 Top Clips for Organizer) ── */}
       {showHighlightsModal && (

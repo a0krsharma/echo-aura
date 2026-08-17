@@ -596,20 +596,123 @@ export async function enableClashQA(clashId: string, moderated: boolean = true):
   }
 }
 
+export interface StageAudienceMember {
+  uid: string;
+  handle: string;
+  photoUrl?: string;
+  auraScore?: number;
+  lastReaction?: string;
+  reactionAt?: any;
+  raisedHand?: boolean;
+  joinedAt?: any;
+}
+
 /**
- * disableClashQA
- * Disable Q&A for a clash
+ * joinStageAudience
+ * Add current user to live audience roster with avatar and aura
  */
-export async function disableClashQA(clashId: string): Promise<void> {
+export async function joinStageAudience(
+  clashId: string,
+  user: { uid: string; handle: string; photoUrl?: string; auraScore?: number }
+): Promise<void> {
   try {
     const db = getFirebaseDb();
-    const ref = doc(db, "clashes", clashId);
-    
+    const audienceRef = doc(db, "clashes", clashId, "audience", user.uid);
+    const { setDoc } = await import("firebase/firestore");
+    await setDoc(
+      audienceRef,
+      {
+        uid: user.uid,
+        handle: user.handle,
+        photoUrl: user.photoUrl || "",
+        auraScore: user.auraScore || 0,
+        joinedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  } catch (err) {
+    console.warn("[joinStageAudience] Error:", err);
+  }
+}
+
+/**
+ * leaveStageAudience
+ * Remove user from live audience roster
+ */
+export async function leaveStageAudience(clashId: string, uid: string): Promise<void> {
+  try {
+    const db = getFirebaseDb();
+    const audienceRef = doc(db, "clashes", clashId, "audience", uid);
+    await deleteDoc(audienceRef);
+  } catch (err) {
+    console.warn("[leaveStageAudience] Error:", err);
+  }
+}
+
+/**
+ * subscribeToStageAudience
+ * Stream real-time audience members, avatars, raised hands, and reactions
+ */
+export function subscribeToStageAudience(
+  clashId: string,
+  callback: (members: StageAudienceMember[]) => void
+): () => void {
+  const db = getFirebaseDb();
+  const q = query(
+    collection(db, "clashes", clashId, "audience"),
+    limit(50)
+  );
+
+  return onSnapshot(
+    q,
+    (snap) => {
+      const members = snap.docs.map((d) => ({
+        uid: d.id,
+        ...d.data(),
+      })) as StageAudienceMember[];
+      callback(members);
+    },
+    () => callback([])
+  );
+}
+
+/**
+ * sendStageAudienceReaction
+ * Trigger real-time emoji reaction pop on audience profile avatar
+ */
+export async function sendStageAudienceReaction(
+  clashId: string,
+  uid: string,
+  emoji: string
+): Promise<void> {
+  try {
+    const db = getFirebaseDb();
+    const ref = doc(db, "clashes", clashId, "audience", uid);
     await updateDoc(ref, {
-      qaEnabled: false,
+      lastReaction: emoji,
+      reactionAt: serverTimestamp(),
     });
-  } catch (error) {
-    console.error("[disableClashQA] Error:", error);
-    throw error;
+  } catch (err) {
+    console.warn("[sendStageAudienceReaction] Error:", err);
+  }
+}
+
+/**
+ * toggleStageRaiseHand
+ * Toggle raised hand status for audience member
+ */
+export async function toggleStageRaiseHand(
+  clashId: string,
+  uid: string,
+  raised: boolean
+): Promise<void> {
+  try {
+    const db = getFirebaseDb();
+    const ref = doc(db, "clashes", clashId, "audience", uid);
+    await updateDoc(ref, {
+      raisedHand: raised,
+    });
+  } catch (err) {
+    console.warn("[toggleStageRaiseHand] Error:", err);
   }
 }

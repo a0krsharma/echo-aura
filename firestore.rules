@@ -61,7 +61,13 @@ service cloud.firestore {
       allow read:   if true;
       allow create: if request.auth != null;
       allow update: if request.auth != null; // votes, listener count
-      allow delete: if false;
+      allow delete: if request.auth != null; // host can delete/end debate
+
+      // Live Audience profiles & reactions sub-collection
+      match /audience/{uid} {
+        allow read:   if true;
+        allow create, update, delete: if request.auth != null;
+      }
 
       // Vibe Chat messages sub-collection
       match /messages/{messageId} {
