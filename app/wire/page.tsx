@@ -116,8 +116,25 @@ function ChatWindow({
   const [sending, setSending]   = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const theirHandle = Object.entries(conv.handles || {})
-    .find(([uid]) => uid !== myUid)?.[1] || "UNKNOWN";
+  const otherUid = (conv.participants || conv.id.split("__")).find((uid) => uid !== myUid) || "";
+  const rawHandle = Object.entries(conv.handles || {}).find(([uid]) => uid !== myUid)?.[1];
+  const [theirHandle, setTheirHandle] = useState<string>(rawHandle && rawHandle !== "UNKNOWN" ? rawHandle : `@ANON_${otherUid.slice(0, 4).toUpperCase()}`);
+
+  useEffect(() => {
+    if (rawHandle && rawHandle !== "UNKNOWN") {
+      setTheirHandle(rawHandle);
+      return;
+    }
+    if (otherUid) {
+      const db = getFirebaseDb();
+      getDoc(doc(db, "users", otherUid)).then((snap) => {
+        if (snap.exists()) {
+          const uData = snap.data();
+          if (uData.handle) setTheirHandle(uData.handle);
+        }
+      }).catch(() => {});
+    }
+  }, [conv.id, rawHandle, otherUid]);
 
   useEffect(() => {
     const unsub = subscribeToMessages(conv.id, (msgs) => {
@@ -479,7 +496,8 @@ function ChatWindow({
 export default function WirePage() {
   const { user } = useAuth();
   const [conversations, setConversations] = useState<WhisperConversation[]>([]);
-  const [activeConv, setActiveConv] = useState<WhisperConversation | null>(null);
+  const [activeConvId, setActiveConvId] = useState<string | null>(null);
+  const [draftConv, setDraftConv] = useState<WhisperConversation | null>(null);
   const [showNew, setShowNew] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -488,6 +506,8 @@ export default function WirePage() {
   // Orbiting & Suggested Accounts state
   const [followingList, setFollowingList] = useState<Follow[]>([]);
   const [suggestedVoices, setSuggestedVoices] = useState<{ uid: string; handle: string; auraScore?: number }[]>([]);
+
+  const activeConv = conversations.find((c) => c.id === activeConvId) || (draftConv?.id === activeConvId ? draftConv : null);
 
   useEffect(() => {
     if (!user) return;
@@ -521,25 +541,29 @@ export default function WirePage() {
     };
   }, [user]);
 
-  // Read URL query parameter ?c=... safely on client side without triggering React Error #310
+  // Read URL query parameters ?c=... or ?with=... safely on client side
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || !user) return;
     const urlParams = new URLSearchParams(window.location.search);
     const targetConvId = urlParams.get("c");
-    if (!targetConvId) return;
+    const targetWith = urlParams.get("with");
+    const targetHandle = urlParams.get("handle");
 
-    const found = conversations.find((c) => c.id === targetConvId);
-    if (found) {
-      setActiveConv(found);
-    } else {
-      const db = getFirebaseDb();
-      getDoc(doc(db, "whispers", targetConvId)).then((snap) => {
-        if (snap.exists()) {
-          setActiveConv({ id: snap.id, ...snap.data() } as WhisperConversation);
-        }
-      });
+    if (targetConvId) {
+      setActiveConvId(targetConvId);
+      const found = conversations.find((c) => c.id === targetConvId);
+      if (!found) {
+        const db = getFirebaseDb();
+        getDoc(doc(db, "whispers", targetConvId)).then((snap) => {
+          if (snap.exists()) {
+            setDraftConv({ id: snap.id, ...snap.data() } as WhisperConversation);
+          }
+        });
+      }
+    } else if (targetWith) {
+      handleStartConversation(targetWith, targetHandle || "@ANON");
     }
-  }, [conversations]);
+  }, [user, conversations]);
 
   const handleSearch = async () => {
     if (!searchQuery.trim() || !user) return;
@@ -576,7 +600,8 @@ export default function WirePage() {
             createdAt: null,
           };
 
-      setActiveConv(conversationData);
+      setDraftConv(conversationData);
+      setActiveConvId(convId);
       setShowNew(false);
       setSearchQuery("");
       setSearchResults([]);
@@ -713,8 +738,8 @@ export default function WirePage() {
                   key={conv.id}
                   conv={conv}
                   myUid={user.uid}
-                  onClick={() => setActiveConv(conv)}
-                  active={activeConv?.id === conv.id}
+                  onClick={() => setActiveConvId(conv.id)}
+                  active={activeConvId === conv.id}
                 />
               ))
             )}
@@ -728,7 +753,7 @@ export default function WirePage() {
               conv={activeConv}
               myUid={user.uid}
               myHandle={user.handle || "@ANON"}
-              onBack={() => setActiveConv(null)}
+              onBack={() => setActiveConvId(null)}
             />
           ) : (
             <div className="flex-1 flex items-center justify-center p-6">

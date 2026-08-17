@@ -239,10 +239,19 @@ export function subscribeToConversations(
         id: d.id,
         ...(d.data() as Omit<WhisperConversation, "id">),
       }));
-      convs.sort((a, b) => (b.lastAt?.seconds || 0) - (a.lastAt?.seconds || 0));
+      convs.sort((a, b) => {
+        const getSec = (ts: any) => {
+          if (!ts) return 0;
+          if (typeof ts.seconds === "number") return ts.seconds;
+          if (typeof ts.toDate === "function") return ts.toDate().getTime() / 1000;
+          return 0;
+        };
+        return getSec(b.lastAt) - getSec(a.lastAt);
+      });
       callback(convs);
     },
     (err) => {
+      console.warn("[subscribeToConversations] Error:", err);
       callback([]);
     }
   );
@@ -274,15 +283,46 @@ export function subscribeToMessages(
         ...(d.data() as Omit<WhisperMessage, "id">),
       }));
       msgs.sort((a, b) => {
-        const tA = a.createdAt?.seconds || 0;
-        const tB = b.createdAt?.seconds || 0;
-        return tA - tB;
+        const getSec = (ts: any) => {
+          if (!ts) return Date.now() / 1000;
+          if (typeof ts.seconds === "number") return ts.seconds;
+          if (typeof ts.toDate === "function") return ts.toDate().getTime() / 1000;
+          return Date.now() / 1000;
+        };
+        return getSec(a.createdAt) - getSec(b.createdAt);
       });
       callback(msgs);
     },
     (err) => {
-      // Graceful fallback for permission check
-      callback([]);
+      console.warn("[subscribeToMessages] Fallback check for wire subcollection due to err:", err);
+      try {
+        const qWire = query(
+          collection(db, "wire", conversationId, "messages"),
+          limit(100)
+        );
+        return onSnapshot(
+          qWire,
+          (snapWire) => {
+            const msgs: WhisperMessage[] = snapWire.docs.map((d) => ({
+              id: d.id,
+              ...(d.data() as Omit<WhisperMessage, "id">),
+            }));
+            msgs.sort((a, b) => {
+              const getSec = (ts: any) => {
+                if (!ts) return Date.now() / 1000;
+                if (typeof ts.seconds === "number") return ts.seconds;
+                if (typeof ts.toDate === "function") return ts.toDate().getTime() / 1000;
+                return Date.now() / 1000;
+              };
+              return getSec(a.createdAt) - getSec(b.createdAt);
+            });
+            callback(msgs);
+          },
+          () => callback([])
+        );
+      } catch {
+        callback([]);
+      }
     }
   );
 }
