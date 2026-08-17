@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 import { useState, useEffect, useRef } from "react";
 import { Mic, Mic2, Lock, Plus, Search, X, Send, ChevronLeft, Loader2, Phone, PhoneOff, Play, Pause, Square, Trash2 } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
-import { uploadAudio } from "@/lib/cloudinary";
+import { uploadAudio, getPlayableUrl } from "@/lib/cloudinary";
 import {
   startOrGetConversation,
   sendWhisper,
@@ -36,6 +36,93 @@ import { subscribeToUserPresence, type UserPresence } from "@/lib/presence";
 import { getFirebaseDb } from "@/lib/firebase";
 import { doc, getDoc, collection, getDocs, query, limit } from "firebase/firestore";
 import { subscribeToFollowing, type Follow } from "@/lib/follows";
+
+// ─── Custom Wire Voice Player (No download button) ───────────────────────────
+function WireVoicePlayer({ audioUrl, isMe }: { audioUrl: string; isMe: boolean }) {
+  const [playing, setPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const toggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!audioRef.current) return;
+    if (playing) {
+      audioRef.current.pause();
+      setPlaying(false);
+    } else {
+      audioRef.current.play().catch(console.error);
+      setPlaying(true);
+    }
+  };
+
+  const fmt = (s: number) => {
+    if (!s || isNaN(s) || !isFinite(s) || s < 0) s = 0;
+    return `${Math.floor(s / 60).toString().padStart(2, "0")}:${Math.floor(s % 60).toString().padStart(2, "0")}`;
+  };
+
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+
+  return (
+    <div className="space-y-1.5 min-w-[200px] max-w-xs py-1">
+      <audio
+        ref={audioRef}
+        src={getPlayableUrl(audioUrl)}
+        preload="metadata"
+        onLoadedMetadata={(e) => {
+          const d = (e.target as HTMLAudioElement).duration;
+          if (isFinite(d)) setDuration(d);
+        }}
+        onTimeUpdate={(e) => setCurrentTime((e.target as HTMLAudioElement).currentTime)}
+        onEnded={() => {
+          setPlaying(false);
+          setCurrentTime(0);
+        }}
+        style={{ display: "none" }}
+      />
+      <div className="flex items-center gap-2.5">
+        <button
+          type="button"
+          onClick={toggle}
+          className={`w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer shrink-0 ${
+            isMe
+              ? "bg-black text-white hover:bg-neutral-800"
+              : "bg-white text-black hover:bg-neutral-200"
+          }`}
+          aria-label={playing ? "Pause voice message" : "Play voice message"}
+        >
+          {playing ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current ml-0.5" />}
+        </button>
+
+        <div className="flex-1 space-y-1">
+          <div
+            className={`w-full h-2 rounded-full overflow-hidden cursor-pointer ${
+              isMe ? "bg-black/20" : "bg-neutral-800"
+            }`}
+            onClick={(e) => {
+              if (!audioRef.current || !duration) return;
+              const rect = e.currentTarget.getBoundingClientRect();
+              const pos = (e.clientX - rect.left) / rect.width;
+              audioRef.current.currentTime = pos * duration;
+            }}
+          >
+            <div
+              className={`h-full transition-all duration-100 ${
+                isMe ? "bg-black" : "bg-white"
+              }`}
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+
+          <div className="flex items-center justify-between text-[9px] font-mono tracking-wider opacity-70">
+            <span>{fmt(currentTime)}</span>
+            <span>{duration > 0 ? fmt(duration) : "00:15"}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ─── Time helper ─────────────────────────────────────────────────────────────
 function timeStr(ts: any): string {
@@ -466,11 +553,11 @@ function ChatWindow({
                   }`}
                 >
                   {msg.audioUrl ? (
-                    <div className="space-y-1.5 min-w-[200px]">
-                      <p className="font-mono text-xs font-bold flex items-center gap-1.5">
-                        <Mic className="w-3.5 h-3.5" /> VOICE ECHO
+                    <div className="space-y-1">
+                      <p className="font-mono text-[10px] font-bold flex items-center gap-1.5 opacity-80 uppercase tracking-widest">
+                        <Mic className="w-3 h-3" /> VOICE ECHO
                       </p>
-                      <audio src={msg.audioUrl} controls className="w-full h-8 accent-black" />
+                      <WireVoicePlayer audioUrl={msg.audioUrl} isMe={isMe} />
                     </div>
                   ) : (
                     <p className="font-mono text-xs">{msg.text}</p>
