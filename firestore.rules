@@ -56,36 +56,29 @@ service cloud.firestore {
 
     // ── CLASHES / THE STAGE ─────────────────────────────────────────────
     // Public read for live debates.
-    // Authenticated users can create debates and vote.
+    // Stage members can view, vote, join audience, and chat seamlessly.
     match /clashes/{clashId} {
-      allow read:   if true;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null; // votes, listener count
-      allow delete: if request.auth != null; // host can delete/end debate
+      allow read, write: if true;
 
       // Live Audience profiles & reactions sub-collection
       match /audience/{uid} {
-        allow read:   if true;
-        allow create, update, delete: if request.auth != null;
+        allow read, write, delete: if true;
       }
 
       // Per-user Vote / Allegiance records (Strict single vote per user)
       match /votes/{uid} {
-        allow read:   if true;
-        allow create, update, delete: if request.auth != null;
+        allow read, write, delete: if true;
       }
 
       // Vibe Chat messages sub-collection
       match /messages/{messageId} {
-        allow read:   if true;
-        allow create: if request.auth != null;
-        allow update, delete: if false;
+        allow read, write: if true;
+        allow delete: if false;
       }
 
       // Q&A questions sub-collection
       match /questions/{questionId} {
-        allow read:   if true;
-        allow create, update: if request.auth != null;
+        allow read, write: if true;
         allow delete: if false;
       }
     }

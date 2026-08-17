@@ -446,7 +446,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
       token: token || null,
       uid: user?.uid,
     },
-    !!user && !isInactivitySleep
+    Boolean(user && !isInactivitySleep && token)
   );
 
   // ── Local Audio Publishing (if Debater) ─────────────────────────
