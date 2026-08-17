@@ -126,9 +126,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
     { label: "[ STUDIO ]",    href: "/studio", icon: Mic2    },
     { label: "[ STAGE ]",     href: "/clash",  icon: Swords  },
     { label: "[ ROOMS ]",     href: "/rooms",  icon: Users   },
-    { label: "[ SEARCH ]",    href: "/search", icon: Search  },
     { label: "[ RADAR ]",     href: "/radar",  icon: Compass },
-    { label: "[ PROFILE ]",   href: "/profile",icon: User    },
   ];
 
   return (
@@ -148,11 +146,20 @@ function ShellContent({ children }: { children: React.ReactNode }) {
           </Link>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <Link
+            href="/search"
+            className="p-2 border border-neutral-800 text-white hover:border-white transition-colors cursor-pointer flex items-center justify-center"
+            aria-label="Search"
+            title="Search"
+          >
+            <Search className="w-4 h-4" />
+          </Link>
           <Link
             href="/notifications"
-            className="relative p-2 border border-neutral-800 text-white hover:border-white transition-colors cursor-pointer"
+            className="relative p-2 border border-neutral-800 text-white hover:border-white transition-colors cursor-pointer flex items-center justify-center"
             aria-label="Notifications"
+            title="Notifications"
           >
             <Bell className="w-4 h-4" />
             {unreadCount > 0 && (

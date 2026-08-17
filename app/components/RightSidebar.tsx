@@ -7,7 +7,7 @@ import { getFirebaseDb } from "@/lib/firebase";
 import { subscribeToClashes, type ClashItem } from "@/lib/clashes";
 import { subscribeToUnreadCount } from "@/lib/notifications";
 import { EchoUser } from "@/lib/userDoc";
-import { Bell } from "lucide-react";
+import { Bell, Search, User } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
 
 export function RightSidebar() {
@@ -51,31 +51,50 @@ export function RightSidebar() {
       "
       aria-label="Right panel"
     >
-      {/* ── NOTIFICATIONS ── */}
-      <div className="flex items-center justify-between mb-6">
-        <p className="font-mono text-xs tracking-widest uppercase text-neutral-700">
-          // NOTIFICATIONS
+      {/* ── TOP RIGHT CONTROLS: SEARCH, NOTIFICATIONS, PROFILE ── */}
+      <div className="flex items-center justify-between gap-2 mb-8 pb-4 border-b border-neutral-900">
+        <p className="font-mono text-[10px] tracking-widest uppercase text-neutral-600">
+          // CONTROLS
         </p>
-        <Link
-          href="/notifications"
-          className="relative p-2 border border-neutral-800 text-white hover:border-white transition-colors cursor-pointer"
-          aria-label="Notifications"
-        >
-          <Bell className="w-4 h-4" />
-          {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 flex items-center justify-center">
-              {unreadCount < 10 ? (
-                <span className="w-4 h-4 bg-white text-black rounded-full font-mono text-[8px] flex items-center justify-center font-bold">
-                  {unreadCount}
-                </span>
-              ) : (
-                <span className="w-4 h-4 bg-white text-black rounded-full font-mono text-[8px] flex items-center justify-center font-bold">
-                  9+
-                </span>
-              )}
-            </span>
-          )}
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/search"
+            className="p-2 border border-neutral-800 text-neutral-400 hover:text-white hover:border-white transition-colors cursor-pointer"
+            title="Search Voices & Topics"
+            aria-label="Search"
+          >
+            <Search className="w-4 h-4" />
+          </Link>
+          <Link
+            href="/notifications"
+            className="relative p-2 border border-neutral-800 text-neutral-400 hover:text-white hover:border-white transition-colors cursor-pointer"
+            title="Notifications"
+            aria-label="Notifications"
+          >
+            <Bell className="w-4 h-4" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 flex items-center justify-center">
+                {unreadCount < 10 ? (
+                  <span className="w-4 h-4 bg-white text-black rounded-full font-mono text-[8px] flex items-center justify-center font-bold">
+                    {unreadCount}
+                  </span>
+                ) : (
+                  <span className="w-4 h-4 bg-white text-black rounded-full font-mono text-[8px] flex items-center justify-center font-bold">
+                    9+
+                  </span>
+                )}
+              </span>
+            )}
+          </Link>
+          <Link
+            href="/profile"
+            className="p-2 border border-neutral-800 text-neutral-400 hover:text-white hover:border-white transition-colors cursor-pointer flex items-center justify-center"
+            title="Profile"
+            aria-label="Profile"
+          >
+            <User className="w-4 h-4" />
+          </Link>
+        </div>
       </div>
 
       {/* ── LIVE ON THE STAGE ── */}
