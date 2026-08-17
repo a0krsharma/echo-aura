@@ -196,14 +196,14 @@ export default function ProfilePage() {
 
   // Voice Bio states
   const [bioState, setBioState] = useState<"idle" | "recording" | "preview" | "saved">("idle");
-  const [bioDuration, setBioDuration] = useState(30);
+  const [bioDuration, setBioDuration] = useState(15);
   const [bioElapsed, setBioElapsed] = useState(0);
   const [bioBlob, setBioBlob] = useState<Blob | null>(null);
   const [bioAudioUrl, setBioAudioUrl] = useState<string | null>(null);
   const [isSavingBio, setIsSavingBio] = useState(false);
   const [isPlayingBio, setIsPlayingBio] = useState(false);
   const [savedVoiceBioUrl, setSavedVoiceBioUrl] = useState<string | null>((user as any)?.voiceBioUrl || null);
-  const [savedVoiceBioDuration, setSavedVoiceBioDuration] = useState<string | null>((user as any)?.voiceBioDuration || "30s");
+  const [savedVoiceBioDuration, setSavedVoiceBioDuration] = useState<string | null>((user as any)?.voiceBioDuration || "15s");
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -713,54 +713,70 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Voice Bio Section (Strict 30s Max Intro) */}
-        <div className="p-4 sm:p-5 border border-neutral-900 bg-neutral-950/40 mb-8 space-y-3 font-mono">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <span className="text-xs text-neutral-400 tracking-widest uppercase flex items-center gap-1.5 font-bold">
-              <Mic2 className="w-3.5 h-3.5 text-neutral-400" /> // VOICE BIO INTRO (30S MAX)
+        {/* Voice Bio Section */}
+        <div className="p-6 border border-neutral-900 bg-neutral-950/40 mb-8 space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-xs text-neutral-500 tracking-widest uppercase">
+              // VOICE BIO (15S / 30S)
             </span>
-            {savedVoiceBioUrl && (
-              <span className="text-[9px] tracking-widest text-green-400 border border-green-900 bg-green-950/50 px-2 py-0.5 uppercase flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> LIVE ON PROFILE
+            {bioState === "saved" && (
+              <span className="font-mono text-[10px] tracking-widest text-white border border-neutral-700 px-2 py-0.5 uppercase">
+                LIVE ON PROFILE
               </span>
             )}
           </div>
 
           {bioState === "idle" && (
-            <div className="space-y-3 pt-1">
-              {savedVoiceBioUrl ? (
-                <div className="p-3 border border-neutral-800 bg-neutral-900/50 space-y-2">
-                  <div className="flex items-center justify-between text-[10px] text-neutral-400 uppercase tracking-wider">
-                    <span>ACTIVE INTRO ({savedVoiceBioDuration || "30S"})</span>
-                    <span className="text-neutral-500">SAVED</span>
+            <div className="space-y-3 pt-2">
+              {savedVoiceBioUrl && (
+                <div className="p-3 border border-neutral-800 bg-neutral-950/80 mb-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-mono text-[10px] text-white tracking-widest uppercase flex items-center gap-1.5">
+                      <Mic2 className="w-3 h-3" /> ACTIVE VOICE BIO ({savedVoiceBioDuration || "15S"})
+                    </span>
+                    <span className="font-mono text-[10px] text-neutral-500 uppercase">SAVED TO DATABASE</span>
                   </div>
-                  <MiniPlayer audioUrl={savedVoiceBioUrl} durationSec={30} />
+                  <MiniPlayer audioUrl={savedVoiceBioUrl} durationSec={bioDuration || 15} />
                 </div>
-              ) : (
-                <p className="font-serif italic text-xs text-neutral-500 leading-relaxed">
-                  Record a quick 30-second audio intro to introduce your voice to orbiters.
-                </p>
               )}
-
-              <button
-                onClick={startBioRecording}
-                className="w-full py-2.5 border border-white text-white text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors cursor-pointer flex items-center justify-center gap-2 font-bold"
-              >
-                <Mic2 className="w-3.5 h-3.5" />
-                <span>{savedVoiceBioUrl ? "[ RECORD NEW VOICE INTRO ]" : "[ 🎙 RECORD 30S VOICE INTRO ]"}</span>
-              </button>
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setBioDuration(15)}
+                    className={`px-3 py-1 font-mono text-xs tracking-widest border transition-colors cursor-pointer ${
+                      bioDuration === 15 ? "border-white text-white font-bold" : "border-neutral-800 text-neutral-600 hover:text-white"
+                    }`}
+                  >
+                    [15S]
+                  </button>
+                  <button
+                    onClick={() => setBioDuration(30)}
+                    className={`px-3 py-1 font-mono text-xs tracking-widest border transition-colors cursor-pointer ${
+                      bioDuration === 30 ? "border-white text-white font-bold" : "border-neutral-800 text-neutral-600 hover:text-white"
+                    }`}
+                  >
+                    [30S]
+                  </button>
+                </div>
+                <button
+                  onClick={startBioRecording}
+                  className="w-full sm:w-auto px-4 py-2 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <Mic2 className="w-3.5 h-3.5" /> [ RECORD NEW VOICE BIO ]
+                </button>
+              </div>
             </div>
           )}
 
           {bioState === "recording" && (
-            <div className="flex items-center justify-between py-2 border border-red-900/60 bg-red-950/30 px-3 sm:px-4">
-              <div className="flex items-center space-x-2 text-xs text-red-400 font-bold">
-                <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
-                <span>00:{bioElapsed.toString().padStart(2, "0")} / 00:30</span>
+            <div className="flex items-center justify-between py-2">
+              <div className="flex items-center space-x-2 font-mono text-xs text-white">
+                <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+                <span>00:{bioElapsed.toString().padStart(2, "0")} / 00:{bioDuration}</span>
               </div>
               <button
                 onClick={stopBioRecording}
-                className="px-3.5 py-1.5 border border-red-500 bg-red-600 text-white text-xs tracking-widest uppercase hover:bg-red-500 transition-colors cursor-pointer font-bold"
+                className="px-4 py-2 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors cursor-pointer"
               >
                 [ STOP & PREVIEW ]
               </button>
@@ -768,55 +784,40 @@ export default function ProfilePage() {
           )}
 
           {(bioState === "preview" || bioState === "saved") && (
-            <div className="space-y-3 pt-1 border border-neutral-800 p-3 bg-neutral-900/40">
-              <div className="flex items-center justify-between text-[10px] text-neutral-400 uppercase tracking-widest">
-                <span>PREVIEW (00:{bioElapsed.toString().padStart(2, "0")} / 00:30)</span>
-                {bioState === "saved" && <span className="text-green-400">SAVED ✓</span>}
+            <div className="space-y-4 pt-2">
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={handleToggleBioPlay}
+                  className="w-10 h-10 rounded-full border border-neutral-700 flex items-center justify-center hover:border-white transition-colors cursor-pointer"
+                >
+                  {isPlayingBio ? <Square className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
+                </button>
+                <div className="flex-1 flex items-center space-x-1 h-6 opacity-60">
+                  {Array.from({ length: 18 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="flex-1 bg-white rounded-full"
+                      style={{ height: `${Math.max(20, (i % 5) * 20 + 20)}%` }}
+                    />
+                  ))}
+                </div>
               </div>
 
-              {bioAudioUrl && (
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={handleToggleBioPlay}
-                    className="w-8 h-8 border border-white text-white flex items-center justify-center hover:bg-white hover:text-black transition-colors cursor-pointer shrink-0"
-                  >
-                    {isPlayingBio ? <Square className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 ml-0.5" />}
-                  </button>
-                  <div className="flex-1 overflow-hidden h-6 flex items-end gap-1">
-                    {Array.from({ length: 20 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className={`flex-1 bg-white transition-all ${isPlayingBio ? "opacity-100" : "opacity-40"}`}
-                        style={{ height: `${Math.max(20, (i % 6) * 16 + 20)}%` }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex items-center gap-2 pt-1 flex-wrap">
+              <div className="flex items-center space-x-3 pt-2">
                 {bioState === "preview" && (
                   <button
                     onClick={saveVoiceBio}
                     disabled={isSavingBio}
-                    className="flex-1 py-2 bg-white text-black text-xs font-bold tracking-widest uppercase hover:bg-neutral-200 transition-colors cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                    className="px-4 py-2 bg-white text-black font-mono text-xs tracking-widest uppercase hover:bg-neutral-200 transition-colors cursor-pointer flex items-center gap-2"
                   >
-                    {isSavingBio ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "[ SAVE VOICE BIO ]"}
+                    {isSavingBio ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "[ SAVE AS VOICE BIO ]"}
                   </button>
                 )}
                 <button
-                  onClick={() => {
-                    setBioState("idle");
-                    setBioBlob(null);
-                    if (bioAudioUrl) URL.revokeObjectURL(bioAudioUrl);
-                    setBioAudioUrl(null);
-                    setBioElapsed(0);
-                    setIsPlayingBio(false);
-                    audioRef.current = null;
-                  }}
-                  className="flex-1 py-2 border border-neutral-800 text-neutral-400 text-xs tracking-widest uppercase hover:border-white hover:text-white transition-colors cursor-pointer"
+                  onClick={() => { setBioState("idle"); setBioBlob(null); if (bioAudioUrl) URL.revokeObjectURL(bioAudioUrl); setBioAudioUrl(null); setBioElapsed(0); setIsPlayingBio(false); audioRef.current = null; }}
+                  className="px-4 py-2 border border-neutral-800 text-neutral-500 font-mono text-xs tracking-widest uppercase hover:border-neutral-600 hover:text-white transition-colors cursor-pointer"
                 >
-                  DISCARD / RE-RECORD
+                  RE-RECORD
                 </button>
               </div>
             </div>
