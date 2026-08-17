@@ -28,7 +28,6 @@ import {
 import { useAuth } from "@/app/components/AuthProvider";
 import { ChatWidget } from "@/app/components/ChatWidget";
 import { getPlayableUrl } from "@/lib/cloudinary";
-import OrbitLogo from "@/app/components/OrbitLogo";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -39,6 +38,8 @@ interface FirestoreUser {
   email?: string;
   displayName?: string;
   photoUrl?: string;
+  photoURL?: string;
+  avatarUrl?: string;
   auraScore?: number;
   badges?: string[];
   bio?: string;
@@ -468,33 +469,40 @@ export default function HandlePage({ params }: { params?: { handle?: string } })
 
   return (
     <div className="bg-black min-h-screen pb-28 md:pb-8 text-white font-sans">
-      {/* Mobile top bar */}
-      <div className="md:hidden flex items-center justify-between px-5 pt-10 pb-4 border-b border-neutral-900">
-        <Link href="/" className="text-neutral-500 hover:text-white transition-colors">
-          <ArrowLeft size={16} strokeWidth={1.5} />
+      {/* ── Instagram-Style Top Header Bar ── */}
+      <header className="px-4 py-3 md:px-6 flex items-center justify-between border-b border-neutral-900 w-full bg-black/90 backdrop-blur sticky top-0 z-30">
+        <Link href="/" className="p-1.5 text-neutral-400 hover:text-white transition-colors cursor-pointer" title="Back">
+          <ArrowLeft className="w-5 h-5" />
         </Link>
-        <span className="font-mono text-xs tracking-widest uppercase text-white">PROFILE</span>
-        <button
-          onClick={handleShareProfile}
-          className="text-neutral-500 hover:text-white transition-colors"
-          title="Share Profile"
-        >
-          {copiedShare ? <Check size={16} className="text-green-400" /> : <Share2 size={16} />}
-        </button>
-      </div>
 
-      <div className="max-w-xl mx-auto px-4 sm:px-5 md:px-6 pt-4 md:pt-6">
-
-        {/* ── Revolving Echo Planet Orbit Hero Display ── */}
-        <div className="flex flex-col items-center justify-center py-3 mb-4 border-b border-neutral-900/80">
-          <OrbitLogo size="md" />
+        {/* Center Handle */}
+        <div className="flex items-center gap-1.5">
+          <h1 className="font-mono text-sm sm:text-base font-bold tracking-wider text-white">
+            {displayHandle}
+          </h1>
+          {isPrivate && (
+            <span className="flex items-center gap-1 font-mono text-[9px] text-neutral-400 border border-neutral-800 bg-neutral-950 px-1.5 py-0.5 uppercase tracking-widest" title="Private Profile">
+              <Lock size={9} />
+            </span>
+          )}
         </div>
 
+        {/* Top Right Share */}
+        <button
+          onClick={handleShareProfile}
+          className="p-1.5 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+          title="Share Profile"
+        >
+          {copiedShare ? <Check className="w-5 h-5 text-green-400" /> : <Share2 className="w-5 h-5" />}
+        </button>
+      </header>
+
+      <div className="max-w-xl mx-auto px-4 sm:px-6 pt-5">
         {/* Live Room Banner (Clubhouse style) */}
         {liveRoom && (
           <Link
             href={`/room/${liveRoom.id}`}
-            className="mb-6 p-3 border border-red-900 bg-red-950/40 hover:bg-red-900/30 transition-colors flex items-center justify-between font-mono text-xs text-white group cursor-pointer"
+            className="mb-5 p-3 border border-red-900 bg-red-950/40 hover:bg-red-900/30 transition-colors flex items-center justify-between font-mono text-xs text-white group cursor-pointer"
           >
             <div className="flex items-center gap-2.5">
               <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
@@ -507,139 +515,152 @@ export default function HandlePage({ params }: { params?: { handle?: string } })
           </Link>
         )}
 
-        {/* Profile Header: Avatar, Handle, Badges, & Action Row */}
-        <div className="space-y-4 mb-6">
-          <div className="flex items-start justify-between gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="font-mono text-2xl font-bold tracking-wider text-white">{displayHandle}</h1>
-                {isPrivate && (
-                  <span className="flex items-center gap-1 font-mono text-[9px] text-neutral-400 border border-neutral-800 bg-neutral-950 px-1.5 py-0.5 uppercase tracking-widest" title="Private Profile">
-                    <Lock size={9} /> PRIVATE
-                  </span>
+        {/* ── Instagram Profile Top Section: Avatar + 4 Stat Counts ── */}
+        <div className="space-y-4 mb-5">
+          <div className="flex items-center justify-between gap-4 sm:gap-6">
+            {/* Left: Avatar with Floating Voice Bio Note Speech Bubble */}
+            <div className="relative flex flex-col items-center shrink-0">
+              {profile.voiceBioUrl && (
+                <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-neutral-900 border border-neutral-700 text-white font-mono text-[9px] px-2.5 py-0.5 rounded-full shadow-lg whitespace-nowrap flex items-center gap-1 z-10">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                  <span>Voice Bio 🎙️</span>
+                </div>
+              )}
+
+              <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-full border-2 border-neutral-700 overflow-hidden flex items-center justify-center text-2xl font-mono bg-neutral-950 mt-2">
+                {profile.avatarUrl ? (
+                  <img
+                    src={profile.avatarUrl}
+                    alt={displayHandle}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-white font-bold">{displayHandle.charAt(1).toUpperCase()}</span>
                 )}
-              </div>
-              <div className="flex items-center gap-2 flex-wrap pt-1">
-                {badges.map(b => <BadgePill key={b} emoji={b} />)}
               </div>
             </div>
 
-            {/* Quick Share Button (Desktop) */}
-            <div className="hidden md:flex items-center gap-2">
+            {/* Right: 4 Stat Columns */}
+            <div className="flex-1 grid grid-cols-4 text-center">
+              {/* 1. Echoes */}
+              <div className="flex flex-col items-center">
+                <span className="font-mono text-base sm:text-lg font-bold text-white">
+                  {isLocked ? "—" : userPosts.length}
+                </span>
+                <span className="font-mono text-[10px] text-neutral-400 uppercase tracking-wider">
+                  echoes
+                </span>
+              </div>
+
+              {/* 2. Orbiters */}
               <button
-                onClick={handleShareProfile}
-                className="flex items-center gap-1.5 font-mono text-xs tracking-widest uppercase border border-neutral-800 px-3 py-2 text-neutral-400 hover:border-white hover:text-white transition-colors cursor-pointer"
-                title="Share Profile Link"
+                onClick={() => setFollowsModal("ORBITERS")}
+                className="flex flex-col items-center cursor-pointer group"
               >
-                {copiedShare ? <Check size={12} className="text-green-400" /> : <Share2 size={12} />}
-                <span>{copiedShare ? "COPIED" : "SHARE"}</span>
+                <span className="font-mono text-base sm:text-lg font-bold text-white group-hover:text-neutral-300">
+                  {followersList.length}
+                </span>
+                <span className="font-mono text-[10px] text-neutral-400 uppercase tracking-wider">
+                  orbiters
+                </span>
               </button>
+
+              {/* 3. Orbiting */}
+              <button
+                onClick={() => setFollowsModal("ORBITING")}
+                className="flex flex-col items-center cursor-pointer group"
+              >
+                <span className="font-mono text-base sm:text-lg font-bold text-white group-hover:text-neutral-300">
+                  {followingList.length}
+                </span>
+                <span className="font-mono text-[10px] text-neutral-400 uppercase tracking-wider">
+                  orbiting
+                </span>
+              </button>
+
+              {/* 4. Aura */}
+              <div className="flex flex-col items-center">
+                <span className="font-serif italic text-base sm:text-lg font-bold text-white">
+                  {aura >= 1000 ? `${(aura / 1000).toFixed(1)}K` : aura}
+                </span>
+                <span className="font-mono text-[10px] text-neutral-400 uppercase tracking-wider">
+                  aura
+                </span>
+              </div>
             </div>
+          </div>
+
+          {/* User Bio Details */}
+          <div className="space-y-1 pt-1">
+            <h2 className="font-mono text-xs sm:text-sm font-bold text-white">
+              {profile.displayName || displayHandle}
+            </h2>
+            <p className="font-mono text-xs text-neutral-300 whitespace-pre-line leading-relaxed">
+              {profile.bio || "Voice creator on Echo"}
+            </p>
+            {badges.length > 0 && (
+              <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                {badges.map((b) => (
+                  <BadgePill key={b} emoji={b} />
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Action Row: [ WIRE ], [ ORBIT / ORBITING ], [ SHARE ] */}
           {!isOwnProfile && profile.uid !== "anon" && (
-            <div className="flex items-center gap-2 flex-wrap pt-1">
+            <div className="flex items-center gap-2 pt-2">
+              {user && (
+                <button
+                  onClick={handleToggleOrbit}
+                  className={`flex-1 py-2 px-3 rounded-lg border font-mono text-xs font-bold tracking-wider uppercase transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
+                    orbiting
+                      ? "border-neutral-800 bg-neutral-900 text-neutral-400 hover:border-neutral-600 hover:text-white"
+                      : "border-white bg-white text-black hover:bg-neutral-200"
+                  }`}
+                >
+                  {orbiting ? <UserCheck size={14} /> : <UserPlus size={14} />}
+                  <span>{orbiting ? "ORBITING" : "ORBIT"}</span>
+                </button>
+              )}
+
               {canStartWire && (
                 <button
                   onClick={handleStartWire}
                   disabled={startingWire}
-                  className="flex-1 min-w-[120px] flex items-center justify-center gap-1.5 font-mono text-xs tracking-widest uppercase border border-neutral-800 bg-neutral-950 px-4 py-2.5 hover:border-white hover:text-white transition-colors cursor-pointer text-white disabled:opacity-30 font-bold"
+                  className="flex-1 py-2 px-3 rounded-lg border border-neutral-800 bg-neutral-900 hover:border-neutral-600 hover:bg-neutral-800 font-mono text-xs font-bold tracking-wider uppercase transition-colors cursor-pointer text-white disabled:opacity-30 flex items-center justify-center gap-1.5"
                 >
-                  <MessageSquare size={12} />
-                  <span>{startingWire ? "CONNECTING..." : "[ 💬 WIRE ]"}</span>
-                </button>
-              )}
-
-              {user && (
-                <button
-                  onClick={handleToggleOrbit}
-                  className={`flex-1 min-w-[130px] flex items-center justify-center gap-1.5 font-mono text-xs tracking-widest uppercase border px-4 py-2.5 transition-colors cursor-pointer ${
-                    orbiting
-                      ? "border-neutral-700 bg-neutral-950 text-neutral-400 hover:border-white hover:text-white"
-                      : "border-white bg-white text-black font-bold hover:bg-neutral-200"
-                  }`}
-                >
-                  {orbiting ? <UserCheck size={13} /> : <UserPlus size={13} />}
-                  <span>{orbiting ? "[ ORBITING ]" : "[ ORBIT ]"}</span>
+                  <MessageSquare size={14} />
+                  <span>{startingWire ? "CONNECTING..." : "WIRE"}</span>
                 </button>
               )}
 
               <button
                 onClick={handleShareProfile}
-                className="md:hidden flex items-center justify-center gap-1.5 font-mono text-xs tracking-widest uppercase border border-neutral-800 px-3 py-2.5 text-neutral-400 hover:border-white hover:text-white transition-colors cursor-pointer"
+                className="p-2 rounded-lg border border-neutral-800 bg-neutral-900 hover:border-neutral-600 hover:bg-neutral-800 text-white transition-colors cursor-pointer shrink-0 flex items-center justify-center"
+                title="Share Profile"
               >
-                {copiedShare ? <Check size={12} className="text-green-400" /> : <Share2 size={12} />}
+                {copiedShare ? <Check size={16} className="text-green-400" /> : <Share2 size={16} />}
               </button>
             </div>
           )}
-        </div>
 
-        {/* Voice Bio (Instagram / Snap style note) */}
-        {profile.voiceBioUrl && (
-          <div className="mb-6 border border-neutral-800 bg-neutral-950 p-4 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="font-mono text-[10px] text-neutral-400 uppercase tracking-widest flex items-center gap-1.5 font-bold">
-                <Mic2 size={12} className="text-red-400" /> VOICE BIO NOTE
-              </span>
-              <span className="font-mono text-[10px] text-neutral-600 uppercase tracking-widest">
-                AUDIO INTRO
-              </span>
+          {/* Voice Bio (Instagram note mini player) */}
+          {profile.voiceBioUrl && (
+            <div className="pt-2">
+              <div className="border border-neutral-800 bg-neutral-950 p-3 rounded-lg space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-[10px] text-white uppercase tracking-widest flex items-center gap-1.5 font-bold">
+                    <Mic2 size={12} className="text-white" /> VOICE BIO
+                  </span>
+                  <span className="font-mono text-[10px] text-neutral-500 uppercase tracking-widest">
+                    AUDIO INTRO
+                  </span>
+                </div>
+                <MiniPlayer audioUrl={profile.voiceBioUrl} duration="00:15" durationSec={15} />
+              </div>
             </div>
-            <MiniPlayer audioUrl={profile.voiceBioUrl} duration="00:15" durationSec={15} />
-          </div>
-        )}
-
-        {/* Bio text */}
-        {profile.bio ? (
-          <p className="font-serif text-base italic text-neutral-300 leading-relaxed mb-6">
-            "{profile.bio}"
-          </p>
-        ) : (
-          <p className="font-serif text-sm italic text-neutral-700 leading-relaxed mb-6">
-            this voice hasn't spoken yet.
-          </p>
-        )}
-
-        {/* Stats Grid: AURA, ORBITERS, ORBITING, ECHOES */}
-        <div className="grid grid-cols-4 border border-neutral-900 mb-8 bg-neutral-950/40">
-          {/* AURA */}
-          <div className="py-4 text-center border-r border-neutral-900">
-            <p className="font-mono text-lg font-bold text-white tracking-widest leading-none">
-              {aura >= 1000 ? `${(aura / 1000).toFixed(1)}K` : aura}
-            </p>
-            <p className="font-mono text-[9px] text-neutral-600 tracking-widest uppercase mt-1">[ AURA ]</p>
-          </div>
-
-          {/* ORBITERS (Followers) */}
-          <button
-            onClick={() => setFollowsModal("ORBITERS")}
-            className="py-4 text-center border-r border-neutral-900 hover:bg-neutral-900 transition-colors cursor-pointer group"
-          >
-            <p className="font-mono text-lg font-bold text-white tracking-widest leading-none group-hover:text-amber-300">
-              {followersList.length}
-            </p>
-            <p className="font-mono text-[9px] text-neutral-600 group-hover:text-neutral-400 tracking-widest uppercase mt-1">ORBITERS</p>
-          </button>
-
-          {/* ORBITING (Following) */}
-          <button
-            onClick={() => setFollowsModal("ORBITING")}
-            className="py-4 text-center border-r border-neutral-900 hover:bg-neutral-900 transition-colors cursor-pointer group"
-          >
-            <p className="font-mono text-lg font-bold text-white tracking-widest leading-none group-hover:text-amber-300">
-              {followingList.length}
-            </p>
-            <p className="font-mono text-[9px] text-neutral-600 group-hover:text-neutral-400 tracking-widest uppercase mt-1">ORBITING</p>
-          </button>
-
-          {/* ECHOES */}
-          <div className="py-4 text-center">
-            <p className="font-mono text-lg font-bold text-white tracking-widest leading-none">
-              {isLocked ? "—" : userPosts.length}
-            </p>
-            <p className="font-mono text-[9px] text-neutral-600 tracking-widest uppercase mt-1">ECHOES</p>
-          </div>
+          )}
         </div>
 
         {/* Private Profile Wall (Instagram / Twitter style) */}

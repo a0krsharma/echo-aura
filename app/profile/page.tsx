@@ -11,6 +11,7 @@ import {
   X,
   Lock,
   Play,
+  Pause,
   Square,
   Copy,
   Check,
@@ -22,6 +23,15 @@ import {
   Camera,
   Edit3,
   Bookmark,
+  Plus,
+  Bell,
+  Menu,
+  Grid,
+  MessageSquare,
+  Heart,
+  Volume2,
+  Sparkles,
+  ChevronDown,
 } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
 import { useSearchParams } from "next/navigation";
@@ -31,7 +41,6 @@ import { doc, updateDoc, setDoc, onSnapshot, serverTimestamp } from "firebase/fi
 import { getFirebaseDb } from "@/lib/firebase";
 import { addTag, removeTag, getUserTags, getFreqMap, setSignalStatus, getSignalStatus, getVibeRead, analyzeVibeRead, updateVibeRead } from "@/lib/userDoc";
 import { subscribeToFollowers, subscribeToFollowing, type Follow } from "@/lib/follows";
-import OrbitLogo from "@/app/components/OrbitLogo";
 
 // Global Audio Singleton Manager — ensures only one audio echo plays at a time
 let globalAudioInstance: HTMLAudioElement | null = null;
@@ -222,6 +231,7 @@ export default function ProfilePage() {
   const [isPlayingBio, setIsPlayingBio] = useState(false);
   const [savedVoiceBioUrl, setSavedVoiceBioUrl] = useState<string | null>((user as any)?.voiceBioUrl || null);
   const [savedVoiceBioDuration, setSavedVoiceBioDuration] = useState<string | null>((user as any)?.voiceBioDuration || "15s");
+  const [bioModalOpen, setBioModalOpen] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -601,51 +611,70 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-black text-white pb-24 md:pb-8 flex flex-col font-sans">
-      {/* Top Header Bar with Clean Top-Right Icon Controls */}
+      {/* ── Instagram-Style Top Header Bar ── */}
       <header className="px-4 py-3 md:px-6 flex items-center justify-between border-b border-neutral-900 w-full bg-black/90 backdrop-blur sticky top-0 z-30">
-        <Link href="/" className="font-serif italic text-lg font-bold text-white hover:opacity-80 transition-opacity">
-          Echo.
-        </Link>
-
-        {/* Top Right Corner Icon Action Buttons */}
         <div className="flex items-center gap-2">
           <Link
-            href="/terminal"
-            className="p-2 border border-neutral-800 hover:border-white text-neutral-300 hover:text-white transition-colors flex items-center justify-center cursor-pointer bg-neutral-950"
-            title="System Terminal & Vault"
+            href="/studio"
+            className="p-1.5 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+            title="Create Voice Echo / Studio"
           >
-            <Terminal className="w-4 h-4" />
+            <Plus className="w-5 h-5" />
           </Link>
+        </div>
 
-          <button
-            onClick={() => setEditProfileOpen(true)}
-            className="p-2 border border-neutral-800 hover:border-white text-neutral-300 hover:text-white transition-colors flex items-center justify-center cursor-pointer bg-neutral-950"
-            title="Edit Profile"
-          >
-            <Edit3 className="w-4 h-4" />
-          </button>
+        {/* Center: Handle with Live Status */}
+        <div className="flex items-center gap-1.5">
+          <h1 className="font-mono text-sm sm:text-base font-bold tracking-wider text-white">
+            {handle}
+          </h1>
+          <span className={`w-2 h-2 rounded-full ${signalStatus === "ONLINE" ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
+        </div>
 
-          <button
-            onClick={() => setShareModalOpen(true)}
-            className="p-2 border border-neutral-800 hover:border-white text-neutral-300 hover:text-white transition-colors flex items-center justify-center cursor-pointer bg-neutral-950"
-            title="Share Profile"
+        {/* Top Right: Notifications & Terminal Settings Menu */}
+        <div className="flex items-center gap-1">
+          <Link
+            href="/notifications"
+            className="p-1.5 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+            title="Notifications"
           >
-            <Share2 className="w-4 h-4" />
-          </button>
+            <Bell className="w-5 h-5" />
+          </Link>
+          <Link
+            href="/terminal"
+            className="p-1.5 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+            title="System Terminal & Settings"
+          >
+            <Menu className="w-5 h-5" />
+          </Link>
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 sm:px-5 md:px-6 pt-4 w-full flex-1">
-        {/* ── Revolving Echo Planet Orbit Hero Display ── */}
-        <div className="flex flex-col items-center justify-center py-3 mb-4 border-b border-neutral-900/80">
-          <OrbitLogo size="md" />
-        </div>
-        {/* User Handle & Avatar Picture Section */}
-        <div className="space-y-4 mb-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="relative group">
-                <div className={`w-20 h-20 rounded-full border-2 overflow-hidden flex items-center justify-center text-2xl font-mono bg-neutral-950 ${
+      <main className="max-w-xl mx-auto px-4 sm:px-6 pt-5 w-full flex-1">
+        {/* ── Top Profile Row: Avatar + 4 Stat Counts ── */}
+        <div className="space-y-4 mb-5">
+          <div className="flex items-center justify-between gap-4 sm:gap-6">
+            {/* Left: Avatar with Floating Note Speech Bubble */}
+            <div className="relative flex flex-col items-center shrink-0">
+              {/* Floating Note Speech Bubble */}
+              <button
+                onClick={() => {
+                  if (savedVoiceBioUrl) {
+                    handleToggleBioPlay();
+                  } else {
+                    setBioModalOpen(true);
+                  }
+                }}
+                className="absolute -top-6 left-1/2 -translate-x-1/2 bg-neutral-900 border border-neutral-700 text-white font-mono text-[9px] px-2.5 py-0.5 rounded-full shadow-lg whitespace-nowrap flex items-center gap-1 z-10 hover:border-white transition-colors cursor-pointer"
+                title="Voice Bio Note"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                <span>{savedVoiceBioUrl ? (isPlayingBio ? "Playing..." : "Voice Bio 🎙️") : "+ Add Voice Bio"}</span>
+              </button>
+
+              {/* Avatar Circle */}
+              <div className="relative group mt-2">
+                <div className={`w-20 h-20 sm:w-22 sm:h-22 rounded-full border-2 overflow-hidden flex items-center justify-center text-2xl font-mono bg-neutral-950 ${
                   vibeRead ? "border-white shadow-lg shadow-white/20" : "border-neutral-700"
                 }`}>
                   {user?.photoURL || user?.avatarUrl || avatarPreview ? (
@@ -660,194 +689,204 @@ export default function ProfilePage() {
                 </div>
                 <button
                   onClick={() => setEditProfileOpen(true)}
-                  className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white"
+                  className="absolute bottom-0 right-0 w-6 h-6 bg-white text-black rounded-full flex items-center justify-center shadow-md cursor-pointer hover:bg-neutral-200 transition-colors"
                   title="Upload profile picture"
                 >
-                  <Camera className="w-5 h-5" />
+                  <Plus className="w-4 h-4 stroke-[3]" />
                 </button>
               </div>
-
-              <div className="space-y-1">
-                <div className="flex items-center space-x-3">
-                  <h1 className="font-mono text-2xl font-bold tracking-widest text-white">
-                    {handle}
-                  </h1>
-                  <span className={`w-2 h-2 rounded-full ${signalStatus === "ONLINE" ? "bg-green-500 animate-ping" : "bg-red-500"}`} />
-                </div>
-                <p className="font-mono text-xs text-neutral-500 tracking-widest uppercase">
-                  {user?.bio || "AUTHENTICATED PROFILE"}
-                </p>
-                {/* Active Domain Tags */}
-                {tags.length > 0 && (
-                  <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                    {tags.map((tag) => (
-                      <span key={tag} className="font-mono text-[9px] px-1.5 py-0.5 border border-neutral-800 text-neutral-400 uppercase">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
             </div>
 
-            <div className="text-right">
-              <div className="font-mono text-xs text-neutral-500 tracking-widest uppercase mb-1">
-                [ AURA ]
-              </div>
-              <div className="font-serif italic text-3xl text-white">
-                {auraScore.toLocaleString()}
-              </div>
+            {/* Right: 4 Stat Columns in a Horizontal Row */}
+            <div className="flex-1 grid grid-cols-4 text-center">
+              {/* 1. Echoes */}
+              <button
+                onClick={() => setActiveTab("ECHOES")}
+                className="flex flex-col items-center cursor-pointer group"
+              >
+                <span className="font-mono text-base sm:text-lg font-bold text-white group-hover:text-neutral-300">
+                  {echoePosts.length}
+                </span>
+                <span className="font-mono text-[10px] text-neutral-400 uppercase tracking-wider">
+                  echoes
+                </span>
+              </button>
+
+              {/* 2. Orbiters (Followers) */}
+              <button
+                onClick={() => setFollowsModal("ORBITERS")}
+                className="flex flex-col items-center cursor-pointer group"
+              >
+                <span className="font-mono text-base sm:text-lg font-bold text-white group-hover:text-neutral-300">
+                  {followersList.length}
+                </span>
+                <span className="font-mono text-[10px] text-neutral-400 uppercase tracking-wider">
+                  orbiters
+                </span>
+              </button>
+
+              {/* 3. Orbiting (Following) */}
+              <button
+                onClick={() => setFollowsModal("ORBITING")}
+                className="flex flex-col items-center cursor-pointer group"
+              >
+                <span className="font-mono text-base sm:text-lg font-bold text-white group-hover:text-neutral-300">
+                  {followingList.length}
+                </span>
+                <span className="font-mono text-[10px] text-neutral-400 uppercase tracking-wider">
+                  orbiting
+                </span>
+              </button>
+
+              {/* 4. Aura */}
+              <Link
+                href="/terminal"
+                className="flex flex-col items-center cursor-pointer group"
+                title="Aura Score"
+              >
+                <span className="font-serif italic text-base sm:text-lg font-bold text-white group-hover:text-neutral-300">
+                  {auraScore.toLocaleString()}
+                </span>
+                <span className="font-mono text-[10px] text-neutral-400 uppercase tracking-wider">
+                  aura
+                </span>
+              </Link>
             </div>
           </div>
 
-          {/* Functional Orbiters / Orbiting row */}
-          <div className="flex items-center gap-6 font-mono text-xs tracking-widest border-t border-neutral-900 pt-3 mt-3">
-            <button
-              onClick={() => setFollowsModal("ORBITING")}
-              className="text-neutral-400 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5"
-            >
-              <span className="text-white font-bold">{followingList.length}</span>
-              <span className="text-neutral-500 uppercase">[ ORBITING ]</span>
-            </button>
-            <button
-              onClick={() => setFollowsModal("ORBITERS")}
-              className="text-neutral-400 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5"
-            >
-              <span className="text-white font-bold">{followersList.length}</span>
-              <span className="text-neutral-500 uppercase">[ ORBITERS ]</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Voice Bio Section */}
-        <div className="p-6 border border-neutral-900 bg-neutral-950/40 mb-8 space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-xs text-neutral-500 tracking-widest uppercase">
-              // VOICE BIO (15S / 30S)
-            </span>
-            {bioState === "saved" && (
-              <span className="font-mono text-[10px] tracking-widest text-white border border-neutral-700 px-2 py-0.5 uppercase">
-                LIVE ON PROFILE
-              </span>
+          {/* User Bio Details Section */}
+          <div className="space-y-1 pt-1">
+            <h2 className="font-mono text-xs sm:text-sm font-bold text-white">
+              {user?.displayName || handle}
+            </h2>
+            <p className="font-mono text-xs text-neutral-300 whitespace-pre-line leading-relaxed">
+              {user?.bio || "Voice creator on Echo"}
+            </p>
+            {/* Active Domain Tags */}
+            {tags.length > 0 && (
+              <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                {tags.map((tag) => (
+                  <span key={tag} className="font-mono text-[9px] px-2 py-0.5 rounded bg-neutral-900 border border-neutral-800 text-neutral-300 uppercase tracking-wider">
+                    {tag}
+                  </span>
+                ))}
+              </div>
             )}
           </div>
 
-          {bioState === "idle" && (
-            <div className="space-y-3 pt-2">
-              {savedVoiceBioUrl && (
-                <div className="p-3 border border-neutral-800 bg-neutral-950/80 mb-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-mono text-[10px] text-white tracking-widest uppercase flex items-center gap-1.5">
-                      <Mic2 className="w-3 h-3" /> ACTIVE VOICE BIO ({savedVoiceBioDuration || "15S"})
-                    </span>
-                    <span className="font-mono text-[10px] text-neutral-500 uppercase">SAVED TO DATABASE</span>
-                  </div>
-                  <MiniPlayer audioUrl={savedVoiceBioUrl} durationSec={bioDuration || 15} />
-                </div>
-              )}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => setBioDuration(15)}
-                    className={`px-3 py-1 font-mono text-xs tracking-widest border transition-colors cursor-pointer ${
-                      bioDuration === 15 ? "border-white text-white font-bold" : "border-neutral-800 text-neutral-600 hover:text-white"
-                    }`}
-                  >
-                    [15S]
-                  </button>
-                  <button
-                    onClick={() => setBioDuration(30)}
-                    className={`px-3 py-1 font-mono text-xs tracking-widest border transition-colors cursor-pointer ${
-                      bioDuration === 30 ? "border-white text-white font-bold" : "border-neutral-800 text-neutral-600 hover:text-white"
-                    }`}
-                  >
-                    [30S]
-                  </button>
-                </div>
-                <button
-                  onClick={startBioRecording}
-                  className="w-full sm:w-auto px-4 py-2 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors cursor-pointer flex items-center justify-center gap-2"
-                >
-                  <Mic2 className="w-3.5 h-3.5" /> [ RECORD NEW VOICE BIO ]
-                </button>
-              </div>
-            </div>
-          )}
-
-          {bioState === "recording" && (
-            <div className="flex items-center justify-between py-2">
-              <div className="flex items-center space-x-2 font-mono text-xs text-white">
-                <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-                <span>00:{bioElapsed.toString().padStart(2, "0")} / 00:{bioDuration}</span>
-              </div>
-              <button
-                onClick={stopBioRecording}
-                className="px-4 py-2 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors cursor-pointer"
-              >
-                [ STOP & PREVIEW ]
-              </button>
-            </div>
-          )}
-
-          {(bioState === "preview" || bioState === "saved") && (
-            <div className="space-y-4 pt-2">
-              <div className="flex items-center space-x-4">
-                <button
-                  onClick={handleToggleBioPlay}
-                  className="w-10 h-10 rounded-full border border-neutral-700 flex items-center justify-center hover:border-white transition-colors cursor-pointer"
-                >
-                  {isPlayingBio ? <Square className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
-                </button>
-                <div className="flex-1 flex items-center space-x-1 h-6 opacity-60">
-                  {Array.from({ length: 18 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="flex-1 bg-white rounded-full"
-                      style={{ height: `${Math.max(20, (i % 5) * 20 + 20)}%` }}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-3 pt-2">
-                {bioState === "preview" && (
-                  <button
-                    onClick={saveVoiceBio}
-                    disabled={isSavingBio}
-                    className="px-4 py-2 bg-white text-black font-mono text-xs tracking-widest uppercase hover:bg-neutral-200 transition-colors cursor-pointer flex items-center gap-2"
-                  >
-                    {isSavingBio ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "[ SAVE AS VOICE BIO ]"}
-                  </button>
-                )}
-                <button
-                  onClick={() => { setBioState("idle"); setBioBlob(null); if (bioAudioUrl) URL.revokeObjectURL(bioAudioUrl); setBioAudioUrl(null); setBioElapsed(0); setIsPlayingBio(false); audioRef.current = null; }}
-                  className="px-4 py-2 border border-neutral-800 text-neutral-500 font-mono text-xs tracking-widest uppercase hover:border-neutral-600 hover:text-white transition-colors cursor-pointer"
-                >
-                  RE-RECORD
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Tabs */}
-        <div className="flex border-b border-neutral-900 mb-6 font-mono text-xs tracking-widest overflow-x-auto no-scrollbar">
-          {(["ECHOES", "REPLIES", "RE-ECHOES", "PULSED"] as const).map((tab) => (
+          {/* Instagram-Style Action Buttons Row */}
+          <div className="flex items-center gap-2 pt-2">
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`pb-3 px-4 uppercase whitespace-nowrap transition-colors cursor-pointer flex items-center gap-1.5 ${
-                activeTab === tab
-                  ? "border-b-2 border-white text-white font-bold"
-                  : "text-neutral-600 hover:text-white"
-              }`}
+              onClick={() => setEditProfileOpen(true)}
+              className="flex-1 py-2 px-3 rounded-lg bg-neutral-900 border border-neutral-800 hover:border-neutral-600 hover:bg-neutral-800 text-white font-mono text-xs font-bold tracking-wider uppercase transition-colors cursor-pointer text-center"
             >
-              <span>{tab}</span>
-              <span className="ml-0.5 text-neutral-700">
-                ({tab === "ECHOES" ? echoePosts.length : tab === "REPLIES" ? reverbPosts.length : tab === "RE-ECHOES" ? orbitPosts.length : pulsedPosts.length})
+              Edit profile
+            </button>
+            <button
+              onClick={() => setShareModalOpen(true)}
+              className="flex-1 py-2 px-3 rounded-lg bg-neutral-900 border border-neutral-800 hover:border-neutral-600 hover:bg-neutral-800 text-white font-mono text-xs font-bold tracking-wider uppercase transition-colors cursor-pointer text-center"
+            >
+              Share profile
+            </button>
+            <Link
+              href="/terminal"
+              className="p-2 rounded-lg bg-neutral-900 border border-neutral-800 hover:border-neutral-600 hover:bg-neutral-800 text-white transition-colors cursor-pointer shrink-0 flex items-center justify-center"
+              title="System Terminal Console"
+            >
+              <Terminal className="w-4 h-4" />
+            </Link>
+          </div>
+
+          {/* Instagram-Style Story Highlights Row */}
+          <div className="flex items-center gap-4 pt-3 overflow-x-auto no-scrollbar pb-1">
+            {/* Highlight 1: + New Voice Take */}
+            <button
+              onClick={() => setBioModalOpen(true)}
+              className="flex flex-col items-center gap-1.5 cursor-pointer shrink-0 group"
+            >
+              <div className="w-14 h-14 rounded-full border border-dashed border-neutral-700 group-hover:border-white bg-neutral-950 flex items-center justify-center transition-colors">
+                <Plus className="w-5 h-5 text-neutral-400 group-hover:text-white" />
+              </div>
+              <span className="font-mono text-[10px] text-neutral-400 group-hover:text-white tracking-wider">
+                New Bio
               </span>
             </button>
-          ))}
+
+            {/* Highlight 2: Active Voice Bio */}
+            {savedVoiceBioUrl && (
+              <button
+                onClick={handleToggleBioPlay}
+                className="flex flex-col items-center gap-1.5 cursor-pointer shrink-0 group"
+              >
+                <div className="w-14 h-14 rounded-full border-2 border-white bg-neutral-950 flex items-center justify-center transition-transform group-active:scale-95 shadow-md">
+                  {isPlayingBio ? (
+                    <Pause className="w-5 h-5 text-white fill-white" />
+                  ) : (
+                    <Play className="w-5 h-5 text-white fill-white ml-0.5" />
+                  )}
+                </div>
+                <span className="font-mono text-[10px] text-white font-bold tracking-wider truncate max-w-[60px]">
+                  Voice Bio
+                </span>
+              </button>
+            )}
+
+            {/* Highlight 3: Saved Vault */}
+            <Link
+              href="/terminal"
+              className="flex flex-col items-center gap-1.5 cursor-pointer shrink-0 group"
+            >
+              <div className="w-14 h-14 rounded-full border border-neutral-800 group-hover:border-neutral-600 bg-neutral-950 flex items-center justify-center transition-colors">
+                <Bookmark className="w-5 h-5 text-neutral-400 group-hover:text-white" />
+              </div>
+              <span className="font-mono text-[10px] text-neutral-400 group-hover:text-white tracking-wider">
+                Vault
+              </span>
+            </Link>
+
+            {/* Highlight 4: Aura Terminal */}
+            <Link
+              href="/terminal"
+              className="flex flex-col items-center gap-1.5 cursor-pointer shrink-0 group"
+            >
+              <div className="w-14 h-14 rounded-full border border-neutral-800 group-hover:border-neutral-600 bg-neutral-950 flex items-center justify-center transition-colors">
+                <Sparkles className="w-5 h-5 text-neutral-400 group-hover:text-white" />
+              </div>
+              <span className="font-mono text-[10px] text-neutral-400 group-hover:text-white tracking-wider">
+                Aura
+              </span>
+            </Link>
+          </div>
+        </div>
+
+        {/* ── Instagram Grid Tabs Bar ── */}
+        <div className="grid grid-cols-4 border-t border-b border-neutral-900 mb-4">
+          {(
+            [
+              { id: "ECHOES", icon: Grid, label: "ECHOES", count: echoePosts.length },
+              { id: "REPLIES", icon: MessageSquare, label: "REPLIES", count: reverbPosts.length },
+              { id: "RE-ECHOES", icon: Repeat2, label: "REPOSTS", count: orbitPosts.length },
+              { id: "PULSED", icon: Heart, label: "LIKES", count: pulsedPosts.length },
+            ] as const
+          ).map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`py-3 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors border-b-2 ${
+                  isActive ? "border-white text-white font-bold" : "border-transparent text-neutral-600 hover:text-neutral-400"
+                }`}
+                title={tab.label}
+              >
+                <Icon className={`w-5 h-5 ${isActive && tab.id === "PULSED" ? "fill-white text-white" : ""}`} />
+                <span className="font-mono text-[9px] tracking-wider">
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Tab Content */}
@@ -1107,10 +1146,129 @@ export default function ProfilePage() {
                   try { await navigator.share({ title: `${handle} on Echo`, url: shareUrl }); } catch {}
                 }
               }}
-              className="w-full border border-neutral-800 text-neutral-500 hover:border-white hover:text-white font-mono text-xs tracking-widest uppercase py-3 transition-colors cursor-pointer"
+              className="w-full border border-neutral-800 text-neutral-400 hover:border-white hover:text-white font-mono text-xs tracking-widest uppercase py-3 transition-colors cursor-pointer"
             >
               [ SHARE PROFILE ]
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Voice Bio Record / Preview Modal */}
+      {bioModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-sm border border-neutral-800 bg-black p-6 space-y-5">
+            <div className="flex items-center justify-between border-b border-neutral-900 pb-3">
+              <span className="font-mono text-xs tracking-widest text-white uppercase font-bold flex items-center gap-1.5">
+                <Mic2 className="w-4 h-4" /> // VOICE BIO (15S / 30S)
+              </span>
+              <button
+                onClick={() => setBioModalOpen(false)}
+                className="text-neutral-500 hover:text-white cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {bioState === "idle" && (
+              <div className="space-y-4">
+                {savedVoiceBioUrl && (
+                  <div className="p-3 border border-neutral-800 bg-neutral-950/80 mb-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-mono text-[10px] text-white tracking-widest uppercase flex items-center gap-1.5">
+                        <Mic2 className="w-3 h-3" /> ACTIVE VOICE BIO
+                      </span>
+                      <span className="font-mono text-[10px] text-neutral-500 uppercase">SAVED</span>
+                    </div>
+                    <MiniPlayer audioUrl={savedVoiceBioUrl} durationSec={bioDuration || 15} />
+                  </div>
+                )}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setBioDuration(15)}
+                      className={`px-3 py-1 font-mono text-xs tracking-widest border transition-colors cursor-pointer ${
+                        bioDuration === 15 ? "border-white text-white font-bold" : "border-neutral-800 text-neutral-600 hover:text-white"
+                      }`}
+                    >
+                      [15S]
+                    </button>
+                    <button
+                      onClick={() => setBioDuration(30)}
+                      className={`px-3 py-1 font-mono text-xs tracking-widest border transition-colors cursor-pointer ${
+                        bioDuration === 30 ? "border-white text-white font-bold" : "border-neutral-800 text-neutral-600 hover:text-white"
+                      }`}
+                    >
+                      [30S]
+                    </button>
+                  </div>
+                  <button
+                    onClick={startBioRecording}
+                    className="flex-1 px-4 py-2 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <Mic2 className="w-3.5 h-3.5" /> [ RECORD ]
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {bioState === "recording" && (
+              <div className="flex items-center justify-between py-4">
+                <div className="flex items-center space-x-2 font-mono text-xs text-white">
+                  <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+                  <span>00:{bioElapsed.toString().padStart(2, "0")} / 00:{bioDuration}</span>
+                </div>
+                <button
+                  onClick={stopBioRecording}
+                  className="px-4 py-2 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors cursor-pointer"
+                >
+                  [ STOP ]
+                </button>
+              </div>
+            )}
+
+            {(bioState === "preview" || bioState === "saved") && (
+              <div className="space-y-4 pt-2">
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={handleToggleBioPlay}
+                    className="w-10 h-10 rounded-full border border-neutral-700 flex items-center justify-center hover:border-white transition-colors cursor-pointer"
+                  >
+                    {isPlayingBio ? <Square className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
+                  </button>
+                  <div className="flex-1 flex items-center space-x-1 h-6 opacity-60">
+                    {Array.from({ length: 18 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="flex-1 bg-white rounded-full"
+                        style={{ height: `${Math.max(20, (i % 5) * 20 + 20)}%` }}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3 pt-2">
+                  {bioState === "preview" && (
+                    <button
+                      onClick={async () => {
+                        await saveVoiceBio();
+                        setBioModalOpen(false);
+                      }}
+                      disabled={isSavingBio}
+                      className="flex-1 px-4 py-2 bg-white text-black font-mono text-xs tracking-widest uppercase hover:bg-neutral-200 transition-colors cursor-pointer flex items-center justify-center gap-2 font-bold"
+                    >
+                      {isSavingBio ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "[ SAVE AS BIO ]"}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => { setBioState("idle"); setBioBlob(null); if (bioAudioUrl) URL.revokeObjectURL(bioAudioUrl); setBioAudioUrl(null); setBioElapsed(0); setIsPlayingBio(false); audioRef.current = null; }}
+                    className="px-4 py-2 border border-neutral-800 text-neutral-500 font-mono text-xs tracking-widest uppercase hover:border-neutral-600 hover:text-white transition-colors cursor-pointer"
+                  >
+                    RE-RECORD
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
