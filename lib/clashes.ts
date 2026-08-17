@@ -604,6 +604,7 @@ export interface StageAudienceMember {
   lastReaction?: string;
   reactionAt?: any;
   raisedHand?: boolean;
+  allegiance?: "A" | "B" | "UNDECIDED";
   joinedAt?: any;
 }
 
@@ -716,3 +717,93 @@ export async function toggleStageRaiseHand(
     console.warn("[toggleStageRaiseHand] Error:", err);
   }
 }
+
+/**
+ * getUserClashVote
+ * Get current user's active vote / allegiance on this clash
+ */
+export async function getUserClashVote(
+  clashId: string,
+  uid: string
+): Promise<"A" | "B" | "UNDECIDED" | null> {
+  try {
+    const db = getFirebaseDb();
+    const voteRef = doc(db, "clashes", clashId, "votes", uid);
+    const snap = await getDoc(voteRef);
+    if (snap.exists()) {
+      return snap.data().side as "A" | "B" | "UNDECIDED";
+    }
+    return null;
+  } catch (err) {
+    console.warn("[getUserClashVote] Error:", err);
+    return null;
+  }
+}
+
+/**
+ * castOrSwitchClashVote
+ * Enforces single vote per user, allows mid-debate side switching ("convinced!"),
+ * and atomic increments/decrements on the Tug-of-War tally.
+ */
+export async function castOrSwitchClashVote(
+  clashId: string,
+  uid: string,
+  handle: string,
+  newSide: "A" | "B" | "UNDECIDED"
+): Promise<{ previousSide: "A" | "B" | "UNDECIDED" | null; newSide: "A" | "B" | "UNDECIDED"; switched: boolean; unchanged: boolean }> {
+  try {
+    const db = getFirebaseDb();
+    const clashRef = doc(db, "clashes", clashId);
+    const voteRef = doc(db, "clashes", clashId, "votes", uid);
+    const audienceRef = doc(db, "clashes", clashId, "audience", uid);
+
+    const voteSnap = await getDoc(voteRef);
+    const previousSide: "A" | "B" | "UNDECIDED" | null = voteSnap.exists() ? voteSnap.data().side : null;
+
+    if (previousSide === newSide) {
+      return { previousSide, newSide, switched: false, unchanged: true };
+    }
+
+    const { setDoc } = await import("firebase/firestore");
+
+    // 1. Calculate Tug-of-War tally changes
+    const clashUpdates: Record<string, any> = {};
+
+    if (previousSide === "A") {
+      clashUpdates["sideA.votes"] = increment(-1);
+    } else if (previousSide === "B") {
+      clashUpdates["sideB.votes"] = increment(-1);
+    }
+
+    if (newSide === "A") {
+      clashUpdates["sideA.votes"] = increment(1);
+    } else if (newSide === "B") {
+      clashUpdates["sideB.votes"] = increment(1);
+    }
+
+    if (Object.keys(clashUpdates).length > 0) {
+      await updateDoc(clashRef, clashUpdates);
+    }
+
+    // 2. Save User Vote Doc
+    await setDoc(voteRef, {
+      uid,
+      handle,
+      side: newSide,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+
+    // 3. Update Audience Roster Record
+    await setDoc(audienceRef, {
+      allegiance: newSide,
+    }, { merge: true });
+
+    const switched = Boolean(previousSide && previousSide !== "UNDECIDED" && newSide !== "UNDECIDED" && previousSide !== newSide);
+
+    return { previousSide, newSide, switched, unchanged: false };
+  } catch (err) {
+    console.error("[castOrSwitchClashVote] Error:", err);
+    throw err;
+  }
+}
+

@@ -4,14 +4,8 @@
  * app/components/LiveArenaClient.tsx
  * ─────────────────────────────────────────────────────
  * Ultra-Low Latency Live 1v1 Audio Arena + Clubhouse-Style Audience Grid.
+ * Big Boss-Style Gamified Debate Allegiance & Mid-Debate Side Switching ("Convinced!").
  * Design: Utilitarian Canvas — pure black/white, monospace & serif, 1px borders.
- * Features:
- *  - Clubhouse-Style Live Audience Grid with avatar emoji reactions & hand raising
- *  - Member Profile & Host Moderation Menu: Promote, Demote, Kick, Ban, and End/Delete Stage
- *  - Voice Relay with active speaker volume detection & avatar pulse
- *  - 1-Hour Stage Countdown & Inactivity Sleep Mode (Preserves free minutes)
- *  - Real-time Vibe Chat & Tug-of-War Live Voting Meter
- *  - 3-Clip AI Clash Highlights Generator for Stage Organizers
  */
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
@@ -20,7 +14,8 @@ import {
   Swords, Mic, MicOff, Send, Volume2, Flame, Heart, 
   Laugh, ThumbsUp, Zap, Radio, Sparkles, Play, Pause, 
   Share2, Check, Loader2, ArrowUp, Hand, Users, Shield,
-  Trash2, UserX, UserCheck, Clock, Moon, AlertTriangle, ExternalLink
+  Trash2, UserX, UserCheck, Clock, Moon, AlertTriangle, ExternalLink,
+  Shuffle, CheckCircle2, Scale
 } from "lucide-react";
 import AgoraRTC, {
   AgoraRTCProvider,
@@ -61,6 +56,8 @@ import {
   sendStageAudienceReaction,
   toggleStageRaiseHand,
   type StageAudienceMember,
+  getUserClashVote,
+  castOrSwitchClashVote,
 } from "@/lib/clashes";
 import { subscribeToVibeChat, sendVibeMessage, type VibeChatMessage } from "@/lib/stageChat";
 import { doc, getDoc } from "firebase/firestore";
@@ -88,7 +85,12 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
 
   // Clash metadata state
   const [clash, setClash] = useState<ClashItem | null>(null);
-  const [votedSide, setVotedSide] = useState<"A" | "B" | null>(null);
+
+  // Big Boss Allegiance state (Single vote per user, allowed to switch sides)
+  const [myAllegiance, setMyAllegiance] = useState<"A" | "B" | "UNDECIDED" | null>(null);
+  const [showAllegianceModal, setShowAllegianceModal] = useState(false);
+  const [showSwitchSideModal, setShowSwitchSideModal] = useState(false);
+  const [isCastingVote, setIsCastingVote] = useState(false);
 
   // Speaker / Debater mode toggle
   const [isDebater, setIsDebater] = useState(false);
@@ -138,6 +140,21 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
     { emoji: '⚡', icon: Zap, label: 'ENERGY' },
   ];
 
+  // ── Fetch Initial User Vote & Allegiance ─────────────────────────────
+  useEffect(() => {
+    async function loadVote() {
+      if (!user) return;
+      const initialVote = await getUserClashVote(clashId, user.uid);
+      if (initialVote) {
+        setMyAllegiance(initialVote);
+      } else {
+        // Prompt new listeners to pick their faction on arrival
+        setShowAllegianceModal(true);
+      }
+    }
+    loadVote();
+  }, [clashId, user]);
+
   // ── Join Live Audience Roster & Cleanup on Leave ─────────────────────
   useEffect(() => {
     if (!user) return;
@@ -172,6 +189,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
         uid: `speaker-a-${handleA}`,
         handle: handleA,
         auraScore: 240,
+        allegiance: "A",
       });
     }
 
@@ -183,6 +201,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
         uid: `speaker-b-${handleB}`,
         handle: handleB,
         auraScore: 180,
+        allegiance: "B",
       });
     }
 
@@ -206,12 +225,13 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
           photoUrl: user.photoUrl,
           auraScore: user.auraScore || 120,
           raisedHand: myHandRaised,
+          allegiance: myAllegiance || "UNDECIDED",
         });
       }
     }
 
     return list;
-  }, [audienceMembers, user, myHandRaised, clash]);
+  }, [audienceMembers, user, myHandRaised, myAllegiance, clash]);
 
   // ── 1-Hour Stage Countdown & Inactivity Sleep Guard ─────────────────
   useEffect(() => {
@@ -261,6 +281,41 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
     const nextState = !myHandRaised;
     setMyHandRaised(nextState);
     await toggleStageRaiseHand(clashId, user.uid, nextState);
+  };
+
+  // ── Big Boss Gamified Allegiance / Mid-Debate Side Switching ─────────
+  const handleSelectAllegiance = async (targetSide: "A" | "B" | "UNDECIDED") => {
+    if (!user || isCastingVote) return;
+    setIsCastingVote(true);
+
+    try {
+      const res = await castOrSwitchClashVote(clashId, user.uid, user.handle || "@ANON", targetSide);
+      setMyAllegiance(targetSide);
+      setShowAllegianceModal(false);
+      setShowSwitchSideModal(false);
+
+      // Trigger reaction pop
+      sendReaction(targetSide === "A" ? "🔵" : targetSide === "B" ? "🟠" : "⚖️");
+
+      // Broadcast mid-debate switch if convinced
+      if (res.switched && res.previousSide) {
+        const sideAName = clash?.sideA?.handle || "Side A";
+        const sideBName = clash?.sideB?.handle || "Side B";
+        const fromName = res.previousSide === "A" ? sideAName : sideBName;
+        const toName = targetSide === "A" ? sideAName : sideBName;
+
+        await sendVibeMessage(
+          clashId,
+          "⚔️ STAGE SHIFT",
+          `🔥 ${user.handle || "@ANON"} was convinced by the debate! Switched allegiance from ${fromName} to ${toName}!`,
+          user.uid
+        );
+      }
+    } catch (e) {
+      console.error("Failed to set allegiance:", e);
+    } finally {
+      setIsCastingVote(false);
+    }
   };
 
   // ── Timer Logic ─────────────────────────────────────────────────────
@@ -494,18 +549,6 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
     };
   }, [clashId, clash?.qaEnabled]);
 
-  // Vote handler
-  const handleVote = async (side: "A" | "B") => {
-    if (votedSide) return;
-    setVotedSide(side);
-    setLiveSurgeCount(prev => prev + 5);
-    try {
-      await voteOnClash(clashId, side);
-    } catch (e) {
-      console.error("Vote failed:", e);
-    }
-  };
-
   // Vibe Chat handler
   const handleSendChat = async (e: React.FormEvent, predefinedText?: string) => {
     if (e) e.preventDefault();
@@ -537,8 +580,8 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
   };
 
   // Real-Time Generated Stage Highlights
-  const votesA = clash?.sideA?.votes || 0;
-  const votesB = clash?.sideB?.votes || 0;
+  const votesA = Math.max(0, clash?.sideA?.votes || 0);
+  const votesB = Math.max(0, clash?.sideB?.votes || 0);
   const totalVotes = votesA + votesB;
   const pctA = totalVotes > 0 ? Math.round((votesA / totalVotes) * 100) : 50;
   const pctB = 100 - pctA;
@@ -740,6 +783,8 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
             className={`border p-4 space-y-3 transition-all duration-300 relative cursor-pointer group ${
               isSideASpeaking 
                 ? "border-emerald-400/80 bg-emerald-950/10 shadow-[0_0_25px_rgba(52,211,153,0.15)]" 
+                : myAllegiance === "A"
+                ? "border-blue-400/80 bg-blue-950/10"
                 : "border-neutral-800 bg-neutral-950/40 hover:border-neutral-600"
             }`}
           >
@@ -749,6 +794,8 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
                 <div className={`w-12 h-12 rounded-full border flex items-center justify-center font-mono text-sm font-bold shrink-0 transition-all ${
                   isSideASpeaking 
                     ? "border-emerald-400 bg-emerald-950 text-emerald-300 ring-4 ring-emerald-400/30 scale-105" 
+                    : myAllegiance === "A"
+                    ? "border-blue-400 bg-blue-950 text-blue-200 ring-2 ring-blue-400/40"
                     : "border-neutral-700 bg-neutral-900 text-neutral-300 group-hover:border-white"
                 }`}>
                   {clash?.sideA?.handle?.replace("@", "").charAt(0) || "A"}
@@ -784,21 +831,30 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
               </p>
             </div>
 
-            {/* Side A Quick Vote Button */}
+            {/* Side A Quick Vote / Allegiance Button */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                handleVote("A");
+                handleSelectAllegiance("A");
               }}
-              disabled={!!votedSide}
-              className={`w-full py-2.5 border font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center justify-center gap-1.5 font-bold ${
-                votedSide === "A"
-                  ? "border-white bg-white text-black"
+              disabled={isCastingVote || myAllegiance === "A"}
+              className={`w-full py-2.5 border font-mono text-xs tracking-widest uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5 font-bold ${
+                myAllegiance === "A"
+                  ? "border-blue-400 bg-blue-950 text-blue-200 shadow-[0_0_15px_rgba(96,165,250,0.3)]"
                   : "border-neutral-800 text-neutral-300 hover:border-white hover:text-white bg-neutral-900/60"
               }`}
             >
-              <ArrowUp className="w-3.5 h-3.5" />
-              {votedSide === "A" ? "[ VOTED FOR SIDE A ]" : "[ VOTE SIDE A ]"}
+              {myAllegiance === "A" ? (
+                <>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />
+                  <span>[ ✓ YOU BACK SIDE A ]</span>
+                </>
+              ) : (
+                <>
+                  <ArrowUp className="w-3.5 h-3.5" />
+                  <span>{myAllegiance === "B" ? "[ SWITCH TO SIDE A ]" : "[ VOTE SIDE A ]"}</span>
+                </>
+              )}
             </button>
           </div>
 
@@ -816,6 +872,8 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
             className={`border p-4 space-y-3 transition-all duration-300 relative cursor-pointer group ${
               isSideBSpeaking 
                 ? "border-emerald-400/80 bg-emerald-950/10 shadow-[0_0_25px_rgba(52,211,153,0.15)]" 
+                : myAllegiance === "B"
+                ? "border-orange-400/80 bg-orange-950/10"
                 : "border-neutral-800 bg-neutral-950/40 hover:border-neutral-600"
             }`}
           >
@@ -825,6 +883,8 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
                 <div className={`w-12 h-12 rounded-full border flex items-center justify-center font-mono text-sm font-bold shrink-0 transition-all ${
                   isSideBSpeaking 
                     ? "border-emerald-400 bg-emerald-950 text-emerald-300 ring-4 ring-emerald-400/30 scale-105" 
+                    : myAllegiance === "B"
+                    ? "border-orange-400 bg-orange-950 text-orange-200 ring-2 ring-orange-400/40"
                     : "border-neutral-700 bg-neutral-900 text-neutral-300 group-hover:border-white"
                 }`}>
                   {clash?.sideB?.handle?.replace("@", "").charAt(0) || "B"}
@@ -860,46 +920,79 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
               </p>
             </div>
 
-            {/* Side B Quick Vote Button */}
+            {/* Side B Quick Vote / Allegiance Button */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                handleVote("B");
+                handleSelectAllegiance("B");
               }}
-              disabled={!!votedSide}
-              className={`w-full py-2.5 border font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center justify-center gap-1.5 font-bold ${
-                votedSide === "B"
-                  ? "border-white bg-white text-black"
+              disabled={isCastingVote || myAllegiance === "B"}
+              className={`w-full py-2.5 border font-mono text-xs tracking-widest uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5 font-bold ${
+                myAllegiance === "B"
+                  ? "border-orange-400 bg-orange-950 text-orange-200 shadow-[0_0_15px_rgba(251,146,60,0.3)]"
                   : "border-neutral-800 text-neutral-300 hover:border-white hover:text-white bg-neutral-900/60"
               }`}
             >
-              <ArrowUp className="w-3.5 h-3.5" />
-              {votedSide === "B" ? "[ VOTED FOR SIDE B ]" : "[ VOTE SIDE B ]"}
+              {myAllegiance === "B" ? (
+                <>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-orange-400" />
+                  <span>[ ✓ YOU BACK SIDE B ]</span>
+                </>
+              ) : (
+                <>
+                  <ArrowUp className="w-3.5 h-3.5" />
+                  <span>{myAllegiance === "A" ? "[ SWITCH TO SIDE B ]" : "[ VOTE SIDE B ]"}</span>
+                </>
+              )}
             </button>
           </div>
         </div>
 
-        {/* ── Dynamic Tug-of-War ASCII Meter ── */}
+        {/* ── Dynamic Tug-of-War ASCII Meter & Live Allegiance Status ── */}
         <div className="w-full border border-neutral-900 bg-neutral-950/80 p-4 space-y-3 text-center">
           <div className="flex justify-between font-mono text-xs tracking-widest text-neutral-400 uppercase font-bold">
-            <span className="text-white">SIDE A ({pctA}%)</span>
+            <span className="text-blue-400">SIDE A ({pctA}%)</span>
             <span className="text-neutral-500">// LIVE TUG-OF-WAR RATIO</span>
-            <span className="text-white">SIDE B ({pctB}%)</span>
+            <span className="text-orange-400">SIDE B ({pctB}%)</span>
           </div>
 
           <div className="w-full h-2.5 bg-neutral-900 rounded-full overflow-hidden flex">
             <div 
-              className="h-full bg-white transition-all duration-500 shadow-[0_0_10px_rgba(255,255,255,0.6)]" 
+              className="h-full bg-blue-400 transition-all duration-500 shadow-[0_0_10px_rgba(96,165,250,0.6)]" 
               style={{ width: `${pctA}%` }} 
             />
             <div 
-              className="h-full bg-neutral-700 transition-all duration-500" 
+              className="h-full bg-orange-400 transition-all duration-500 shadow-[0_0_10px_rgba(251,146,60,0.6)]" 
               style={{ width: `${pctB}%` }} 
             />
           </div>
 
           <div className="font-mono text-xs sm:text-sm text-neutral-400 tracking-widest select-none overflow-hidden">
             {renderAsciiMeter(votesA, votesB)}
+          </div>
+
+          {/* Gamified Allegiance Flip / Side Switch Control */}
+          <div className="pt-2 border-t border-neutral-900 flex items-center justify-between flex-wrap gap-2 font-mono text-xs">
+            <div className="flex items-center gap-1.5">
+              <span className="text-neutral-500 uppercase tracking-widest">// YOUR FACTION:</span>
+              <span className={`px-2 py-0.5 text-[10px] font-bold uppercase ${
+                myAllegiance === "A" 
+                  ? "bg-blue-950 text-blue-300 border border-blue-800" 
+                  : myAllegiance === "B" 
+                  ? "bg-orange-950 text-orange-300 border border-orange-800" 
+                  : "bg-neutral-900 text-neutral-400 border border-neutral-700"
+              }`}>
+                {myAllegiance === "A" ? "🔵 TEAM SIDE A" : myAllegiance === "B" ? "🟠 TEAM SIDE B" : "⚖️ UNDECIDED"}
+              </span>
+            </div>
+
+            <button
+              onClick={() => setShowSwitchSideModal(true)}
+              className="px-3 py-1 border border-amber-500/80 bg-amber-950/40 text-amber-300 hover:bg-amber-900 text-[10px] uppercase font-bold tracking-wider flex items-center gap-1.5 transition-all cursor-pointer"
+            >
+              <Shuffle className="w-3 h-3" />
+              <span>[ 🔄 SWITCH SIDE / CONVINCED! ]</span>
+            </button>
           </div>
         </div>
 
@@ -908,7 +1001,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
           <div className="flex items-center justify-between font-mono text-xs text-neutral-400 uppercase tracking-widest flex-wrap gap-2">
             <div className="flex items-center gap-2">
               <Users className="w-3.5 h-3.5 text-emerald-400" />
-              <span>// STAGE MEMBERS & AUDIENCE ({allStageParticipants.length})</span>
+              <span>// STAGE MEMBERS & FACTIONS ({allStageParticipants.length})</span>
             </div>
             
             {/* Hand Raise Toggle Button */}
@@ -925,11 +1018,12 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
             </button>
           </div>
 
-          {/* Grid of All Stage Avatars with Floating Emojis */}
+          {/* Grid of All Stage Avatars with Floating Emojis and Faction Badges */}
           <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3 pt-2">
             {allStageParticipants.map((m) => {
               const isRecentReaction = m.lastReaction;
               const isUserSpeaking = speakingUsers.has(m.uid) || (m.handle === user?.handle && isLocalSpeaking);
+              const allegiance = m.allegiance;
 
               return (
                 <div
@@ -951,10 +1045,14 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
                     </div>
                   )}
 
-                  {/* Avatar Circle with Dynamic Speaking Ring */}
+                  {/* Avatar Circle with Faction Ring & Dynamic Speaking Pulse */}
                   <div className={`w-11 h-11 rounded-full border flex items-center justify-center font-mono text-xs font-bold transition-all overflow-hidden relative ${
                     isUserSpeaking 
-                      ? "border-emerald-400 bg-emerald-950 text-emerald-300 ring-2 ring-emerald-400/40" 
+                      ? "border-emerald-400 bg-emerald-950 text-emerald-300 ring-4 ring-emerald-400/40 animate-pulse" 
+                      : allegiance === "A"
+                      ? "border-blue-400 bg-blue-950 text-blue-200 ring-2 ring-blue-500/40"
+                      : allegiance === "B"
+                      ? "border-orange-400 bg-orange-950 text-orange-200 ring-2 ring-orange-500/40"
                       : "border-neutral-700 bg-neutral-900 text-neutral-300 group-hover:border-white group-hover:scale-105"
                   }`}>
                     {m.photoUrl ? (
@@ -964,12 +1062,22 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
                     )}
                   </div>
 
-                  {/* Handle & Aura */}
+                  {/* Faction Badge Tag */}
+                  {allegiance && allegiance !== "UNDECIDED" ? (
+                    <span className={`font-mono text-[7px] px-1 py-0.2 rounded font-bold uppercase ${
+                      allegiance === "A" ? "bg-blue-950 text-blue-300 border border-blue-800" : "bg-orange-950 text-orange-300 border border-orange-800"
+                    }`}>
+                      TEAM {allegiance}
+                    </span>
+                  ) : (
+                    <span className="font-mono text-[7px] text-neutral-500 uppercase leading-none">
+                      [ AURA {m.auraScore || 0} ]
+                    </span>
+                  )}
+
+                  {/* Handle */}
                   <span className="font-mono text-[9px] text-white tracking-tight truncate max-w-[65px] group-hover:text-amber-300">
                     {m.handle}
-                  </span>
-                  <span className="font-mono text-[7px] text-neutral-500 uppercase leading-none">
-                    [ AURA {m.auraScore || 0} ]
                   </span>
                 </div>
               );
@@ -1114,6 +1222,129 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
         </div>
 
       </main>
+
+      {/* ── Gamified Initial Allegiance Selection Modal ("Join the Battle") ── */}
+      {showAllegianceModal && !myAllegiance && (
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="w-full max-w-md border border-neutral-700 bg-neutral-950 p-6 space-y-5 font-mono text-xs shadow-2xl">
+            <div className="text-center space-y-1.5 border-b border-neutral-800 pb-4">
+              <span className="text-[10px] text-amber-400 tracking-widest uppercase font-bold">
+                // ⚔️ JOIN THE BATTLE • CHOOSE YOUR SIDE
+              </span>
+              <h3 className="font-serif italic text-lg text-white">
+                "{clash?.topic || "Stage Debate Arena"}"
+              </h3>
+              <p className="text-[11px] text-neutral-400">
+                Pick your initial stance. You can switch sides mid-debate if convinced!
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              {/* Option Side A */}
+              <button
+                onClick={() => handleSelectAllegiance("A")}
+                disabled={isCastingVote}
+                className="w-full p-3 border border-blue-900 bg-blue-950/20 hover:bg-blue-900/40 hover:border-blue-400 text-left space-y-1 transition-all cursor-pointer group"
+              >
+                <div className="flex items-center justify-between text-blue-300 font-bold uppercase">
+                  <span>[ 🔵 BACK {clash?.sideA?.handle || "SIDE A"} ]</span>
+                  <span className="text-[10px] text-neutral-500">{votesA} BACKERS</span>
+                </div>
+                <p className="font-serif italic text-xs text-neutral-300">
+                  "{clash?.sideA?.position || "Stance A"}"
+                </p>
+              </button>
+
+              {/* Option Side B */}
+              <button
+                onClick={() => handleSelectAllegiance("B")}
+                disabled={isCastingVote}
+                className="w-full p-3 border border-orange-900 bg-orange-950/20 hover:bg-orange-900/40 hover:border-orange-400 text-left space-y-1 transition-all cursor-pointer group"
+              >
+                <div className="flex items-center justify-between text-orange-300 font-bold uppercase">
+                  <span>[ 🟠 BACK {clash?.sideB?.handle || "SIDE B"} ]</span>
+                  <span className="text-[10px] text-neutral-500">{votesB} BACKERS</span>
+                </div>
+                <p className="font-serif italic text-xs text-neutral-300">
+                  "{clash?.sideB?.position || "Stance B"}"
+                </p>
+              </button>
+
+              {/* Option Undecided */}
+              <button
+                onClick={() => handleSelectAllegiance("UNDECIDED")}
+                disabled={isCastingVote}
+                className="w-full py-2.5 border border-neutral-800 hover:border-white text-neutral-400 hover:text-white uppercase transition-colors flex items-center justify-center gap-2 cursor-pointer font-bold"
+              >
+                <Scale className="w-3.5 h-3.5" />
+                <span>[ ⚖️ UNDECIDED • CONVINCE ME ]</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Mid-Debate Side Switching Modal ("I Was Convinced!") ── */}
+      {showSwitchSideModal && (
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="w-full max-w-sm border border-neutral-700 bg-neutral-950 p-5 space-y-4 font-mono text-xs shadow-2xl">
+            <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
+              <span className="text-white font-bold tracking-widest uppercase flex items-center gap-1.5">
+                <Shuffle className="w-3.5 h-3.5 text-amber-400" />
+                // FLIP YOUR ALLEGIANCE
+              </span>
+              <button
+                onClick={() => setShowSwitchSideModal(false)}
+                className="text-neutral-500 hover:text-white p-1"
+              >
+                [ ✕ ]
+              </button>
+            </div>
+
+            <p className="text-neutral-400 text-[11px] font-serif italic">
+              Did a speaker convince you with fiery arguments? Flip your vote in real-time and sway the Tug-of-War!
+            </p>
+
+            <div className="space-y-2">
+              <button
+                onClick={() => handleSelectAllegiance("A")}
+                disabled={isCastingVote || myAllegiance === "A"}
+                className={`w-full py-2.5 border uppercase font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  myAllegiance === "A"
+                    ? "border-blue-500 bg-blue-950 text-blue-300 opacity-60"
+                    : "border-neutral-800 hover:border-blue-400 hover:text-blue-300 text-white"
+                }`}
+              >
+                <span>🔵 FLIP TO {clash?.sideA?.handle || "SIDE A"}</span>
+              </button>
+
+              <button
+                onClick={() => handleSelectAllegiance("B")}
+                disabled={isCastingVote || myAllegiance === "B"}
+                className={`w-full py-2.5 border uppercase font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  myAllegiance === "B"
+                    ? "border-orange-500 bg-orange-950 text-orange-300 opacity-60"
+                    : "border-neutral-800 hover:border-orange-400 hover:text-orange-300 text-white"
+                }`}
+              >
+                <span>🟠 FLIP TO {clash?.sideB?.handle || "SIDE B"}</span>
+              </button>
+
+              <button
+                onClick={() => handleSelectAllegiance("UNDECIDED")}
+                disabled={isCastingVote || myAllegiance === "UNDECIDED"}
+                className={`w-full py-2 border uppercase transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  myAllegiance === "UNDECIDED"
+                    ? "border-neutral-700 bg-neutral-900 text-neutral-400 opacity-60"
+                    : "border-neutral-800 hover:border-neutral-500 text-neutral-400 hover:text-white"
+                }`}
+              >
+                <span>⚖️ STAY UNDECIDED</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Member Profile & Host Action Modal ── */}
       {selectedUserForModeration && (

@@ -69,6 +69,12 @@ service cloud.firestore {
         allow create, update, delete: if request.auth != null;
       }
 
+      // Per-user Vote / Allegiance records (Strict single vote per user)
+      match /votes/{uid} {
+        allow read:   if true;
+        allow create, update, delete: if request.auth != null;
+      }
+
       // Vibe Chat messages sub-collection
       match /messages/{messageId} {
         allow read:   if true;
