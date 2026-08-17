@@ -371,6 +371,15 @@ export default function TerminalPage() {
           </div>
         </div>
 
+        {/* ── SAVED VAULT ─────────────────────────────────── */}
+        <SectionHeader label="SAVED ARCHIVE & VAULT" />
+        <NavItem
+          label="SAVED ECHO VAULT"
+          sub="access all your bookmarked audio clips & saved waves"
+          href="/profile?tab=VAULT"
+          badge="VAULT"
+        />
+
         {/* ── PINGS ─────────────────────────────────────────── */}
         <SectionHeader label="PINGS — NOTIFICATIONS" />
         <NavItem

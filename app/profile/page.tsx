@@ -21,10 +21,12 @@ import {
   Terminal,
   Camera,
   Edit3,
+  Bookmark,
 } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
+import { useSearchParams } from "next/navigation";
 import { uploadAudio, uploadImage, getPlayableUrl } from "@/lib/cloudinary";
-import { subscribeToUserPosts, subscribeToUserPulsedPosts, type PostItem } from "@/lib/posts";
+import { subscribeToUserPosts, subscribeToUserPulsedPosts, getUserVaultedPosts, type PostItem } from "@/lib/posts";
 import { doc, updateDoc, setDoc, onSnapshot, serverTimestamp } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 import { addTag, removeTag, getUserTags, getFreqMap, setSignalStatus, getSignalStatus, getVibeRead, analyzeVibeRead, updateVibeRead } from "@/lib/userDoc";
@@ -168,12 +170,28 @@ function MiniPlayer({ audioUrl, durationSec }: { audioUrl: string; durationSec: 
 
 export default function ProfilePage() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<"ECHOES" | "REPLIES" | "RE-ECHOES" | "PULSED">("ECHOES");
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<"ECHOES" | "REPLIES" | "RE-ECHOES" | "PULSED" | "VAULT">(
+    initialTab === "VAULT" ? "VAULT" : "ECHOES"
+  );
   const [userPosts, setUserPosts] = useState<PostItem[]>([]);
   const [pulsedPosts, setPulsedPosts] = useState<PostItem[]>([]);
+  const [vaultPosts, setVaultPosts] = useState<PostItem[]>([]);
   const [followersList, setFollowersList] = useState<Follow[]>([]);
   const [followingList, setFollowingList] = useState<Follow[]>([]);
   const [followsModal, setFollowsModal] = useState<"ORBITERS" | "ORBITING" | null>(null);
+
+  useEffect(() => {
+    if (initialTab === "VAULT") {
+      setActiveTab("VAULT");
+    }
+  }, [initialTab]);
+
+  useEffect(() => {
+    if (!user) return;
+    getUserVaultedPosts(user.uid).then(setVaultPosts).catch(() => {});
+  }, [user, activeTab]);
 
   useEffect(() => {
     if (!user) return;
@@ -608,6 +626,18 @@ export default function ProfilePage() {
       <header className="px-4 py-4 md:px-6 flex items-center justify-between border-b border-neutral-900 gap-2 flex-wrap sm:flex-nowrap">
         <OrbitLogo />
         <div className="flex items-center gap-2 flex-wrap shrink-0">
+          <button
+            onClick={() => setActiveTab("VAULT")}
+            className={`px-2.5 py-1.5 border font-mono text-[11px] sm:text-xs tracking-wider uppercase transition-colors cursor-pointer flex items-center gap-1 shrink-0 ${
+              activeTab === "VAULT"
+                ? "border-white bg-white text-black font-bold"
+                : "border-neutral-800 text-neutral-400 hover:border-white hover:text-white"
+            }`}
+            title="Saved Echo Vault"
+          >
+            <Bookmark className="w-3.5 h-3.5" />
+            <span>VAULT ({vaultPosts.length})</span>
+          </button>
           <Link
             href="/terminal"
             className="px-2.5 py-1.5 border border-neutral-800 hover:border-white text-neutral-400 hover:text-white font-mono text-[11px] sm:text-xs tracking-wider uppercase transition-colors cursor-pointer flex items-center gap-1 whitespace-nowrap shrink-0"
@@ -900,19 +930,20 @@ export default function ProfilePage() {
 
         {/* Tabs */}
         <div className="flex border-b border-neutral-900 mb-6 font-mono text-xs tracking-widest overflow-x-auto no-scrollbar">
-          {(["ECHOES", "REPLIES", "RE-ECHOES", "PULSED"] as const).map((tab) => (
+          {(["ECHOES", "REPLIES", "RE-ECHOES", "PULSED", "VAULT"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`pb-3 px-4 uppercase whitespace-nowrap transition-colors cursor-pointer ${
+              className={`pb-3 px-4 uppercase whitespace-nowrap transition-colors cursor-pointer flex items-center gap-1.5 ${
                 activeTab === tab
                   ? "border-b-2 border-white text-white font-bold"
                   : "text-neutral-600 hover:text-white"
               }`}
             >
-              {tab}
-              <span className="ml-1 text-neutral-700">
-                ({tab === "ECHOES" ? echoePosts.length : tab === "REPLIES" ? reverbPosts.length : tab === "RE-ECHOES" ? orbitPosts.length : pulsedPosts.length})
+              {tab === "VAULT" && <Bookmark className="w-3 h-3" />}
+              <span>{tab === "VAULT" ? "SAVED VAULT" : tab}</span>
+              <span className="ml-0.5 text-neutral-700">
+                ({tab === "ECHOES" ? echoePosts.length : tab === "REPLIES" ? reverbPosts.length : tab === "RE-ECHOES" ? orbitPosts.length : tab === "PULSED" ? pulsedPosts.length : vaultPosts.length})
               </span>
             </button>
           ))}
@@ -923,6 +954,7 @@ export default function ProfilePage() {
         {activeTab === "REPLIES"   && renderPostList(reverbPosts, "replies")}
         {activeTab === "RE-ECHOES" && renderPostList(orbitPosts,  "re-echoes")}
         {activeTab === "PULSED"    && renderPostList(pulsedPosts, "pulsed posts")}
+        {activeTab === "VAULT"     && renderPostList(vaultPosts,  "saved echoes")}
       </main>
 
       {/* ORBITERS / ORBITING MODAL */}

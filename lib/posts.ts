@@ -427,24 +427,37 @@ export async function isPostVaulted(postId: string, uid: string): Promise<boolea
  */
 export async function getUserVaultedPosts(uid: string): Promise<PostItem[]> {
   const db = getFirebaseDb();
-  const vaultQuery = query(
-    collection(db, "user_vault"),
-    where("uid", "==", uid)
-  );
-  
-  const vaultSnap = await getDocs(vaultQuery);
-  const postIds = vaultSnap.docs.map(doc => doc.data().postId);
-  
+  const postIds: string[] = [];
+
+  try {
+    const userVaultSnap = await getDocs(collection(db, "users", uid, "vault"));
+    userVaultSnap.docs.forEach((d) => {
+      const pId = d.data().postId || d.id;
+      if (pId && !postIds.includes(pId)) postIds.push(pId);
+    });
+  } catch {}
+
+  try {
+    const vaultQuery = query(collection(db, "user_vault"), where("uid", "==", uid));
+    const vaultSnap = await getDocs(vaultQuery);
+    vaultSnap.docs.forEach((doc) => {
+      const pId = doc.data().postId;
+      if (pId && !postIds.includes(pId)) postIds.push(pId);
+    });
+  } catch {}
+
   if (postIds.length === 0) return [];
-  
-  // Get post details
-  const postsQuery = query(
-    collection(db, "posts"),
-    where("__name__", "in", postIds.slice(0, 10)) // Firestore limit for 'in' queries
-  );
-  
-  const postsSnap = await getDocs(postsQuery);
-  return postsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PostItem[];
+
+  try {
+    const postsQuery = query(
+      collection(db, "posts"),
+      where("__name__", "in", postIds.slice(0, 30))
+    );
+    const postsSnap = await getDocs(postsQuery);
+    return postsSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as PostItem[];
+  } catch {
+    return [];
+  }
 }
 
 /**
