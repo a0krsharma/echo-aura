@@ -161,8 +161,13 @@ export function getPlayableUrl(rawUrl: string): string {
   // Fix legacy /raw/upload/ path to /video/upload/ for browser audio playback compatibility
   url = url.replace(/\/raw\/upload\//g, "/video/upload/");
   
-  // Strip any raw extension if it was saved with .webm but uploaded under video/upload
-  // Also provide fallback mp3 transformation if direct webm fails
+  // Ensure Cloudinary audio URLs are transcoded to universal MP3 on the fly for Safari / Chrome compatibility
+  if (url.includes("res.cloudinary.com") && url.includes("/video/upload/")) {
+    if (!url.includes("f_mp3") && !url.endsWith(".mp3")) {
+      url = url.replace("/video/upload/", "/video/upload/f_mp3,q_auto:good/");
+    }
+  }
+  
   return url;
 }
 

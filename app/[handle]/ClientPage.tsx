@@ -571,24 +571,16 @@ export default function HandlePage({ params }: { params?: { handle?: string } })
 
         {/* Voice Bio (Instagram / Snap style note) */}
         {profile.voiceBioUrl && (
-          <div className="mb-6 border border-neutral-800 bg-neutral-950 p-3 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={toggleVoiceBio}
-                className="w-8 h-8 rounded-full border border-white text-white flex items-center justify-center hover:bg-white hover:text-black transition-colors cursor-pointer shrink-0"
-              >
-                {playingVoiceBio ? <Pause size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" className="ml-0.5" />}
-              </button>
-              <div>
-                <p className="font-mono text-[10px] text-neutral-500 uppercase tracking-widest flex items-center gap-1">
-                  <Mic2 size={10} className="text-red-400" /> VOICE BIO NOTE
-                </p>
-                <p className="font-mono text-xs text-white">Tap to listen to this creator speak</p>
-              </div>
+          <div className="mb-6 border border-neutral-800 bg-neutral-950 p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[10px] text-neutral-400 uppercase tracking-widest flex items-center gap-1.5 font-bold">
+                <Mic2 size={12} className="text-red-400" /> VOICE BIO NOTE
+              </span>
+              <span className="font-mono text-[10px] text-neutral-600 uppercase tracking-widest">
+                AUDIO INTRO
+              </span>
             </div>
-            <div className="hidden sm:block">
-              <Waveform playing={playingVoiceBio} />
-            </div>
+            <MiniPlayer audioUrl={profile.voiceBioUrl} duration="00:15" durationSec={15} />
           </div>
         )}
 
