@@ -21,7 +21,7 @@ import { ToastContainer } from "@/app/components/Toast";
 import { PWAInstallPrompt } from "@/app/components/PWAInstallPrompt";
 import { RoomAudioProvider } from "@/lib/context/RoomAudioContext";
 import PersistentRoomDock from "@/app/components/PersistentRoomDock";
-import { subscribeToNotifications, markNotificationRead, subscribeToUnreadCount, type EchoNotification } from "@/lib/notifications";
+import { subscribeToNotifications, markNotificationRead, subscribeToUnreadCount, requestNotificationPermission, dispatchNativeMobileNotification, type EchoNotification } from "@/lib/notifications";
 import {
   Loader2,
   Menu,
@@ -64,16 +64,30 @@ function ShellContent({ children }: { children: React.ReactNode }) {
     return () => unsub();
   }, [user]);
 
-  // Subscribe to notifications for toasts
+  // Request browser/mobile push notification permission when logged in
+  useEffect(() => {
+    if (user && typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission === "default") {
+        requestNotificationPermission().catch(() => {});
+      }
+    }
+  }, [user]);
+
+  // Subscribe to notifications for toasts & native mobile push
   useEffect(() => {
     if (!user) return;
 
     const unsub = subscribeToNotifications(user.uid, (notifications) => {
-      // Show toasts for new unread notifications
+      // Show toasts & dispatch mobile notifications for new unread notifications
       const newUnread = notifications.filter(n => !n.read && !shownToastIdsRef.current.has(n.id));
       
       if (newUnread.length > 0) {
-        newUnread.forEach(n => shownToastIdsRef.current.add(n.id));
+        newUnread.forEach(n => {
+          shownToastIdsRef.current.add(n.id);
+          // Dispatch native browser / mobile status bar notification
+          dispatchNativeMobileNotification(n).catch(() => {});
+        });
+
         setToastNotifications(prev => {
           // Filter out any duplicates that might already exist in prev
           const existingIds = new Set(prev.map(t => t.id));

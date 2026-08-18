@@ -218,6 +218,54 @@ export function showNotification(title: string, options?: NotificationOptions): 
   return null;
 }
 
+export async function dispatchNativeMobileNotification(notif: EchoNotification): Promise<void> {
+  if (typeof window === "undefined" || !("Notification" in window)) return;
+  if (Notification.permission !== "granted") return;
+
+  const titleMap: Record<string, string> = {
+    pulse: "❤️ [ PULSE ]",
+    reverb: "🎙 [ REVERB / RE-ECHO ]",
+    orbiter: "🌐 [ NEW ORBITER ]",
+    wire: "💬 [ WIRE DIRECT MESSAGE ]",
+    whisper: "🤫 [ WHISPER MESSAGE ]",
+    room_join: "📻 [ NODE JOINED ROOM ]",
+    room_leave: "📻 [ NODE LEFT ROOM ]",
+    raise_hand: "✋ [ MIC REQUEST IN ROOM ]",
+    room_promote: "🎙 [ PROMOTED TO SPEAKER ]",
+    room_demote: "🎧 [ DEMOTED TO LISTENER ]",
+    stage: "⚔ [ LIVE STAGE DEBATE ]",
+  };
+
+  const title = titleMap[notif.type] || "// [ ECHO FREQUENCY ]";
+  const body = notif.text || `${notif.fromHandle} interacted with your frequency.`;
+  const targetUrl = notif.roomId ? `/room/${notif.roomId}` : notif.postId ? `/#${notif.postId}` : "/notifications";
+
+  try {
+    if ("serviceWorker" in navigator) {
+      const reg = await navigator.serviceWorker.ready;
+      if (reg && typeof reg.showNotification === "function") {
+        await reg.showNotification(title, {
+          body,
+          icon: "/favicon.ico",
+          badge: "/favicon.ico",
+          tag: notif.id,
+          data: { url: targetUrl },
+        });
+        return;
+      }
+    }
+
+    new Notification(title, {
+      body,
+      icon: "/favicon.ico",
+      badge: "/favicon.ico",
+      tag: notif.id,
+    });
+  } catch (err) {
+    console.warn("[Notifications] Mobile push dispatch warning:", err);
+  }
+}
+
 export function notifyDebateStart(clashTitle: string, user1: string, user2: string) {
   showNotification("🔴 LIVE DEBATE STARTED", {
     body: `${user1} vs ${user2} is live on Stage: "${clashTitle}"`,

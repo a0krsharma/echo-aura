@@ -103,3 +103,25 @@ self.addEventListener('activate', (event) => {
     ])
   );
 });
+
+// Notification click event - focus or open window to target URL
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = (event.notification.data && event.notification.data.url) ? event.notification.data.url : '/';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      for (const client of windowClients) {
+        if ('focus' in client) {
+          if (client.url.includes(targetUrl)) {
+            return client.focus();
+          }
+          return client.navigate(targetUrl).then((c) => c ? c.focus() : null);
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
+    })
+  );
+});
