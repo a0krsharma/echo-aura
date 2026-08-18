@@ -113,22 +113,12 @@ export default function NotificationsPage() {
   return (
     <div className="min-h-screen bg-black text-white pb-24 md:pb-8 font-mono">
       <main className="max-w-2xl mx-auto px-4 sm:px-6 pt-5 space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-neutral-900 pb-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-              <h1 className="font-mono text-sm font-bold text-white tracking-widest uppercase">
-                REAL-TIME NOTIFICATIONS
-              </h1>
-            </div>
-            {unreadCount > 0 && (
-              <p className="font-mono text-[10px] text-neutral-400 tracking-widest mt-1 font-bold">
-                [{unreadCount} UNREAD SIGNALS]
-              </p>
-            )}
-          </div>
-          {unreadCount > 0 && (
+        {/* Header Unread & Mark All Read */}
+        {unreadCount > 0 && (
+          <div className="flex items-center justify-between border-b border-neutral-900 pb-2">
+            <span className="font-mono text-[10px] text-neutral-400 tracking-widest font-bold">
+              [{unreadCount} UNREAD SIGNALS]
+            </span>
             <button
               onClick={handleMarkAll}
               disabled={marking}
@@ -140,8 +130,8 @@ export default function NotificationsPage() {
               }
               MARK ALL READ
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Filter Tabs */}
         <div className="overflow-x-auto no-scrollbar">
