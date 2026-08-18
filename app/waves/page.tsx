@@ -379,9 +379,28 @@ function WaveCard({
       </div>
 
       {/* ── BOTTOM CREATOR INFO & EXPANDABLE DESCRIPTION ── */}
-      <div className="absolute bottom-3 sm:bottom-4 left-3 right-15 sm:left-4 sm:right-18 z-20 space-y-1.5 pointer-events-none max-w-[calc(100%-4rem)]">
+      <div className="absolute bottom-20 sm:bottom-6 left-3 right-16 sm:left-6 sm:right-20 z-20 space-y-2 pointer-events-none max-w-[calc(100%-4.5rem)]">
+        {/* Interactive Scrub Timeline Slider */}
+        <div className="flex items-center gap-2 pointer-events-auto w-full select-none">
+          <input
+            type="range"
+            min={0}
+            max={dur || 15}
+            step={0.1}
+            value={current}
+            onChange={(e) => {
+              seek(parseFloat(e.target.value));
+            }}
+            className="w-full h-1.5 bg-white/20 hover:bg-white/40 rounded-none appearance-none cursor-pointer accent-white transition-all focus:outline-none"
+            title="Drag slider to seek audio"
+          />
+          <span className="font-mono text-[9px] text-white tabular-nums shrink-0 uppercase tracking-widest bg-black/70 px-1.5 py-0.5 border border-white/20">
+            {Math.floor(current)}s / {dur}s
+          </span>
+        </div>
+
         {/* Creator Row: Avatar, Handle, and Orbit Follow Button */}
-        <div className="flex items-center gap-2 pointer-events-auto">
+        <div className="flex items-center gap-2 pointer-events-auto flex-wrap">
           <button
             onClick={onProfile}
             className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-white/60 bg-neutral-900 flex items-center justify-center text-white font-mono text-xs font-bold shrink-0 hover:border-white transition-colors cursor-pointer"
@@ -419,10 +438,10 @@ function WaveCard({
         </div>
 
         {/* Caption / Description Box */}
-        <div className="pointer-events-auto bg-black/50 backdrop-blur-sm p-2 rounded-lg border border-white/10 space-y-1">
+        <div className="pointer-events-auto bg-black/60 backdrop-blur-md p-2.5 rounded-none border border-white/20 space-y-1">
           {!expandedDesc ? (
             <div className="space-y-1">
-              <p className="font-serif italic text-white text-xs sm:text-sm leading-snug drop-shadow line-clamp-2">
+              <p className="font-mono font-bold text-white text-xs sm:text-sm leading-snug drop-shadow line-clamp-2">
                 "{shortTitle}"
               </p>
               {isLong && (
@@ -436,7 +455,7 @@ function WaveCard({
             </div>
           ) : (
             <div className="space-y-1 max-h-32 overflow-y-auto no-scrollbar">
-              <p className="font-serif italic text-white text-xs sm:text-sm leading-snug drop-shadow">
+              <p className="font-mono font-bold text-white text-xs sm:text-sm leading-snug drop-shadow">
                 "<FormattedText text={cleanCaption} />"
               </p>
               <button
@@ -449,7 +468,7 @@ function WaveCard({
           )}
           
           <div className="flex items-center gap-2 pt-0.5">
-            <span className="font-mono text-[8px] sm:text-[9px] px-1.5 py-0.2 rounded border border-neutral-700 bg-neutral-900 text-white font-bold uppercase tracking-wider">
+            <span className="font-mono text-[8px] sm:text-[9px] px-1.5 py-0.2 rounded-none border border-neutral-700 bg-neutral-900 text-white font-bold uppercase tracking-wider">
               [ WAVES ]
             </span>
             <span className="font-mono text-[9px] text-neutral-400">
@@ -466,7 +485,7 @@ function WaveCard({
       </div>
 
       {/* ── RIGHT ACTION STACK (INSTAGRAM REELS INSPIRED) ── */}
-      <div className="absolute bottom-3 sm:bottom-4 right-1.5 sm:right-3 z-20 flex flex-col items-center gap-2 sm:gap-2.5 pointer-events-auto">
+      <div className="absolute bottom-20 sm:bottom-6 right-2 sm:right-4 z-20 flex flex-col items-center gap-2.5 sm:gap-3 pointer-events-auto">
         {/* 1. Heart / Pulse (Like) */}
         <button
           onClick={onPulse}

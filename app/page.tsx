@@ -434,18 +434,25 @@ function AudioPlayer({ audioUrl, fallbackDurationSec, isActive, onPlayToggle, sm
         <span className="font-mono text-[10px] text-neutral-500 tracking-widest shrink-0 tabular-nums">{fmt(current)}/{fmt(dur)}</span>
       </div>
 
-      {/* Interactive Timeline Scrubber */}
-      <div
-        className="w-full h-3 flex items-center cursor-pointer group select-none py-1"
-        onClick={seek}
-        title="Click to jump / scrub audio"
-      >
-        <div className="w-full h-1.5 bg-neutral-900 group-hover:h-2 transition-all relative overflow-hidden">
-          <div
-            className="h-full bg-white transition-none"
-            style={{ width: `${dur > 0 ? Math.min(100, (current / dur) * 100) : 0}%` }}
-          />
-        </div>
+      {/* Interactive Timeline Scrubber Slider */}
+      <div className="w-full flex items-center gap-2 select-none pt-1">
+        <input
+          type="range"
+          min={0}
+          max={dur || 1}
+          step={0.1}
+          value={current}
+          onChange={(e) => {
+            const val = parseFloat(e.target.value);
+            const a = audioRef.current;
+            if (a && isFinite(a.duration)) {
+              a.currentTime = val;
+              setCurrent(val);
+            }
+          }}
+          className="w-full h-1.5 bg-neutral-900 hover:bg-neutral-800 rounded-none appearance-none cursor-pointer accent-white hover:h-2 transition-all focus:outline-none"
+          title="Slide to seek audio"
+        />
       </div>
     </div>
   );
