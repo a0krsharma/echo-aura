@@ -1,24 +1,26 @@
 "use client";
 
 /**
- * ECHO — Echo Rooms ( /rooms )
- * Live group audio listening sessions & stage relays.
+ * ECHO — Echo Live Rooms ( /rooms )
+ * 1-Tap Tune-In audio frequencies & scheduled transmissions.
  */
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Mic2, Volume2, Users, Lock, Radio, Swords, Plus, X, Trash2, Share2 } from "lucide-react";
+import { Radio, Swords, Plus, X, Calendar, Flame, Lock } from "lucide-react";
 import { subscribeToClashes, type ClashItem } from "@/lib/clashes";
-import { getRoom, subscribeToPublicRooms, addParticipant, deleteRoom, getTrendingRooms, getRoomsByCategory, type Room } from "@/lib/rooms";
+import { subscribeToPublicRooms, getTrendingRooms, getRoomsByCategory, type Room } from "@/lib/rooms";
 import { useAuth } from "@/app/components/AuthProvider";
+import QuickRoomCard from "@/app/components/QuickRoomCard";
+import { ScheduledRoomCard } from "@/app/components/ScheduledRoomCard";
 
 function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate: (roomId: string) => void }) {
   const { user } = useAuth();
   const router = useRouter();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("GENERAL");
+  const [category, setCategory] = useState("TECH");
   const [maxParticipants, setMaxParticipants] = useState(100);
   const [isPublic, setIsPublic] = useState(true);
   const [tags, setTags] = useState("");
@@ -27,25 +29,13 @@ function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate:
   const [scheduledFor, setScheduledFor] = useState("");
   const [openMic, setOpenMic] = useState(false);
 
-  const CATEGORIES = ["GENERAL", "TECH", "MUSIC", "DEBATE", "CASUAL", "PROFESSIONAL"];
-
+  const CATEGORIES = ["GENERAL", "TECH", "MARKETS", "MUSIC", "DEBATE", "CRICKET", "CASUAL"];
   const canCreate = name.trim().length >= 3 && user;
 
   const handleCreate = async () => {
     if (!canCreate || !user) return;
     setLoading(true);
     try {
-      console.log("Creating room with data:", {
-        name: name.trim(),
-        description: description.trim(),
-        hostUid: user.uid,
-        hostHandle: user.handle || "@ANON",
-        maxParticipants,
-        isPublic,
-        category,
-        tags: tags.split(",").map(t => t.trim()).filter(t => t),
-      });
-
       const response = await fetch("/api/rooms", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -57,31 +47,23 @@ function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate:
           maxParticipants,
           isPublic,
           category,
-          tags: tags.split(",").map(t => t.trim()).filter(t => t),
+          tags: tags.split(",").map(t => t.trim()).filter(Boolean),
           scheduledFor: scheduleMode && scheduledFor ? new Date(scheduledFor).toISOString() : null,
           openMic,
         }),
       });
 
       const data = await response.json();
-      console.log("API response:", data);
-
-      if (!response.ok) {
-        console.error("API error:", data.error);
+      if (!response.ok || !data.success) {
         alert(`Error: ${data.error || "Failed to create room"}`);
         return;
       }
 
-      if (data.success) {
-        onCreate(data.roomId);
-        router.push(`/room/${data.roomId}`);
-      } else {
-        console.error("Creation failed:", data.error);
-        alert(`Error: ${data.error || "Failed to create room"}`);
-      }
+      onCreate(data.roomId);
+      router.push(`/room/${data.roomId}`);
     } catch (error) {
       console.error("Error creating room:", error);
-      alert("Error: Failed to create room. Check console for details.");
+      alert("Error: Failed to create room. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -89,156 +71,102 @@ function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate:
 
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/90 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-md bg-black border border-neutral-700 p-6 md:p-8 animate-slide-up space-y-4">
-        <div className="flex items-start justify-between">
+      <div className="w-full max-w-md bg-black border border-white p-6 md:p-8 animate-slide-up space-y-4 font-mono">
+        <div className="flex items-start justify-between border-b border-neutral-900 pb-3">
           <div>
-            <p className="font-mono text-xs tracking-widest text-neutral-500 mb-1">// CREATE NEW ROOM</p>
-            <p className="font-serif italic text-white text-lg">Start a live frequency.</p>
+            <p className="text-[10px] tracking-widest text-neutral-500 uppercase">// BROADCAST SETUP</p>
+            <h2 className="text-sm font-bold text-white uppercase mt-0.5">LAUNCH LIVE FREQUENCY</h2>
           </div>
-          <button onClick={onClose} className="text-neutral-600 hover:text-white transition-colors cursor-pointer">
+          <button onClick={onClose} className="text-neutral-500 hover:text-white transition-colors cursor-pointer">
             <X size={18} />
           </button>
         </div>
 
-        <div>
-          <label className="font-mono text-[10px] tracking-widest text-neutral-600 block mb-1">ROOM NAME</label>
-          <input
-            value={name}
-            onChange={e => setName(e.target.value)}
-            placeholder="e.g. Late Night Vibes"
-            className="w-full bg-transparent border-b border-neutral-800 focus:border-white outline-none font-mono text-xs text-white py-1 tracking-widest"
-          />
-        </div>
-
-        <div>
-          <label className="font-mono text-[10px] tracking-widest text-neutral-600 block mb-1">DESCRIPTION</label>
-          <textarea
-            value={description}
-            onChange={e => setDescription(e.target.value)}
-            placeholder="What's this room about?"
-            rows={2}
-            className="w-full bg-transparent border border-neutral-800 focus:border-neutral-600 outline-none font-serif italic text-white p-2 text-sm leading-relaxed resize-none"
-          />
-        </div>
-
-        <div>
-          <label className="font-mono text-[10px] tracking-widest text-neutral-600 block mb-1">CATEGORY</label>
-          <select
-            value={category}
-            onChange={e => setCategory(e.target.value)}
-            className="w-full bg-transparent border border-neutral-800 p-2 font-mono text-xs text-white focus:outline-none focus:border-white"
-          >
-            {CATEGORIES.map(cat => (
-              <option key={cat} value={cat} className="bg-black">{cat}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-3">
           <div>
-            <label className="font-mono text-[9px] tracking-widest text-neutral-600 block mb-1">MAX PARTICIPANTS (2 - 1000)</label>
+            <label className="text-[10px] tracking-widest text-neutral-500 block mb-1">FREQUENCY TITLE</label>
             <input
-              type="number"
-              value={maxParticipants}
-              onChange={e => {
-                const val = parseInt(e.target.value);
-                setMaxParticipants(isNaN(val) ? 2 : Math.max(2, Math.min(1000, val)));
-              }}
-              min="2"
-              max="1000"
-              className="w-full bg-transparent border border-neutral-800 p-2 font-mono text-xs text-white"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="e.g. OPTIONS EXPIRY & ORDER FLOW"
+              className="w-full bg-neutral-950 border border-neutral-800 p-2.5 text-xs text-white placeholder-neutral-700 outline-none focus:border-white"
             />
           </div>
+
           <div>
-            <label className="font-mono text-[9px] tracking-widest text-neutral-600 block mb-1">VISIBILITY</label>
+            <label className="text-[10px] tracking-widest text-neutral-500 block mb-1">TOPIC / PINNED ARTIFACT</label>
+            <input
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="Thesis or discussion notes for listeners"
+              className="w-full bg-neutral-950 border border-neutral-800 p-2.5 text-xs text-white placeholder-neutral-700 outline-none focus:border-white"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[10px] tracking-widest text-neutral-500 block mb-1">CATEGORY</label>
+              <select
+                value={category}
+                onChange={e => setCategory(e.target.value)}
+                className="w-full bg-neutral-950 border border-neutral-800 p-2.5 text-xs text-white outline-none focus:border-white"
+              >
+                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-[10px] tracking-widest text-neutral-500 block mb-1">MIC ACCESS</label>
+              <button
+                type="button"
+                onClick={() => setOpenMic(!openMic)}
+                className={`w-full border p-2.5 text-xs uppercase tracking-wider transition-colors ${
+                  openMic ? "border-white bg-white text-black font-bold" : "border-neutral-800 text-neutral-400 bg-neutral-950"
+                }`}
+              >
+                {openMic ? "OPEN MIC" : "HAND RAISE"}
+              </button>
+            </div>
+          </div>
+
+          <div className="pt-1">
             <button
-              onClick={() => setIsPublic(!isPublic)}
-              className={`w-full border p-2 font-mono text-xs uppercase transition-colors ${
-                isPublic ? "border-white text-white" : "border-neutral-800 text-neutral-500"
+              type="button"
+              onClick={() => setScheduleMode(!scheduleMode)}
+              className={`flex items-center gap-2 text-[10px] tracking-widest uppercase transition-colors ${
+                scheduleMode ? "text-white font-bold" : "text-neutral-600 hover:text-white"
               }`}
             >
-              {isPublic ? "PUBLIC" : "PRIVATE"}
+              <Calendar size={12} /> {scheduleMode ? "[ SCHEDULED MODE ACTIVE ]" : "[+] SCHEDULE FOR LATER"}
             </button>
           </div>
+
+          {scheduleMode && (
+            <div>
+              <label className="text-[10px] tracking-widest text-neutral-500 block mb-1">TRANSMISSION DATE & TIME</label>
+              <input
+                type="datetime-local"
+                value={scheduledFor}
+                onChange={e => setScheduledFor(e.target.value)}
+                className="w-full bg-neutral-950 border border-neutral-800 p-2.5 text-xs text-white outline-none focus:border-white"
+              />
+            </div>
+          )}
         </div>
-
-        <div>
-          <label className="font-mono text-[10px] tracking-widest text-neutral-600 block mb-1">TAGS (comma separated)</label>
-          <input
-            value={tags}
-            onChange={e => setTags(e.target.value)}
-            placeholder="e.g. music, chill, talk"
-            className="w-full bg-transparent border border-neutral-800 p-2 font-mono text-xs text-white placeholder-neutral-700"
-          />
-        </div>
-
-        <div className="flex items-center gap-3 pt-2">
-          <button
-            onClick={() => setScheduleMode(!scheduleMode)}
-            className={`font-mono text-[10px] uppercase px-3 py-1.5 border transition-colors ${
-              scheduleMode ? "border-white text-white" : "border-neutral-800 text-neutral-500"
-            }`}
-          >
-            {scheduleMode ? "SCHEDULED" : "LIVE NOW"}
-          </button>
-          <button
-            onClick={() => setOpenMic(!openMic)}
-            className={`font-mono text-[10px] uppercase px-3 py-1.5 border transition-colors ${
-              openMic ? "border-white text-white" : "border-neutral-800 text-neutral-500"
-            }`}
-          >
-            {openMic ? "OPEN MIC" : "RAISE HAND"}
-          </button>
-        </div>
-
-        {scheduleMode && (
-          <div>
-            <label className="font-mono text-[10px] tracking-widest text-neutral-600 block mb-1">SCHEDULED FOR</label>
-            <input
-              type="datetime-local"
-              value={scheduledFor}
-              onChange={e => setScheduledFor(e.target.value)}
-              className="w-full bg-transparent border border-neutral-800 p-2 font-mono text-xs text-white"
-            />
-          </div>
-        )}
-
-        <div className="flex items-center gap-3 pt-2">
-          <button
-            onClick={() => setScheduleMode(!scheduleMode)}
-            className={`flex items-center gap-2 font-mono text-[10px] tracking-widest uppercase transition-colors ${
-              scheduleMode ? "text-white" : "text-neutral-600 hover:text-white"
-            }`}
-          >
-            <Radio size={12} /> {scheduleMode ? "SCHEDULED MODE" : "SCHEDULE FOR LATER"}
-          </button>
-        </div>
-
-        {scheduleMode && (
-          <div>
-            <label className="font-mono text-[10px] tracking-widest text-neutral-600 block mb-1">SCHEDULED DATE & TIME</label>
-            <input
-              type="datetime-local"
-              value={scheduledFor}
-              onChange={e => setScheduledFor(e.target.value)}
-              className="w-full bg-transparent border border-neutral-800 p-2 font-mono text-xs text-white focus:outline-none focus:border-white"
-            />
-          </div>
-        )}
 
         <div className="flex items-center justify-end gap-3 pt-4 border-t border-neutral-900">
           <button
             onClick={onClose}
-            className="font-mono text-xs tracking-widest uppercase text-neutral-500 hover:text-white transition-colors cursor-pointer"
+            className="text-xs tracking-widest uppercase text-neutral-500 hover:text-white transition-colors cursor-pointer"
           >
             CANCEL
           </button>
           <button
             onClick={handleCreate}
             disabled={!canCreate || loading}
-            className="font-mono text-xs tracking-widest uppercase border border-white px-4 py-2 text-white hover:bg-white hover:text-black transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+            className="text-xs tracking-widest uppercase border border-white bg-white text-black font-bold px-5 py-2.5 hover:bg-neutral-200 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
           >
-            {loading ? "CREATING..." : "CREATE"}
+            {loading ? "INITIALIZING..." : scheduleMode ? "[ SCHEDULE TRANSMISSION ]" : "[ GO LIVE ]"}
           </button>
         </div>
       </div>
@@ -248,296 +176,156 @@ function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate:
 
 export default function RoomsPage() {
   const { user } = useAuth();
-  const router = useRouter();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [clashes, setClashes] = useState<ClashItem[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [trendingRooms, setTrendingRooms] = useState<Room[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
-  const [loadingTrending, setLoadingTrending] = useState(true);
 
-  const CATEGORIES = ["ALL", "GENERAL", "TECH", "MUSIC", "DEBATE", "CASUAL", "PROFESSIONAL"];
+  const CATEGORIES = ["ALL", "TECH", "MARKETS", "DEBATE", "MUSIC", "CRICKET", "GENERAL"];
 
   useEffect(() => {
-    const unsubClashes = subscribeToClashes((list) => {
-      setClashes(list);
-    });
-    const unsubRooms = subscribeToPublicRooms((list) => {
-      setRooms(list);
-    });
-    
+    const unsubClashes = subscribeToClashes((list) => setClashes(list));
+    const unsubRooms = subscribeToPublicRooms((list) => setRooms(list));
     return () => {
       unsubClashes();
       unsubRooms();
     };
   }, []);
 
-  // Load trending rooms when category changes
-  useEffect(() => {
-    const loadTrending = async () => {
-      setLoadingTrending(true);
-      try {
-        let trending;
-        if (selectedCategory === "ALL") {
-          trending = await getTrendingRooms(10);
-        } else {
-          trending = await getRoomsByCategory(selectedCategory, 10);
-        }
-        setTrendingRooms(trending);
-      } catch (error) {
-        console.error("Error loading trending rooms:", error);
-      } finally {
-        setLoadingTrending(false);
-      }
-    };
-    loadTrending();
-  }, [selectedCategory]);
+  const liveRooms = rooms.filter(r => !r.scheduledFor);
+  const scheduledRooms = rooms.filter(r => Boolean(r.scheduledFor));
 
-  const handleJoinRoom = async (roomId: string) => {
-    if (!user) return;
-    try {
-      // Check if user is the host
-      const roomData = await getRoom(roomId);
-      const isHost = roomData?.hostUid === user.uid;
-      
-      await addParticipant(roomId, {
-        uid: user.uid,
-        handle: user.handle || "@ANON",
-        isSpeaker: false,
-      }, isHost);
-      router.push(`/room/${roomId}`);
-    } catch (error) {
-      console.error("Error joining room:", error);
-    }
-  };
-
-  const handleDeleteRoom = async (roomId: string) => {
-    if (!user) return;
-    if (!confirm("Are you sure you want to delete this room?")) return;
-    try {
-      await deleteRoom(roomId);
-    } catch (error) {
-      console.error("Error deleting room:", error);
-    }
-  };
-
-  const handleShareRoom = async (roomId: string) => {
-    const shareUrl = `${window.location.origin}/room/${roomId}`;
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      alert("Room link copied to clipboard!");
-    } catch (error) {
-      console.error("Error copying link:", error);
-    }
-  };
+  const filteredLiveRooms = selectedCategory === "ALL"
+    ? liveRooms
+    : liveRooms.filter(r => (r.category || "").toUpperCase() === selectedCategory);
 
   return (
-    <div className="min-h-screen bg-black text-white pb-24 md:pb-8 flex flex-col font-sans">
+    <div className="min-h-screen bg-black text-white pb-28 md:pb-12 font-mono">
       {showCreateModal && <CreateRoomModal onClose={() => setShowCreateModal(false)} onCreate={() => {}} />}
 
-      {/* Mobile Top Bar */}
-      <div className="md:hidden flex items-center justify-between px-5 pt-10 pb-6 border-b border-neutral-900">
-        <span className="font-serif text-xl font-bold text-white">Echo.</span>
-        <span className="font-mono text-xs tracking-widest uppercase text-neutral-500">[ ROOMS ]</span>
-      </div>
-
-      <main className="max-w-2xl mx-auto px-5 pt-8 space-y-10 w-full flex-1">
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-2">
-            <p className="font-mono text-xs tracking-widest text-neutral-700 uppercase">// LIVE AUDIO ROOMS</p>
-            <h1 className="font-mono text-3xl tracking-widest text-white uppercase">
-              [ ROOMS ]
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 pt-8 space-y-8 w-full">
+        {/* Top Header */}
+        <div className="flex items-start justify-between gap-4 border-b border-neutral-900 pb-6">
+          <div className="space-y-1">
+            <p className="text-[10px] tracking-widest text-neutral-500 uppercase">// 1-TAP LIVE AUDIO RELAYS</p>
+            <h1 className="text-2xl font-bold tracking-widest text-white uppercase">
+              [ FREQUENCIES ]
             </h1>
           </div>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="shrink-0 flex items-center gap-2 font-mono text-xs tracking-widest uppercase text-black bg-white px-4 py-2.5 hover:opacity-80 transition-opacity cursor-pointer"
+            className="flex items-center gap-2 text-xs font-bold tracking-widest uppercase text-black bg-white px-4 py-2.5 hover:bg-neutral-200 transition-colors cursor-pointer"
           >
-            <Plus size={11} strokeWidth={2} />
-            CREATE
+            <Plus size={14} strokeWidth={2.5} />
+            [ + LAUNCH ]
           </button>
         </div>
 
-        {/* Trending Rooms Section */}
-        <section className="space-y-4">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <p className="font-mono text-xs tracking-widest text-neutral-700 uppercase shrink-0">// 🔥 TRENDING</p>
-            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 flex-nowrap max-w-full">
-              {CATEGORIES.map(cat => (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`font-mono text-[10px] tracking-widest uppercase px-2 py-1 border transition-colors cursor-pointer shrink-0 whitespace-nowrap ${
-                    selectedCategory === cat
-                      ? "border-white text-white"
-                      : "border-neutral-800 text-neutral-500 hover:border-white hover:text-white"
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
+        {/* Category Filter Pills */}
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+          {CATEGORIES.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`text-[10px] tracking-widest uppercase px-3 py-1.5 border transition-colors cursor-pointer shrink-0 whitespace-nowrap ${
+                selectedCategory === cat
+                  ? "border-white bg-white text-black font-bold"
+                  : "border-neutral-800 text-neutral-400 hover:border-neutral-600 bg-neutral-950"
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+
+        {/* Live Frequencies (1-Tap Tune-In) */}
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] tracking-widest text-neutral-500 uppercase flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+              // ACTIVE LIVE FREQUENCIES ({filteredLiveRooms.length})
+            </span>
+            <span className="text-[9px] text-neutral-600 uppercase tracking-widest">
+              TAP ANY CARD TO INTERCEPT AUDIO
+            </span>
           </div>
-          {loadingTrending ? (
-            <div className="border border-neutral-900 p-6 text-center">
-              <p className="font-mono text-xs text-neutral-500 tracking-widest uppercase animate-pulse">LOADING...</p>
-            </div>
-          ) : trendingRooms.length === 0 ? (
-            <div className="border border-neutral-900 p-6 text-center">
-              <p className="font-mono text-xs text-neutral-500 tracking-widest uppercase">NO TRENDING ROOMS</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-neutral-900 border border-neutral-900">
-              {trendingRooms.map((room) => (
-                <div key={room.id} className="p-4 space-y-3">
-                  <div className="flex items-center justify-between font-mono text-xs">
-                    <div className="flex items-center gap-2">
-                      <span className="text-orange-500">🔥</span>
-                      <span className="text-white font-bold">{room.name}</span>
-                      {!room.isPublic && <Lock size={12} className="text-neutral-600" />}
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-neutral-500">{room.participantCount} LISTENERS</span>
-                      <span className="px-2 py-0.5 border border-neutral-800 text-neutral-600 text-[10px] uppercase">{room.category}</span>
-                      {user && room.hostUid === user.uid && (
-                        <div className="flex items-center gap-2">
-                          <button onClick={() => handleShareRoom(room.id)} className="text-neutral-500 hover:text-white transition-colors cursor-pointer" title="Share room">
-                            <Share2 size={12} />
-                          </button>
-                          <button onClick={() => handleDeleteRoom(room.id)} className="text-neutral-500 hover:text-red-500 transition-colors cursor-pointer" title="Delete room">
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  {room.description && (
-                    <p className="font-mono text-neutral-300 text-sm">"{room.description}"</p>
-                  )}
-                  <div className="pt-1">
-                    <Link
-                      href={`/room/${room.id}`}
-                      onClick={() => handleJoinRoom(room.id)}
-                      className="w-full h-10 border border-white bg-black hover:bg-white hover:text-black font-mono text-xs tracking-widest text-white uppercase transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md"
-                    >
-                      [ 🎧 JOIN ]
-                    </Link>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
 
-        {/* Live Rooms Section */}
-        <section className="space-y-4">
-          <p className="font-mono text-xs tracking-widest text-neutral-700 uppercase">// [ ROOMS ]</p>
-          {rooms.length === 0 ? (
-            <div className="border border-neutral-900 p-6 text-center space-y-3">
-              <Radio className="w-6 h-6 text-neutral-700 mx-auto" />
-              <p className="font-mono text-xs text-neutral-500 tracking-widest uppercase">
-                NO [ ROOMS ] ACTIVE
+          {filteredLiveRooms.length === 0 ? (
+            <div className="border border-neutral-900 bg-neutral-950 p-8 text-center space-y-3">
+              <Radio className="w-6 h-6 text-neutral-700 mx-auto animate-pulse" />
+              <p className="text-xs text-neutral-500 tracking-widest uppercase">
+                NO LIVE FREQUENCIES IN THIS BAND
               </p>
-            </div>
-          ) : (
-            <div className="divide-y divide-neutral-900 border border-neutral-900">
-              {rooms.map((room) => (
-                <div key={room.id} className="p-4 space-y-3">
-                  <div className="flex items-center justify-between font-mono text-xs">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-                      <span className="text-white font-bold">{room.name}</span>
-                      {!room.isPublic && <Lock size={12} className="text-neutral-600" />}
-                    </div>
-                    <div className="flex items-center gap-3 text-neutral-500">
-                      <span className="flex items-center gap-1">
-                        <Users size={12} /> {room.participantCount}/{room.maxParticipants}
-                      </span>
-                      <span className="text-neutral-600">{room.category}</span>
-                      {user && room.hostUid === user.uid && (
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleShareRoom(room.id)}
-                            className="text-neutral-500 hover:text-white transition-colors cursor-pointer"
-                            title="Share room"
-                          >
-                            <Share2 size={12} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteRoom(room.id)}
-                            className="text-neutral-500 hover:text-red-500 transition-colors cursor-pointer"
-                            title="Delete room"
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  {room.description && (
-                    <p className="font-mono text-neutral-400 text-sm">"{room.description}"</p>
-                  )}
-                  <div className="flex items-center gap-2 font-mono text-[10px] text-neutral-600">
-                    <span>HOST: {room.hostHandle}</span>
-                  </div>
-                  <div className="pt-1">
-                    <Link
-                      href={`/room/${room.id}`}
-                      onClick={() => handleJoinRoom(room.id)}
-                      className="w-full h-10 border border-white bg-black hover:bg-white hover:text-black font-mono text-xs tracking-widest text-white uppercase transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md"
-                    >
-                      [ 🎧 JOIN ]
-                    </Link>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* Stage Debates Section */}
-        <section className="space-y-4">
-          <p className="font-mono text-xs tracking-widest text-neutral-700 uppercase">// STAGE DEBATES</p>
-          {clashes.length === 0 ? (
-            <div className="border border-neutral-900 p-6 text-center space-y-3">
-              <Swords className="w-6 h-6 text-neutral-700 mx-auto" />
-              <p className="font-mono text-xs text-neutral-500 tracking-widest uppercase">
-                NO LIVE DEBATES ON [ STAGE ]
-              </p>
-              <Link
-                href="/clash"
-                className="inline-block px-4 py-2 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors"
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="inline-block px-4 py-2 border border-white text-white text-[11px] tracking-widest uppercase hover:bg-white hover:text-black transition-colors cursor-pointer"
               >
-                [ ⚔ LAUNCH DEBATE ]
-              </Link>
+                [ + START FIRST FREQUENCY ]
+              </button>
             </div>
           ) : (
-            <div className="divide-y divide-neutral-900 border border-neutral-900">
-              {clashes.map((c: ClashItem) => (
-                <div key={c.id} className="p-4 space-y-3">
-                  <div className="flex items-center justify-between font-mono text-xs">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-                      <span className="text-white font-bold">{c.title}</span>
-                    </div>
-                    <span className="text-neutral-500 font-mono text-[10px] tracking-widest uppercase">
-                      {c.listeners ? `${c.listeners} AUDIENCE` : "1 AUDIENCE"}
-                    </span>
-                  </div>
-                  <p className="font-mono text-neutral-300">"{c.topic}"</p>
-                  <div className="pt-1">
-                    <Link
-                      href={`/stage/${c.id}`}
-                      className="w-full h-10 border border-white bg-black hover:bg-white hover:text-black font-mono text-xs tracking-widest text-white uppercase transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md"
-                    >
-                      [ 🎧 JOIN ]
-                    </Link>
-                  </div>
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {filteredLiveRooms.map(room => (
+                <QuickRoomCard key={room.id} room={room} />
               ))}
             </div>
           )}
         </section>
+
+        {/* Scheduled Transmissions */}
+        <section className="space-y-3 pt-4 border-t border-neutral-900">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] tracking-widest text-neutral-500 uppercase flex items-center gap-2">
+              <Calendar className="w-3.5 h-3.5" />
+              // SCHEDULED TRANSMISSIONS ({scheduledRooms.length})
+            </span>
+            <span className="text-[9px] text-neutral-600 uppercase tracking-widest">
+              SYNC CALENDAR & ALARMS
+            </span>
+          </div>
+
+          {scheduledRooms.length === 0 ? (
+            <div className="border border-neutral-900 bg-neutral-950 p-6 text-center">
+              <p className="text-xs text-neutral-600 tracking-widest uppercase">
+                NO UPCOMING SCHEDULED TRANSMISSIONS
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {scheduledRooms.map(room => (
+                <ScheduledRoomCard key={room.id} room={room} />
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Live Stage Debates */}
+        {clashes.length > 0 && (
+          <section className="space-y-3 pt-4 border-t border-neutral-900">
+            <span className="text-[10px] tracking-widest text-neutral-500 uppercase flex items-center gap-2">
+              <Swords className="w-3.5 h-3.5" />
+              // LIVE STAGE DEBATES ({clashes.length})
+            </span>
+            <div className="space-y-2">
+              {clashes.map((c: ClashItem) => (
+                <div key={c.id} className="border border-neutral-800 bg-neutral-950 p-3.5 flex items-center justify-between">
+                  <div className="space-y-1">
+                    <span className="text-[9px] text-neutral-500 uppercase tracking-wider block">
+                      DEBATE ARENA // {c.listeners || 1} NODES
+                    </span>
+                    <h3 className="text-xs font-bold text-white uppercase">{c.title}</h3>
+                  </div>
+                  <Link
+                    href={`/stage/${c.id}`}
+                    className="px-3 py-1.5 border border-white text-white hover:bg-white hover:text-black text-xs font-bold uppercase tracking-wider transition-colors"
+                  >
+                    [ ENTER STAGE ]
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </main>
     </div>
   );

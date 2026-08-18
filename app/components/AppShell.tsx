@@ -19,6 +19,8 @@ import LeftSidebar from "@/app/components/LeftSidebar";
 import { RightSidebar } from "@/app/components/RightSidebar";
 import { ToastContainer } from "@/app/components/Toast";
 import { PWAInstallPrompt } from "@/app/components/PWAInstallPrompt";
+import { RoomAudioProvider } from "@/lib/context/RoomAudioContext";
+import PersistentRoomDock from "@/app/components/PersistentRoomDock";
 import { subscribeToNotifications, markNotificationRead, subscribeToUnreadCount, type EchoNotification } from "@/lib/notifications";
 import {
   Loader2,
@@ -313,14 +315,20 @@ function ShellContent({ children }: { children: React.ReactNode }) {
         notifications={toastNotifications}
         onDismiss={handleDismissToast}
       />
+
+      {/* PERSISTENT LIVE AUDIO ROOM DOCK */}
+      <PersistentRoomDock />
     </>
   );
 }
 
+// ─── Exported Shell ──────────────────────────────────────────────
 export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
-      <ShellContent>{children}</ShellContent>
+      <RoomAudioProvider>
+        <ShellContent>{children}</ShellContent>
+      </RoomAudioProvider>
     </AuthProvider>
   );
 }
