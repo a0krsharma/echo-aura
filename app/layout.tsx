@@ -119,6 +119,16 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
+  verification: {
+    google: "google-site-verification-echo-audio",
+    yandex: "yandex-verification-token",
+  },
+  other: {
+    "revisit-after": "1 days",
+    "rating": "General",
+    "distribution": "Global",
+    "target": "all",
+  },
 };
 
 export const viewport: Viewport = {
@@ -193,6 +203,71 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     "price": "0",
                     "priceCurrency": "USD"
                   }
+                },
+                {
+                  "@type": "SiteNavigationElement",
+                  "name": "Echo Navigation Sitelinks",
+                  "hasPart": [
+                    {
+                      "@type": "WebPage",
+                      "name": "Frequency Live Feed",
+                      "url": "https://echo-aura.vercel.app/"
+                    },
+                    {
+                      "@type": "WebPage",
+                      "name": "Waves Voice Reels",
+                      "url": "https://echo-aura.vercel.app/waves"
+                    },
+                    {
+                      "@type": "WebPage",
+                      "name": "Live Audio Rooms",
+                      "url": "https://echo-aura.vercel.app/rooms"
+                    },
+                    {
+                      "@type": "WebPage",
+                      "name": "The Stage 1v1 Debates",
+                      "url": "https://echo-aura.vercel.app/clash"
+                    },
+                    {
+                      "@type": "WebPage",
+                      "name": "Radar Telemetry",
+                      "url": "https://echo-aura.vercel.app/radar"
+                    },
+                    {
+                      "@type": "WebPage",
+                      "name": "Frequency+ Masterclasses",
+                      "url": "https://echo-aura.vercel.app/frequency-plus"
+                    }
+                  ]
+                },
+                {
+                  "@type": "FAQPage",
+                  "mainEntity": [
+                    {
+                      "@type": "Question",
+                      "name": "What is Echo?",
+                      "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "Echo is the world's premier audio-first social platform for unfiltered voice takes, full-screen vertical voice reels (Waves), interactive live audio rooms, and 1v1 live debate clashes."
+                      }
+                    },
+                    {
+                      "@type": "Question",
+                      "name": "How does Echo audio platform work?",
+                      "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "Users can record and stream raw voice takes up to 60 seconds, broadcast in live rooms, participate in real-time audience voting on The Stage debates, and message directly through encrypted Wire transmissions."
+                      }
+                    },
+                    {
+                      "@type": "Question",
+                      "name": "Is Echo free to use?",
+                      "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "Yes, Echo is 100% free and accessible on mobile browsers, Progressive Web App (PWA), and desktop."
+                      }
+                    }
+                  ]
                 }
               ]
             }),

@@ -1240,6 +1240,51 @@ export default function HomeFeedPage() {
             ))}
           </div>
         )}
+
+        {/* ── Google Search Engine Discovery & Topic Directory ── */}
+        <section className="mt-16 pt-8 border-t border-neutral-900 font-mono space-y-6 text-xs select-none">
+          <div className="space-y-2">
+            <h2 className="text-white font-bold text-xs uppercase tracking-widest flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+              // ECHO — UNFILTERED AUDIO PLATFORM & REAL-TIME VOICE SOCIAL NETWORK
+            </h2>
+            <p className="text-neutral-500 text-[11px] leading-relaxed">
+              Echo is an audio-first social platform for spontaneous voice posts, vertical voice reels (Waves), 
+              live interactive audio rooms, and real-time 1v1 debate clashes (The Stage).
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <span className="text-[10px] text-neutral-400 uppercase tracking-wider block font-bold">
+              [ DISCOVER AUDIO TOPICS & CHANNELS ]
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                "tech", "ai", "crypto", "startup", "music", "debates", "news",
+                "philosophy", "gaming", "culture", "india", "global", "finance", "podcasts", "voice", "aura"
+              ].map((tag) => (
+                <Link
+                  key={tag}
+                  href={`/hashtag/${tag}`}
+                  className="px-2 py-1 border border-neutral-800 hover:border-white text-[10px] text-neutral-400 hover:text-white uppercase transition-colors"
+                >
+                  #{tag}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between text-[9px] text-neutral-600 uppercase tracking-widest pt-2 border-t border-neutral-950">
+            <span>© {new Date().getFullYear()} ECHO AUDIO NETWORK</span>
+            <div className="flex items-center gap-4">
+              <Link href="/waves" className="hover:text-white transition-colors">WAVES</Link>
+              <Link href="/clash" className="hover:text-white transition-colors">STAGE</Link>
+              <Link href="/rooms" className="hover:text-white transition-colors">ROOMS</Link>
+              <Link href="/radar" className="hover:text-white transition-colors">RADAR</Link>
+              <Link href="/frequency-plus" className="hover:text-white transition-colors">FREQUENCY+</Link>
+            </div>
+          </div>
+        </section>
       </main>
 
       {replyModal&&(

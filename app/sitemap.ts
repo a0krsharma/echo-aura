@@ -4,7 +4,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://echo-aura.vercel.app";
   const lastModified = new Date();
 
-  // Core high-priority platform routes
+  // Core high-priority platform routes for search engine indexing
   const coreRoutes: MetadataRoute.Sitemap = [
     {
       url: `${baseUrl}`,
@@ -22,28 +22,34 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${baseUrl}/clash`,
       lastModified,
       changeFrequency: "always",
-      priority: 0.9,
+      priority: 0.95,
     },
     {
       url: `${baseUrl}/rooms`,
       lastModified,
       changeFrequency: "always",
-      priority: 0.9,
+      priority: 0.95,
     },
     {
       url: `${baseUrl}/radar`,
       lastModified,
       changeFrequency: "hourly",
-      priority: 0.85,
+      priority: 0.9,
     },
     {
       url: `${baseUrl}/search`,
       lastModified,
-      changeFrequency: "daily",
-      priority: 0.8,
+      changeFrequency: "hourly",
+      priority: 0.85,
     },
     {
       url: `${baseUrl}/frequency-plus`,
+      lastModified,
+      changeFrequency: "daily",
+      priority: 0.85,
+    },
+    {
+      url: `${baseUrl}/terminal`,
       lastModified,
       changeFrequency: "daily",
       priority: 0.8,
@@ -52,29 +58,39 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${baseUrl}/login`,
       lastModified,
       changeFrequency: "monthly",
-      priority: 0.5,
+      priority: 0.6,
     },
   ];
 
-  // Popular Trending Hashtags
-  const popularHashtags = [
+  // Comprehensive Top Audio & Voice Categories
+  const discoveryHashtags = [
     "tech",
-    "crypto",
     "ai",
+    "crypto",
     "startup",
     "music",
-    "india",
-    "news",
     "debates",
+    "news",
+    "philosophy",
+    "gaming",
+    "culture",
+    "india",
+    "global",
+    "finance",
+    "podcasts",
     "voice",
     "aura",
+    "sound",
+    "audio",
+    "clash",
+    "unfiltered",
   ];
 
-  const hashtagRoutes: MetadataRoute.Sitemap = popularHashtags.map((tag) => ({
+  const hashtagRoutes: MetadataRoute.Sitemap = discoveryHashtags.map((tag) => ({
     url: `${baseUrl}/hashtag/${tag}`,
     lastModified,
     changeFrequency: "hourly",
-    priority: 0.75,
+    priority: 0.8,
   }));
 
   return [...coreRoutes, ...hashtagRoutes];
