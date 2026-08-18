@@ -221,7 +221,7 @@ export default function FrequencyPlusPage() {
                       </h2>
 
                       {ep.description && (
-                        <p className="text-xs text-neutral-400 line-clamp-2 font-serif italic">
+                        <p className="text-xs text-neutral-400 line-clamp-2 font-mono">
                           "{ep.description}"
                         </p>
                       )}

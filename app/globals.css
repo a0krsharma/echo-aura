@@ -118,9 +118,9 @@
   --border:          #1a1a1a;
 
   /* Standardized Typography Scale */
-  --font-heading:    var(--font-serif);
+  --font-heading:    var(--font-mono);
   --font-label:      var(--font-mono);
-  --font-body:       var(--font-sans);
+  --font-body:       var(--font-mono);
   --font-caption:    var(--font-mono);
 
   /* Standardized Spacing Scale */

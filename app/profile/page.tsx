@@ -740,8 +740,8 @@ export default function ProfilePage() {
     <div>
       {posts.length === 0 ? (
         <div className="py-16 text-center space-y-4">
-          <p className="font-serif italic text-neutral-500 text-lg">
-            No {emptyLabel.toLowerCase()} yet.
+          <p className="font-mono text-neutral-500 text-sm uppercase tracking-wider">
+            NO {emptyLabel.toUpperCase()} YET
           </p>
           <Link
             href="/studio"
@@ -767,7 +767,7 @@ export default function ProfilePage() {
                 </span>
               </div>
 
-              <p className="font-serif italic text-lg text-white leading-snug">
+              <p className="font-mono text-sm sm:text-base font-bold text-white leading-snug">
                 "{post.caption}"
               </p>
 
@@ -923,7 +923,7 @@ export default function ProfilePage() {
                 className="flex flex-col items-center cursor-pointer group py-1"
                 title="Aura Score"
               >
-                <span className="font-serif italic text-base sm:text-lg font-bold text-white group-hover:text-neutral-300">
+                <span className="font-mono text-base sm:text-lg font-bold text-white group-hover:text-neutral-300">
                   {auraScore.toLocaleString()}
                 </span>
                 <span className="font-mono text-[9px] text-neutral-400 uppercase tracking-widest mt-0.5">

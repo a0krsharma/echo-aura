@@ -222,7 +222,7 @@ function PostItem({ post }: { post: UserPost }) {
         <span>{timeAgo()}</span>
         <span>[ ECHO ]</span>
       </div>
-      <p className="font-serif text-lg italic text-white leading-snug">"{post.caption}"</p>
+      <p className="font-mono text-sm sm:text-base font-bold text-white leading-snug">"{post.caption}"</p>
       <MiniPlayer audioUrl={post.audioUrl} duration={post.duration} durationSec={post.durationSec} />
       <div className="flex items-center gap-5 pt-1">
         <button
@@ -635,7 +635,7 @@ export default function HandlePage({ params }: { params?: { handle?: string } })
 
               {/* 4. Aura */}
               <div className="flex flex-col items-center">
-                <span className="font-serif italic text-base sm:text-lg font-bold text-white">
+                <span className="font-mono text-base sm:text-lg font-bold text-white">
                   {aura >= 1000 ? `${(aura / 1000).toFixed(1)}K` : aura}
                 </span>
                 <span className="font-mono text-[10px] text-neutral-400 uppercase tracking-wider">
@@ -753,8 +753,8 @@ export default function HandlePage({ params }: { params?: { handle?: string } })
               userPosts.map(p => <PostItem key={p.id} post={p} />)
             ) : (
               <div className="py-16 text-center border border-neutral-900 p-8 space-y-2">
-                <p className="font-serif text-base italic text-neutral-600">
-                  this voice hasn't dropped anything yet.
+                <p className="font-mono text-xs text-neutral-500 uppercase tracking-widest">
+                  NO ECHOES DROPPED YET
                 </p>
               </div>
             )}

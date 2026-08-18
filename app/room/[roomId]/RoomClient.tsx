@@ -435,7 +435,7 @@ export default function RoomClient({ roomId }: RoomClientProps) {
             <FormattedText text={room.name} />
           </h1>
           {room.description && (
-            <p className="text-xs text-neutral-300 font-serif italic pt-1">
+            <p className="text-xs text-neutral-300 font-mono pt-1">
               "{room.description}"
             </p>
           )}
@@ -824,7 +824,7 @@ export default function RoomClient({ roomId }: RoomClientProps) {
             ) : profileData ? (
               <div className="space-y-4">
                 {profileData.bio && (
-                  <p className="text-xs text-neutral-300 font-serif italic">
+                  <p className="text-xs text-neutral-300 font-mono">
                     "{profileData.bio}"
                   </p>
                 )}

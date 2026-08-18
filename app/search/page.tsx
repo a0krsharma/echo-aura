@@ -424,7 +424,7 @@ export default function SearchPage() {
   const isSearchActive = searchQuery.trim().length > 0 || activeTab !== "ALL";
 
   return (
-    <div className="min-h-screen bg-black text-white pb-24 md:pb-8 font-mono">
+    <div className="min-h-screen bg-black text-white pb-28 md:pb-12 font-mono">
       {/* Top Header Bar */}
       <div className="sticky top-0 z-40 bg-black border-b border-neutral-900">
         <div className="max-w-3xl mx-auto px-4 py-3 space-y-2.5" ref={searchContainerRef}>

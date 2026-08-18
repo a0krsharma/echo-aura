@@ -125,7 +125,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-4">
-        <span className="font-serif text-4xl italic text-white">Echo.</span>
+        <span className="font-mono text-3xl font-bold text-white uppercase tracking-widest">Echo.</span>
         <Loader2 className="w-4 h-4 text-neutral-700 animate-spin mt-2" />
       </div>
     );
@@ -160,7 +160,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
             <Menu className="w-4 h-4" />
           </button>
           {pathname === "/" ? (
-            <Link href="/" className="font-serif italic text-xl tracking-tight text-white">
+            <Link href="/" className="font-mono font-bold text-lg tracking-tight text-white uppercase">
               Echo.
             </Link>
           ) : (
@@ -242,7 +242,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
           <aside className="relative w-4/5 max-w-xs bg-black border-r border-standard h-full flex flex-col justify-between p-6 z-10 animate-slide-in">
             <div className="space-y-6">
               <div className="md:hidden flex items-center justify-between px-5 pt-10 pb-6 border-b border-standard">
-                <span className="font-serif italic text-2xl text-white">Echo.</span>
+                <span className="font-mono font-bold text-xl text-white uppercase tracking-wider">Echo.</span>
                 <button
                   onClick={() => setDrawerOpen(false)}
                   className="font-mono text-xs text-neutral-500 hover:text-white"

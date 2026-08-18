@@ -18,7 +18,7 @@ export default function NotFound() {
           </h1>
         </div>
 
-        <p className="font-serif italic text-neutral-500 text-sm leading-relaxed">
+        <p className="font-mono text-neutral-400 text-xs leading-relaxed uppercase tracking-wider">
           The requested audio frequency does not exist or has been purged from the network.
         </p>
 

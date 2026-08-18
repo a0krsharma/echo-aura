@@ -296,9 +296,9 @@ function StudioContent() {
       <header className="flex items-center justify-between border-b border-neutral-900 pb-4">
         <Link
           href="/"
-          className="font-serif italic text-2xl tracking-tight text-white hover:text-neutral-400 transition-colors"
+          className="font-mono font-bold text-xl tracking-tight text-white hover:text-neutral-400 transition-colors uppercase"
         >
-          Echo.
+          Echo. [ STUDIO ]
         </Link>
         <div className="font-mono text-xs tracking-widest text-neutral-500 uppercase">
           // STUDIO ·{" "}
@@ -356,10 +356,10 @@ function StudioContent() {
             value={caption}
             onChange={(e) => setCaption(e.target.value)}
             maxLength={180}
-            placeholder="What's on your mind?"
+            placeholder="What's on your mind? Add caption or @tag..."
             rows={3}
             disabled={studioState === "uploading"}
-            className="w-full bg-transparent border-b border-neutral-800 pb-4 font-serif italic text-2xl md:text-3xl text-white placeholder:text-neutral-700 placeholder:not-italic focus:outline-none focus:border-white transition-colors resize-none disabled:opacity-50"
+            className="w-full bg-transparent border-b border-neutral-800 pb-4 font-mono text-xl md:text-2xl text-white placeholder:text-neutral-700 focus:outline-none focus:border-white transition-colors resize-none disabled:opacity-50"
           />
           <div className="flex justify-between mt-1 font-mono text-[10px] text-neutral-600 tracking-widest">
             <span>UNFILTERED THOUGHT</span>

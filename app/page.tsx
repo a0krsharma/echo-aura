@@ -533,7 +533,7 @@ function ReplyRecordModal({ postId, postCaption, postAuthorHandle, postAuthorUid
           </p>
           <button onClick={onClose} className="font-mono text-xs text-neutral-600 hover:text-white cursor-pointer">[ ✕ ]</button>
         </div>
-        <p className="font-serif italic text-neutral-400 text-sm">"{postCaption.slice(0,80)}{postCaption.length>80?"…":""}"</p>
+        <p className="font-mono text-neutral-300 text-xs leading-relaxed">"{postCaption.slice(0,80)}{postCaption.length>80?"…":""}"</p>
         <div className="flex items-center gap-2 border-b border-neutral-800">
           <AtSign className="w-3 h-3 text-neutral-500 shrink-0"/>
           <input value={caption} onChange={e=>setCaption(e.target.value)} maxLength={140}
@@ -725,7 +725,7 @@ function PostReverbSection({ post, currentUser, onReplyClick, onProfileClick }: 
 
             <div className="p-2 border border-neutral-900 bg-black/60 rounded">
               <p className="font-mono text-[9px] text-neutral-500 uppercase">// VOICE TAKE</p>
-              <p className="font-serif italic text-xs text-neutral-300">
+              <p className="font-mono text-xs text-neutral-300">
                 "{selectedReverbForLog.caption}"
               </p>
             </div>
@@ -1184,7 +1184,7 @@ export default function HomeFeedPage() {
   };
 
   return(
-    <div className="min-h-screen bg-black text-white pb-28 md:pb-8 flex flex-col font-sans"
+    <div className="min-h-screen bg-black text-white pb-28 md:pb-12 flex flex-col font-mono"
       onClick={()=>{userInteracted.current=true;}}>
       <header className="w-full bg-black border-b border-neutral-900 py-2.5 px-4 overflow-x-hidden">
         <div className="flex items-center gap-5 font-mono text-[10px] tracking-widest text-neutral-500 uppercase whitespace-nowrap">
@@ -1203,7 +1203,7 @@ export default function HomeFeedPage() {
           <div className="flex-1 flex flex-col items-center justify-center py-24 text-center space-y-6 border border-neutral-900 p-8 my-8">
             <div className="w-12 h-12 border border-neutral-800 flex items-center justify-center"><Mic2 className="w-5 h-5 text-neutral-500"/></div>
             <div className="space-y-2">
-              <h2 className="font-serif italic text-2xl text-white">The stream is silent.</h2>
+              <h2 className="font-mono font-bold text-2xl text-white tracking-wider uppercase">THE STREAM IS SILENT</h2>
               <p className="font-mono text-[10px] tracking-widest text-neutral-600 uppercase">NO ECHOES IN THE FREQUENCY YET</p>
             </div>
             <Link href="/studio" className="px-6 py-3 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors">[ 🎙 DROP THE FIRST ECHO ]</Link>

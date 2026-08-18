@@ -436,8 +436,8 @@ export default function TerminalPage() {
           {vaultPosts.length === 0 ? (
             <div className="py-16 text-center space-y-3 border border-dashed border-neutral-900">
               <Bookmark className="w-6 h-6 text-neutral-700 mx-auto" />
-              <p className="font-serif italic text-neutral-500 text-sm">
-                Your vault is empty.
+              <p className="font-mono text-neutral-400 text-xs uppercase tracking-wider">
+                YOUR VAULT IS EMPTY
               </p>
               <p className="font-mono text-[10px] text-neutral-700 uppercase tracking-widest">
                 Bookmark echoes from Frequency or Waves to save them here.
@@ -460,7 +460,7 @@ export default function TerminalPage() {
                     </button>
                   </div>
 
-                  <p className="font-serif italic text-sm text-neutral-300">
+                  <p className="font-mono text-xs text-neutral-300">
                     "{post.caption}"
                   </p>
 
@@ -516,8 +516,8 @@ export default function TerminalPage() {
           {!vibeRead ? (
             <div className="p-6 border border-dashed border-neutral-900 text-center space-y-3">
               <Activity className="w-8 h-8 text-neutral-700 mx-auto" />
-              <p className="font-serif italic text-neutral-400 text-sm">
-                No vocal biometrics analyzed yet.
+              <p className="font-mono text-xs text-neutral-400 uppercase tracking-wider">
+                NO VOCAL BIOMETRICS ANALYZED YET
               </p>
               <p className="font-mono text-[10px] text-neutral-600 uppercase tracking-widest">
                 Record a 5-second voice sample below to calibrate your live pitch & frequency.

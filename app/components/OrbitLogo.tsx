@@ -40,7 +40,7 @@ export default function OrbitLogo({
       {/* Brand Text */}
       <div className="flex flex-col">
         <div className="flex items-center gap-1.5">
-          <span className={`font-serif italic ${isSm ? "text-lg" : isLg ? "text-3xl" : "text-2xl"} font-bold tracking-tight text-white group-hover:text-amber-300 transition-colors`}>
+          <span className={`font-mono ${isSm ? "text-base" : isLg ? "text-2xl" : "text-xl"} font-bold tracking-tight text-white uppercase group-hover:text-amber-300 transition-colors`}>
             Echo.
           </span>
           <span className="font-mono text-[9px] px-1.5 py-0.2 border border-neutral-800 text-neutral-400 uppercase tracking-widest group-hover:border-neutral-600 transition-colors">

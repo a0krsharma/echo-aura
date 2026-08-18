@@ -96,7 +96,7 @@ export function PWAInstallPrompt() {
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-white text-black font-serif italic text-lg font-bold flex items-center justify-center border border-neutral-700 shrink-0">
+            <div className="w-9 h-9 bg-white text-black font-mono text-base font-extrabold flex items-center justify-center border border-neutral-700 shrink-0">
               E.
             </div>
             <div>

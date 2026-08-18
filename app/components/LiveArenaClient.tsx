@@ -706,7 +706,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
         <div className="font-mono text-[10px] tracking-widest uppercase text-neutral-500">
           // 1V1 AUDIO CLASH ARENA
         </div>
-        <h1 className="font-serif italic text-xl sm:text-2xl md:text-3xl text-white leading-snug">
+        <h1 className="font-mono font-bold text-lg sm:text-xl md:text-2xl text-white leading-snug uppercase tracking-wide">
           "<FormattedText text={clash?.topic || "Loading live stage debate..."} />"
         </h1>
         <p className="font-mono text-[11px] text-neutral-400 uppercase tracking-widest">
@@ -777,7 +777,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
 
             <div className="p-2.5 border border-neutral-900 bg-black/60">
               <p className="font-mono text-[10px] text-neutral-500 uppercase mb-1">// STANCE A</p>
-              <p className="font-serif italic text-xs sm:text-sm text-neutral-300 leading-relaxed">
+              <p className="font-mono text-xs text-neutral-300 leading-relaxed">
                 "{clash?.sideA?.position || "Debater A Position"}"
               </p>
             </div>
@@ -866,7 +866,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
 
             <div className="p-2.5 border border-neutral-900 bg-black/60">
               <p className="font-mono text-[10px] text-neutral-500 uppercase mb-1">// STANCE B</p>
-              <p className="font-serif italic text-xs sm:text-sm text-neutral-300 leading-relaxed">
+              <p className="font-mono text-xs text-neutral-300 leading-relaxed">
                 "{clash?.sideB?.position || "Debater B Position"}"
               </p>
             </div>
@@ -1139,8 +1139,8 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
             className="h-36 overflow-y-auto no-scrollbar space-y-1.5 font-mono text-xs tracking-wide select-text border border-neutral-950 p-2 bg-neutral-950/60"
           >
             {chatMessages.length === 0 ? (
-              <div className="text-neutral-700 italic font-serif py-6 text-center">
-                Stage chat is live. Drop a vibe or comment.
+              <div className="text-neutral-600 font-mono text-xs py-6 text-center uppercase tracking-wider">
+                STAGE CHAT IS LIVE. DROP A COMMENT.
               </div>
             ) : (
               chatMessages.map((msg) => (
@@ -1182,7 +1182,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
               <span className="text-[10px] text-neutral-400 tracking-widest uppercase font-bold">
                 // ⚔️ JOIN THE BATTLE • CHOOSE YOUR SIDE
               </span>
-              <h3 className="font-serif italic text-lg text-white">
+              <h3 className="font-mono font-bold text-base text-white uppercase tracking-wider">
                 "{clash?.topic || "Stage Debate Arena"}"
               </h3>
               <p className="text-[11px] text-neutral-400">
@@ -1201,7 +1201,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
                   <span>[ BACK {clash?.sideA?.handle || "SIDE A"} ]</span>
                   <span className="text-[10px] text-neutral-500">{votesA} BACKERS</span>
                 </div>
-                <p className="font-serif italic text-xs text-neutral-300">
+                <p className="font-mono text-xs text-neutral-300">
                   "{clash?.sideA?.position || "Stance A"}"
                 </p>
               </button>
@@ -1216,7 +1216,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
                   <span>[ BACK {clash?.sideB?.handle || "SIDE B"} ]</span>
                   <span className="text-[10px] text-neutral-500">{votesB} BACKERS</span>
                 </div>
-                <p className="font-serif italic text-xs text-neutral-300">
+                <p className="font-mono text-xs text-neutral-300">
                   "{clash?.sideB?.position || "Stance B"}"
                 </p>
               </button>
@@ -1252,7 +1252,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
               </button>
             </div>
 
-            <p className="text-neutral-400 text-[11px] font-serif italic">
+            <p className="text-neutral-400 text-[11px] font-mono">
               Did a speaker convince you with fiery arguments? Flip your vote in real-time and sway the Tug-of-War!
             </p>
 
@@ -1436,7 +1436,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
 
                   <div>
                     <h4 className="text-xs font-bold text-white uppercase">{clip.title}</h4>
-                    <p className="text-[11px] font-serif italic text-neutral-400 mt-1">{clip.description}</p>
+                    <p className="text-[11px] font-mono text-neutral-400 mt-1">{clip.description}</p>
                   </div>
 
                   <div className="flex items-center justify-between pt-2 border-t border-neutral-900 gap-2 flex-wrap">

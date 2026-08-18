@@ -680,9 +680,9 @@ function CommentsDrawer({
             <div className="text-center py-12 space-y-2">
               <MessageSquare className="w-8 h-8 text-neutral-700 mx-auto" />
               <p className="font-mono text-xs text-neutral-500 tracking-widest uppercase">
-                NO REVERBS YET.
+                NO REVERBS YET
               </p>
-              <p className="font-serif italic text-xs text-neutral-600">
+              <p className="font-mono text-[10px] text-neutral-600 uppercase tracking-wider">
                 Be the first to echo back.
               </p>
             </div>
@@ -718,7 +718,7 @@ function CommentsDrawer({
                     </span>
                   </div>
 
-                  <p className="font-serif italic text-sm text-neutral-300 leading-snug">
+                  <p className="font-mono text-xs text-neutral-300 leading-snug">
                     "<FormattedText text={rev.caption} />"
                   </p>
 
@@ -803,7 +803,7 @@ function CommentsDrawer({
 
             <div className="p-2 border border-neutral-900 bg-black/60 rounded">
               <p className="font-mono text-[9px] text-neutral-500 uppercase">// VOICE TAKE</p>
-              <p className="font-serif italic text-xs text-neutral-300">
+              <p className="font-mono text-xs text-neutral-300">
                 "{selectedReverbForLog.caption}"
               </p>
             </div>
@@ -1219,7 +1219,7 @@ export default function WavesPage() {
     return (
       <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-6 text-center px-8">
         <Mic2 className="w-10 h-10 text-neutral-700" />
-        <h1 className="font-serif italic text-3xl text-white">No waves yet.</h1>
+        <h1 className="font-mono font-bold text-2xl sm:text-3xl text-white uppercase tracking-wider">NO WAVES YET</h1>
         <p className="font-mono text-[10px] text-neutral-600 tracking-widest uppercase">
           Drop an echo in studio to start a wave.
         </p>
@@ -1283,7 +1283,7 @@ export default function WavesPage() {
           </Link>
         </div>
         <div className="flex items-center gap-2 pointer-events-auto">
-          <span className="font-serif italic text-white text-lg drop-shadow-lg">[ WAVES ]</span>
+          <span className="font-mono font-bold text-white text-sm sm:text-base tracking-widest uppercase drop-shadow-lg">[ WAVES ]</span>
         </div>
         {/* Mute toggle */}
         <button

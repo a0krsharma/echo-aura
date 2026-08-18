@@ -37,18 +37,18 @@ export default function LoginPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-4">
-        <span className="font-serif text-4xl italic text-white">Echo.</span>
-        <Loader2 className="w-4 h-4 text-neutral-700 animate-spin" />
+        <span className="font-mono text-4xl font-bold text-white uppercase tracking-widest">Echo.</span>
+        <Loader2 className="w-4 h-4 text-neutral-700 animate-spin mt-2" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
+    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6 font-mono">
 
       {/* ── Logotype ── */}
       <header className="mb-16 text-center select-none">
-        <h1 className="font-serif text-7xl italic text-white leading-none tracking-tight">
+        <h1 className="font-mono text-6xl md:text-7xl font-extrabold text-white leading-none tracking-tight uppercase">
           Echo.
         </h1>
         <p className="font-mono text-[10px] tracking-[0.3em] uppercase text-neutral-600 mt-4">
@@ -73,7 +73,7 @@ export default function LoginPage() {
           id="btn-google-signin"
           onClick={handleGoogle}
           disabled={busy}
-          className="w-full flex items-center justify-center gap-3 border border-white text-white font-mono text-[11px] tracking-[0.2em] uppercase py-4 px-6 hover:bg-white hover:text-black transition-colors duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          className="w-full flex items-center justify-center gap-3 border border-white text-white font-mono text-[11px] tracking-[0.2em] uppercase py-4 px-6 hover:bg-white hover:text-black transition-colors duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed font-bold"
         >
           {busy ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -83,7 +83,7 @@ export default function LoginPage() {
           {busy ? "SIGNING IN…" : "[ CONTINUE WITH GOOGLE ]"}
         </button>
 
-        <p className="font-serif italic text-neutral-700 text-[11px] text-center leading-relaxed mt-2">
+        <p className="font-mono text-[10px] text-neutral-600 text-center uppercase tracking-wider mt-2">
           By continuing, you accept our terms and privacy policy.
         </p>
       </div>

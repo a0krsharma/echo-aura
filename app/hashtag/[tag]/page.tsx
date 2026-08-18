@@ -145,7 +145,7 @@ export default function HashtagPage() {
       <div className="border-b border-neutral-900 p-6 space-y-4">
         <div className="flex items-center gap-3">
           <Hash className="w-6 h-6 text-neutral-600" />
-          <h1 className="font-serif italic text-3xl text-white">{hashtagTag}</h1>
+          <h1 className="font-mono font-bold text-2xl sm:text-3xl text-white uppercase tracking-wider">{hashtagTag}</h1>
         </div>
         
         <div className="flex items-center justify-between">
@@ -198,7 +198,7 @@ export default function HashtagPage() {
             <p className="font-mono text-xs text-neutral-600 tracking-widest uppercase">
               NO POSTS YET
             </p>
-            <p className="font-serif italic text-neutral-700 text-sm">
+            <p className="font-mono text-xs text-neutral-500 uppercase tracking-wider">
               Be the first to post with {hashtagTag}
             </p>
             <Link
@@ -214,7 +214,7 @@ export default function HashtagPage() {
               <div className="flex items-center justify-between">
                 <Link
                   href={`/${post.postAuthorHandle.replace("@", "")}`}
-                  className="font-mono text-xs tracking-widest text-white hover:underline uppercase cursor-pointer"
+                  className="font-mono text-xs tracking-widest text-white hover:underline uppercase cursor-pointer font-bold"
                 >
                   {post.postAuthorHandle}
                 </Link>
@@ -223,7 +223,7 @@ export default function HashtagPage() {
                 </span>
               </div>
 
-              <p className="font-serif italic text-xl text-white leading-snug">
+              <p className="font-mono text-base sm:text-lg font-bold text-white leading-snug">
                 "{post.postCaption}"
               </p>
 

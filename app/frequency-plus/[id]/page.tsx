@@ -338,7 +338,7 @@ export default function EpisodeStagePage() {
           {/* Description */}
           {episode.description && (
             <div className="pt-2">
-              <p className="text-xs text-neutral-300 font-serif italic whitespace-pre-wrap">
+              <p className="text-xs text-neutral-300 font-mono whitespace-pre-wrap">
                 "{episode.description}"
               </p>
             </div>
