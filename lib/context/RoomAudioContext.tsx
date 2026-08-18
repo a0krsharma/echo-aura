@@ -76,19 +76,37 @@ export function RoomAudioProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!activeRoomId || !user) return;
     const db = getFirebaseDb();
-    const unsub = onSnapshot(doc(db, "rooms", activeRoomId, "participants", user.uid), (snap) => {
+    const unsub = onSnapshot(doc(db, "room_participants", `${activeRoomId}_${user.uid}`), async (snap) => {
       if (snap.exists()) {
         const data = snap.data() as RoomParticipant;
         if (data.isSpeaker) {
           setRole(prev => prev === "host" ? "host" : "speaker");
+          if (clientRef.current) {
+            try {
+              await clientRef.current.setClientRole("host");
+            } catch (e) {
+              console.warn("[RoomAudio] Set client role host error:", e);
+            }
+          }
         } else {
           setRole(prev => prev === "host" ? "host" : "listener");
+          if (clientRef.current && (!activeRoom || activeRoom.hostUid !== user.uid)) {
+            try {
+              if (localAudioTrackRef.current) {
+                await localAudioTrackRef.current.setEnabled(false);
+                setIsMuted(true);
+              }
+              await clientRef.current.setClientRole("audience");
+            } catch (e) {
+              console.warn("[RoomAudio] Set client role audience error:", e);
+            }
+          }
         }
         setHandRaised(Boolean(data.raisedHand));
       }
     });
     return () => unsub();
-  }, [activeRoomId, user]);
+  }, [activeRoomId, user, activeRoom]);
 
   // ── 1-Tap Tune-In ───────────────────────────────────────────────────────────
   const tuneIn = useCallback(async (roomId: string, initialRoom?: Room) => {

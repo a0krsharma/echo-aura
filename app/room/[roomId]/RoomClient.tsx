@@ -356,8 +356,9 @@ export default function RoomClient({ roomId }: RoomClientProps) {
   const listeners = participants.filter((p) => !p.isSpeaker && (room ? p.uid !== room.hostUid : true));
   const pendingRequests = participants.filter((p) => p.raisedHand);
 
+  const currentParticipant = user ? participants.find((p) => p.uid === user.uid) : null;
   const isHost = Boolean(user && room && room.hostUid === user.uid);
-  const isSpeaker = role === "host" || role === "speaker";
+  const isSpeaker = isHost || role === "host" || role === "speaker" || Boolean(currentParticipant?.isSpeaker);
 
   if (!room) {
     return (
@@ -513,39 +514,40 @@ export default function RoomClient({ roomId }: RoomClientProps) {
                     </div>
                   )}
 
-                  {/* Avatar Frame */}
+                  {/* Avatar Frame with Speaking Waves */}
                   <button
                     onClick={() => setProfileModal({ uid: s.uid, handle: s.handle })}
                     className={`w-14 h-14 border-2 flex items-center justify-center text-sm font-bold relative transition-all cursor-pointer mb-2 ${
                       isSpeaking
-                        ? "border-white bg-white text-black font-extrabold shadow-lg"
+                        ? "border-white bg-white text-black font-extrabold shadow-[0_0_20px_rgba(255,255,255,0.6)] ring-4 ring-white/50 scale-105"
                         : "border-neutral-700 bg-neutral-950 text-neutral-400 hover:border-white hover:text-white"
                     }`}
                   >
                     {s.handle.replace("@", "").slice(0, 2).toUpperCase()}
                     {isSpeaking && (
-                      <span className="absolute -top-1.5 -right-1.5 text-[8px] bg-black text-white border border-white px-1 font-bold animate-pulse">
-                        TX 🔊
+                      <span className="absolute -top-2 -right-2 text-[8px] bg-white text-black border border-white px-1.5 py-0.2 font-black animate-pulse shadow-md rounded-none">
+                        🎙️ TX
                       </span>
                     )}
                   </button>
 
-                  <p className="text-xs font-bold text-white truncate w-full">
-                    {s.handle}
+                  <p className="text-xs font-bold text-white truncate w-full flex items-center justify-center gap-1">
+                    {isSpeaking && <span className="w-2 h-2 rounded-full bg-white animate-ping" />}
+                    <span>{s.handle}</span>
                   </p>
-                  <span className={`text-[9px] uppercase mt-0.5 tracking-wider font-bold ${isSpeaking ? "text-white" : "text-neutral-500"}`}>
-                    {isHostUser ? "[ HOST ]" : "[ SPEAKER ]"}
+                  <span className={`text-[9px] uppercase mt-0.5 tracking-wider font-bold ${isSpeaking ? "text-white animate-pulse" : "text-neutral-500"}`}>
+                    {isSpeaking ? "[ 🎙️ SPEAKING NOW ]" : isHostUser ? "[ HOST ]" : "[ SPEAKER ]"}
                   </span>
 
                   {/* Live ASCII / CSS Decibel Meter */}
                   <div className="w-full bg-neutral-950 h-2 mt-2 overflow-hidden border border-neutral-800">
                     <div
                       className={`h-full transition-all duration-75 ${isSpeaking ? "bg-white" : "bg-neutral-800"}`}
-                      style={{ width: `${isSpeaking ? Math.max(level, 50) : s.isMuted ? 0 : 15}%` }}
+                      style={{ width: `${isSpeaking ? Math.max(level, 60) : s.isMuted ? 0 : 15}%` }}
                     />
                   </div>
                   <span className={`text-[8px] uppercase mt-1 font-mono font-bold ${isSpeaking ? "text-white animate-pulse" : "text-neutral-500"}`}>
-                    {isSpeaking ? `[||||||--] TX (${level || 75}dB)` : s.isMuted ? "[ MUTE ]" : "[------] IDLE"}
+                    {isSpeaking ? `[||||||||] TX (${level || 85}dB)` : s.isMuted ? "[ MUTED ]" : "[------] IDLE"}
                   </span>
 
                   {/* Host Quick Moderation Controls */}
@@ -772,14 +774,26 @@ export default function RoomClient({ roomId }: RoomClientProps) {
                 : pendingRequests
               ).map((p) => {
                 const isHostUser = room && p.uid === room.hostUid;
+                const isNodeSpeaking = speakingUids.has(p.uid) || (user && p.uid === user.uid && (speakingUids.has("0") || speakingUids.has(user.uid)));
                 return (
                   <div key={p.uid} className="pt-2 flex items-center justify-between gap-2 text-xs">
                     <div className="flex items-center gap-2.5 overflow-hidden">
-                      <div className="w-8 h-8 border border-neutral-700 bg-neutral-900 flex items-center justify-center font-bold text-xs text-white shrink-0">
+                      <div className={`w-8 h-8 border flex items-center justify-center font-bold text-xs shrink-0 transition-all ${
+                        isNodeSpeaking
+                          ? "border-white bg-white text-black ring-2 ring-white/50"
+                          : "border-neutral-700 bg-neutral-900 text-white"
+                      }`}>
                         {p.handle.replace("@", "").slice(0, 2).toUpperCase()}
                       </div>
                       <div className="overflow-hidden">
-                        <p className="font-bold text-white truncate">{p.handle}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-bold text-white truncate">{p.handle}</p>
+                          {isNodeSpeaking && (
+                            <span className="text-[8px] bg-white text-black px-1 font-extrabold uppercase animate-pulse shrink-0">
+                              🎙️ SPEAKING
+                            </span>
+                          )}
+                        </div>
                         <span className="text-[9px] text-neutral-500 uppercase tracking-wider block">
                           {isHostUser
                             ? "[ HOST ]"
@@ -842,6 +856,14 @@ export default function RoomClient({ roomId }: RoomClientProps) {
                 <X size={18} />
               </button>
             </div>
+
+            {/* Speaking Status in this Room */}
+            {(speakingUids.has(profileModal.uid) || (user && profileModal.uid === user.uid && (speakingUids.has("0") || speakingUids.has(user.uid)))) && (
+              <div className="p-2 border border-white bg-white text-black font-extrabold text-xs flex items-center justify-center gap-2 animate-pulse uppercase tracking-wider">
+                <Mic className="w-3.5 h-3.5" />
+                <span>[ 🎙️ CURRENTLY SPEAKING IN THIS ROOM ]</span>
+              </div>
+            )}
 
             {loadingProfile ? (
               <p className="text-center py-6 text-xs text-neutral-500 tracking-widest uppercase animate-pulse">
