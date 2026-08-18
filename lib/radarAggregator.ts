@@ -48,6 +48,13 @@ export function calculateVelocityScore(
   return Math.max(1, Math.round(rawScore));
 }
 
+// Utility to recursively remove undefined properties before sending to Firestore
+export function cleanFirestoreData<T>(obj: T): T {
+  return JSON.parse(
+    JSON.stringify(obj, (_, v) => (v === undefined ? null : v))
+  );
+}
+
 // Curated seed data for INDIA and WORLD focus
 const REGIONAL_SEEDS: Record<RadarRegion, Record<RadarCategoryId, RadarTopicItem[]>> = {
   india: {
@@ -679,27 +686,19 @@ export async function aggregateRadarCategory(
 
     // Save regional doc e.g. radar_feeds/india_trending
     const regionalDocId = getRadarFeedDocId(region, category);
-    await setDoc(
-      doc(db, 'radar_feeds', regionalDocId),
-      {
-        category,
-        region,
-        updated_at: now,
-        topics: top10,
-      },
-      { merge: true }
-    );
+    const docPayload = cleanFirestoreData({
+      category,
+      region,
+      updated_at: now,
+      topics: top10,
+    });
 
-    // Also write to default radar_feeds/{category} for backwards compatibility
-    await setDoc(
-      doc(db, 'radar_feeds', category),
-      {
-        category,
-        updated_at: now,
-        topics: top10,
-      },
-      { merge: true }
-    );
+    try {
+      await setDoc(doc(db, 'radar_feeds', regionalDocId), docPayload, { merge: true });
+      await setDoc(doc(db, 'radar_feeds', category), docPayload, { merge: true });
+    } catch (saveErr) {
+      console.warn(`[RadarAggregator] Could not write to Firestore for ${regionalDocId}:`, saveErr);
+    }
 
     return top10;
   } catch (error) {

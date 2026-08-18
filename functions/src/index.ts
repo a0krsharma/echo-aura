@@ -191,15 +191,19 @@ export const aggregateRadarFeeds = functions.pubsub
       topics.sort((a, b) => b.velocity_score - a.velocity_score);
       const top10 = topics.slice(0, 10);
 
-      // Write single aggregated document per category
-      await db.collection('radar_feeds').doc(category).set(
-        {
-          category,
-          updated_at: now,
-          topics: top10,
-        },
-        { merge: true }
+      // Write single aggregated document per category with sanitized data
+      const docPayload = JSON.parse(
+        JSON.stringify(
+          {
+            category,
+            updated_at: now,
+            topics: top10,
+          },
+          (_, v) => (v === undefined ? null : v)
+        )
       );
+
+      await db.collection('radar_feeds').doc(category).set(docPayload, { merge: true });
     }
 
     console.log('[RadarAggregator] Completed aggregation for all categories');
