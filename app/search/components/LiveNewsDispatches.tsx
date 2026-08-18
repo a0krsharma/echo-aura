@@ -29,6 +29,7 @@ export default function LiveNewsDispatches({
   const router = useRouter();
   const { user } = useAuth();
   const [creatingRoomId, setCreatingRoomId] = useState<string | null>(null);
+  const [visibleCount, setVisibleCount] = useState<number>(6);
 
   const handleStartLiveStage = async (e: React.MouseEvent, item: NewsDispatch) => {
     e.stopPropagation();
@@ -69,6 +70,9 @@ export default function LiveNewsDispatches({
     router.push(`/hashtag/${encodeURIComponent(cleanTag)}`);
   };
 
+  const displayedDispatches = dispatches.slice(0, visibleCount);
+  const hasMore = visibleCount < dispatches.length;
+
   return (
     <section className="space-y-3 font-mono">
       {/* Telemetry Header */}
@@ -98,7 +102,7 @@ export default function LiveNewsDispatches({
         </div>
       ) : (
         <div className="space-y-3">
-          {dispatches.map((item, index) => {
+          {displayedDispatches.map((item, index) => {
             const isCreating = creatingRoomId === item.id;
 
             return (
@@ -181,6 +185,16 @@ export default function LiveNewsDispatches({
               </div>
             );
           })}
+
+          {/* Load More Dispatches Button */}
+          {hasMore && (
+            <button
+              onClick={() => setVisibleCount((prev) => prev + 6)}
+              className="w-full py-3 border border-neutral-800 hover:border-white text-neutral-300 hover:text-white bg-neutral-950 text-xs font-mono font-bold uppercase tracking-widest transition-colors cursor-pointer"
+            >
+              [ + LOAD MORE SECTOR DISPATCHES ({dispatches.length - visibleCount} REMAINING) ]
+            </button>
+          )}
         </div>
       )}
     </section>

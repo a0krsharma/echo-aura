@@ -13,9 +13,9 @@ export type RadarRegion = typeof RADAR_REGIONS[number]['id'];
 
 export const RADAR_CATEGORIES = [
   { id: 'trending', label: 'TRENDING' },
-  { id: 'sports', label: 'SPORTS' },
+  { id: 'sports', label: 'SPORTS & CRICKET' },
   { id: 'news', label: 'NEWS' },
-  { id: 'music', label: 'MUSIC' },
+  { id: 'music', label: 'MUSIC / ENTERTAINMENT' },
   { id: 'tech', label: 'TECH' },
   { id: 'markets', label: 'MARKETS' },
   { id: 'startup', label: 'STARTUP' },

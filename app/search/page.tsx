@@ -50,6 +50,7 @@ import { NewsDispatch } from "@/lib/newsService";
 import { aggregateRadarCategory } from "@/lib/radarAggregator";
 import SearchAutocomplete from "./components/SearchAutocomplete";
 import LiveNewsDispatches from "./components/LiveNewsDispatches";
+import LiveCricketScorecard from "./components/LiveCricketScorecard";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // User Card with Real-time ORBIT Toggle & Direct WIRE Trigger
@@ -239,11 +240,11 @@ const SEARCH_CATEGORY_TABS = [
   { id: "ALL", label: "ALL" },
   { id: "TRENDING", label: "TRENDING" },
   { id: "NEWS", label: "WORLD NEWS" },
+  { id: "SPORTS", label: "SPORTS & CRICKET" },
+  { id: "MUSIC", label: "MUSIC / ENTERTAINMENT" },
   { id: "TECH", label: "TECH" },
   { id: "STARTUP", label: "STARTUP" },
-  { id: "SPORTS", label: "SPORTS" },
   { id: "MARKETS", label: "MARKETS" },
-  { id: "MUSIC", label: "MUSIC" },
   { id: "VOICES", label: "VOICES" },
   { id: "ECHOES", label: "ECHOES" },
 ] as const;
@@ -518,11 +519,16 @@ export default function SearchPage() {
         {!isSearchActive ? (
           <div className="space-y-8 pb-12">
             
+            {/* 0. Live Cricket Match Scorecard (Sports & Cricket Priority) */}
+            {(activeTab === "ALL" || activeTab === "SPORTS") && (
+              <LiveCricketScorecard />
+            )}
+
             {/* 1. Real-time World News Wire Dispatches */}
             <LiveNewsDispatches
-              dispatches={newsDispatches.slice(0, 4)}
+              dispatches={newsDispatches}
               loading={newsLoading}
-              categoryTitle="LIVE BREAKING WORLD DISPATCHES"
+              categoryTitle={`LIVE ${activeTab === 'ALL' ? 'BREAKING' : activeTab} DISPATCHES`}
             />
 
             {/* 2. Top Trending Audio Frequencies */}
@@ -667,6 +673,11 @@ export default function SearchPage() {
           /* ───────────────────────────────────────────────────────────── */
           <div className="space-y-8">
             
+            {/* Live Cricket Match Scorecard */}
+            {(activeTab === "SPORTS" || searchQuery.toLowerCase().includes("cricket") || searchQuery.toLowerCase().includes("ind") || searchQuery.toLowerCase().includes("match") || searchQuery.toLowerCase().includes("score")) && (
+              <LiveCricketScorecard />
+            )}
+
             {/* 1. MATCHING ACTIVE LIVE ROOMS / STAGES */}
             {results.liveRooms.length > 0 && (
               <section className="space-y-3">
