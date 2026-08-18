@@ -3,16 +3,18 @@
 /**
  * app/radar/components/RadarHeader.tsx
  * ─────────────────────────────────────────────────────
- * Tab navigation and search component for Echo Radar.
+ * Tab navigation, regional focus switcher, and search for Echo Radar.
  */
 
 import React from 'react';
-import { RADAR_CATEGORIES, RadarCategoryId } from '@/lib/categories';
-import { Search, X, Radio, Users } from 'lucide-react';
+import { RADAR_CATEGORIES, RadarCategoryId, RADAR_REGIONS, RadarRegion } from '@/lib/categories';
+import { Search, X, Radio, Users, Globe } from 'lucide-react';
 
 interface RadarHeaderProps {
   activeTab: RadarCategoryId;
   onSelectTab: (tab: RadarCategoryId) => void;
+  activeRegion: RadarRegion;
+  onSelectRegion: (region: RadarRegion) => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
   viewMode: 'trending' | 'open_users';
@@ -22,6 +24,8 @@ interface RadarHeaderProps {
 export default function RadarHeader({
   activeTab,
   onSelectTab,
+  activeRegion,
+  onSelectRegion,
   searchQuery,
   onSearchChange,
   viewMode,
@@ -52,9 +56,9 @@ export default function RadarHeader({
         </div>
       </div>
 
-      {/* Mode Switcher: Live Trending vs Open Nodes */}
-      <div className="flex border-b border-neutral-900 px-3 py-1.5 justify-between items-center text-[10px] text-neutral-500">
-        <div className="flex gap-2">
+      {/* Mode & Regional Focus Switcher */}
+      <div className="flex flex-wrap border-b border-neutral-900 px-3 py-1.5 justify-between items-center text-[10px] text-neutral-500 gap-2">
+        <div className="flex gap-2 items-center">
           <button
             onClick={() => onToggleViewMode('trending')}
             className={`flex items-center gap-1.5 px-2 py-1 transition-colors uppercase cursor-pointer ${
@@ -64,7 +68,7 @@ export default function RadarHeader({
             }`}
           >
             <Radio className="w-3 h-3" />
-            [ TELEMETRY & VELOCITY ]
+            [ TELEMETRY &amp; VELOCITY ]
           </button>
           <button
             onClick={() => onToggleViewMode('open_users')}
@@ -78,9 +82,26 @@ export default function RadarHeader({
             [ OPEN NODES ]
           </button>
         </div>
-        <div className="hidden sm:flex items-center gap-1.5 text-neutral-500">
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
-          <span>AUDIO FREQUENCY ENGINE</span>
+
+        {/* Regional Focus Toggle: INDIA vs WORLD */}
+        <div className="flex items-center gap-1">
+          <span className="text-[9px] text-neutral-600 uppercase mr-1 hidden sm:inline">FOCUS:</span>
+          {RADAR_REGIONS.map((reg) => {
+            const isSelected = activeRegion === reg.id;
+            return (
+              <button
+                key={reg.id}
+                onClick={() => onSelectRegion(reg.id)}
+                className={`px-2 py-0.5 text-[10px] uppercase font-bold transition-colors cursor-pointer border ${
+                  isSelected
+                    ? 'bg-white text-black border-white'
+                    : 'text-neutral-500 hover:text-white border-neutral-900'
+                }`}
+              >
+                [{reg.label}]
+              </button>
+            );
+          })}
         </div>
       </div>
 

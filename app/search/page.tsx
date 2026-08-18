@@ -246,6 +246,7 @@ export default function SearchPage() {
   // Search State
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<SearchCategoryTabId>("ALL");
+  const [activeRegion, setActiveRegion] = useState<"all" | "india" | "world">("india");
   const [isFocused, setIsFocused] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -278,9 +279,10 @@ export default function SearchPage() {
 
     const db = getFirebaseDb();
 
-    // 1. Subscribe to Top Trending Feed
+    // 1. Subscribe to Regional Trending Feed
+    const docId = activeRegion === "world" ? "world_trending" : "india_trending";
     const unsubTrending = onSnapshot(
-      doc(db, "radar_feeds", "trending"),
+      doc(db, "radar_feeds", docId),
       (snap) => {
         if (snap.exists()) {
           const data = snap.data();
@@ -306,15 +308,15 @@ export default function SearchPage() {
     loadSuggested();
 
     return () => unsubTrending();
-  }, []);
+  }, [activeRegion]);
 
-  // Fetch Live World News Dispatches (Client Cache Friendly)
+  // Fetch Live World & India News Dispatches (Client Cache Friendly)
   useEffect(() => {
     async function loadNews() {
       setNewsLoading(true);
       try {
         const catParam = activeTab === "ALL" ? "all" : activeTab.toLowerCase();
-        const res = await fetch(`/api/news?category=${encodeURIComponent(catParam)}&q=${encodeURIComponent(searchQuery)}`);
+        const res = await fetch(`/api/news?category=${encodeURIComponent(catParam)}&region=${encodeURIComponent(activeRegion)}&q=${encodeURIComponent(searchQuery)}`);
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data.dispatches)) {
@@ -329,7 +331,7 @@ export default function SearchPage() {
     }
 
     loadNews();
-  }, [activeTab, searchQuery]);
+  }, [activeTab, activeRegion, searchQuery]);
 
   // Save query to localStorage
   const saveToHistory = useCallback((queryStr: string) => {
@@ -434,6 +436,29 @@ export default function SearchPage() {
                 onClose={() => setIsFocused(false)}
               />
             )}
+          </div>
+
+          {/* Regional Focus Selector */}
+          <div className="flex items-center justify-between pt-1 text-[10px] text-neutral-500">
+            <span className="uppercase text-[9px] text-neutral-600 tracking-wider">REGION FOCUS:</span>
+            <div className="flex items-center gap-1">
+              {(["india", "world", "all"] as const).map((reg) => {
+                const isSelected = activeRegion === reg;
+                return (
+                  <button
+                    key={reg}
+                    onClick={() => setActiveRegion(reg)}
+                    className={`px-2 py-0.5 uppercase text-[10px] font-bold transition-colors cursor-pointer border ${
+                      isSelected
+                        ? "bg-white text-black border-white"
+                        : "text-neutral-500 hover:text-white border-neutral-900"
+                    }`}
+                  >
+                    [{reg.toUpperCase()}]
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Twitter-Style Horizontal Category Scroll */}

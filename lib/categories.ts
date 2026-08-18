@@ -1,8 +1,15 @@
 /**
  * lib/categories.ts
  * ─────────────────────────────────────────────────────
- * Category configuration and types for Echo Radar & Trending Feeds.
+ * Category and Region configuration and types for Echo Radar & Trending Feeds.
  */
+
+export const RADAR_REGIONS = [
+  { id: 'india', label: 'INDIA' },
+  { id: 'world', label: 'WORLD' },
+] as const;
+
+export type RadarRegion = typeof RADAR_REGIONS[number]['id'];
 
 export const RADAR_CATEGORIES = [
   { id: 'trending', label: 'TRENDING' },
@@ -20,6 +27,7 @@ export type RadarCategoryId = typeof RADAR_CATEGORIES[number]['id'];
 export interface RadarTopicItem {
   tag: string;
   category: RadarCategoryId;
+  region?: RadarRegion;
   velocity_score: number;
   live_rooms: number;
   voice_replies: number;
@@ -34,6 +42,7 @@ export interface RadarTopicItem {
 
 export interface RadarFeedDoc {
   category: RadarCategoryId;
+  region?: RadarRegion;
   updated_at: number;
   topics: RadarTopicItem[];
 }
@@ -48,3 +57,7 @@ export const RADAR_TRACKED_CATEGORIES: RadarCategoryId[] = [
   'startup',
   'entertainment',
 ];
+
+export function getRadarFeedDocId(region: RadarRegion, category: RadarCategoryId): string {
+  return `${region}_${category}`;
+}

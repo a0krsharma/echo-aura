@@ -4,6 +4,7 @@
  * app/radar/components/LiveRadarFeed.tsx
  * ─────────────────────────────────────────────────────
  * Real-time terminal feed subscribing to aggregated category telemetry & live rooms.
+ * Supports regional focus (India / World).
  * Hardcore pure monochrome (Black & White).
  */
 
@@ -11,17 +12,19 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { doc, collection, onSnapshot, query, limit } from 'firebase/firestore';
 import { getFirebaseDb } from '@/lib/firebase';
-import { RadarCategoryId, RadarTopicItem } from '@/lib/categories';
+import { RadarCategoryId, RadarRegion, RadarTopicItem, getRadarFeedDocId } from '@/lib/categories';
 import { aggregateRadarCategory } from '@/lib/radarAggregator';
-import { Play, Pause, Flame, ArrowRight, Radio } from 'lucide-react';
+import { Play, Pause, Flame, ArrowRight, Radio, Globe } from 'lucide-react';
 
 interface LiveRadarFeedProps {
   category?: RadarCategoryId;
+  region?: RadarRegion;
   searchQuery?: string;
 }
 
 export default function LiveRadarFeed({
   category = 'trending',
+  region = 'india',
   searchQuery = '',
 }: LiveRadarFeedProps) {
   const router = useRouter();
@@ -32,11 +35,12 @@ export default function LiveRadarFeed({
   const [playingTag, setPlayingTag] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // 1. Real-time Category Telemetry Document Subscription
+  // 1. Real-time Regional Category Telemetry Document Subscription
   useEffect(() => {
     setLoading(true);
     const db = getFirebaseDb();
-    const docRef = doc(db, 'radar_feeds', category);
+    const docId = getRadarFeedDocId(region, category);
+    const docRef = doc(db, 'radar_feeds', docId);
 
     const unsub = onSnapshot(
       docRef,
@@ -53,14 +57,14 @@ export default function LiveRadarFeed({
         }
 
         // Fallback: If document not populated yet, trigger background aggregation
-        aggregateRadarCategory(category).then((topics) => {
+        aggregateRadarCategory(category, region).then((topics) => {
           setFeedData(topics);
           setLoading(false);
         });
       },
       (error) => {
         console.error('[LiveRadarFeed] Error listening to radar feed:', error);
-        aggregateRadarCategory(category).then((topics) => {
+        aggregateRadarCategory(category, region).then((topics) => {
           setFeedData(topics);
           setLoading(false);
         });
@@ -68,7 +72,7 @@ export default function LiveRadarFeed({
     );
 
     return () => unsub();
-  }, [category]);
+  }, [category, region]);
 
   // 2. Real-time Active Rooms Subscription (Instant 0ms Stage/Room Updates)
   useEffect(() => {
@@ -157,7 +161,7 @@ export default function LiveRadarFeed({
       <div className="border-b border-neutral-900 pb-2.5 flex justify-between items-center text-xs text-neutral-500">
         <div className="flex items-center gap-2">
           <span className="text-white font-bold tracking-widest uppercase">
-            &gt;&gt; TRACKING: [ {category.toUpperCase()} ]
+            &gt;&gt; TRACKING: [ {region.toUpperCase()} • {category.toUpperCase()} ]
           </span>
           <span className="text-[10px] text-neutral-600 hidden sm:inline font-mono">
             // ACOUSTIC VELOCITY ENGINE
@@ -175,7 +179,7 @@ export default function LiveRadarFeed({
       {loading && feedData.length === 0 ? (
         <div className="p-8 border border-neutral-900 bg-neutral-950 text-center space-y-2">
           <div className="text-neutral-400 text-xs animate-pulse tracking-widest uppercase">
-            CALCULATING REAL-TIME ACOUSTIC VELOCITY...
+            CALCULATING {region.toUpperCase()} ACOUSTIC VELOCITY...
           </div>
           <div className="text-[10px] text-neutral-600 font-mono">
             GRAVITY DECAY RUNNING // SCANNING ACTIVE NODES
@@ -212,12 +216,16 @@ export default function LiveRadarFeed({
                   </div>
                 )}
 
-                {/* Index and Velocity Score */}
+                {/* Index, Region, and Velocity Score */}
                 <div className="flex items-center gap-2 text-xs text-neutral-500 mb-1.5">
                   <span className="font-bold text-neutral-400">
                     {String(index + 1).padStart(2, '0')}
                   </span>
                   <span>//</span>
+                  <span className="uppercase text-[10px] text-neutral-400 border border-neutral-900 px-1 py-0.5">
+                    {topic.region || region}
+                  </span>
+                  <span>•</span>
                   <span className="text-neutral-400 flex items-center gap-1">
                     <Flame className="w-3 h-3 text-neutral-400 inline" />
                     VELOCITY: <strong className="text-white">{topic.velocity_score}</strong>

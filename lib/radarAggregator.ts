@@ -1,7 +1,7 @@
 /**
  * lib/radarAggregator.ts
  * ─────────────────────────────────────────────────────
- * Acoustic Velocity Trending Engine for Echo Radar.
+ * Acoustic Velocity Trending Engine for Echo Radar (India & World Focused).
  * Computes time-decayed velocity scores based on:
  *   - L (Live Listeners / Active Stage Nodes) * 10
  *   - V (Voice Replies / Reverbs) * 5
@@ -16,12 +16,16 @@ import {
   getDocs,
   setDoc,
   query,
-  where,
   limit,
-  Timestamp,
 } from 'firebase/firestore';
 import { getFirebaseDb } from '@/lib/firebase';
-import { RADAR_TRACKED_CATEGORIES, RadarCategoryId, RadarTopicItem, RadarFeedDoc } from '@/lib/categories';
+import {
+  RADAR_TRACKED_CATEGORIES,
+  RadarCategoryId,
+  RadarRegion,
+  RadarTopicItem,
+  getRadarFeedDocId,
+} from '@/lib/categories';
 
 // Gravity factor for time decay (1.5 to 1.8)
 const GRAVITY = 1.6;
@@ -44,200 +48,438 @@ export function calculateVelocityScore(
   return Math.max(1, Math.round(rawScore));
 }
 
-// Fallback high-signal topics per category when Firestore has fresh/sparse data
-const DEFAULT_TOPICS_BY_CATEGORY: Record<RadarCategoryId, RadarTopicItem[]> = {
-  trending: [
-    {
-      tag: '#AutonomousAgents',
-      category: 'trending',
-      velocity_score: 9420,
-      live_rooms: 4,
-      voice_replies: 184,
-      total_pulses: 1420,
-      shares: 98,
-      headline: 'Multi-agent orchestration debate on voice latency',
-    },
-    {
-      tag: '#IndiaTechSummit',
-      category: 'trending',
-      velocity_score: 8150,
-      live_rooms: 2,
-      voice_replies: 92,
-      total_pulses: 980,
-      shares: 45,
-      headline: 'Bangalore & NCR founders live stage',
-    },
-    {
-      tag: '#AudioFirstSocial',
-      category: 'trending',
-      velocity_score: 6200,
-      live_rooms: 1,
-      voice_replies: 64,
-      total_pulses: 640,
-      shares: 31,
-      headline: 'Acoustic communication vs traditional text feeds',
-    },
-  ],
-  sports: [
-    {
-      tag: '#ChampionsLeague',
-      category: 'sports',
-      velocity_score: 8900,
-      live_rooms: 3,
-      voice_replies: 142,
-      total_pulses: 1200,
-      shares: 80,
-      headline: 'Post-match tactical audio breakdowns and fan clashes',
-    },
-    {
-      tag: '#CricketWorldCup',
-      category: 'sports',
-      velocity_score: 7600,
-      live_rooms: 2,
-      voice_replies: 110,
-      total_pulses: 850,
-      shares: 55,
-      headline: 'Live ball-by-ball stage commentary',
-    },
-  ],
-  news: [
-    {
-      tag: '#GlobalMarketsBrief',
-      category: 'news',
-      velocity_score: 7800,
-      live_rooms: 2,
-      voice_replies: 88,
-      total_pulses: 930,
-      shares: 42,
-      headline: 'Federal Reserve rate cut implications audio dispatch',
-    },
-    {
-      tag: '#OpenSourceAI',
-      category: 'news',
-      velocity_score: 6950,
-      live_rooms: 1,
-      voice_replies: 74,
-      total_pulses: 620,
-      shares: 39,
-      headline: 'New weights release triggers open stage debate',
-    },
-  ],
-  music: [
-    {
-      tag: '#SynthesizerLab',
-      category: 'music',
-      velocity_score: 8400,
-      live_rooms: 3,
-      voice_replies: 156,
-      total_pulses: 1100,
-      shares: 72,
-      headline: 'Producers sharing raw modular stems and patches',
-    },
-    {
-      tag: '#LoFiJamSession',
-      category: 'music',
-      velocity_score: 5900,
-      live_rooms: 1,
-      voice_replies: 45,
-      total_pulses: 510,
-      shares: 28,
-      headline: 'Late night ambient frequencies and beat jams',
-    },
-  ],
-  tech: [
-    {
-      tag: '#EdgeCompute',
-      category: 'tech',
-      velocity_score: 9100,
-      live_rooms: 3,
-      voice_replies: 160,
-      total_pulses: 1350,
-      shares: 85,
-      headline: 'Running quantized models locally on device',
-    },
-    {
-      tag: '#WebRTCvsHLS',
-      category: 'tech',
-      velocity_score: 7200,
-      live_rooms: 2,
-      voice_replies: 95,
-      total_pulses: 810,
-      shares: 44,
-      headline: 'Ultra-low latency audio streaming architectures',
-    },
-  ],
-  markets: [
-    {
-      tag: '#Nifty50Options',
-      category: 'markets',
-      velocity_score: 8800,
-      live_rooms: 2,
-      voice_replies: 130,
-      total_pulses: 1140,
-      shares: 60,
-      headline: 'Live trading floor audio debrief',
-    },
-    {
-      tag: '#CryptoVolatility',
-      category: 'markets',
-      velocity_score: 6800,
-      live_rooms: 1,
-      voice_replies: 62,
-      total_pulses: 590,
-      shares: 33,
-      headline: 'On-chain signals and liquidity pool stage',
-    },
-  ],
-  startup: [
-    {
-      tag: '#SeedRound',
-      category: 'startup',
-      velocity_score: 8300,
-      live_rooms: 2,
-      voice_replies: 118,
-      total_pulses: 990,
-      shares: 50,
-      headline: 'Early dilution vs revenue bootstrapping clash',
-    },
-    {
-      tag: '#BuildInPublic',
-      category: 'startup',
-      velocity_score: 7500,
-      live_rooms: 2,
-      voice_replies: 84,
-      total_pulses: 740,
-      shares: 38,
-      headline: 'Daily founder audio logs and MRR disclosures',
-    },
-  ],
-  entertainment: [
-    {
-      tag: '#CinemaAesthetics',
-      category: 'entertainment',
-      velocity_score: 7100,
-      live_rooms: 1,
-      voice_replies: 89,
-      total_pulses: 780,
-      shares: 41,
-      headline: 'Directing style, sound design and film scoring',
-    },
-    {
-      tag: '#PodcastLore',
-      category: 'entertainment',
-      velocity_score: 5600,
-      live_rooms: 1,
-      voice_replies: 52,
-      total_pulses: 490,
-      shares: 20,
-      headline: 'Deep dives into forgotten broadcast archives',
-    },
-  ],
+// Curated seed data for INDIA and WORLD focus
+const REGIONAL_SEEDS: Record<RadarRegion, Record<RadarCategoryId, RadarTopicItem[]>> = {
+  india: {
+    trending: [
+      {
+        tag: '#BiharStartups',
+        category: 'trending',
+        region: 'india',
+        velocity_score: 9850,
+        live_rooms: 4,
+        voice_replies: 210,
+        total_pulses: 1680,
+        shares: 110,
+        headline: 'Tier-2/3 founders debating early venture debt and profitability',
+      },
+      {
+        tag: '#Nifty50Options',
+        category: 'trending',
+        region: 'india',
+        velocity_score: 8900,
+        live_rooms: 3,
+        voice_replies: 165,
+        total_pulses: 1320,
+        shares: 78,
+        headline: 'Weekly expiry live trading floor audio debrief',
+      },
+      {
+        tag: '#BangaloreTech',
+        category: 'trending',
+        region: 'india',
+        velocity_score: 7800,
+        live_rooms: 2,
+        voice_replies: 94,
+        total_pulses: 890,
+        shares: 42,
+        headline: 'Engineers discussing open source AI models hosted on Indian cloud',
+      },
+      {
+        tag: '#INDvsENG',
+        category: 'trending',
+        region: 'india',
+        velocity_score: 7100,
+        live_rooms: 2,
+        voice_replies: 120,
+        total_pulses: 950,
+        shares: 60,
+        headline: 'Live ball-by-ball stage banter and tactical clash',
+      },
+    ],
+    sports: [
+      {
+        tag: '#INDvsENG',
+        category: 'sports',
+        region: 'india',
+        velocity_score: 9400,
+        live_rooms: 4,
+        voice_replies: 190,
+        total_pulses: 1450,
+        shares: 88,
+        headline: 'Live test match audio stage and bowling analysis',
+      },
+      {
+        tag: '#IPL2026Auction',
+        category: 'sports',
+        region: 'india',
+        velocity_score: 8200,
+        live_rooms: 3,
+        voice_replies: 130,
+        total_pulses: 1100,
+        shares: 55,
+        headline: 'Franchise strategy and uncapped player scouting room',
+      },
+    ],
+    news: [
+      {
+        tag: '#IndiaBudgetDebate',
+        category: 'news',
+        region: 'india',
+        velocity_score: 8600,
+        live_rooms: 3,
+        voice_replies: 145,
+        total_pulses: 1200,
+        shares: 64,
+        headline: 'Policy analysts breakdown capital expenditure and tax slabs',
+      },
+      {
+        tag: '#ISROMission',
+        category: 'news',
+        region: 'india',
+        velocity_score: 7900,
+        live_rooms: 2,
+        voice_replies: 98,
+        total_pulses: 880,
+        shares: 50,
+        headline: 'Next-gen launch vehicle telemetry and payload updates',
+      },
+    ],
+    music: [
+      {
+        tag: '#RagaFusion',
+        category: 'music',
+        region: 'india',
+        velocity_score: 8100,
+        live_rooms: 2,
+        voice_replies: 110,
+        total_pulses: 920,
+        shares: 48,
+        headline: 'Indian classical raag structures paired with analog synths',
+      },
+      {
+        tag: '#IndianIndieFrequencies',
+        category: 'music',
+        region: 'india',
+        velocity_score: 6900,
+        live_rooms: 1,
+        voice_replies: 72,
+        total_pulses: 640,
+        shares: 30,
+        headline: 'Late night acoustic sessions and unreleased stems',
+      },
+    ],
+    tech: [
+      {
+        tag: '#BangaloreDevs',
+        category: 'tech',
+        region: 'india',
+        velocity_score: 9300,
+        live_rooms: 3,
+        voice_replies: 175,
+        total_pulses: 1400,
+        shares: 80,
+        headline: 'Distributed systems and low-latency voice pipelines discussion',
+      },
+      {
+        tag: '#UPIArchitecture',
+        category: 'tech',
+        region: 'india',
+        velocity_score: 7600,
+        live_rooms: 2,
+        voice_replies: 95,
+        total_pulses: 850,
+        shares: 40,
+        headline: 'High throughput transactional engineering debrief',
+      },
+    ],
+    markets: [
+      {
+        tag: '#Nifty50Options',
+        category: 'markets',
+        region: 'india',
+        velocity_score: 9500,
+        live_rooms: 3,
+        voice_replies: 185,
+        total_pulses: 1500,
+        shares: 90,
+        headline: 'Live intraday options flow and volatility surface',
+      },
+      {
+        tag: '#DalalStreetAudio',
+        category: 'markets',
+        region: 'india',
+        velocity_score: 8300,
+        live_rooms: 2,
+        voice_replies: 120,
+        total_pulses: 1020,
+        shares: 52,
+        headline: 'Quarterly earnings calls takeaways and sector rotation',
+      },
+    ],
+    startup: [
+      {
+        tag: '#BiharStartups',
+        category: 'startup',
+        region: 'india',
+        velocity_score: 9700,
+        live_rooms: 4,
+        voice_replies: 205,
+        total_pulses: 1600,
+        shares: 105,
+        headline: 'Bharat-first business models and grassroots distribution',
+      },
+      {
+        tag: '#BootstrappedIndia',
+        category: 'startup',
+        region: 'india',
+        velocity_score: 8400,
+        live_rooms: 2,
+        voice_replies: 135,
+        total_pulses: 1100,
+        shares: 60,
+        headline: 'Profitable SaaS builders sharing unvarnished MRR numbers',
+      },
+    ],
+    entertainment: [
+      {
+        tag: '#RegionalCinemaDebate',
+        category: 'entertainment',
+        region: 'india',
+        velocity_score: 8500,
+        live_rooms: 2,
+        voice_replies: 140,
+        total_pulses: 1150,
+        shares: 68,
+        headline: 'Screenplay craft, sound mixing and cinematography breakdown',
+      },
+      {
+        tag: '#BollywoodAudioLore',
+        category: 'entertainment',
+        region: 'india',
+        velocity_score: 7200,
+        live_rooms: 1,
+        voice_replies: 88,
+        total_pulses: 780,
+        shares: 35,
+        headline: 'Behind the scenes archives of iconic film scores',
+      },
+    ],
+  },
+  world: {
+    trending: [
+      {
+        tag: '#AutonomousAgents',
+        category: 'trending',
+        region: 'world',
+        velocity_score: 9420,
+        live_rooms: 4,
+        voice_replies: 184,
+        total_pulses: 1420,
+        shares: 98,
+        headline: 'Multi-agent orchestration debate on voice latency',
+      },
+      {
+        tag: '#EdgeCompute',
+        category: 'trending',
+        region: 'world',
+        velocity_score: 8500,
+        live_rooms: 3,
+        voice_replies: 140,
+        total_pulses: 1150,
+        shares: 65,
+        headline: 'Quantized neural models running locally on device',
+      },
+      {
+        tag: '#AudioFirstSocial',
+        category: 'trending',
+        region: 'world',
+        velocity_score: 6900,
+        live_rooms: 2,
+        voice_replies: 82,
+        total_pulses: 720,
+        shares: 40,
+        headline: 'Acoustic communication vs traditional text feeds',
+      },
+    ],
+    sports: [
+      {
+        tag: '#ChampionsLeague',
+        category: 'sports',
+        region: 'world',
+        velocity_score: 9100,
+        live_rooms: 3,
+        voice_replies: 155,
+        total_pulses: 1300,
+        shares: 82,
+        headline: 'Post-match tactical audio breakdowns and fan clashes',
+      },
+      {
+        tag: '#F1GrandPrix',
+        category: 'sports',
+        region: 'world',
+        velocity_score: 7800,
+        live_rooms: 2,
+        voice_replies: 105,
+        total_pulses: 890,
+        shares: 48,
+        headline: 'Telemetry data, tire degradation, and team radio leaks',
+      },
+    ],
+    news: [
+      {
+        tag: '#GlobalMarketsBrief',
+        category: 'news',
+        region: 'world',
+        velocity_score: 8400,
+        live_rooms: 2,
+        voice_replies: 120,
+        total_pulses: 1050,
+        shares: 55,
+        headline: 'Federal Reserve rate cut implications audio dispatch',
+      },
+      {
+        tag: '#OpenSourceAI',
+        category: 'news',
+        region: 'world',
+        velocity_score: 7500,
+        live_rooms: 2,
+        voice_replies: 88,
+        total_pulses: 740,
+        shares: 44,
+        headline: 'New weights release triggers open stage debate',
+      },
+    ],
+    music: [
+      {
+        tag: '#SynthesizerLab',
+        category: 'music',
+        region: 'world',
+        velocity_score: 8600,
+        live_rooms: 3,
+        voice_replies: 160,
+        total_pulses: 1150,
+        shares: 75,
+        headline: 'Producers sharing raw modular stems and patches',
+      },
+      {
+        tag: '#LoFiJamSession',
+        category: 'music',
+        region: 'world',
+        velocity_score: 6400,
+        live_rooms: 1,
+        voice_replies: 55,
+        total_pulses: 580,
+        shares: 30,
+        headline: 'Late night ambient frequencies and beat jams',
+      },
+    ],
+    tech: [
+      {
+        tag: '#EdgeCompute',
+        category: 'tech',
+        region: 'world',
+        velocity_score: 9300,
+        live_rooms: 3,
+        voice_replies: 170,
+        total_pulses: 1400,
+        shares: 88,
+        headline: 'Running quantized models locally on device',
+      },
+      {
+        tag: '#WebRTCvsHLS',
+        category: 'tech',
+        region: 'world',
+        velocity_score: 7600,
+        live_rooms: 2,
+        voice_replies: 98,
+        total_pulses: 840,
+        shares: 45,
+        headline: 'Ultra-low latency audio streaming architectures',
+      },
+    ],
+    markets: [
+      {
+        tag: '#FedRateDecision',
+        category: 'markets',
+        region: 'world',
+        velocity_score: 8900,
+        live_rooms: 2,
+        voice_replies: 135,
+        total_pulses: 1180,
+        shares: 64,
+        headline: 'Central banks liquidity updates and macro outlook',
+      },
+      {
+        tag: '#CryptoVolatility',
+        category: 'markets',
+        region: 'world',
+        velocity_score: 7200,
+        live_rooms: 1,
+        voice_replies: 70,
+        total_pulses: 640,
+        shares: 36,
+        headline: 'On-chain signals and liquidity pool stage',
+      },
+    ],
+    startup: [
+      {
+        tag: '#SeedRound',
+        category: 'startup',
+        region: 'world',
+        velocity_score: 8700,
+        live_rooms: 2,
+        voice_replies: 125,
+        total_pulses: 1050,
+        shares: 55,
+        headline: 'Early dilution vs revenue bootstrapping clash',
+      },
+      {
+        tag: '#BuildInPublic',
+        category: 'startup',
+        region: 'world',
+        velocity_score: 7900,
+        live_rooms: 2,
+        voice_replies: 90,
+        total_pulses: 780,
+        shares: 42,
+        headline: 'Daily founder audio logs and MRR disclosures',
+      },
+    ],
+    entertainment: [
+      {
+        tag: '#CinemaAesthetics',
+        category: 'entertainment',
+        region: 'world',
+        velocity_score: 7700,
+        live_rooms: 1,
+        voice_replies: 95,
+        total_pulses: 820,
+        shares: 45,
+        headline: 'Directing style, sound design and film scoring',
+      },
+      {
+        tag: '#PodcastLore',
+        category: 'entertainment',
+        region: 'world',
+        velocity_score: 6100,
+        live_rooms: 1,
+        voice_replies: 60,
+        total_pulses: 540,
+        shares: 25,
+        headline: 'Deep dives into forgotten broadcast archives',
+      },
+    ],
+  },
 };
 
 /**
- * Aggregates posts and active rooms into radar_feeds document per category
+ * Aggregates posts and active rooms into radar_feeds document per category & region
  */
-export async function aggregateRadarCategory(category: RadarCategoryId): Promise<RadarTopicItem[]> {
+export async function aggregateRadarCategory(
+  category: RadarCategoryId,
+  region: RadarRegion = 'india'
+): Promise<RadarTopicItem[]> {
   try {
     const db = getFirebaseDb();
     const now = Date.now();
@@ -248,7 +490,7 @@ export async function aggregateRadarCategory(category: RadarCategoryId): Promise
     const activeRooms: any[] = [];
     roomsSnap.forEach((docSnap) => {
       const data = docSnap.data();
-      if (data.isLive || data.isActive || data.listenerCount > 0) {
+      if (data.isLive || data.isActive || (data.listenerCount && data.listenerCount > 0)) {
         activeRooms.push({ id: docSnap.id, ...data });
       }
     });
@@ -267,6 +509,7 @@ export async function aggregateRadarCategory(category: RadarCategoryId): Promise
       {
         tag: string;
         category: RadarCategoryId;
+        region: RadarRegion;
         liveRooms: number;
         activeRoomId?: string;
         activeRoomName?: string;
@@ -279,10 +522,10 @@ export async function aggregateRadarCategory(category: RadarCategoryId): Promise
       }
     > = {};
 
-    // Helper to register topic
     const registerTopic = (
       rawTag: string,
       itemCat: RadarCategoryId,
+      itemRegion: RadarRegion,
       itemLive: number,
       roomId?: string,
       roomName?: string,
@@ -298,6 +541,7 @@ export async function aggregateRadarCategory(category: RadarCategoryId): Promise
         topicMap[tag] = {
           tag,
           category: itemCat,
+          region: itemRegion,
           liveRooms: itemLive,
           activeRoomId: roomId,
           activeRoomName: roomName,
@@ -332,15 +576,18 @@ export async function aggregateRadarCategory(category: RadarCategoryId): Promise
     // Scan rooms
     for (const room of activeRooms) {
       const roomCat = (room.category?.toLowerCase() || 'trending') as RadarCategoryId;
+      const roomRegion = (room.region?.toLowerCase() || 'india') as RadarRegion;
       const roomTags = Array.isArray(room.tags) ? room.tags : [room.name || 'Stage'];
       const listeners = Number(room.listenerCount || room.listeners || 1);
       const isCatMatch = category === 'trending' || roomCat === category;
+      const isRegionMatch = !room.region || roomRegion === region;
 
-      if (isCatMatch) {
+      if (isCatMatch && isRegionMatch) {
         for (const t of roomTags) {
           registerTopic(
             t,
             category,
+            region,
             1,
             room.id,
             room.name,
@@ -357,28 +604,28 @@ export async function aggregateRadarCategory(category: RadarCategoryId): Promise
     // Scan posts
     for (const post of recentPosts) {
       const postCat = (post.category?.toLowerCase() || 'trending') as RadarCategoryId;
+      const postRegion = (post.region?.toLowerCase() || 'india') as RadarRegion;
       const postTags: string[] = [];
-      
-      // Extract from tags or hashtags in caption
-      if (Array.isArray(post.tags)) {
-        postTags.push(...post.tags);
-      }
+
+      if (Array.isArray(post.tags)) postTags.push(...post.tags);
       if (post.caption) {
         const matches = post.caption.match(/#[a-zA-Z0-9_]+/g);
         if (matches) postTags.push(...matches);
       }
-
       if (postTags.length === 0 && post.category) {
         postTags.push(`#${post.category}`);
       }
 
       const isCatMatch = category === 'trending' || postCat === category;
-      if (isCatMatch && postTags.length > 0) {
+      const isRegionMatch = !post.region || postRegion === region;
+
+      if (isCatMatch && isRegionMatch && postTags.length > 0) {
         const postTime = post.createdAt?.toMillis?.() || now;
         for (const t of postTags) {
           registerTopic(
             t,
             category,
+            region,
             0,
             undefined,
             undefined,
@@ -393,7 +640,7 @@ export async function aggregateRadarCategory(category: RadarCategoryId): Promise
       }
     }
 
-    // Convert to topics array and calculate velocity
+    // Calculate velocity
     let computedTopics: RadarTopicItem[] = Object.values(topicMap).map((entry) => {
       const hoursElapsed = (now - entry.newestTimestamp) / (1000 * 60 * 60);
       const velocity = calculateVelocityScore(
@@ -407,6 +654,7 @@ export async function aggregateRadarCategory(category: RadarCategoryId): Promise
       return {
         tag: entry.tag,
         category,
+        region,
         velocity_score: velocity,
         live_rooms: entry.liveRooms,
         voice_replies: entry.voiceReplies,
@@ -420,19 +668,31 @@ export async function aggregateRadarCategory(category: RadarCategoryId): Promise
       };
     });
 
-    // If no dynamic items exist yet in DB, merge default seed data for immediate high fidelity
+    // Merge default regional seed data if dynamic is sparse
+    const defaultSeedList = REGIONAL_SEEDS[region]?.[category] || REGIONAL_SEEDS.india[category];
     if (computedTopics.length === 0) {
-      computedTopics = DEFAULT_TOPICS_BY_CATEGORY[category] || DEFAULT_TOPICS_BY_CATEGORY.trending;
+      computedTopics = defaultSeedList;
     }
 
-    // Sort descending by velocity score
     computedTopics.sort((a, b) => b.velocity_score - a.velocity_score);
     const top10 = computedTopics.slice(0, 10);
 
-    // Save aggregated document to radar_feeds/{category}
-    const feedRef = doc(db, 'radar_feeds', category);
+    // Save regional doc e.g. radar_feeds/india_trending
+    const regionalDocId = getRadarFeedDocId(region, category);
     await setDoc(
-      feedRef,
+      doc(db, 'radar_feeds', regionalDocId),
+      {
+        category,
+        region,
+        updated_at: now,
+        topics: top10,
+      },
+      { merge: true }
+    );
+
+    // Also write to default radar_feeds/{category} for backwards compatibility
+    await setDoc(
+      doc(db, 'radar_feeds', category),
       {
         category,
         updated_at: now,
@@ -443,20 +703,25 @@ export async function aggregateRadarCategory(category: RadarCategoryId): Promise
 
     return top10;
   } catch (error) {
-    console.error(`[RadarAggregator] Error aggregating category ${category}:`, error);
-    return DEFAULT_TOPICS_BY_CATEGORY[category] || DEFAULT_TOPICS_BY_CATEGORY.trending;
+    console.error(`[RadarAggregator] Error aggregating category ${category} for region ${region}:`, error);
+    return REGIONAL_SEEDS[region]?.[category] || REGIONAL_SEEDS.india[category];
   }
 }
 
 /**
- * Aggregates all tracked categories in parallel
+ * Aggregates all tracked categories across both India and World regions in parallel
  */
-export async function aggregateAllRadarFeeds(): Promise<Record<RadarCategoryId, RadarTopicItem[]>> {
+export async function aggregateAllRadarFeeds(): Promise<Record<string, RadarTopicItem[]>> {
   const results: Record<string, RadarTopicItem[]> = {};
-  await Promise.all(
-    RADAR_TRACKED_CATEGORIES.map(async (cat) => {
-      results[cat] = await aggregateRadarCategory(cat);
-    })
-  );
-  return results as Record<RadarCategoryId, RadarTopicItem[]>;
+  const regions: RadarRegion[] = ['india', 'world'];
+
+  for (const reg of regions) {
+    await Promise.all(
+      RADAR_TRACKED_CATEGORIES.map(async (cat) => {
+        const key = getRadarFeedDocId(reg, cat);
+        results[key] = await aggregateRadarCategory(cat, reg);
+      })
+    );
+  }
+  return results;
 }

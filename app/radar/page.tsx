@@ -38,6 +38,7 @@ export default function RadarPage() {
   
   // State
   const [activeCategory, setActiveCategory] = useState<RadarCategoryId>("trending");
+  const [activeRegion, setActiveRegion] = useState<"india" | "world">("india");
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"trending" | "open_users">("trending");
   const [openUsers, setOpenUsers] = useState<OpenUser[]>([]);
@@ -149,6 +150,8 @@ export default function RadarPage() {
         <RadarHeader
           activeTab={activeCategory}
           onSelectTab={setActiveCategory}
+          activeRegion={activeRegion}
+          onSelectRegion={setActiveRegion}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           viewMode={viewMode}
@@ -161,6 +164,7 @@ export default function RadarPage() {
         {viewMode === "trending" && (
           <LiveRadarFeed
             category={activeCategory}
+            region={activeRegion}
             searchQuery={searchQuery}
           />
         )}

@@ -1,18 +1,14 @@
 /**
  * lib/newsService.ts
  * ─────────────────────────────────────────────────────
- * Zero-Cost Real-Time World News Aggregator for Echo.
- * Fetches and parses public wire RSS feeds across:
- *  - World / Global News
- *  - Tech & AI
- *  - Markets & Finance
- *  - Sports
- *  - Entertainment & Culture
- * 
- * Includes in-memory caching and fallback high-signal seeds.
+ * Zero-Cost Real-Time World & India News Aggregator for Echo.
+ * Ingests public wire RSS feeds across:
+ *  - India Focused Wire (National, Tech, Markets, Cricket, Startups)
+ *  - World / Global Wire (Geopolitics, AI, Wall Street, Sports, Entertainment)
  */
 
 export type NewsCategory = 'all' | 'world' | 'tech' | 'markets' | 'sports' | 'entertainment' | 'startup' | 'news';
+export type NewsRegion = 'all' | 'india' | 'world';
 
 export interface NewsDispatch {
   id: string;
@@ -20,6 +16,7 @@ export interface NewsDispatch {
   description: string;
   source: string;
   category: NewsCategory;
+  region: 'india' | 'world';
   publishedAt: string;
   timestamp: number;
   timeAgo: string;
@@ -27,167 +24,158 @@ export interface NewsDispatch {
   topicTag: string;
 }
 
-// Public RSS Feeds ($0 Cost, no API keys needed)
-const RSS_FEED_MAP: Record<string, { url: string; source: string; category: NewsCategory }[]> = {
-  world: [
-    { url: 'https://feeds.bbci.co.uk/news/world/rss.xml', source: 'BBC WORLD', category: 'world' },
-    { url: 'https://rss.nytimes.com/services/xml/rss/nyt/World.xml', source: 'NYT GLOBAL', category: 'world' },
+// Regional Public RSS Feeds
+const RSS_FEED_MAP: Record<string, { url: string; source: string; category: NewsCategory; region: 'india' | 'world' }[]> = {
+  // INDIA FOCUSED FEEDS
+  india_all: [
+    { url: 'https://feeds.feedburner.com/ndtvnews-top-stories', source: 'NDTV INDIA', category: 'world', region: 'india' },
+    { url: 'https://indianexpress.com/feed/', source: 'INDIAN EXPRESS', category: 'world', region: 'india' },
+    { url: 'https://www.livemint.com/rss/markets', source: 'LIVEMINT MARKETS', category: 'markets', region: 'india' },
+    { url: 'https://economictimes.indiatimes.com/tech/rssfeeds/13357270.cms', source: 'ET TECH', category: 'tech', region: 'india' },
+    { url: 'https://www.espncricinfo.com/rss/content/story/feeds/0.xml', source: 'ESPN CRICINFO', category: 'sports', region: 'india' },
   ],
-  tech: [
-    { url: 'https://techcrunch.com/feed/', source: 'TECHCRUNCH', category: 'tech' },
-    { url: 'https://www.theverge.com/rss/index.xml', source: 'THE VERGE', category: 'tech' },
-    { url: 'https://news.ycombinator.com/rss', source: 'HACKER NEWS', category: 'tech' },
+  india_tech: [
+    { url: 'https://economictimes.indiatimes.com/tech/rssfeeds/13357270.cms', source: 'ET TECH INDIA', category: 'tech', region: 'india' },
+    { url: 'https://techcrunch.com/tag/india/feed/', source: 'TC BHARAT', category: 'tech', region: 'india' },
   ],
-  markets: [
-    { url: 'https://www.cnbc.com/id/10000664/device/rss/rss.html', source: 'CNBC MARKETS', category: 'markets' },
-    { url: 'https://feeds.a.dj.com/rss/WSJcomUSBusiness.xml', source: 'WALL STREET JOURNAL', category: 'markets' },
+  india_markets: [
+    { url: 'https://www.livemint.com/rss/markets', source: 'LIVEMINT MARKETS', category: 'markets', region: 'india' },
+    { url: 'https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms', source: 'ET MARKETS', category: 'markets', region: 'india' },
   ],
-  sports: [
-    { url: 'https://www.espn.com/espn/rss/news', source: 'ESPN WIRE', category: 'sports' },
-    { url: 'https://feeds.bbci.co.uk/sport/rss.xml', source: 'BBC SPORT', category: 'sports' },
+  india_sports: [
+    { url: 'https://www.espncricinfo.com/rss/content/story/feeds/0.xml', source: 'CRICINFO WIRE', category: 'sports', region: 'india' },
+    { url: 'https://feeds.feedburner.com/ndtvsports-cricket', source: 'NDTV CRICKET', category: 'sports', region: 'india' },
   ],
-  entertainment: [
-    { url: 'https://variety.com/feed/', source: 'VARIETY WIRE', category: 'entertainment' },
-    { url: 'https://www.billboard.com/feed/', source: 'BILLBOARD', category: 'entertainment' },
+  india_startup: [
+    { url: 'https://techcrunch.com/tag/india/feed/', source: 'TC STARTUPS INDIA', category: 'startup', region: 'india' },
+    { url: 'https://economictimes.indiatimes.com/small-biz/startups/rssfeeds/11993050.cms', source: 'ET STARTUPS', category: 'startup', region: 'india' },
   ],
-  startup: [
-    { url: 'https://techcrunch.com/category/startups/feed/', source: 'TC STARTUPS', category: 'startup' },
-    { url: 'https://news.ycombinator.com/rss', source: 'YC HACKER NEWS', category: 'startup' },
+
+  // WORLD / GLOBAL FEEDS
+  world_all: [
+    { url: 'https://feeds.bbci.co.uk/news/world/rss.xml', source: 'BBC WORLD', category: 'world', region: 'world' },
+    { url: 'https://techcrunch.com/feed/', source: 'TECHCRUNCH', category: 'tech', region: 'world' },
+    { url: 'https://www.cnbc.com/id/10000664/device/rss/rss.html', source: 'CNBC GLOBAL', category: 'markets', region: 'world' },
+    { url: 'https://www.espn.com/espn/rss/news', source: 'ESPN GLOBAL', category: 'sports', region: 'world' },
+  ],
+  world_tech: [
+    { url: 'https://techcrunch.com/feed/', source: 'TECHCRUNCH', category: 'tech', region: 'world' },
+    { url: 'https://www.theverge.com/rss/index.xml', source: 'THE VERGE', category: 'tech', region: 'world' },
+    { url: 'https://news.ycombinator.com/rss', source: 'HACKER NEWS', category: 'tech', region: 'world' },
+  ],
+  world_markets: [
+    { url: 'https://www.cnbc.com/id/10000664/device/rss/rss.html', source: 'CNBC MARKETS', category: 'markets', region: 'world' },
+    { url: 'https://feeds.a.dj.com/rss/WSJcomUSBusiness.xml', source: 'WALL STREET JOURNAL', category: 'markets', region: 'world' },
+  ],
+  world_sports: [
+    { url: 'https://www.espn.com/espn/rss/news', source: 'ESPN WIRE', category: 'sports', region: 'world' },
+    { url: 'https://feeds.bbci.co.uk/sport/rss.xml', source: 'BBC SPORT', category: 'sports', region: 'world' },
+  ],
+  world_startup: [
+    { url: 'https://techcrunch.com/category/startups/feed/', source: 'TC GLOBAL STARTUPS', category: 'startup', region: 'world' },
+    { url: 'https://news.ycombinator.com/rss', source: 'YC WIRE', category: 'startup', region: 'world' },
+  ],
+  world_entertainment: [
+    { url: 'https://variety.com/feed/', source: 'VARIETY WIRE', category: 'entertainment', region: 'world' },
+    { url: 'https://www.billboard.com/feed/', source: 'BILLBOARD', category: 'entertainment', region: 'world' },
   ],
 };
 
-// Fallback high-signal curated wire dispatches if external network times out
+// Fallback high-signal curated wire dispatches
 const FALLBACK_DISPATCHES: Record<string, NewsDispatch[]> = {
-  world: [
+  india: [
     {
-      id: 'world-01',
-      title: 'Global Semiconductor Supply Chains Pivot Toward Decentralized Fab Hubs',
-      description: 'Major chip manufacturers announce multi-billion dollar edge facilities across Europe and Asia to counter supply choke points.',
-      source: 'GLOBAL WIRE',
-      category: 'world',
-      publishedAt: new Date().toISOString(),
-      timestamp: Date.now() - 15 * 60 * 1000,
-      timeAgo: '15M AGO',
-      link: '#',
-      topicTag: '#SemiconductorGrid',
-    },
-    {
-      id: 'world-02',
-      title: 'United Nations Convenes Summit on Open Source Autonomous Protocols',
-      description: 'Delegates debate cross-border AI safety verifications and latency thresholds for automated infrastructure systems.',
-      source: 'REUTERS DISPATCH',
-      category: 'world',
-      publishedAt: new Date().toISOString(),
-      timestamp: Date.now() - 45 * 60 * 1000,
-      timeAgo: '45M AGO',
-      link: '#',
-      topicTag: '#UNAIProtocol',
-    },
-  ],
-  tech: [
-    {
-      id: 'tech-01',
-      title: 'Next-Generation Neural Audio Engines Achieve Sub-20ms Voice Latency',
-      description: 'Breakthrough quantized acoustic models allow instant cross-language real-time translation on embedded edge hardware.',
-      source: 'TECHCRUNCH',
+      id: 'ind-01',
+      title: 'UPI Global Connectivity Expands to 15 New Central Banks',
+      description: 'NPCI International announces direct cross-border instant settlement corridors, reducing remittance overhead by 80%.',
+      source: 'ET TECH INDIA',
       category: 'tech',
+      region: 'india',
       publishedAt: new Date().toISOString(),
       timestamp: Date.now() - 10 * 60 * 1000,
       timeAgo: '10M AGO',
       link: '#',
-      topicTag: '#NeuralAudio',
+      topicTag: '#UPIArchitecture',
     },
     {
-      id: 'tech-02',
-      title: 'Open Source Agent Frameworks Introduce Decentralized State Consensus',
-      description: 'Autonomous software swarms can now coordinate complex distributed workflows without centralized server bottlenecks.',
-      source: 'HACKER NEWS',
-      category: 'tech',
-      publishedAt: new Date().toISOString(),
-      timestamp: Date.now() - 30 * 60 * 1000,
-      timeAgo: '30M AGO',
-      link: '#',
-      topicTag: '#AgentConsensus',
-    },
-  ],
-  markets: [
-    {
-      id: 'markets-01',
-      title: 'Tech Indices Rally on Surging Autonomous Infrastructure Spending',
-      description: 'Cloud compute providers report record revenue growth as enterprise adoption of voice AI workloads skyrockets.',
-      source: 'CNBC MARKETS',
+      id: 'ind-02',
+      title: 'Nifty Reaches Fresh Highs as Domestic Capital Inflows Surge',
+      description: 'Domestic institutional investors absorb foreign outflow with steady mutual fund SIP volumes across manufacturing sectors.',
+      source: 'LIVEMINT MARKETS',
       category: 'markets',
-      publishedAt: new Date().toISOString(),
-      timestamp: Date.now() - 20 * 60 * 1000,
-      timeAgo: '20M AGO',
-      link: '#',
-      topicTag: '#TechRally',
-    },
-    {
-      id: 'markets-02',
-      title: 'Central Banks Signal Cautious Rate Policy Amid Tech Productivity Surge',
-      description: 'Macro analysts discuss how automated software gains are dampening inflation across developed economies.',
-      source: 'WALL STREET JOURNAL',
-      category: 'markets',
-      publishedAt: new Date().toISOString(),
-      timestamp: Date.now() - 55 * 60 * 1000,
-      timeAgo: '55M AGO',
-      link: '#',
-      topicTag: '#MacroEconomy',
-    },
-  ],
-  sports: [
-    {
-      id: 'sports-01',
-      title: 'Tactical Audio Breakdown: How Pressing Structures Dominated the European Final',
-      description: 'Managers and analysts dissect the tactical innovations and defensive line shifts in the latest championship clash.',
-      source: 'BBC SPORT',
-      category: 'sports',
+      region: 'india',
       publishedAt: new Date().toISOString(),
       timestamp: Date.now() - 25 * 60 * 1000,
       timeAgo: '25M AGO',
       link: '#',
-      topicTag: '#TacticsBreakdown',
+      topicTag: '#Nifty50Options',
     },
     {
-      id: 'sports-02',
-      title: 'World Cricket League Announces Expansion of High-Speed Audio Broadcasts',
-      description: 'Ultra-low latency commentary channels allow fans to hear mic\'d up players and umpires directly.',
-      source: 'ESPN WIRE',
+      id: 'ind-03',
+      title: 'India Test Squad Finalizes Pace Combinations Ahead of World Championship Series',
+      description: 'Team management holds extended training camp in Bengaluru, emphasizing reverse swing and depth in the lower order.',
+      source: 'CRICINFO WIRE',
       category: 'sports',
-      publishedAt: new Date().toISOString(),
-      timestamp: Date.now() - 50 * 60 * 1000,
-      timeAgo: '50M AGO',
-      link: '#',
-      topicTag: '#LiveCricketAudio',
-    },
-  ],
-  startup: [
-    {
-      id: 'startup-01',
-      title: 'Solo Founder Reaches $2M ARR with Audio Agent Workflow Builder',
-      description: 'Founder shares detailed breakdown of cloud costs, voice API pipelines, and organic Twitter launch tactics.',
-      source: 'TC STARTUPS',
-      category: 'startup',
-      publishedAt: new Date().toISOString(),
-      timestamp: Date.now() - 12 * 60 * 1000,
-      timeAgo: '12M AGO',
-      link: '#',
-      topicTag: '#Bootstrapped2M',
-    },
-  ],
-  entertainment: [
-    {
-      id: 'ent-01',
-      title: 'Acoustic Soundtracks and Modular Synthesis Resurge in Independent Cinema',
-      description: 'Directors ditch orchestral templates in favor of analog synthesizer drones and field recording audio collages.',
-      source: 'VARIETY WIRE',
-      category: 'entertainment',
+      region: 'india',
       publishedAt: new Date().toISOString(),
       timestamp: Date.now() - 40 * 60 * 1000,
       timeAgo: '40M AGO',
       link: '#',
-      topicTag: '#CinemaSoundDesign',
+      topicTag: '#INDvsENG',
+    },
+    {
+      id: 'ind-04',
+      title: 'Tier-2 Tech Hubs in Patna, Indore, and Kochi Record 40% Growth in New Startups',
+      description: 'Lower burn rates, regional talent retention, and state innovation grants accelerate product market fit for founders.',
+      source: 'TC BHARAT',
+      category: 'startup',
+      region: 'india',
+      publishedAt: new Date().toISOString(),
+      timestamp: Date.now() - 55 * 60 * 1000,
+      timeAgo: '55M AGO',
+      link: '#',
+      topicTag: '#BiharStartups',
+    },
+  ],
+  world: [
+    {
+      id: 'world-01',
+      title: 'Next-Generation Neural Audio Engines Achieve Sub-20ms Voice Latency',
+      description: 'Quantized acoustic models allow instant cross-language real-time translation on embedded edge hardware.',
+      source: 'TECHCRUNCH',
+      category: 'tech',
+      region: 'world',
+      publishedAt: new Date().toISOString(),
+      timestamp: Date.now() - 15 * 60 * 1000,
+      timeAgo: '15M AGO',
+      link: '#',
+      topicTag: '#NeuralAudio',
+    },
+    {
+      id: 'world-02',
+      title: 'Federal Reserve Holds Interest Rates Steady, Signals High Productivity Growth',
+      description: 'Macro analysts discuss how automated software gains are dampening inflation across developed economies.',
+      source: 'WALL STREET JOURNAL',
+      category: 'markets',
+      region: 'world',
+      publishedAt: new Date().toISOString(),
+      timestamp: Date.now() - 35 * 60 * 1000,
+      timeAgo: '35M AGO',
+      link: '#',
+      topicTag: '#FedRateDecision',
+    },
+    {
+      id: 'world-03',
+      title: 'Champions League Knockout Stage: Tactical Innovations and High Press Shifts',
+      description: 'Coaches and tactical analysts debate high defensive lines and transition speed in tournament play.',
+      source: 'BBC SPORT',
+      category: 'sports',
+      region: 'world',
+      publishedAt: new Date().toISOString(),
+      timestamp: Date.now() - 50 * 60 * 1000,
+      timeAgo: '50M AGO',
+      link: '#',
+      topicTag: '#ChampionsLeague',
     },
   ],
 };
@@ -211,7 +199,7 @@ function extractTag(title: string): string {
     .replace(/[^a-zA-Z0-9\s]/g, '')
     .split(/\s+/)
     .filter((w) => w.length > 3 && !['with', 'from', 'that', 'this', 'have', 'were', 'what', 'into', 'over'].includes(w.toLowerCase()));
-  
+
   if (words.length >= 2) {
     const capitalized = words.slice(0, 2).map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join('');
     return `#${capitalized}`;
@@ -223,10 +211,7 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]*>?/gm, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim();
 }
 
-/**
- * Fast RSS XML Parser
- */
-function parseRssXml(xmlText: string, source: string, category: NewsCategory): NewsDispatch[] {
+function parseRssXml(xmlText: string, source: string, category: NewsCategory, region: 'india' | 'world'): NewsDispatch[] {
   const items: NewsDispatch[] = [];
   const itemMatches = xmlText.match(/<item[\s\S]*?<\/item>/gi) || [];
 
@@ -251,6 +236,7 @@ function parseRssXml(xmlText: string, source: string, category: NewsCategory): N
         description: desc || title,
         source,
         category,
+        region,
         publishedAt: pubDate,
         timestamp: new Date(pubDate).getTime() || Date.now(),
         timeAgo: formatTimeAgo(pubDate),
@@ -265,33 +251,40 @@ function parseRssXml(xmlText: string, source: string, category: NewsCategory): N
 
 // In-Memory Cache with 5-minute TTL
 let _newsCache: { [key: string]: { timestamp: number; data: NewsDispatch[] } } = {};
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL_MS = 5 * 60 * 1000;
 
-/**
- * Fetches real-time world news dispatches by category
- */
-export async function fetchLiveNewsDispatches(category: NewsCategory = 'all'): Promise<NewsDispatch[]> {
-  const normalizedCat = category.toLowerCase() as NewsCategory;
-  const cacheKey = normalizedCat;
+export async function fetchLiveNewsDispatches(
+  category: NewsCategory = 'all',
+  region: NewsRegion = 'all'
+): Promise<NewsDispatch[]> {
+  const normCat = category.toLowerCase() as NewsCategory;
+  const normRegion = region.toLowerCase() as NewsRegion;
+  const cacheKey = `${normRegion}_${normCat}`;
   const now = Date.now();
 
   if (_newsCache[cacheKey] && now - _newsCache[cacheKey].timestamp < CACHE_TTL_MS) {
     return _newsCache[cacheKey].data;
   }
 
-  let feedsToFetch: { url: string; source: string; category: NewsCategory }[] = [];
+  let feedKeys: string[] = [];
 
-  if (normalizedCat === 'all' || normalizedCat === 'news') {
-    feedsToFetch = [
-      ...RSS_FEED_MAP.world,
-      ...RSS_FEED_MAP.tech,
-      ...RSS_FEED_MAP.markets,
-      ...RSS_FEED_MAP.sports,
-    ];
-  } else if (RSS_FEED_MAP[normalizedCat]) {
-    feedsToFetch = RSS_FEED_MAP[normalizedCat];
+  if (normRegion === 'india') {
+    feedKeys = normCat === 'all' || normCat === 'news' ? ['india_all', 'india_tech', 'india_markets', 'india_sports'] : [`india_${normCat}`];
+  } else if (normRegion === 'world') {
+    feedKeys = normCat === 'all' || normCat === 'news' ? ['world_all', 'world_tech', 'world_markets', 'world_sports'] : [`world_${normCat}`];
   } else {
-    feedsToFetch = RSS_FEED_MAP.world;
+    feedKeys = normCat === 'all' || normCat === 'news' ? ['india_all', 'world_all'] : [`india_${normCat}`, `world_${normCat}`];
+  }
+
+  const feedsToFetch: { url: string; source: string; category: NewsCategory; region: 'india' | 'world' }[] = [];
+  for (const k of feedKeys) {
+    if (RSS_FEED_MAP[k]) {
+      feedsToFetch.push(...RSS_FEED_MAP[k]);
+    }
+  }
+
+  if (feedsToFetch.length === 0) {
+    feedsToFetch.push(...(RSS_FEED_MAP.india_all || []), ...(RSS_FEED_MAP.world_all || []));
   }
 
   const results: NewsDispatch[] = [];
@@ -300,43 +293,42 @@ export async function fetchLiveNewsDispatches(category: NewsCategory = 'all'): P
     feedsToFetch.map(async (feed) => {
       try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 3500); // 3.5s timeout
+        const timeout = setTimeout(() => controller.abort(), 3500);
 
         const response = await fetch(feed.url, {
           signal: controller.signal,
           headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           },
-          next: { revalidate: 300 }, // 5 min Next.js cache
+          next: { revalidate: 300 },
         });
 
         clearTimeout(timeout);
 
         if (response.ok) {
           const text = await response.text();
-          const parsed = parseRssXml(text, feed.source, feed.category);
+          const parsed = parseRssXml(text, feed.source, feed.category, feed.region);
           results.push(...parsed);
         }
       } catch (err) {
-        // Silently fall back to seed data if network fails
+        // Fallback gracefully
       }
     })
   );
 
-  // If no RSS items succeeded (e.g. offline or blocked), load curated fallback seeds
+  // Fallback to regional seeds if network fails
   if (results.length === 0) {
-    if (normalizedCat === 'all' || normalizedCat === 'news') {
-      Object.values(FALLBACK_DISPATCHES).forEach((list) => results.push(...list));
-    } else if (FALLBACK_DISPATCHES[normalizedCat]) {
-      results.push(...FALLBACK_DISPATCHES[normalizedCat]);
-    } else {
+    if (normRegion === 'india') {
+      results.push(...FALLBACK_DISPATCHES.india);
+    } else if (normRegion === 'world') {
       results.push(...FALLBACK_DISPATCHES.world);
+    } else {
+      results.push(...FALLBACK_DISPATCHES.india, ...FALLBACK_DISPATCHES.world);
     }
   }
 
-  // Sort newest first
   results.sort((a, b) => b.timestamp - a.timestamp);
-  const finalDispatches = results.slice(0, 20);
+  const finalDispatches = results.slice(0, 25);
 
   _newsCache[cacheKey] = {
     timestamp: now,
