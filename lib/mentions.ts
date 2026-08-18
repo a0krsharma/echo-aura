@@ -43,7 +43,7 @@ const MENTIONS_COLLECTION = "mentions";
 
 // ── Extract mentions from text ─────────────────────────────────────────────────
 export function extractMentions(text: string): string[] {
-  const mentionRegex = /@(\w+)/g;
+  const mentionRegex = /@([a-zA-Z0-9_]+)/g;
   const mentions: string[] = [];
   let match;
 
@@ -57,45 +57,82 @@ export function extractMentions(text: string): string[] {
 // ── Get user UID by handle ─────────────────────────────────────────────────────
 export async function getUserUidByHandle(handle: string): Promise<string | null> {
   const db = getFirebaseDb();
-  const cleanHandle = handle.replace('@', '').toLowerCase();
+  const cleanHandle = handle.replace(/^@/, '').toLowerCase();
   
-  const usersQuery = query(
-    collection(db, "users"),
-    where("handle", "==", cleanHandle),
-    limit(1)
-  );
+  try {
+    const usersQuery = query(
+      collection(db, "users"),
+      where("handle", "in", [cleanHandle, `@${cleanHandle}`]),
+      limit(1)
+    );
 
-  const usersSnap = await getDocs(usersQuery);
-  if (usersSnap.empty) return null;
+    const usersSnap = await getDocs(usersQuery);
+    if (!usersSnap.empty) {
+      return usersSnap.docs[0].id;
+    }
 
-  return usersSnap.docs[0].id;
+    // Fallback search
+    const allUsers = await getDocs(query(collection(db, "users"), limit(200)));
+    for (const d of allUsers.docs) {
+      const uHandle = (d.data().handle || "").replace(/^@/, '').toLowerCase();
+      if (uHandle === cleanHandle) return d.id;
+    }
+  } catch (e) {
+    console.warn("[getUserUidByHandle] Error:", e);
+  }
+
+  return null;
 }
 
 // ── Get multiple user UIDs by handles ───────────────────────────────────────────
 export async function getUserUidsByHandles(handles: string[]): Promise<Map<string, string>> {
   const db = getFirebaseDb();
-  const cleanHandles = handles.map(h => h.replace('@', '').toLowerCase());
+  const cleanHandles = handles.map(h => h.replace(/^@/, '').toLowerCase()).filter(Boolean);
   const result = new Map<string, string>();
 
   if (cleanHandles.length === 0) return result;
 
-  // Firestore 'in' queries are limited to 10 items
-  const chunks = [];
-  for (let i = 0; i < cleanHandles.length; i += 10) {
-    chunks.push(cleanHandles.slice(i, i + 10));
+  const searchVariants: string[] = [];
+  for (const h of cleanHandles) {
+    searchVariants.push(h);
+    searchVariants.push(`@${h}`);
   }
 
-  for (const chunk of chunks) {
-    const usersQuery = query(
-      collection(db, "users"),
-      where("handle", "in", chunk)
-    );
+  // Firestore 'in' queries are limited to 10 items
+  for (let i = 0; i < searchVariants.length; i += 10) {
+    const chunk = searchVariants.slice(i, i + 10);
+    try {
+      const usersQuery = query(
+        collection(db, "users"),
+        where("handle", "in", chunk)
+      );
 
-    const usersSnap = await getDocs(usersQuery);
-    usersSnap.forEach(doc => {
-      const userData = doc.data();
-      result.set(userData.handle || doc.id, doc.id);
-    });
+      const usersSnap = await getDocs(usersQuery);
+      usersSnap.forEach(doc => {
+        const userData = doc.data();
+        const rawHandle = (userData.handle || "").replace(/^@/, '').toLowerCase();
+        if (rawHandle) {
+          result.set(rawHandle, doc.id);
+        }
+      });
+    } catch (e) {
+      console.warn("[getUserUidsByHandles] query error:", e);
+    }
+  }
+
+  // Fallback if any handle was not found with strict equality
+  const missing = cleanHandles.filter(h => !result.has(h));
+  if (missing.length > 0) {
+    try {
+      const snap = await getDocs(query(collection(db, "users"), limit(300)));
+      snap.forEach(doc => {
+        const u = doc.data();
+        const rawHandle = (u.handle || "").replace(/^@/, '').toLowerCase();
+        if (missing.includes(rawHandle)) {
+          result.set(rawHandle, doc.id);
+        }
+      });
+    } catch {}
   }
 
   return result;

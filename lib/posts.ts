@@ -689,6 +689,12 @@ export async function addPostReverb(
   try {
     await updateDoc(doc(db, "posts", postId), { reverbCount: increment(1) });
   } catch {}
+
+  // Parse and trigger @mention notifications on comments/reverbs
+  try {
+    createPostMentions(postId, data.caption, data.uid, data.handle, data.audioUrl).catch(() => {});
+  } catch {}
+
   return docRef.id;
 }
 

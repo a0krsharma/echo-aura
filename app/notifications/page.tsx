@@ -29,6 +29,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
+import { useRouter } from "next/navigation";
 import {
   subscribeToNotifications,
   markAllNotificationsRead,
@@ -89,6 +90,7 @@ type Tab = typeof TABS[number];
 
 export default function NotificationsPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [filter,   setFilter]   = useState<Tab>("ALL");
   const [notifs,   setNotifs]   = useState<EchoNotification[]>([]);
   const [loading,  setLoading]  = useState(true);
@@ -130,6 +132,21 @@ export default function NotificationsPage() {
     e.stopPropagation();
     if (!user) return;
     await deleteNotification(user.uid, notifId);
+  };
+
+  const handleItemClick = (notif: EchoNotification) => {
+    handleMarkOne(notif);
+    if (notif.roomId) {
+      router.push(`/room/${notif.roomId}`);
+    } else if (notif.type === "wire" || notif.type === "whisper") {
+      router.push("/wire");
+    } else if (notif.type === "stage") {
+      router.push("/clash");
+    } else if (notif.postId) {
+      router.push(`/#${notif.postId}`);
+    } else if (notif.type === "orbiter") {
+      router.push(`/${notif.fromHandle.replace("@", "")}`);
+    }
   };
 
   // Filter by tab accurately
@@ -243,7 +260,7 @@ export default function NotificationsPage() {
             {filtered.map((notif) => (
               <div
                 key={notif.id}
-                onClick={() => handleMarkOne(notif)}
+                onClick={() => handleItemClick(notif)}
                 className={`flex items-start justify-between gap-3 p-4 cursor-pointer transition-colors hover:bg-neutral-950/80 group ${
                   !notif.read ? "bg-neutral-950 border-l-2 border-l-white" : ""
                 }`}
@@ -288,7 +305,7 @@ export default function NotificationsPage() {
                 </div>
 
                 {/* Card Action Controls */}
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
                   {/* Mark as read single button */}
                   {!notif.read && (
                     <button
@@ -300,23 +317,54 @@ export default function NotificationsPage() {
                     </button>
                   )}
 
+                  {/* 1-Click Action Redirects */}
+                  {notif.postId && (
+                    <Link
+                      href={`/#${notif.postId}`}
+                      className="font-mono text-[9px] border border-neutral-700 bg-white text-black font-bold px-2 py-1 uppercase tracking-wider hover:bg-neutral-200 transition-colors shrink-0"
+                      onClick={(e) => { e.stopPropagation(); handleMarkOne(notif); }}
+                    >
+                      [ 🎙 REPLY ]
+                    </Link>
+                  )}
+
+                  {notif.roomId && !notif.postId && (
+                    <Link
+                      href={`/room/${notif.roomId}`}
+                      className="font-mono text-[9px] border border-neutral-700 bg-white text-black font-bold px-2 py-1 uppercase tracking-wider hover:bg-neutral-200 transition-colors shrink-0"
+                      onClick={(e) => { e.stopPropagation(); handleMarkOne(notif); }}
+                    >
+                      [ 📻 ROOM ]
+                    </Link>
+                  )}
+
                   {notif.type === "orbiter" && (
                     <Link
                       href={`/${notif.fromHandle.replace("@", "")}`}
-                      className="font-mono text-[9px] border border-neutral-800 px-2 py-1 text-neutral-400 hover:border-white hover:text-white uppercase transition-colors"
-                      onClick={(e) => e.stopPropagation()}
+                      className="font-mono text-[9px] border border-neutral-800 px-2 py-1 text-neutral-400 hover:border-white hover:text-white uppercase transition-colors shrink-0"
+                      onClick={(e) => { e.stopPropagation(); handleMarkOne(notif); }}
                     >
-                      [ PROFILE ]
+                      [ 🌐 PROFILE ]
                     </Link>
                   )}
 
                   {(notif.type === "whisper" || notif.type === "wire") && (
                     <Link
                       href="/wire"
-                      className="font-mono text-[9px] border border-neutral-800 px-2 py-1 text-neutral-400 hover:border-white hover:text-white uppercase transition-colors"
-                      onClick={(e) => e.stopPropagation()}
+                      className="font-mono text-[9px] border border-neutral-700 bg-white text-black font-bold px-2 py-1 uppercase tracking-wider hover:bg-neutral-200 transition-colors shrink-0"
+                      onClick={(e) => { e.stopPropagation(); handleMarkOne(notif); }}
                     >
-                      [ WIRE ]
+                      [ 💬 WIRE ]
+                    </Link>
+                  )}
+
+                  {notif.type === "stage" && (
+                    <Link
+                      href="/clash"
+                      className="font-mono text-[9px] border border-neutral-700 bg-white text-black font-bold px-2 py-1 uppercase tracking-wider hover:bg-neutral-200 transition-colors shrink-0"
+                      onClick={(e) => { e.stopPropagation(); handleMarkOne(notif); }}
+                    >
+                      [ ⚔ STAGE ]
                     </Link>
                   )}
 
