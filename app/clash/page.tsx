@@ -10,6 +10,7 @@ import { useAuth } from "@/app/components/AuthProvider";
 function fmt(n: number): string { return n >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(n); }
 
 function ChallengeModal({ onClose }: { onClose: () => void }) {
+  const { user } = useAuth();
   const router = useRouter();
   const [handle, setHandle] = useState("");
   const [topic, setTopic]   = useState("");
@@ -24,13 +25,16 @@ function ChallengeModal({ onClose }: { onClose: () => void }) {
     if (!canSend) return;
     setBusy(true);
     try {
+      const myHandle = user?.handle || "@YOU";
       const newId = await createClash({
         title: title || "LIVE STAGE DEBATE",
         topic: topic.trim(),
-        handleA: "@YOU",
+        handleA: myHandle,
         posA: posA.trim(),
         handleB: handle || "@CHALLENGER",
         posB: posB.trim(),
+        creatorUid: user?.uid,
+        creatorHandle: myHandle,
       });
       onClose();
       router.push(`/stage/${newId}`);
@@ -217,6 +221,15 @@ export default function StagePage() {
                 const totalVotes = (c.sideA?.votes || 0) + (c.sideB?.votes || 0);
                 const pctA = totalVotes > 0 ? ((c.sideA?.votes || 0) / totalVotes) * 100 : 50;
                 const userVote = votedClashes[c.id];
+                const isCreator = Boolean(
+                  user && (
+                    c.creatorUid === user.uid ||
+                    (c.creatorHandle && user.handle && c.creatorHandle.toLowerCase() === user.handle.toLowerCase()) ||
+                    (c.sideA?.handle && user.handle && c.sideA.handle.toLowerCase() === user.handle.toLowerCase()) ||
+                    c.sideA?.handle === "@YOU" ||
+                    c.creatorHandle === "@YOU"
+                  )
+                );
 
                 return (
                   <div key={c.id} className="border border-neutral-800 p-6 space-y-5">
@@ -269,22 +282,23 @@ export default function StagePage() {
                       <div className="w-full h-1 bg-neutral-900 relative">
                         <div className="h-full bg-white transition-all duration-500" style={{ width: `${pctA}%` }} />
                       </div>
-                      <div className="flex justify-between items-center">
+                      <div className="flex justify-between items-center gap-2">
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleShareClash(c.id)}
-                            className="font-mono text-[10px] text-neutral-500 hover:text-white transition-colors cursor-pointer"
+                            className="p-1.5 border border-neutral-800 text-neutral-400 hover:text-white hover:border-neutral-500 transition-colors cursor-pointer"
                             title="Share debate"
                           >
                             <Share2 size={12} />
                           </button>
-                          {user && c.sideA?.handle === user.handle && (
+                          {isCreator && (
                             <button
                               onClick={() => handleDeleteClash(c.id)}
-                              className="font-mono text-[10px] text-neutral-500 hover:text-red-500 transition-colors cursor-pointer"
+                              className="flex items-center gap-1 font-mono text-[10px] text-red-400 hover:text-red-200 border border-red-900/60 hover:border-red-500 bg-red-950/30 px-2 py-1 uppercase tracking-wider transition-colors cursor-pointer"
                               title="Delete debate"
                             >
-                              <Trash2 size={12} />
+                              <Trash2 size={11} />
+                              <span>[ DELETE ]</span>
                             </button>
                           )}
                         </div>

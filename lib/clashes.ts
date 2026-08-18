@@ -30,8 +30,10 @@ export interface ClashItem {
   id:           string;
   title:        string;
   topic:        string;
-  sideA:        { handle: string; position: string; votes: number };
-  sideB:        { handle: string; position: string; votes: number };
+  creatorUid?:  string;
+  creatorHandle?: string;
+  sideA:        { handle: string; uid?: string; position: string; votes: number };
+  sideB:        { handle: string; uid?: string; position: string; votes: number };
   listeners:    number;
   status:       "live" | "upcoming" | "ended";
   createdAt:    Timestamp | null;
@@ -73,12 +75,16 @@ export async function createClash(data: {
   posA:     string;
   handleB:  string;
   posB:     string;
+  creatorUid?: string;
+  creatorHandle?: string;
   timerDuration?: number; // Optional timer duration in seconds
 }): Promise<string> {
   const db = getFirebaseDb();
   const docRef = await addDoc(collection(db, "clashes"), {
     title:     data.title,
     topic:     data.topic,
+    creatorUid: data.creatorUid || null,
+    creatorHandle: data.creatorHandle || data.handleA || null,
     sideA:     { handle: data.handleA, position: data.posA, votes: 0 },
     sideB:     { handle: data.handleB, position: data.posB, votes: 0 },
     listeners: 1,

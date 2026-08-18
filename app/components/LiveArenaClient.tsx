@@ -600,11 +600,11 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
   const isHost = Boolean(
     user && (
       user.handle === clash?.sideA?.handle ||
-      user.handle === "@ANON_LASJ" ||
-      user.handle === "@ANON_2HNA" ||
       user.uid === (clash as any)?.creatorUid ||
+      (clash as any)?.creatorHandle?.toLowerCase() === user.handle?.toLowerCase() ||
       clash?.sideA?.handle === "@YOU" ||
-      clash?.sideA?.handle?.toLowerCase() === user.handle?.toLowerCase()
+      clash?.sideA?.handle?.toLowerCase() === user.handle?.toLowerCase() ||
+      clash?.sideB?.handle?.toLowerCase() === user.handle?.toLowerCase()
     )
   );
 
