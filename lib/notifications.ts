@@ -250,22 +250,32 @@ export async function dispatchNativeMobileNotification(notif: EchoNotification):
   if (Notification.permission !== "granted") return;
 
   const titleMap: Record<string, string> = {
-    pulse: "❤️ [ PULSE ]",
-    reverb: "🎙 [ REVERB / RE-ECHO ]",
+    pulse: "⚡ [ PULSED YOUR ECHO ]",
+    reverb: "🎙 [ REPLY / RE-ECHO ]",
     orbiter: "🌐 [ NEW ORBITER ]",
     wire: "💬 [ WIRE DIRECT MESSAGE ]",
-    whisper: "🤫 [ WHISPER MESSAGE ]",
+    whisper: "💬 [ WIRE MESSAGE ]",
     room_join: "📻 [ NODE JOINED ROOM ]",
     room_leave: "📻 [ NODE LEFT ROOM ]",
     raise_hand: "✋ [ MIC REQUEST IN ROOM ]",
     room_promote: "🎙 [ PROMOTED TO SPEAKER ]",
     room_demote: "🎧 [ DEMOTED TO LISTENER ]",
     stage: "⚔ [ LIVE STAGE DEBATE ]",
+    bookmark: "⭐ [ ROOM BOOKMARKED ]",
+    mention: "@ [ YOU WERE MENTIONED ]",
   };
 
-  const title = titleMap[notif.type] || "// [ ECHO FREQUENCY ]";
+  const title = titleMap[notif.type] || "// [ ECHO TRANSMISSION ]";
   const body = notif.text || `${notif.fromHandle} interacted with your frequency.`;
-  const targetUrl = notif.roomId ? `/room/${notif.roomId}` : notif.postId ? `/#${notif.postId}` : "/notifications";
+  const targetUrl = notif.roomId
+    ? `/room/${notif.roomId}`
+    : notif.type === "wire" || notif.type === "whisper"
+    ? "/wire"
+    : notif.type === "orbiter"
+    ? `/${notif.fromHandle.replace("@", "")}`
+    : notif.postId
+    ? `/#${notif.postId}`
+    : "/notifications";
 
   try {
     if ("serviceWorker" in navigator) {
@@ -273,8 +283,8 @@ export async function dispatchNativeMobileNotification(notif: EchoNotification):
       if (reg && typeof reg.showNotification === "function") {
         await reg.showNotification(title, {
           body,
-          icon: "/favicon.ico",
-          badge: "/favicon.ico",
+          icon: "/icon-192.png",
+          badge: "/icon-192.png",
           tag: notif.id,
           data: { url: targetUrl },
         });
@@ -284,12 +294,12 @@ export async function dispatchNativeMobileNotification(notif: EchoNotification):
 
     new Notification(title, {
       body,
-      icon: "/favicon.ico",
-      badge: "/favicon.ico",
+      icon: "/icon-192.png",
+      badge: "/icon-192.png",
       tag: notif.id,
     });
   } catch (err) {
-    console.warn("[Notifications] Mobile push dispatch warning:", err);
+    console.warn("[Notifications] Native mobile dispatch error:", err);
   }
 }
 

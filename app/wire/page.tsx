@@ -14,6 +14,7 @@ export const dynamic = "force-dynamic";
  */
 
 import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { Mic, Mic2, Lock, Plus, Search, X, Send, ChevronLeft, Loader2, Phone, PhoneOff, Play, Pause, Square, Trash2 } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
 import { uploadAudio, getPlayableUrl } from "@/lib/cloudinary";
@@ -475,34 +476,42 @@ function ChatWindow({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-neutral-900 shrink-0">
-        <button
-          onClick={onBack}
-          className="md:hidden text-neutral-500 hover:text-white transition-colors cursor-pointer p-1"
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </button>
-        <div className="w-8 h-8 border border-neutral-700 flex items-center justify-center font-mono text-xs text-neutral-500">
-          {theirHandle.replace("@", "").charAt(0)}
-        </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <p className="font-mono text-xs text-white tracking-widest">{theirHandle}</p>
-            {peerPresence.state === "online" ? (
-              <span className="flex items-center gap-1 font-mono text-[9px] text-green-400 bg-green-950/60 border border-green-900/80 px-1.5 py-0.5 uppercase tracking-widest shrink-0">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                ONLINE
-              </span>
-            ) : (
-              <span className="font-mono text-[9px] text-neutral-600 bg-neutral-950 border border-neutral-900 px-1.5 py-0.5 uppercase tracking-widest shrink-0">
-                OFFLINE
-              </span>
-            )}
-          </div>
-          <p className="font-mono text-[10px] text-neutral-600">[ PRIVATE WIRE ]</p>
+      <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-neutral-900 shrink-0">
+        <div className="flex items-center gap-3 min-w-0">
+          <button
+            onClick={onBack}
+            className="md:hidden text-neutral-500 hover:text-white transition-colors cursor-pointer p-1 shrink-0"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <Link
+            href={`/${theirHandle.replace("@", "")}`}
+            className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer min-w-0"
+            title={`View @${theirHandle.replace("@", "")}'s profile`}
+          >
+            <div className="w-8 h-8 border border-neutral-700 hover:border-white flex items-center justify-center font-mono text-xs text-white uppercase shrink-0 transition-colors">
+              {theirHandle.replace("@", "").charAt(0)}
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="font-mono text-xs text-white tracking-widest hover:underline truncate">{theirHandle}</p>
+                {peerPresence.state === "online" ? (
+                  <span className="flex items-center gap-1 font-mono text-[9px] text-green-400 bg-green-950/60 border border-green-900/80 px-1.5 py-0.5 uppercase tracking-widest shrink-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                    ONLINE
+                  </span>
+                ) : (
+                  <span className="font-mono text-[9px] text-neutral-600 bg-neutral-950 border border-neutral-900 px-1.5 py-0.5 uppercase tracking-widest shrink-0">
+                    OFFLINE
+                  </span>
+                )}
+              </div>
+              <p className="font-mono text-[10px] text-neutral-500 hover:text-neutral-300 uppercase tracking-wider">[ VIEW PROFILE ]</p>
+            </div>
+          </Link>
         </div>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2 shrink-0">
           {!callActive ? (
             <button
               onClick={startCall}

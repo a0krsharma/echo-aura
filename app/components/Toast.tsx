@@ -10,6 +10,8 @@ import React, { useEffect, useState } from "react";
 import { X, Bell, ArrowUp, Repeat2, RefreshCw, Swords, Mic2, Hand, Users, LogOut, Mic, MicOff, AtSign, Star } from "lucide-react";
 import { type EchoNotification } from "@/lib/notifications";
 
+import { useRouter } from "next/navigation";
+
 // Simple notification sound using Web Audio API
 const playNotificationSound = () => {
   try {
@@ -38,6 +40,7 @@ interface ToastProps {
 }
 
 export function Toast({ notification, onClose, duration = 5000 }: ToastProps) {
+  const router = useRouter();
   const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
@@ -51,6 +54,23 @@ export function Toast({ notification, onClose, duration = 5000 }: ToastProps) {
 
     return () => clearTimeout(timer);
   }, [duration, onClose]);
+
+  const handleClick = () => {
+    if (notification.roomId) {
+      router.push(`/room/${notification.roomId}`);
+    } else if (notification.type === "wire" || notification.type === "whisper") {
+      router.push("/wire");
+    } else if (notification.type === "orbiter") {
+      router.push(`/${notification.fromHandle.replace("@", "")}`);
+    } else if (notification.type === "stage") {
+      router.push("/clash");
+    } else if (notification.postId) {
+      router.push(`/#${notification.postId}`);
+    } else {
+      router.push("/notifications");
+    }
+    onClose();
+  };
 
   const getIcon = () => {
     const cls = "w-4 h-4";
@@ -74,26 +94,27 @@ export function Toast({ notification, onClose, duration = 5000 }: ToastProps) {
 
   const getIconColor = () => {
     switch (notification.type) {
-      case "pulse": return "text-green-500";
-      case "reverb": return "text-blue-500";
-      case "orbiter": return "text-purple-500";
-      case "stage": return "text-red-500";
+      case "pulse": return "text-white";
+      case "reverb": return "text-white";
+      case "orbiter": return "text-white";
+      case "stage": return "text-white";
       case "whisper":
-      case "wire": return "text-yellow-500";
-      case "raise_hand": return "text-orange-500";
-      case "room_join": return "text-cyan-500";
-      case "room_leave": return "text-gray-500";
+      case "wire": return "text-white";
+      case "raise_hand": return "text-white";
+      case "room_join": return "text-white";
+      case "room_leave": return "text-neutral-500";
       case "room_promote": return "text-green-400";
       case "room_demote": return "text-red-400";
-      case "mention": return "text-pink-500";
-      case "bookmark": return "text-yellow-400";
+      case "mention": return "text-white";
+      case "bookmark": return "text-amber-400";
       default: return "text-white";
     }
   };
 
   return (
     <div
-      className={`fixed top-4 right-4 z-50 max-w-sm w-full bg-black border border-neutral-800 p-4 shadow-2xl transition-all duration-300 ${
+      onClick={handleClick}
+      className={`fixed top-4 right-4 z-50 max-w-sm w-full bg-black border border-white p-4 shadow-2xl transition-all duration-300 cursor-pointer font-mono ${
         isVisible ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"
       }`}
     >
@@ -105,14 +126,14 @@ export function Toast({ notification, onClose, duration = 5000 }: ToastProps) {
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <p className="font-mono text-xs text-white font-bold tracking-widest">
+          <p className="text-xs text-white font-bold tracking-widest uppercase">
             {notification.fromHandle}
           </p>
-          <p className="font-serif italic text-neutral-400 text-sm leading-snug truncate">
+          <p className="text-neutral-300 text-xs leading-snug truncate mt-0.5">
             {notification.text}
           </p>
           {notification.roomName && (
-            <p className="font-mono text-[10px] text-neutral-600 uppercase mt-1">
+            <p className="text-[10px] text-neutral-500 uppercase mt-1">
               in "{notification.roomName}"
             </p>
           )}
@@ -120,11 +141,12 @@ export function Toast({ notification, onClose, duration = 5000 }: ToastProps) {
 
         {/* Close button */}
         <button
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation();
             setIsVisible(false);
             setTimeout(onClose, 300);
           }}
-          className="shrink-0 text-neutral-600 hover:text-white transition-colors cursor-pointer"
+          className="shrink-0 text-neutral-600 hover:text-white transition-colors cursor-pointer p-1"
         >
           <X size={14} />
         </button>
