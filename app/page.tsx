@@ -298,19 +298,10 @@ function AudioPlayer({ audioUrl, fallbackDurationSec, isActive, onPlayToggle, sm
 
   useEffect(() => {
     const a = audioRef.current; if (!a || !instanceIdRef.current) return;
-    if (isActive && !playing) {
-      a.volume = 1; a.muted = false;
-      if (!a.src) a.src = src;
-      audioManager.requestPlay(instanceIdRef.current).then(granted => {
-        if (granted) {
-          setPlaying(true);
-          onPlayToggle?.(true);
-        }
-      }).catch(() => {});
-    } else if (!isActive && playing) {
+    if (!isActive && playing) {
+      a.pause();
       audioManager.pause(instanceIdRef.current);
       setPlaying(false);
-      onPlayToggle?.(false);
     }
   }, [isActive]);
 
@@ -326,6 +317,7 @@ function AudioPlayer({ audioUrl, fallbackDurationSec, isActive, onPlayToggle, sm
     if (!a || !id) return;
     
     if (playing) { 
+      a.pause();
       audioManager.pause(id);
       setPlaying(false); 
       onPlayToggle?.(false); 
@@ -339,10 +331,22 @@ function AudioPlayer({ audioUrl, fallbackDurationSec, isActive, onPlayToggle, sm
           setPlaying(true);
           onPlayToggle?.(true);
         } else {
-          setLoading(false);
+          await a.play();
+          setPlaying(true);
+          onPlayToggle?.(true);
         }
       }
-      catch { onErr(); } finally { setLoading(false); }
+      catch {
+        try {
+          await a.play();
+          setPlaying(true);
+          onPlayToggle?.(true);
+        } catch {
+          onErr();
+        }
+      } finally { 
+        setLoading(false); 
+      }
     }
   };
 
@@ -376,7 +380,7 @@ function AudioPlayer({ audioUrl, fallbackDurationSec, isActive, onPlayToggle, sm
         onTimeUpdate={e=>setCurrent(e.currentTarget.currentTime)}
         onPlaying={()=>{setPlaying(true);setLoading(false);}}
         onPause={()=>setPlaying(false)}
-        onEnded={()=>{setPlaying(false);setCurrent(0);}}
+        onEnded={()=>{setPlaying(false);setCurrent(0);onPlayToggle?.(false);}}
         onError={onErr} style={{display:"none"}} />
       <div className="flex items-center gap-3">
         <button onClick={toggle} disabled={loading}
@@ -1074,19 +1078,6 @@ export default function HomeFeedPage() {
   const setRef=useCallback((id:string,el:HTMLElement|null)=>{
     if(el)articleRefs.current.set(id,el);else articleRefs.current.delete(id);
   },[]);
-
-  useEffect(()=>{
-    observerRef.current=new IntersectionObserver(entries=>{
-      if(!userInteracted.current)return;
-      for(const e of entries){
-        const id=e.target.getAttribute("data-post-id");
-        if(id&&e.isIntersecting&&e.intersectionRatio>=0.6){setActiveId(id);return;}
-      }
-    },{threshold:[0,0.6]});
-    const obs=observerRef.current;
-    articleRefs.current.forEach(el=>obs.observe(el));
-    return()=>obs.disconnect();
-  },[posts]);
 
   const handlePulse=async(post:FeedPost)=>{
     if(!user){router.push("/login");return;}
