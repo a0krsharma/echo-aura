@@ -39,8 +39,24 @@ import { uploadAudio, uploadImage, getPlayableUrl } from "@/lib/cloudinary";
 import { subscribeToUserPosts, subscribeToUserPulsedPosts, getUserVaultedPosts, type PostItem } from "@/lib/posts";
 import { doc, updateDoc, setDoc, onSnapshot, serverTimestamp } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
-import { addTag, removeTag, getUserTags, getFreqMap, setSignalStatus, getSignalStatus, getVibeRead, analyzeVibeRead, updateVibeRead } from "@/lib/userDoc";
 import { subscribeToFollowers, subscribeToFollowing, type Follow } from "@/lib/follows";
+import {
+  addTag,
+  removeTag,
+  getUserTags,
+  getFreqMap,
+  setSignalStatus,
+  getSignalStatus,
+  getVibeRead,
+  analyzeVibeRead,
+  updateVibeRead,
+  setVoiceBio,
+  deleteVoiceBio,
+  set24HourThought,
+  delete24HourThought,
+  isThoughtActive,
+  getThoughtRemainingHours,
+} from "@/lib/userDoc";
 
 // Global Audio Singleton Manager — ensures only one audio echo plays at a time
 let globalAudioInstance: HTMLAudioElement | null = null;
@@ -243,6 +259,21 @@ export default function ProfilePage() {
   const [savedVoiceBioDuration, setSavedVoiceBioDuration] = useState<string | null>((user as any)?.voiceBioDuration || "15s");
   const [bioModalOpen, setBioModalOpen] = useState(false);
 
+  // 24-Hour Expiring Thought (Orbiters Only)
+  const [thoughtText, setThoughtText] = useState<string | null>(null);
+  const [thoughtAudioUrl, setThoughtAudioUrl] = useState<string | null>(null);
+  const [thoughtDuration, setThoughtDuration] = useState<string | null>(null);
+  const [thoughtExpiresAt, setThoughtExpiresAt] = useState<number | null>(null);
+  const [thoughtModalOpen, setThoughtModalOpen] = useState(false);
+  const [thoughtInputText, setThoughtInputText] = useState("");
+  const [thoughtBlob, setThoughtBlob] = useState<Blob | null>(null);
+  const [thoughtAudioUrlPreview, setThoughtAudioUrlPreview] = useState<string | null>(null);
+  const [thoughtState, setThoughtState] = useState<"idle" | "recording" | "preview">("idle");
+  const [thoughtElapsed, setThoughtElapsed] = useState(0);
+  const [isSavingThought, setIsSavingThought] = useState(false);
+  const [isPlayingThought, setIsPlayingThought] = useState(false);
+  const thoughtAudioRef = useRef<HTMLAudioElement | null>(null);
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const bioTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -267,6 +298,15 @@ export default function ProfilePage() {
         if (data.voiceBioUrl) {
           setSavedVoiceBioUrl(data.voiceBioUrl);
           setSavedVoiceBioDuration(data.voiceBioDuration || "30s");
+        } else {
+          setSavedVoiceBioUrl(null);
+          setSavedVoiceBioDuration(null);
+        }
+        if (data.thoughtText !== undefined || data.thoughtAudioUrl !== undefined) {
+          setThoughtText(data.thoughtText || null);
+          setThoughtAudioUrl(data.thoughtAudioUrl || null);
+          setThoughtDuration(data.thoughtDuration || null);
+          setThoughtExpiresAt(data.thoughtExpiresAt || null);
         }
         if (data.vibeRead) {
           setVibeRead(data.vibeRead);
@@ -519,6 +559,132 @@ export default function ProfilePage() {
     }
   };
 
+  const handleDeleteBio = async () => {
+    if (!user) return;
+    try {
+      await deleteVoiceBio(user.uid);
+      setSavedVoiceBioUrl(null);
+      setSavedVoiceBioDuration(null);
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      setIsPlayingBio(false);
+    } catch (err) {
+      console.error("Failed to delete voice bio:", err);
+    }
+  };
+
+  const startThoughtRecording = async () => {
+    setThoughtElapsed(0);
+    chunksRef.current = [];
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      let mimeType = "audio/webm";
+      if (MediaRecorder.isTypeSupported("audio/mp4")) mimeType = "audio/mp4";
+      else if (MediaRecorder.isTypeSupported("audio/aac")) mimeType = "audio/aac";
+      const recorder = new MediaRecorder(stream, { mimeType });
+      mediaRecorderRef.current = recorder;
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+      recorder.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: mimeType });
+        setThoughtBlob(blob);
+        setThoughtAudioUrlPreview(URL.createObjectURL(blob));
+        stream.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      };
+      recorder.start();
+      setThoughtState("recording");
+      const startTime = Date.now();
+      bioTimerRef.current = setInterval(() => {
+        const secs = Math.floor((Date.now() - startTime) / 1000);
+        setThoughtElapsed(secs);
+        if (secs >= 30) {
+          stopThoughtRecording();
+        }
+      }, 250);
+    } catch {
+      setThoughtState("idle");
+    }
+  };
+
+  const stopThoughtRecording = () => {
+    if (bioTimerRef.current) {
+      clearInterval(bioTimerRef.current);
+      bioTimerRef.current = null;
+    }
+    if (mediaRecorderRef.current?.state === "recording") {
+      mediaRecorderRef.current.stop();
+    }
+    setThoughtState("preview");
+  };
+
+  const handleSaveThought = async () => {
+    if (!user) return;
+    if (!thoughtInputText.trim() && !thoughtBlob) return;
+    setIsSavingThought(true);
+    try {
+      let audioUrl: string | null = null;
+      if (thoughtBlob) {
+        const res = await uploadAudio(thoughtBlob, `thought-${user.uid}-${Date.now()}`);
+        audioUrl = res.secureUrl;
+      }
+      await set24HourThought(
+        user.uid,
+        thoughtInputText.trim() || "Voice note thought",
+        audioUrl,
+        thoughtBlob ? `${thoughtElapsed}s` : null
+      );
+      setThoughtModalOpen(false);
+      setThoughtInputText("");
+      setThoughtBlob(null);
+      setThoughtAudioUrlPreview(null);
+      setThoughtState("idle");
+    } catch (err) {
+      console.error("Failed to save thought:", err);
+    } finally {
+      setIsSavingThought(false);
+    }
+  };
+
+  const handleDeleteThought = async () => {
+    if (!user) return;
+    try {
+      await delete24HourThought(user.uid);
+      setThoughtText(null);
+      setThoughtAudioUrl(null);
+      setThoughtExpiresAt(null);
+      if (thoughtAudioRef.current) {
+        thoughtAudioRef.current.pause();
+        thoughtAudioRef.current = null;
+      }
+      setIsPlayingThought(false);
+    } catch (err) {
+      console.error("Failed to delete thought:", err);
+    }
+  };
+
+  const handleToggleThoughtPlay = () => {
+    if (!thoughtAudioUrl) return;
+    const playable = getPlayableUrl(thoughtAudioUrl);
+    if (!thoughtAudioRef.current) {
+      const a = new Audio(playable);
+      a.onended = () => setIsPlayingThought(false);
+      a.onerror = () => setIsPlayingThought(false);
+      thoughtAudioRef.current = a;
+    }
+    if (isPlayingThought) {
+      thoughtAudioRef.current.pause();
+      setIsPlayingThought(false);
+    } else {
+      thoughtAudioRef.current.play().catch(() => setIsPlayingThought(false));
+      setIsPlayingThought(true);
+    }
+  };
+
   const handleAddTag = async () => {
     if (!user || !newTag.trim()) return;
     const tag = newTag.trim().toUpperCase();
@@ -644,19 +810,46 @@ export default function ProfilePage() {
         {/* ── Top Profile Telemetry Section: Avatar + Data Columns ── */}
         <div className="space-y-4 mb-6">
           <div className="flex items-center justify-between gap-4 sm:gap-6">
-            {/* Left: Avatar with Telemetry Quote Audio Badge */}
+            {/* Left: Avatar with 24-Hour Expiring Thought Speech Bubble (Orbiters Only) */}
             <div className="relative flex flex-col items-center shrink-0">
-              {/* Telemetry Audio Quote Capsule */}
-              <button
-                onClick={handleToggleBioPlay}
-                className="absolute -top-6 left-1/2 -translate-x-1/2 bg-black border border-neutral-700 hover:border-white text-white font-mono text-[9px] px-2.5 py-0.5 whitespace-nowrap flex items-center gap-1.5 z-10 transition-colors cursor-pointer shadow-md"
-                title="Audio Quote Telemetry"
-              >
-                <span className={`w-1.5 h-1.5 rounded-full ${isPlayingBio ? "bg-white animate-ping" : "bg-white"}`} />
-                <span className="tracking-widest uppercase font-bold">
-                  {savedVoiceBioUrl ? (isPlayingBio ? "PLAYING QUOTE ∿" : "“QUOTE” 🎙️") : "+ SET QUOTE"}
-                </span>
-              </button>
+              {/* 24-Hour Expiring Thought Capsule (Orbiters Only) */}
+              {isThoughtActive({ thoughtText, thoughtAudioUrl, thoughtExpiresAt }) ? (
+                <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-black border border-white text-white font-mono text-[9px] px-2.5 py-0.5 whitespace-nowrap flex items-center gap-1.5 z-10 shadow-lg">
+                  <button
+                    onClick={thoughtAudioUrl ? handleToggleThoughtPlay : () => setThoughtModalOpen(true)}
+                    className="flex items-center gap-1 hover:underline cursor-pointer"
+                  >
+                    <span>💭</span>
+                    <span className="font-bold max-w-[110px] sm:max-w-[150px] truncate">
+                      "{thoughtText}"
+                    </span>
+                    {thoughtAudioUrl && (
+                      <span className="text-[8px] bg-white text-black font-bold px-1 py-0.2">
+                        {isPlayingThought ? "PAUSE ∿" : "PLAY 🎙️"}
+                      </span>
+                    )}
+                  </button>
+                  <span className="text-[8px] text-neutral-500">
+                    • {getThoughtRemainingHours({ thoughtExpiresAt })}H
+                  </span>
+                  <button
+                    onClick={handleDeleteThought}
+                    className="text-neutral-500 hover:text-red-400 ml-0.5 cursor-pointer"
+                    title="Delete 24h thought"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setThoughtModalOpen(true)}
+                  className="absolute -top-6 left-1/2 -translate-x-1/2 bg-black border border-dashed border-neutral-700 hover:border-white text-neutral-400 hover:text-white font-mono text-[9px] px-2 py-0.5 whitespace-nowrap flex items-center gap-1 z-10 transition-colors cursor-pointer shadow-md"
+                  title="24-Hour Expiring Thought (Visible to Orbiters only)"
+                >
+                  <span>💭</span>
+                  <span className="tracking-wider uppercase">+ 24H THOUGHT</span>
+                </button>
+              )}
 
               {/* Avatar Aperture */}
               <div className="relative group mt-2">
@@ -770,8 +963,64 @@ export default function ProfilePage() {
             )}
           </div>
 
+          {/* ── PERMANENT VOICE BIO (PUBLIC TO EVERYONE) ── */}
+          <div className="pt-1">
+            {savedVoiceBioUrl ? (
+              <div className="p-3 border border-neutral-800 bg-neutral-950 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-[10px] text-white font-bold flex items-center gap-1.5 uppercase">
+                    <Mic2 className="w-3.5 h-3.5 text-white" /> PERMANENT VOICE BIO ({savedVoiceBioDuration || "15S"})
+                  </span>
+                  <span className="font-mono text-[9px] text-neutral-500 uppercase tracking-widest">
+                    ● PUBLIC TO EVERYONE
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleToggleBioPlay}
+                    className="flex-1 py-1.5 px-3 bg-white text-black font-mono text-xs font-bold uppercase tracking-wider hover:bg-neutral-200 transition-colors cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    {isPlayingBio ? <Pause className="w-3.5 h-3.5 fill-black text-black" /> : <Play className="w-3.5 h-3.5 fill-black text-black" />}
+                    <span>{isPlayingBio ? "PAUSE VOICE BIO" : "PLAY VOICE BIO"}</span>
+                  </button>
+                  <button
+                    onClick={() => setBioModalOpen(true)}
+                    className="py-1.5 px-3 border border-neutral-700 hover:border-white text-neutral-300 hover:text-white font-mono text-xs uppercase transition-colors cursor-pointer"
+                    title="Re-record voice bio"
+                  >
+                    ↺ UPDATE
+                  </button>
+                  <button
+                    onClick={handleDeleteBio}
+                    className="py-1.5 px-3 border border-neutral-800 hover:border-red-500 text-neutral-500 hover:text-red-400 font-mono text-xs uppercase transition-colors cursor-pointer"
+                    title="Delete voice bio"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setBioModalOpen(true)}
+                className="w-full p-3 border border-dashed border-neutral-700 hover:border-white bg-neutral-950/60 hover:bg-neutral-950 text-left transition-colors cursor-pointer group space-y-1"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-xs text-white font-bold tracking-wider flex items-center gap-1.5 uppercase group-hover:text-white">
+                    <Mic2 className="w-3.5 h-3.5" /> [ + RECORD PERMANENT VOICE BIO ]
+                  </span>
+                  <span className="font-mono text-[9px] text-neutral-500 uppercase tracking-widest">
+                    ● PUBLIC INTRO
+                  </span>
+                </div>
+                <p className="font-mono text-[10px] text-neutral-400">
+                  Record a 15-30s audio intro. Anyone visiting your profile can listen.
+                </p>
+              </button>
+            )}
+          </div>
+
           {/* Utilitarian Action Deck */}
-          <div className="flex items-center gap-2 pt-2">
+          <div className="flex items-center gap-2 pt-1">
             <button
               onClick={() => setEditProfileOpen(true)}
               className="flex-1 py-2 px-3 border border-neutral-800 bg-neutral-950 hover:border-white text-white font-mono text-xs tracking-wider uppercase transition-colors cursor-pointer text-center"
@@ -790,46 +1039,6 @@ export default function ProfilePage() {
               title="System Terminal Console"
             >
               <Terminal className="w-4 h-4" />
-            </Link>
-          </div>
-
-          {/* Audio Channels & Bio Capsules (Echo Bespoke Feature Deck) */}
-          <div className="flex items-center gap-2.5 pt-2 overflow-x-auto no-scrollbar pb-1">
-            {/* Capsule 1: Voice Bio */}
-            {savedVoiceBioUrl ? (
-              <button
-                onClick={handleToggleBioPlay}
-                className="flex items-center gap-2 px-3 py-2 border border-neutral-800 hover:border-white bg-neutral-950 text-white font-mono text-xs uppercase tracking-wider transition-colors cursor-pointer shrink-0"
-              >
-                {isPlayingBio ? <Pause className="w-3.5 h-3.5 fill-white text-white" /> : <Play className="w-3.5 h-3.5 fill-white text-white" />}
-                <span>VOICE BIO ({savedVoiceBioDuration || "15S"})</span>
-              </button>
-            ) : (
-              <button
-                onClick={() => setBioModalOpen(true)}
-                className="flex items-center gap-2 px-3 py-2 border border-dashed border-neutral-700 hover:border-white bg-neutral-950 text-neutral-300 hover:text-white font-mono text-xs uppercase tracking-wider transition-colors cursor-pointer shrink-0"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>[ RECORD VOICE BIO ]</span>
-              </button>
-            )}
-
-            {/* Capsule 2: Vault Archive */}
-            <Link
-              href="/terminal"
-              className="flex items-center gap-2 px-3 py-2 border border-neutral-800 hover:border-white bg-neutral-950 text-neutral-400 hover:text-white font-mono text-xs uppercase tracking-wider transition-colors cursor-pointer shrink-0"
-            >
-              <Bookmark className="w-3.5 h-3.5" />
-              <span>SAVED VAULT</span>
-            </Link>
-
-            {/* Capsule 3: Terminal Biometrics */}
-            <Link
-              href="/terminal"
-              className="flex items-center gap-2 px-3 py-2 border border-neutral-800 hover:border-white bg-neutral-950 text-neutral-400 hover:text-white font-mono text-xs uppercase tracking-wider transition-colors cursor-pointer shrink-0"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>BIOMETRICS</span>
             </Link>
           </div>
         </div>
@@ -1247,6 +1456,109 @@ export default function ProfilePage() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* 24-Hour Expiring Thought (Orbiters Only) Record & Share Modal */}
+      {thoughtModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-sm border border-white bg-black p-6 space-y-4 font-mono shadow-2xl">
+            <div className="flex items-center justify-between border-b border-neutral-900 pb-3">
+              <span className="text-xs tracking-widest text-white uppercase font-bold flex items-center gap-1.5">
+                <span>💭</span> // 24H THOUGHT (ORBITERS ONLY)
+              </span>
+              <button
+                onClick={() => setThoughtModalOpen(false)}
+                className="text-neutral-500 hover:text-white cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-[10px] text-neutral-400 uppercase tracking-wider">
+                ● EXPIRES IN 24 HOURS • VISIBLE TO YOUR ORBITERS ONLY
+              </p>
+              <input
+                type="text"
+                maxLength={90}
+                value={thoughtInputText}
+                onChange={(e) => setThoughtInputText(e.target.value)}
+                placeholder="WHAT'S ON YOUR MIND? (STATUS TEXT)..."
+                className="w-full p-2.5 bg-neutral-950 border border-neutral-800 focus:border-white text-xs text-white placeholder-neutral-600 outline-none"
+              />
+              <span className="text-[9px] text-neutral-600 text-right block">
+                {thoughtInputText.length}/90 CHARACTERS
+              </span>
+            </div>
+
+            {/* Voice Thought Recording Section (Optional Voice Note) */}
+            <div className="p-3 border border-neutral-900 bg-neutral-950 space-y-2">
+              <span className="text-[10px] text-neutral-400 uppercase tracking-widest block font-bold">
+                ATTACH VOICE NOTE (OPTIONAL)
+              </span>
+
+              {thoughtState === "idle" && (
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-neutral-500">MAX 30 SECONDS</span>
+                  <button
+                    onClick={startThoughtRecording}
+                    className="px-3 py-1.5 border border-white text-white text-[10px] tracking-widest uppercase hover:bg-white hover:text-black transition-colors cursor-pointer flex items-center gap-1 font-bold"
+                  >
+                    <Mic2 className="w-3 h-3" /> [ RECORD VOICE NOTE ]
+                  </button>
+                </div>
+              )}
+
+              {thoughtState === "recording" && (
+                <div className="flex items-center justify-between py-2">
+                  <div className="flex items-center space-x-2 text-xs text-white">
+                    <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+                    <span>00:{thoughtElapsed.toString().padStart(2, "0")} / 00:30</span>
+                  </div>
+                  <button
+                    onClick={stopThoughtRecording}
+                    className="px-3 py-1 border border-white text-white text-[10px] tracking-widest uppercase hover:bg-white hover:text-black transition-colors cursor-pointer font-bold"
+                  >
+                    [ STOP ]
+                  </button>
+                </div>
+              )}
+
+              {thoughtState === "preview" && (
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-[10px] text-white font-bold flex items-center gap-1">
+                    <Mic2 className="w-3 h-3" /> VOICE NOTE RECORDED ({thoughtElapsed}S)
+                  </span>
+                  <button
+                    onClick={() => {
+                      setThoughtState("idle");
+                      setThoughtBlob(null);
+                      setThoughtAudioUrlPreview(null);
+                    }}
+                    className="text-[10px] text-neutral-500 hover:text-white uppercase underline cursor-pointer"
+                  >
+                    REDO
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Save Button */}
+            <div className="pt-2">
+              <button
+                onClick={handleSaveThought}
+                disabled={isSavingThought || (!thoughtInputText.trim() && !thoughtBlob)}
+                className="w-full py-2.5 bg-white text-black text-xs tracking-widest uppercase font-bold hover:bg-neutral-200 transition-colors cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40"
+              >
+                {isSavingThought ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  "[ POST 24H THOUGHT ]"
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

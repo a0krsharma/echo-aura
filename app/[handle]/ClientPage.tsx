@@ -29,6 +29,7 @@ import {
 import { useAuth } from "@/app/components/AuthProvider";
 import { ChatWidget } from "@/app/components/ChatWidget";
 import { getPlayableUrl } from "@/lib/cloudinary";
+import { isThoughtActive, getThoughtRemainingHours } from "@/lib/userDoc";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -45,6 +46,12 @@ interface FirestoreUser {
   badges?: string[];
   bio?: string;
   voiceBioUrl?: string;
+  voiceBioDuration?: string;
+  thoughtText?: string | null;
+  thoughtAudioUrl?: string | null;
+  thoughtDuration?: string | null;
+  thoughtExpiresAt?: number | null;
+  thoughtCreatedAt?: number | null;
   isPrivate?: boolean;
   settings?: {
     privateAcc?: boolean;
@@ -263,6 +270,28 @@ export default function HandlePage({ params }: { params?: { handle?: string } })
   // Voice Bio playback
   const [playingVoiceBio, setPlayingVoiceBio] = useState(false);
   const voiceBioAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // 24-Hour Expiring Thought playback (Orbiters Only)
+  const [playingThoughtAudio, setPlayingThoughtAudio] = useState(false);
+  const thoughtAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  const handleToggleThoughtAudio = () => {
+    if (!profile?.thoughtAudioUrl) return;
+    const playableUrl = getPlayableUrl(profile.thoughtAudioUrl);
+    if (!thoughtAudioRef.current) {
+      const a = new Audio(playableUrl);
+      a.onended = () => setPlayingThoughtAudio(false);
+      a.onerror = () => setPlayingThoughtAudio(false);
+      thoughtAudioRef.current = a;
+    }
+    if (playingThoughtAudio) {
+      thoughtAudioRef.current.pause();
+      setPlayingThoughtAudio(false);
+    } else {
+      thoughtAudioRef.current.play().catch(() => setPlayingThoughtAudio(false));
+      setPlayingThoughtAudio(true);
+    }
+  };
 
   useEffect(() => {
     async function loadProfile() {
@@ -519,13 +548,38 @@ export default function HandlePage({ params }: { params?: { handle?: string } })
         {/* ── Instagram Profile Top Section: Avatar + 4 Stat Counts ── */}
         <div className="space-y-4 mb-5">
           <div className="flex items-center justify-between gap-4 sm:gap-6">
-            {/* Left: Avatar with Floating Voice Bio Note Speech Bubble */}
+            {/* Left: Avatar with 24-Hour Expiring Thought Speech Bubble (Orbiters Only) */}
             <div className="relative flex flex-col items-center shrink-0">
-              {profile.voiceBioUrl && (
-                <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-neutral-900 border border-neutral-700 text-white font-mono text-[9px] px-2.5 py-0.5 rounded-full shadow-lg whitespace-nowrap flex items-center gap-1 z-10">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                  <span>Voice Bio 🎙️</span>
-                </div>
+              {/* 24-Hour Expiring Thought Speech Bubble */}
+              {isThoughtActive(profile) && (
+                isOwnProfile || orbiting ? (
+                  <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-black border border-white text-white font-mono text-[9px] px-2.5 py-0.5 whitespace-nowrap flex items-center gap-1.5 z-10 shadow-lg">
+                    <span>💭</span>
+                    <span className="font-bold max-w-[110px] sm:max-w-[150px] truncate">
+                      "{profile.thoughtText}"
+                    </span>
+                    {profile.thoughtAudioUrl && (
+                      <button
+                        onClick={handleToggleThoughtAudio}
+                        className="text-[8px] bg-white text-black font-bold px-1 py-0.2 hover:bg-neutral-200 cursor-pointer"
+                      >
+                        {playingThoughtAudio ? "PAUSE ∿" : "PLAY 🎙️"}
+                      </button>
+                    )}
+                    <span className="text-[8px] text-neutral-500">
+                      • {getThoughtRemainingHours(profile)}H
+                    </span>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleToggleOrbit}
+                    className="absolute -top-7 left-1/2 -translate-x-1/2 bg-black border border-dashed border-neutral-600 hover:border-white text-neutral-300 hover:text-white font-mono text-[9px] px-2.5 py-0.5 whitespace-nowrap flex items-center gap-1.5 z-10 shadow-lg cursor-pointer transition-colors"
+                    title="Orbit to unlock this creator's 24H thought"
+                  >
+                    <Lock size={9} />
+                    <span className="font-bold">ORBIT TO UNLOCK 24H THOUGHT</span>
+                  </button>
+                )
               )}
 
               <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-full border-2 border-neutral-700 overflow-hidden flex items-center justify-center text-2xl font-mono bg-neutral-950 mt-2">
@@ -608,13 +662,13 @@ export default function HandlePage({ params }: { params?: { handle?: string } })
             )}
           </div>
 
-          {/* Action Row: [ WIRE ], [ ORBIT / ORBITING ], [ SHARE ] */}
+          {/* Action Row: [ ORBIT / ORBITING ], [ WIRE ] (Duplicate share button removed) */}
           {!isOwnProfile && profile.uid !== "anon" && (
             <div className="flex items-center gap-2 pt-2">
               {user && (
                 <button
                   onClick={handleToggleOrbit}
-                  className={`flex-1 py-2 px-3 rounded-lg border font-mono text-xs font-bold tracking-wider uppercase transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
+                  className={`flex-1 py-2 px-3 border font-mono text-xs font-bold tracking-wider uppercase transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
                     orbiting
                       ? "border-neutral-800 bg-neutral-900 text-neutral-400 hover:border-neutral-600 hover:text-white"
                       : "border-white bg-white text-black hover:bg-neutral-200"
@@ -629,36 +683,28 @@ export default function HandlePage({ params }: { params?: { handle?: string } })
                 <button
                   onClick={handleStartWire}
                   disabled={startingWire}
-                  className="flex-1 py-2 px-3 rounded-lg border border-neutral-800 bg-neutral-900 hover:border-neutral-600 hover:bg-neutral-800 font-mono text-xs font-bold tracking-wider uppercase transition-colors cursor-pointer text-white disabled:opacity-30 flex items-center justify-center gap-1.5"
+                  className="flex-1 py-2 px-3 border border-neutral-800 bg-neutral-900 hover:border-neutral-600 hover:bg-neutral-800 font-mono text-xs font-bold tracking-wider uppercase transition-colors cursor-pointer text-white disabled:opacity-30 flex items-center justify-center gap-1.5"
                 >
                   <MessageSquare size={14} />
                   <span>{startingWire ? "CONNECTING..." : "WIRE"}</span>
                 </button>
               )}
-
-              <button
-                onClick={handleShareProfile}
-                className="p-2 rounded-lg border border-neutral-800 bg-neutral-900 hover:border-neutral-600 hover:bg-neutral-800 text-white transition-colors cursor-pointer shrink-0 flex items-center justify-center"
-                title="Share Profile"
-              >
-                {copiedShare ? <Check size={16} className="text-green-400" /> : <Share2 size={16} />}
-              </button>
             </div>
           )}
 
-          {/* Voice Bio (Instagram note mini player) */}
+          {/* Permanent Voice Bio (Public to Everyone) */}
           {profile.voiceBioUrl && (
             <div className="pt-2">
-              <div className="border border-neutral-800 bg-neutral-950 p-3 rounded-lg space-y-1.5">
+              <div className="border border-neutral-800 bg-neutral-950 p-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="font-mono text-[10px] text-white uppercase tracking-widest flex items-center gap-1.5 font-bold">
-                    <Mic2 size={12} className="text-white" /> VOICE BIO
+                    <Mic2 size={12} className="text-white" /> PERMANENT VOICE BIO ({profile.voiceBioDuration || "15S"})
                   </span>
-                  <span className="font-mono text-[10px] text-neutral-500 uppercase tracking-widest">
-                    AUDIO INTRO
+                  <span className="font-mono text-[9px] text-neutral-500 uppercase tracking-widest">
+                    ● PUBLIC INTRO
                   </span>
                 </div>
-                <MiniPlayer audioUrl={profile.voiceBioUrl} duration="00:15" durationSec={15} />
+                <MiniPlayer audioUrl={profile.voiceBioUrl} duration={profile.voiceBioDuration || "00:15"} durationSec={15} />
               </div>
             </div>
           )}

@@ -112,29 +112,19 @@ export default function NotificationsPage() {
 
   return (
     <div className="min-h-screen bg-black text-white pb-24 md:pb-8 font-mono">
-      {/* Mobile Top Bar */}
-      <div className="md:hidden flex items-center justify-between px-5 pt-8 pb-4 border-b border-neutral-900">
-        <OrbitLogo />
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-xs tracking-widest uppercase text-neutral-500">[ NOTIFS ]</span>
-          {unreadCount > 0 && (
-            <span className="w-5 h-5 rounded-full bg-white text-black font-mono text-[10px] flex items-center justify-center font-bold">
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
-          )}
-        </div>
-      </div>
-
-      <main className="max-w-2xl mx-auto px-5 pt-8 space-y-6">
+      <main className="max-w-2xl mx-auto px-4 sm:px-6 pt-5 space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between border-b border-neutral-900 pb-3">
           <div>
-            <p className="font-mono text-xs tracking-widest text-neutral-500 uppercase flex items-center gap-2">
-              <Bell className="w-3.5 h-3.5 text-amber-400 animate-pulse" /> // [ NOTIFS ] — REALTIME
-            </p>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+              <h1 className="font-mono text-sm font-bold text-white tracking-widest uppercase">
+                REAL-TIME NOTIFICATIONS
+              </h1>
+            </div>
             {unreadCount > 0 && (
-              <p className="font-mono text-[10px] text-white tracking-widest mt-0.5 font-bold">
-                {unreadCount} UNREAD NOTIFICATIONS
+              <p className="font-mono text-[10px] text-neutral-400 tracking-widest mt-1 font-bold">
+                [{unreadCount} UNREAD SIGNALS]
               </p>
             )}
           </div>

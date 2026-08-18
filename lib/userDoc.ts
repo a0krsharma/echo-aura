@@ -25,7 +25,15 @@ export interface EchoUser {
   lastActiveDate: string | null;
   freqMap:     Record<string, number>; // Topic -> count
   signalStatus: "ONLINE" | "OFFLINE" | "SIGNAL-OFF";
-  lastSignalChange: Timestamp | null;
+  lastSignalChange?: Timestamp | null;
+  voiceBioUrl?: string;
+  voiceBioDuration?: string;
+  voiceBioAt?: Timestamp | null;
+  thoughtText?: string | null;
+  thoughtAudioUrl?: string | null;
+  thoughtDuration?: string | null;
+  thoughtExpiresAt?: number | null;
+  thoughtCreatedAt?: number | null;
   vibeRead:    {
     pitch: number;
     tempo: number;
@@ -429,4 +437,72 @@ export async function getStreak(uid: string): Promise<number> {
   
   const userData = snap.data() as EchoUser;
   return userData.streak || 0;
+}
+
+/**
+ * Voice Bio Helpers (Permanent Audio Intro - Public to Everyone)
+ */
+export async function setVoiceBio(uid: string, audioUrl: string, duration: string): Promise<void> {
+  const db = getFirebaseDb();
+  await updateDoc(doc(db, "users", uid), {
+    voiceBioUrl: audioUrl,
+    voiceBioDuration: duration,
+    voiceBioAt: serverTimestamp(),
+  });
+}
+
+export async function deleteVoiceBio(uid: string): Promise<void> {
+  const db = getFirebaseDb();
+  await updateDoc(doc(db, "users", uid), {
+    voiceBioUrl: null,
+    voiceBioDuration: null,
+    voiceBioAt: null,
+  });
+}
+
+/**
+ * 24-Hour Expiring Thought Helpers (Exclusive to Orbiters / Followers)
+ */
+export async function set24HourThought(
+  uid: string,
+  thoughtText: string,
+  thoughtAudioUrl?: string | null,
+  thoughtDuration?: string | null
+): Promise<void> {
+  const db = getFirebaseDb();
+  const now = Date.now();
+  const expiresAt = now + 24 * 60 * 60 * 1000;
+  await updateDoc(doc(db, "users", uid), {
+    thoughtText,
+    thoughtAudioUrl: thoughtAudioUrl || null,
+    thoughtDuration: thoughtDuration || null,
+    thoughtExpiresAt: expiresAt,
+    thoughtCreatedAt: now,
+  });
+}
+
+export async function delete24HourThought(uid: string): Promise<void> {
+  const db = getFirebaseDb();
+  await updateDoc(doc(db, "users", uid), {
+    thoughtText: null,
+    thoughtAudioUrl: null,
+    thoughtDuration: null,
+    thoughtExpiresAt: null,
+    thoughtCreatedAt: null,
+  });
+}
+
+export function isThoughtActive(user: any): boolean {
+  if (!user?.thoughtText && !user?.thoughtAudioUrl) return false;
+  if (!user?.thoughtExpiresAt) return false;
+  const exp = typeof user.thoughtExpiresAt === "number" ? user.thoughtExpiresAt : user.thoughtExpiresAt?.toMillis?.() || 0;
+  return exp > Date.now();
+}
+
+export function getThoughtRemainingHours(user: any): number {
+  if (!user?.thoughtExpiresAt) return 0;
+  const exp = typeof user.thoughtExpiresAt === "number" ? user.thoughtExpiresAt : user.thoughtExpiresAt?.toMillis?.() || 0;
+  const diffMs = exp - Date.now();
+  if (diffMs <= 0) return 0;
+  return Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60)));
 }
