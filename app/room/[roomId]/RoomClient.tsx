@@ -80,10 +80,12 @@ export default function RoomClient({ roomId }: RoomClientProps) {
     handRaised,
     speakingUids,
     audioLevels,
+    autoplayBlocked,
     tuneIn,
     disconnect,
     toggleMic,
     toggleHandRaise,
+    unlockAudio,
   } = useRoomAudio();
 
   // Room state
@@ -368,7 +370,21 @@ export default function RoomClient({ roomId }: RoomClientProps) {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col font-mono select-none">
+    <div 
+      onClick={unlockAudio}
+      className="min-h-screen bg-black text-white flex flex-col font-mono select-none"
+    >
+      {/* ── Autoplay Blocked Recovery Banner ── */}
+      {autoplayBlocked && (
+        <div 
+          onClick={(e) => { e.stopPropagation(); unlockAudio(); }}
+          className="sticky top-0 z-50 bg-white text-black font-mono text-xs font-bold p-3 text-center flex items-center justify-center gap-2 cursor-pointer shadow-2xl animate-pulse uppercase tracking-wider"
+        >
+          <Volume2 className="w-4 h-4 text-black animate-bounce" />
+          <span>[ 🔊 TAP HERE TO UNMUTE LIVE AUDIO STREAM ]</span>
+        </div>
+      )}
+
       {/* ── Top Header Telemetry ── */}
       <header className="flex items-center justify-between border-b border-neutral-900 px-4 py-3 text-xs tracking-wider uppercase flex-wrap gap-2 bg-neutral-950">
         <div className="flex items-center gap-3 flex-wrap">
@@ -420,6 +436,16 @@ export default function RoomClient({ roomId }: RoomClientProps) {
 
       {/* ── Main Stage Area ── */}
       <main className="flex-1 max-w-5xl mx-auto w-full p-4 sm:p-6 space-y-6 pb-32">
+        {/* Host/Speaker Mic Action Banner */}
+        {isSpeaker && isMuted && (
+          <div 
+            onClick={toggleMic}
+            className="border border-white bg-neutral-950 p-3 text-center cursor-pointer hover:bg-neutral-900 transition-colors flex items-center justify-center gap-2 font-bold text-xs"
+          >
+            <MicOff className="w-4 h-4 text-white animate-pulse" />
+            <span>[ 🎙️ YOU ARE ON STAGE • TAP HERE OR CLICK 'LIVE TX' BELOW TO BROADCAST ]</span>
+          </div>
+        )}
         {/* Pinned Signal / Artifact Thesis Box */}
         <div className="border border-neutral-800 bg-neutral-950 p-4 space-y-2">
           <div className="flex items-center justify-between text-[10px]">

@@ -19,10 +19,12 @@ interface RoomAudioContextType {
   speakingUids: Set<string>;
   audioLevels: Record<string, number>;
   isExpanded: boolean;
+  autoplayBlocked: boolean;
   tuneIn: (roomId: string, initialRoom?: Room) => Promise<void>;
   disconnect: () => Promise<void>;
   toggleMic: () => Promise<void>;
   toggleHandRaise: () => Promise<void>;
+  unlockAudio: () => void;
   setIsExpanded: (expanded: boolean) => void;
 }
 
@@ -39,6 +41,7 @@ export function RoomAudioProvider({ children }: { children: React.ReactNode }) {
   const [speakingUids, setSpeakingUids] = useState<Set<string>>(new Set());
   const [audioLevels, setAudioLevels] = useState<Record<string, number>>({});
   const [isExpanded, setIsExpanded] = useState(false);
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
 
   const clientRef = useRef<IAgoraRTCClient | null>(null);
   const localAudioTrackRef = useRef<IMicrophoneAudioTrack | null>(null);
@@ -110,6 +113,12 @@ export function RoomAudioProvider({ children }: { children: React.ReactNode }) {
       const AgoraRTC = (await import("agora-rtc-sdk-ng")).default;
       try { AgoraRTC.setLogLevel(3); } catch {}
 
+      // Register autoplay failure handler
+      AgoraRTC.onAudioAutoplayFailed = () => {
+        console.warn("[RoomAudio] Autoplay blocked by browser. User interaction required.");
+        setAutoplayBlocked(true);
+      };
+
       // Fetch room doc if not provided
       const db = getFirebaseDb();
       let roomData = initialRoom;
@@ -123,7 +132,7 @@ export function RoomAudioProvider({ children }: { children: React.ReactNode }) {
 
       if (!roomData) throw new Error("Room does not exist");
 
-      const channelName = roomData.agoraChannel || `echo_${roomId}`;
+      const channelName = roomData.agoraChannel || `echo_room_${roomId}`;
       const uid = user ? user.uid : `anon_${Math.random().toString(36).slice(2, 6)}`;
       const isHost = Boolean(user && roomData.hostUid === user.uid);
       const initialRole: RoomRole = isHost ? "host" : "listener";
@@ -178,7 +187,13 @@ export function RoomAudioProvider({ children }: { children: React.ReactNode }) {
           try {
             const track = await client.subscribe(remoteUser, "audio");
             remoteTracksRef.current.set(String(remoteUser.uid), track);
-            track.play();
+            try {
+              track.setVolume(100);
+              await track.play();
+            } catch (playErr) {
+              console.warn("[RoomAudio] Autoplay blocked for remote track, queuing unlock:", playErr);
+              setAutoplayBlocked(true);
+            }
             setSpeakerCount(remoteTracksRef.current.size);
           } catch (err) {
             console.error("[RoomAudio] Failed to subscribe to remote audio:", err);
@@ -188,13 +203,21 @@ export function RoomAudioProvider({ children }: { children: React.ReactNode }) {
 
       client.on("user-unpublished", (remoteUser, mediaType) => {
         if (mediaType === "audio") {
-          remoteTracksRef.current.delete(String(remoteUser.uid));
+          const track = remoteTracksRef.current.get(String(remoteUser.uid));
+          if (track) {
+            try { track.stop(); } catch {}
+            remoteTracksRef.current.delete(String(remoteUser.uid));
+          }
           setSpeakerCount(remoteTracksRef.current.size);
         }
       });
 
       client.on("user-left", (remoteUser) => {
-        remoteTracksRef.current.delete(String(remoteUser.uid));
+        const track = remoteTracksRef.current.get(String(remoteUser.uid));
+        if (track) {
+          try { track.stop(); } catch {}
+          remoteTracksRef.current.delete(String(remoteUser.uid));
+        }
         setSpeakerCount(remoteTracksRef.current.size);
       });
 
@@ -231,6 +254,19 @@ export function RoomAudioProvider({ children }: { children: React.ReactNode }) {
       await disconnectInternal();
     }
   }, [user]);
+
+  // Unlock Audio on User Tap/Gesture
+  const unlockAudio = useCallback(() => {
+    remoteTracksRef.current.forEach((track) => {
+      try {
+        track.setVolume(100);
+        track.play();
+      } catch (e) {
+        console.warn("[RoomAudio] Unlock track play error:", e);
+      }
+    });
+    setAutoplayBlocked(false);
+  }, []);
 
   // Internal disconnect logic
   const disconnectInternal = async () => {
@@ -275,6 +311,7 @@ export function RoomAudioProvider({ children }: { children: React.ReactNode }) {
       setSpeakingUids(new Set());
       setAudioLevels({});
       setIsExpanded(false);
+      setAutoplayBlocked(false);
     }
   };
 
@@ -290,18 +327,22 @@ export function RoomAudioProvider({ children }: { children: React.ReactNode }) {
     try {
       if (isMuted) {
         // Unmute: create or enable local microphone audio track
+        const AgoraRTC = (await import("agora-rtc-sdk-ng")).default;
+        await client.setClientRole("host");
         if (!localAudioTrackRef.current) {
-          const AgoraRTC = (await import("agora-rtc-sdk-ng")).default;
-          await client.setClientRole("host");
           const track = await AgoraRTC.createMicrophoneAudioTrack({
-            encoderConfig: "speech_standard",
+            encoderConfig: "music_standard",
             AEC: true,
             ANS: true,
+            AGC: true,
           });
           localAudioTrackRef.current = track;
           await client.publish([track]);
         } else {
           await localAudioTrackRef.current.setEnabled(true);
+          try {
+            await client.publish([localAudioTrackRef.current]);
+          } catch {}
         }
         setIsMuted(false);
       } else {
@@ -344,10 +385,12 @@ export function RoomAudioProvider({ children }: { children: React.ReactNode }) {
         speakingUids,
         audioLevels,
         isExpanded,
+        autoplayBlocked,
         tuneIn,
         disconnect,
         toggleMic,
         toggleHandRaise,
+        unlockAudio,
         setIsExpanded,
       }}
     >
