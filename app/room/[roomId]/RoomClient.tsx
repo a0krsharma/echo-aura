@@ -427,15 +427,18 @@ export default function RoomClient({ roomId }: RoomClientProps) {
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
             {speakers.map((s) => {
-              const isSpeaking = speakingUids.has(s.uid);
+              const isSpeaking = speakingUids.has(s.uid) || (user && s.uid === user.uid && (speakingUids.has("0") || speakingUids.has(user.uid)));
+              const level = audioLevels[s.uid] || (user && s.uid === user.uid ? audioLevels["0"] || audioLevels[user.uid] : 0) || (isSpeaking ? 80 : 0);
               const isHostUser = room && s.uid === room.hostUid;
               const floatingEmoji = activeReactions[s.uid];
 
               return (
                 <div
                   key={s.uid}
-                  className={`relative border p-3 flex flex-col items-center justify-center text-center transition-all ${
-                    isSpeaking ? "border-white bg-neutral-900 shadow-xl" : "border-neutral-800 bg-black"
+                  className={`relative border p-3.5 flex flex-col items-center justify-center text-center transition-all ${
+                    isSpeaking
+                      ? "border-white bg-neutral-900 shadow-2xl ring-2 ring-white scale-[1.02]"
+                      : "border-neutral-800 bg-black"
                   }`}
                 >
                   {/* 1.5s Floating Pop-Up Emoji Reaction (Non-Sticky!) */}
@@ -450,14 +453,14 @@ export default function RoomClient({ roomId }: RoomClientProps) {
                     onClick={() => setProfileModal({ uid: s.uid, handle: s.handle })}
                     className={`w-14 h-14 border-2 flex items-center justify-center text-sm font-bold relative transition-all cursor-pointer mb-2 ${
                       isSpeaking
-                        ? "border-white bg-neutral-800 text-white"
+                        ? "border-white bg-white text-black font-extrabold shadow-lg"
                         : "border-neutral-700 bg-neutral-950 text-neutral-400 hover:border-white hover:text-white"
                     }`}
                   >
                     {s.handle.replace("@", "").slice(0, 2).toUpperCase()}
                     {isSpeaking && (
-                      <span className="absolute -top-1.5 -right-1.5 text-[8px] bg-white text-black px-1 font-bold">
-                        TX
+                      <span className="absolute -top-1.5 -right-1.5 text-[8px] bg-black text-white border border-white px-1 font-bold animate-pulse">
+                        TX 🔊
                       </span>
                     )}
                   </button>
@@ -465,19 +468,19 @@ export default function RoomClient({ roomId }: RoomClientProps) {
                   <p className="text-xs font-bold text-white truncate w-full">
                     {s.handle}
                   </p>
-                  <span className="text-[9px] text-neutral-500 uppercase mt-0.5 tracking-wider">
+                  <span className={`text-[9px] uppercase mt-0.5 tracking-wider font-bold ${isSpeaking ? "text-white" : "text-neutral-500"}`}>
                     {isHostUser ? "[ HOST ]" : "[ SPEAKER ]"}
                   </span>
 
                   {/* Live ASCII / CSS Decibel Meter */}
-                  <div className="w-full bg-neutral-900 h-1.5 mt-2 overflow-hidden border border-neutral-800">
+                  <div className="w-full bg-neutral-950 h-2 mt-2 overflow-hidden border border-neutral-800">
                     <div
-                      className="bg-white h-full transition-all duration-75"
-                      style={{ width: `${isSpeaking ? "90%" : s.isMuted ? "0%" : "20%"}` }}
+                      className={`h-full transition-all duration-75 ${isSpeaking ? "bg-white" : "bg-neutral-800"}`}
+                      style={{ width: `${isSpeaking ? Math.max(level, 50) : s.isMuted ? 0 : 15}%` }}
                     />
                   </div>
-                  <span className="text-[8px] text-neutral-500 uppercase mt-1">
-                    {isSpeaking ? "[||||||--] TX" : s.isMuted ? "[ MUTE ]" : "[------] IDLE"}
+                  <span className={`text-[8px] uppercase mt-1 font-mono font-bold ${isSpeaking ? "text-white animate-pulse" : "text-neutral-500"}`}>
+                    {isSpeaking ? `[||||||--] TX (${level || 75}dB)` : s.isMuted ? "[ MUTE ]" : "[------] IDLE"}
                   </span>
 
                   {/* Host Quick Moderation Controls */}

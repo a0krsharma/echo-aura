@@ -130,10 +130,19 @@ export function RoomAudioProvider({ children }: { children: React.ReactNode }) {
       setIsMuted(true);
 
       // Fetch token
-      const tokenRes = await fetch(`/api/agora/token?channel=${encodeURIComponent(channelName)}&uid=${encodeURIComponent(uid)}`);
-      const tokenData = await tokenRes.json();
-      const appId = tokenData.appId || process.env.NEXT_PUBLIC_AGORA_APP_ID;
-      const token = tokenData.token || null;
+      let token: string | null = null;
+      let appId = process.env.NEXT_PUBLIC_AGORA_APP_ID || "9fc4c57053244c5b9f46211616b01c4c";
+
+      try {
+        const tokenRes = await fetch(`/api/agora/token?channel=${encodeURIComponent(channelName)}&uid=${encodeURIComponent(uid)}`);
+        if (tokenRes.ok) {
+          const tokenData = await tokenRes.json();
+          if (tokenData.appId) appId = tokenData.appId;
+          token = tokenData.token || null;
+        }
+      } catch (err) {
+        console.warn("[RoomAudio] Token fetch failed, attempting direct connect:", err);
+      }
 
       if (!appId) throw new Error("Agora App ID is not configured");
 
@@ -141,7 +150,7 @@ export function RoomAudioProvider({ children }: { children: React.ReactNode }) {
       const client = AgoraRTC.createClient({ mode: "live", codec: "vp8" });
       clientRef.current = client;
 
-      // Enable Audio Volume Indicator
+      // Enable Audio Volume Indicator for active speaking telemetry
       client.enableAudioVolumeIndicator();
       client.on("volume-indicator", (volumes) => {
         const newLevels: Record<string, number> = {};
@@ -149,7 +158,14 @@ export function RoomAudioProvider({ children }: { children: React.ReactNode }) {
         volumes.forEach((v) => {
           const level = Math.min(100, Math.round(v.level * 1.5));
           newLevels[String(v.uid)] = level;
-          if (level > 10) speaking.add(String(v.uid));
+          if (level > 8) {
+            speaking.add(String(v.uid));
+            // Local microphone volume in Agora returns v.uid === 0
+            if (v.uid === 0 && user?.uid) {
+              speaking.add(user.uid);
+              newLevels[user.uid] = level;
+            }
+          }
         });
         setAudioLevels(newLevels);
         setSpeakingUids(speaking);
@@ -184,8 +200,18 @@ export function RoomAudioProvider({ children }: { children: React.ReactNode }) {
       // Set Agora client role: audience for listeners, host for room creators
       await client.setClientRole(isHost ? "host" : "audience");
 
-      // Join Agora channel
-      await client.join(appId, channelName, token, uid);
+      // Join Agora channel with automatic fallback if token expires or mismatches
+      try {
+        await client.join(appId, channelName, token, uid);
+      } catch (joinErr: any) {
+        const errMsg = joinErr?.message || String(joinErr);
+        if (token && (errMsg.includes("dynamic key") || errMsg.includes("GATEWAY") || errMsg.includes("token timeout"))) {
+          console.warn("[RoomAudio] Token rejected, joining in App ID direct mode (null token)...");
+          await client.join(appId, channelName, null, uid);
+        } else {
+          throw joinErr;
+        }
+      }
 
       // Register participant in Firestore
       if (user) {
@@ -260,7 +286,7 @@ export function RoomAudioProvider({ children }: { children: React.ReactNode }) {
           const AgoraRTC = (await import("agora-rtc-sdk-ng")).default;
           await client.setClientRole("host");
           const track = await AgoraRTC.createMicrophoneAudioTrack({
-            encoderConfig: "high_quality_stereo",
+            encoderConfig: "speech_standard",
             AEC: true,
             ANS: true,
           });

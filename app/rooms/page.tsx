@@ -207,9 +207,9 @@ export default function RoomsPage() {
         {/* Top Header */}
         <div className="flex items-start justify-between gap-4 border-b border-neutral-900 pb-6">
           <div className="space-y-1">
-            <p className="text-[10px] tracking-widest text-neutral-500 uppercase">// 1-TAP LIVE AUDIO RELAYS</p>
+            <p className="text-[10px] tracking-widest text-neutral-500 uppercase">// 1-TAP LIVE AUDIO ROOMS</p>
             <h1 className="text-2xl font-bold tracking-widest text-white uppercase">
-              [ FREQUENCIES ]
+              [ ROOMS ]
             </h1>
           </div>
           <button
@@ -217,7 +217,7 @@ export default function RoomsPage() {
             className="flex items-center gap-2 text-xs font-bold tracking-widest uppercase text-black bg-white px-4 py-2.5 hover:bg-neutral-200 transition-colors cursor-pointer"
           >
             <Plus size={14} strokeWidth={2.5} />
-            [ + LAUNCH ]
+            [ + ROOM ]
           </button>
         </div>
 
@@ -243,7 +243,7 @@ export default function RoomsPage() {
           <div className="flex items-center justify-between">
             <span className="text-[10px] tracking-widest text-neutral-500 uppercase flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-              // ACTIVE LIVE FREQUENCIES ({filteredLiveRooms.length})
+              // ACTIVE LIVE ROOMS ({filteredLiveRooms.length})
             </span>
             <span className="text-[9px] text-neutral-600 uppercase tracking-widest">
               TAP ANY CARD TO INTERCEPT AUDIO
@@ -254,7 +254,7 @@ export default function RoomsPage() {
             <div className="border border-neutral-900 bg-neutral-950 p-8 text-center space-y-3">
               <Radio className="w-6 h-6 text-neutral-700 mx-auto animate-pulse" />
               <p className="text-xs text-neutral-500 tracking-widest uppercase">
-                NO LIVE FREQUENCIES IN THIS BAND
+                NO LIVE ROOMS IN THIS BAND
               </p>
               <button
                 onClick={() => setShowCreateModal(true)}
