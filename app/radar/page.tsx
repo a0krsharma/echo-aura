@@ -177,7 +177,7 @@ export default function RadarPage() {
                     onClick={handleToggleOpen}
                     className={`text-xs tracking-widest uppercase px-3 py-1.5 border transition-colors cursor-pointer ${
                       isOpen 
-                        ? "border-emerald-500 text-emerald-400 bg-emerald-950/30" 
+                        ? "border-white text-white bg-white/10" 
                         : "border-neutral-800 text-neutral-500 hover:border-white hover:text-white"
                     }`}
                   >
@@ -214,7 +214,7 @@ export default function RadarPage() {
             <section className="space-y-3">
               <div className="border-b border-neutral-900 pb-2 flex justify-between items-center text-xs text-neutral-500">
                 <span>&gt;&gt; ACTIVE RADAR NODES ({filteredUsers.length})</span>
-                <span className="text-emerald-500">● LIVE SCAN</span>
+                <span className="text-white">● LIVE SCAN</span>
               </div>
 
               {filteredUsers.length === 0 ? (

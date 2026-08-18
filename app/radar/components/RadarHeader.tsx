@@ -78,8 +78,8 @@ export default function RadarHeader({
             [ OPEN NODES ]
           </button>
         </div>
-        <div className="hidden sm:flex items-center gap-1.5 text-neutral-600">
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+        <div className="hidden sm:flex items-center gap-1.5 text-neutral-500">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
           <span>AUDIO FREQUENCY ENGINE</span>
         </div>
       </div>
