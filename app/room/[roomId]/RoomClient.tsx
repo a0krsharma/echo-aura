@@ -581,11 +581,11 @@ export default function RoomClient({ roomId }: RoomClientProps) {
         </div>
       </footer>
 
-      {/* ── Floating Sliding Chat Drawer (Not full window!) ── */}
+      {/* ── Floating Sliding Chat Drawer (Positioned above footer with zero cutoff) ── */}
       {showChat && (
         <aside
           aria-label="Room live chat"
-          className="fixed bottom-16 right-3 md:right-8 z-40 max-w-sm w-[92vw] sm:w-[380px] h-[450px] bg-black border border-white shadow-2xl flex flex-col font-mono animate-slide-up"
+          className="fixed bottom-20 right-4 sm:right-8 z-50 w-[calc(100vw-32px)] sm:w-[380px] h-[460px] max-h-[70vh] bg-black border-2 border-white shadow-[0_0_50px_rgba(0,0,0,0.95)] flex flex-col font-mono animate-slide-up"
         >
           <div className="p-3 border-b border-neutral-900 flex items-center justify-between bg-neutral-950">
             <span className="text-xs font-bold text-white uppercase tracking-widest flex items-center gap-1.5">
@@ -594,7 +594,8 @@ export default function RoomClient({ roomId }: RoomClientProps) {
             </span>
             <button
               onClick={() => setShowChat(false)}
-              className="text-neutral-500 hover:text-white transition-colors cursor-pointer"
+              className="text-neutral-400 hover:text-white transition-colors cursor-pointer p-1"
+              title="Close Chat"
             >
               <X size={16} />
             </button>

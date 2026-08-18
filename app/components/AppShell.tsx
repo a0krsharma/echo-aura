@@ -297,14 +297,14 @@ function ShellContent({ children }: { children: React.ReactNode }) {
       {/*
        * MAIN CONTENT
        * md: offset right by left sidebar width  (w-52 = 208px)
-       * lg: also offset left by right sidebar   (w-72 = 288px)
+       * lg: also offset left by right sidebar   (w-72 = 288px) (disabled on /room/ pages for full width)
        */}
-      <div className="md:ml-52 lg:mr-72 min-h-full">
+      <div className={`md:ml-52 ${pathname.startsWith("/room/") ? "" : "lg:mr-72"} min-h-full`}>
         {children}
       </div>
 
-      {/* RIGHT SIDEBAR — desktop lg+ */}
-      <RightSidebar />
+      {/* RIGHT SIDEBAR — desktop lg+ (hidden on /room/ pages to give stage full focus) */}
+      {!pathname.startsWith("/room/") && <RightSidebar />}
 
       {/* FLOATING WIRE CHAT LAUNCHER (Bottom Right Corner - hidden on wire, room, stage, waves) */}
       {!pathname.startsWith("/wire") && !pathname.startsWith("/room") && !pathname.startsWith("/stage") && !pathname.startsWith("/waves") && (
@@ -320,8 +320,8 @@ function ShellContent({ children }: { children: React.ReactNode }) {
         </Link>
       )}
 
-      {/* BOTTOM NAV — mobile only */}
-      <BottomNav />
+      {/* BOTTOM NAV — mobile only (hidden on /room/ to prevent overlap with room controls) */}
+      {!pathname.startsWith("/room/") && <BottomNav />}
 
       {/* PWA INSTALL PROMPT */}
       <PWAInstallPrompt />
@@ -332,8 +332,8 @@ function ShellContent({ children }: { children: React.ReactNode }) {
         onDismiss={handleDismissToast}
       />
 
-      {/* PERSISTENT LIVE AUDIO ROOM DOCK */}
-      <PersistentRoomDock />
+      {/* PERSISTENT LIVE AUDIO ROOM DOCK (hidden when already inside /room/[roomId]) */}
+      {!pathname.startsWith("/room/") && <PersistentRoomDock />}
     </>
   );
 }
