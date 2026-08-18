@@ -28,6 +28,11 @@ interface FeedPost {
   pulseCount: number; pulsedBy: string[];
   orbitedBy?: string[]; duration: string; durationSec: number;
   reverbCount: number; commentCount: number; createdAt: any;
+  newsTopic?: string | null;
+  newsHeadline?: string | null;
+  newsLink?: string | null;
+  tags?: string[];
+  category?: string;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -937,6 +942,38 @@ function PostCard({ post, user, orbitedPosts, activePostId, deletingId, onPulse,
           )}
         </div>
       </div>
+
+      {/* Tagged News Dispatch Banner on Frequency Feed */}
+      {(post.newsTopic || post.newsHeadline) && (
+        <div className="p-3 border border-neutral-800 bg-neutral-950 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 overflow-hidden">
+            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse shrink-0" />
+            {post.newsTopic && (
+              <Link
+                href={`/hashtag/${encodeURIComponent(post.newsTopic.replace(/^#+/, ""))}`}
+                className="font-mono text-xs font-bold text-white uppercase hover:underline shrink-0"
+              >
+                #{post.newsTopic.replace(/^#+/, "")}
+              </Link>
+            )}
+            {post.newsHeadline && (
+              <span className="font-mono text-xs text-neutral-400 truncate">
+                "{post.newsHeadline}"
+              </span>
+            )}
+          </div>
+          {post.newsLink && post.newsLink !== "#" && (
+            <a
+              href={post.newsLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-[10px] text-neutral-500 hover:text-white uppercase tracking-widest shrink-0"
+            >
+              WIRE ↗
+            </a>
+          )}
+        </div>
+      )}
 
       {/* Caption */}
       <h2 className="font-mono text-sm md:text-base font-bold text-white tracking-wide leading-relaxed">

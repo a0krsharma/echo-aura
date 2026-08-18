@@ -60,8 +60,9 @@ export default function LiveNewsDispatches({
 
   const handleRecordAudioTake = (e: React.MouseEvent, item: NewsDispatch) => {
     e.stopPropagation();
-    const cleanTag = item.topicTag.replace('#', '');
-    router.push(`/record?topic=${encodeURIComponent(cleanTag)}&headline=${encodeURIComponent(item.title.slice(0, 80))}`);
+    const cleanTag = item.topicTag.replace(/^#+/, '');
+    const urlParam = item.link && item.link !== '#' ? `&url=${encodeURIComponent(item.link)}` : '';
+    router.push(`/record?topic=${encodeURIComponent(cleanTag)}&headline=${encodeURIComponent(item.title.slice(0, 90))}&category=${encodeURIComponent(item.category)}${urlParam}`);
   };
 
   const handleInterceptHashtag = (e: React.MouseEvent, item: NewsDispatch) => {

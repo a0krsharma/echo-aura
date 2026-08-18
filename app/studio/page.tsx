@@ -11,23 +11,35 @@
  * hear what they recorded.
  */
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Loader2, Play, Square, Trash2, Send } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Loader2, Play, Square, Trash2, Send, Radio } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
 import { uploadAudio } from "@/lib/cloudinary";
 import { createPost } from "@/lib/posts";
 
 type StudioState = "idle" | "recording" | "preview" | "uploading";
 
-export default function StudioPage() {
+function StudioContent() {
   const { user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const topicParam = searchParams.get("topic") || "";
+  const headlineParam = searchParams.get("headline") || "";
+  const newsUrlParam = searchParams.get("url") || searchParams.get("link") || "";
+  const categoryParam = searchParams.get("category") || "";
 
   const [studioState, setStudioState] = useState<StudioState>("idle");
   const [elapsedMs, setElapsedMs] = useState(0);
-  const [caption, setCaption] = useState("");
+  const [caption, setCaption] = useState(() => {
+    if (topicParam) {
+      const clean = topicParam.replace(/^#+/, "");
+      return `#${clean} `;
+    }
+    return "";
+  });
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -260,6 +272,11 @@ export default function StudioPage() {
         authorHandle: user?.handle || "@ANON",
         duration: formatSeconds(elapsedMs),
         durationSec: secSec,
+        newsTopic: topicParam ? topicParam.replace(/^#+/, "") : null,
+        newsHeadline: headlineParam || null,
+        newsLink: newsUrlParam || null,
+        category: categoryParam || null,
+        tags: topicParam ? [topicParam.replace(/^#+/, "").toUpperCase()] : [],
       });
 
       // Revoke blob URL
@@ -296,7 +313,30 @@ export default function StudioPage() {
       </header>
 
       {/* ── Main ── */}
-      <main className="flex-1 flex flex-col items-center justify-center max-w-xl mx-auto w-full my-8 space-y-10">
+      <main className="flex-1 flex flex-col items-center justify-center max-w-xl mx-auto w-full my-8 space-y-8">
+        {/* Tagged Wire News Dispatch Banner (when recording a take from Search / Radar) */}
+        {(topicParam || headlineParam) && (
+          <div className="w-full p-4 border border-white bg-neutral-950 space-y-1.5 font-mono shadow-xl">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-white font-bold tracking-widest uppercase flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                // TAGGED WIRE DISPATCH
+              </span>
+              <span className="text-[9px] text-neutral-400 uppercase tracking-widest border border-neutral-800 px-2 py-0.5">
+                FREQUENCY FEED TAKE
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm font-bold text-white tracking-wide">
+              #{topicParam.replace(/^#+/, "")} {headlineParam ? `— "${headlineParam}"` : ""}
+            </p>
+            {categoryParam && (
+              <span className="text-[9px] text-neutral-500 uppercase tracking-widest block">
+                CATEGORY: {categoryParam}
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Timer */}
         <div className="text-center">
           <div className="font-mono text-6xl md:text-7xl lg:text-8xl tracking-tighter text-white font-extralight select-none tabular-nums">
@@ -437,5 +477,20 @@ export default function StudioPage() {
         </span>
       </footer>
     </div>
+  );
+}
+
+export default function StudioPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-black text-white flex items-center justify-center p-8 font-mono text-xs tracking-widest uppercase">
+          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+          INITIALIZING AUDIO STUDIO...
+        </div>
+      }
+    >
+      <StudioContent />
+    </Suspense>
   );
 }

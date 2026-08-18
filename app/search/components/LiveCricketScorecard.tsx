@@ -178,7 +178,7 @@ export default function LiveCricketScorecard() {
   const handleRecordTake = () => {
     const topicTag = `${activeMatch.team1.shortName}vs${activeMatch.team2.shortName}`;
     const headline = `${activeMatch.team1.name} ${activeMatch.team1.score} vs ${activeMatch.team2.name} ${activeMatch.team2.score} (${activeMatch.statusText})`;
-    router.push(`/record?topic=${encodeURIComponent(topicTag)}&headline=${encodeURIComponent(headline)}`);
+    router.push(`/record?topic=${encodeURIComponent(topicTag)}&headline=${encodeURIComponent(headline)}&category=SPORTS`);
   };
 
   return (

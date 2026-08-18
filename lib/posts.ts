@@ -72,6 +72,9 @@ export interface PostItem {
   duetPartnerHandle?: string;
   category?:       string;
   tags?:           string[];
+  newsTopic?:      string | null;
+  newsHeadline?:   string | null;
+  newsLink?:       string | null;
 }
 
 /** Inline voice comment on a post — stored in posts/{id}/reverbs subcollection */
@@ -108,6 +111,11 @@ export async function createPost(data: {
   orbitOfHandle?:   string;
   duetOf?:          string;
   duetOfHandle?:    string;
+  newsTopic?:       string | null;
+  newsHeadline?:    string | null;
+  newsLink?:        string | null;
+  tags?:            string[] | null;
+  category?:        string | null;
 }): Promise<string> {
   try {
     const db = getFirebaseDb();
@@ -132,6 +140,11 @@ export async function createPost(data: {
       duetOfHandle:    data.duetOfHandle    || null,
       duetPartnerUid:  null,
       duetPartnerHandle: null,
+      newsTopic:       data.newsTopic       || null,
+      newsHeadline:    data.newsHeadline    || null,
+      newsLink:        data.newsLink        || null,
+      tags:            data.tags            || (data.newsTopic ? [data.newsTopic.replace(/^#/, '').toUpperCase()] : []),
+      category:        data.category        || null,
       createdAt:       serverTimestamp(),
       // [ SPIKE ] - Initialize trending metrics
       spikeScore:      0,
@@ -151,6 +164,26 @@ export async function createPost(data: {
       await createPostMentions(docRef.id, data.caption, data.authorUid, data.authorHandle, data.audioUrl);
     } catch (error) {
       console.error("[createPost] Error creating mentions:", error);
+    }
+
+    // Update hashtags & trending feeds
+    try {
+      const { updatePostHashtags } = await import("@/lib/hashtags");
+      const combinedCaption = data.newsTopic && !data.caption.includes(`#${data.newsTopic.replace(/^#/, '')}`)
+        ? `${data.caption} #${data.newsTopic.replace(/^#/, '')}`
+        : data.caption;
+      await updatePostHashtags(
+        docRef.id,
+        combinedCaption,
+        data.authorUid,
+        data.authorHandle,
+        data.audioUrl,
+        data.duration || "00:15",
+        data.durationSec || 15,
+        0
+      );
+    } catch (error) {
+      console.error("[createPost] Error updating hashtags:", error);
     }
 
     // Increment parent reverbCount

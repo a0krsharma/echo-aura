@@ -160,25 +160,34 @@ export default function HashtagPage() {
             </span>
           </div>
           
-          {user && (
-            <button
-              onClick={handleFollowToggle}
-              disabled={followingLoading}
-              className={`font-mono text-xs tracking-widest uppercase px-4 py-2 border transition-colors cursor-pointer ${
-                isFollowing
-                  ? "border-neutral-800 text-neutral-500 hover:border-white hover:text-white"
-                  : "border-white text-white hover:bg-white hover:text-black"
-              } disabled:opacity-50`}
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/record?topic=${encodeURIComponent(tag)}`}
+              className="font-mono text-xs tracking-widest uppercase px-3 py-2 border border-white bg-white text-black hover:bg-neutral-200 transition-colors font-bold flex items-center gap-1.5"
             >
-              {followingLoading ? (
-                <Loader2 className="w-3 h-3 animate-spin" />
-              ) : isFollowing ? (
-                "FOLLOWING"
-              ) : (
-                <><Plus className="w-3 h-3 inline mr-1" />FOLLOW</>
-              )}
-            </button>
-          )}
+              <Plus className="w-3.5 h-3.5" /> [ RECORD TAKE ]
+            </Link>
+
+            {user && (
+              <button
+                onClick={handleFollowToggle}
+                disabled={followingLoading}
+                className={`font-mono text-xs tracking-widest uppercase px-3 py-2 border transition-colors cursor-pointer ${
+                  isFollowing
+                    ? "border-neutral-800 text-neutral-500 hover:border-white hover:text-white"
+                    : "border-neutral-700 text-neutral-300 hover:border-white hover:text-white"
+                } disabled:opacity-50`}
+              >
+                {followingLoading ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : isFollowing ? (
+                  "FOLLOWING"
+                ) : (
+                  "FOLLOW"
+                )}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -193,10 +202,10 @@ export default function HashtagPage() {
               Be the first to post with {hashtagTag}
             </p>
             <Link
-              href="/studio"
+              href={`/record?topic=${encodeURIComponent(tag)}`}
               className="inline-block px-6 py-3 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors"
             >
-              CREATE POST
+              [ + RECORD FIRST TAKE ]
             </Link>
           </div>
         ) : (
