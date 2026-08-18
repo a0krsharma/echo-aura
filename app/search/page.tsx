@@ -4,15 +4,37 @@ export const dynamic = "force-dynamic";
 
 /**
  * app/search/page.tsx
- * Enhanced search with filters, history, Top 10 suggested profiles,
- * real-time ORBIT toggle buttons, and direct WIRE message launchers.
+ * ─────────────────────────────────────────────────────
+ * Twitter/X-Style Enhanced Search & Discovery Engine for Echo:
+ *  - Real-time predictive autocomplete (#tags, @mentions, platform terms)
+ *  - Twitter-style category filter tabs (Trending, Tech, Startup, News, Sports, etc.)
+ *  - Live Acoustic Velocity telemetry
+ *  - Active stage rooms, voices, and audio echoes in strict monochrome.
  */
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Search, X, Mic2, Users, Play, Loader2, Clock, Filter, TrendingUp, MessageSquare, UserPlus, UserCheck, Sparkles } from "lucide-react";
-import { collection, query, getDocs, limit, orderBy, where } from "firebase/firestore";
+import {
+  Search,
+  X,
+  Mic2,
+  Users,
+  Play,
+  Pause,
+  Loader2,
+  Clock,
+  Filter,
+  Flame,
+  Radio,
+  Hash,
+  ArrowRight,
+  MessageSquare,
+  UserPlus,
+  UserCheck,
+  Sparkles,
+} from "lucide-react";
+import { collection, query, getDocs, limit, doc, onSnapshot } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 import { type EchoUser } from "@/lib/userDoc";
 import { type PostItem } from "@/lib/posts";
@@ -20,6 +42,9 @@ import { followUser, unfollowUser, subscribeToFollowStatus } from "@/lib/follows
 import { startOrGetConversation } from "@/lib/wire";
 import { getPlayableUrl } from "@/lib/cloudinary";
 import { useAuth } from "@/app/components/AuthProvider";
+import { RADAR_CATEGORIES, RadarCategoryId, RadarTopicItem } from "@/lib/categories";
+import { executeMultiVectorSearch, SearchResultsMatrix, LiveRoomResult } from "@/lib/searchEngine";
+import SearchAutocomplete from "./components/SearchAutocomplete";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // User Card with Real-time ORBIT Toggle & Direct WIRE Trigger
@@ -74,23 +99,23 @@ function UserSearchResultCard({ targetUser }: { targetUser: EchoUser }) {
   const avatarSrc = targetUser.photoUrl || (targetUser as any).photoURL || (targetUser as any).avatarUrl;
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-neutral-950/60 border border-neutral-900 hover:border-neutral-800 transition-colors gap-3">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-black border border-neutral-900 hover:border-neutral-700 transition-colors gap-3 font-mono">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full border border-neutral-700 bg-neutral-900 overflow-hidden flex items-center justify-center font-mono text-sm text-white font-bold shrink-0">
+        <div className="w-9 h-9 rounded-full border border-neutral-800 bg-neutral-950 overflow-hidden flex items-center justify-center font-bold text-xs text-white shrink-0">
           {avatarSrc ? (
             <img src={avatarSrc} alt={targetUser.handle} className="w-full h-full object-cover" />
           ) : (
-            targetUser.handle?.charAt(1)?.toUpperCase() || "A"
+            targetUser.handle?.charAt(1)?.toUpperCase() || "V"
           )}
         </div>
         <div className="space-y-0.5">
-          <Link href={`/${targetUser.handle?.replace("@", "")}`} className="font-mono text-sm text-white hover:underline tracking-widest block font-bold">
+          <Link href={`/${targetUser.handle?.replace("@", "")}`} className="text-xs text-white hover:underline tracking-wider block font-bold">
             {targetUser.handle}
           </Link>
           {targetUser.displayName && (
-            <p className="font-mono text-[10px] text-neutral-500">{targetUser.displayName}</p>
+            <p className="text-[10px] text-neutral-500">{targetUser.displayName}</p>
           )}
-          <p className="font-mono text-[10px] text-neutral-600">
+          <p className="text-[10px] text-neutral-600">
             [ AURA ]: {targetUser.auraScore || 0}
           </p>
         </div>
@@ -102,9 +127,9 @@ function UserSearchResultCard({ targetUser }: { targetUser: EchoUser }) {
             <button
               onClick={handleToggleOrbit}
               disabled={loadingFollow}
-              className={`font-mono text-[10px] uppercase px-3 py-1.5 border transition-colors cursor-pointer flex items-center gap-1.5 ${
+              className={`text-[10px] uppercase px-2.5 py-1.5 border transition-colors cursor-pointer flex items-center gap-1.5 ${
                 isFollowingState
-                  ? "border-neutral-700 text-neutral-400 hover:border-red-800 hover:text-red-400"
+                  ? "border-neutral-700 text-neutral-400 hover:border-white hover:text-white"
                   : "border-white text-white hover:bg-white hover:text-black font-bold"
               }`}
             >
@@ -125,7 +150,7 @@ function UserSearchResultCard({ targetUser }: { targetUser: EchoUser }) {
 
             <button
               onClick={handleOpenWire}
-              className="font-mono text-[10px] uppercase px-2.5 py-1.5 border border-neutral-800 text-neutral-400 hover:border-white hover:text-white transition-colors cursor-pointer flex items-center gap-1"
+              className="text-[10px] uppercase px-2.5 py-1.5 border border-neutral-800 text-neutral-400 hover:border-white hover:text-white transition-colors cursor-pointer flex items-center gap-1"
               title="Send direct audio wire message"
             >
               <MessageSquare className="w-3 h-3 text-neutral-300" />
@@ -136,7 +161,7 @@ function UserSearchResultCard({ targetUser }: { targetUser: EchoUser }) {
 
         <Link
           href={`/${targetUser.handle?.replace("@", "")}`}
-          className="font-mono text-[10px] border border-neutral-800 px-2.5 py-1.5 text-neutral-500 hover:text-white uppercase transition-colors"
+          className="text-[10px] border border-neutral-800 px-2.5 py-1.5 text-neutral-500 hover:text-white uppercase transition-colors"
         >
           VIEW →
         </Link>
@@ -167,7 +192,8 @@ function MiniPlay({ url }: { url: string }) {
     };
   }, [url]);
 
-  const toggle = async () => {
+  const toggle = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     const a = audioRef.current;
     if (!a) return;
     if (playing) {
@@ -186,29 +212,54 @@ function MiniPlay({ url }: { url: string }) {
       onClick={toggle}
       className="w-7 h-7 border border-neutral-700 flex items-center justify-center hover:border-white hover:bg-white hover:text-black transition-colors cursor-pointer shrink-0"
     >
-      {playing ? "⏸" : <Play className="w-3 h-3" />}
+      {playing ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
     </button>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MAIN SEARCH PAGE
+// SEARCH CATEGORIES TABS (Twitter/X Style)
 // ─────────────────────────────────────────────────────────────────────────────
-type SearchFilter = "all" | "recent" | "trending" | "long" | "short";
+const SEARCH_CATEGORY_TABS = [
+  { id: "ALL", label: "ALL" },
+  { id: "TRENDING", label: "TRENDING" },
+  { id: "TECH", label: "TECH" },
+  { id: "STARTUP", label: "STARTUP" },
+  { id: "NEWS", label: "NEWS" },
+  { id: "SPORTS", label: "SPORTS" },
+  { id: "MARKETS", label: "MARKETS" },
+  { id: "MUSIC", label: "MUSIC" },
+  { id: "VOICES", label: "VOICES" },
+  { id: "ECHOES", label: "ECHOES" },
+] as const;
+
+type SearchCategoryTabId = typeof SEARCH_CATEGORY_TABS[number]["id"];
 
 export default function SearchPage() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [users,       setUsers]       = useState<EchoUser[]>([]);
-  const [suggestedUsers, setSuggestedUsers] = useState<EchoUser[]>([]);
-  const [posts,       setPosts]       = useState<PostItem[]>([]);
-  const [loading,     setLoading]     = useState(false);
-  const [activeTab,   setActiveTab]   = useState<"ALL" | "VOICES" | "ECHOES">("ALL");
-  const [searchHistory, setSearchHistory] = useState<string[]>([]);
-  const [showFilters, setShowFilters] = useState(false);
-  const [timeFilter, setTimeFilter] = useState<SearchFilter>("all");
-  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const router = useRouter();
+  const searchContainerRef = useRef<HTMLDivElement | null>(null);
 
-  // Load search history & Top 10 suggested users on mount
+  // Search State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState<SearchCategoryTabId>("ALL");
+  const [isFocused, setIsFocused] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // Multi-Vector Search Results
+  const [results, setResults] = useState<SearchResultsMatrix>({
+    users: [],
+    hashtags: [],
+    liveRooms: [],
+    posts: [],
+    shortcuts: [],
+  });
+
+  // Default Discovery State (Explore View)
+  const [trendingFrequencies, setTrendingFrequencies] = useState<RadarTopicItem[]>([]);
+  const [suggestedUsers, setSuggestedUsers] = useState<EchoUser[]>([]);
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
+
+  // Load Explore Defaults & History on Mount
   useEffect(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("echo_search_history");
@@ -217,11 +268,27 @@ export default function SearchPage() {
       }
     }
 
+    const db = getFirebaseDb();
+
+    // 1. Subscribe to Top Trending Feed
+    const unsubTrending = onSnapshot(
+      doc(db, "radar_feeds", "trending"),
+      (snap) => {
+        if (snap.exists()) {
+          const data = snap.data();
+          if (Array.isArray(data?.topics)) {
+            setTrendingFrequencies(data.topics.slice(0, 5));
+          }
+        }
+      },
+      (e) => console.warn("[SearchPage] Failed loading trending feeds:", e)
+    );
+
+    // 2. Load Top Voices to Orbit
     async function loadSuggested() {
       try {
-        const db = getFirebaseDb();
-        const qSnap = await getDocs(query(collection(db, "users"), limit(10)));
-        const list = qSnap.docs.map(d => d.data() as EchoUser);
+        const qSnap = await getDocs(query(collection(db, "users"), limit(6)));
+        const list = qSnap.docs.map((d) => d.data() as EchoUser);
         list.sort((a, b) => (b.auraScore || 0) - (a.auraScore || 0));
         setSuggestedUsers(list);
       } catch (e) {
@@ -229,211 +296,222 @@ export default function SearchPage() {
       }
     }
     loadSuggested();
+
+    return () => unsubTrending();
   }, []);
 
-  // Save search history to localStorage
+  // Save query to localStorage
   const saveToHistory = useCallback((queryStr: string) => {
     if (!queryStr.trim()) return;
-    setSearchHistory(prev => {
-      const newHistory = [queryStr, ...prev.filter(q => q !== queryStr)].slice(0, 10);
+    setSearchHistory((prev) => {
+      const newHistory = [queryStr, ...prev.filter((q) => q !== queryStr)].slice(0, 8);
       localStorage.setItem("echo_search_history", JSON.stringify(newHistory));
       return newHistory;
     });
   }, []);
 
+  // Handle Search Input & Execution
   useEffect(() => {
-    async function search() {
-      if (!searchQuery.trim()) { 
-        setUsers([]); 
-        setPosts([]); 
-        setSuggestions([]);
-        return; 
-      }
+    if (!searchQuery.trim() && activeTab === "ALL") {
+      setResults({ users: [], hashtags: [], liveRooms: [], posts: [], shortcuts: [] });
+      return;
+    }
 
+    const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const db = getFirebaseDb();
-        const q  = searchQuery.toLowerCase();
-
-        // Generate autocomplete suggestions
-        if (searchQuery.length >= 2) {
-          const usersSnap = await getDocs(query(collection(db, "users"), limit(10)));
-          const userSuggestions = usersSnap.docs
-            .map((d) => d.data() as EchoUser)
-            .filter((u) =>
-              u.handle?.toLowerCase().startsWith(q) ||
-              u.displayName?.toLowerCase().startsWith(q)
-            )
-            .map(u => u.handle || u.displayName || "")
-            .slice(0, 5);
-          
-          setSuggestions(userSuggestions);
-        }
-
-        // Fetch users
-        let usersQuery = query(collection(db, "users"), limit(30));
-        const usersSnap = await getDocs(usersQuery);
-        const matchedUsers = usersSnap.docs
-          .map((d) => d.data() as EchoUser)
-          .filter((u) =>
-            u.handle?.toLowerCase().includes(q) ||
-            u.displayName?.toLowerCase().includes(q)
-          );
-
-        // Build posts query with filters
-        let postsQuery = query(collection(db, "posts"), orderBy("createdAt", "desc"), limit(100));
-        
-        if (timeFilter === "recent") {
-          const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-          postsQuery = query(
-            collection(db, "posts"),
-            where("createdAt", ">=", oneWeekAgo),
-            orderBy("createdAt", "desc"),
-            limit(50)
-          );
-        } else if (timeFilter === "trending") {
-          postsQuery = query(
-            collection(db, "posts"),
-            orderBy("pulseCount", "desc"),
-            limit(50)
-          );
-        }
-
-        const postsSnap = await getDocs(postsQuery);
-        let matchedPosts = postsSnap.docs
-          .map((d) => ({ id: d.id, ...(d.data() as Omit<PostItem, "id">) }))
-          .filter((p) =>
-            p.caption?.toLowerCase().includes(q) ||
-            p.authorHandle?.toLowerCase().includes(q)
-          );
-
-        if (timeFilter === "short") {
-          matchedPosts = matchedPosts.filter(p => (p.durationSec || 0) <= 30);
-        } else if (timeFilter === "long") {
-          matchedPosts = matchedPosts.filter(p => (p.durationSec || 0) > 60);
-        }
-
-        setUsers(matchedUsers);
-        setPosts(matchedPosts.slice(0, 50));
-        
-        if (matchedUsers.length > 0 || matchedPosts.length > 0) {
-          saveToHistory(searchQuery);
+        const data = await executeMultiVectorSearch(searchQuery, activeTab);
+        setResults(data);
+        if (searchQuery.trim().length >= 3) {
+          saveToHistory(searchQuery.trim());
         }
       } catch (err) {
-        console.error("Search error:", err);
+        console.error("[SearchPage] Search error:", err);
       } finally {
         setLoading(false);
       }
-    }
+    }, 250);
 
-    const t = setTimeout(search, 300);
-    return () => clearTimeout(t);
-  }, [searchQuery, timeFilter, saveToHistory]);
-
-  const totalResults = users.length + posts.length;
+    return () => clearTimeout(timer);
+  }, [searchQuery, activeTab, saveToHistory]);
 
   const clearHistory = () => {
     setSearchHistory([]);
     localStorage.removeItem("echo_search_history");
   };
 
-  const handleSuggestionClick = (suggestion: string) => {
-    setSearchQuery(suggestion);
-    setSuggestions([]);
+  const handleClearHistoryItem = (term: string) => {
+    setSearchHistory((prev) => {
+      const updated = prev.filter((item) => item !== term);
+      localStorage.setItem("echo_search_history", JSON.stringify(updated));
+      return updated;
+    });
   };
 
-  return (
-    <div className="min-h-screen bg-black text-white pb-24 md:pb-8">
-      {/* Mobile top bar */}
-      <div className="md:hidden flex items-center justify-between px-5 pt-10 pb-6 border-b border-neutral-900">
-        <span className="font-serif text-xl font-bold text-white">Echo.</span>
-        <span className="font-mono text-xs tracking-widest uppercase text-neutral-500">SEARCH &amp; DISCOVER</span>
-      </div>
+  const handleSelectSuggestion = (term: string) => {
+    setSearchQuery(term);
+    setIsFocused(false);
+  };
 
-      {/* Search Input — sticky */}
-      <div className="sticky top-0 z-10 bg-black/95 backdrop-blur border-b border-neutral-900">
-        <div className="max-w-2xl mx-auto px-5 py-4 space-y-3">
-          <div className="flex items-center gap-3">
-            <Search className="w-4 h-4 text-neutral-600 shrink-0" strokeWidth={1.5} />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="SEARCH ECHOES, VOICES, HANDLES..."
-              autoFocus
-              className="flex-1 bg-transparent border-none outline-none text-white font-mono text-xs tracking-widest placeholder:text-neutral-700"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => { setSearchQuery(""); setUsers([]); setPosts([]); setSuggestions([]); }}
-                className="text-neutral-600 hover:text-white transition-colors cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
+  const totalResultsCount =
+    results.users.length +
+    results.hashtags.length +
+    results.liveRooms.length +
+    results.posts.length;
+
+  const isSearchActive = searchQuery.trim().length > 0 || activeTab !== "ALL";
+
+  return (
+    <div className="min-h-screen bg-black text-white pb-24 md:pb-8 font-mono">
+      {/* Top Header Bar */}
+      <div className="sticky top-0 z-40 bg-black border-b border-neutral-900">
+        <div className="max-w-3xl mx-auto px-4 py-3 space-y-2.5" ref={searchContainerRef}>
+          
+          {/* Main Search Input */}
+          <div className="relative">
+            <div className="flex items-center bg-neutral-950 border border-neutral-800 px-3 py-2 focus-within:border-white transition-colors">
+              <span className="text-neutral-500 mr-2 text-xs font-mono">[?]</span>
+              <input
+                type="text"
+                value={searchQuery}
+                onFocus={() => setIsFocused(true)}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="SEARCH HASHTAGS (#), VOICES (@), OR PLATFORM TERMS..."
+                className="w-full bg-transparent text-xs text-white placeholder-neutral-600 outline-none tracking-wider"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="text-neutral-600 hover:text-white transition-colors cursor-pointer ml-2"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Predictive Autocomplete Dropdown */}
+            {isFocused && (
+              <SearchAutocomplete
+                query={searchQuery}
+                hashtags={results.hashtags}
+                users={results.users}
+                shortcuts={results.shortcuts}
+                history={searchHistory}
+                onSelectSuggestion={handleSelectSuggestion}
+                onClearHistoryItem={handleClearHistoryItem}
+                onClose={() => setIsFocused(false)}
+              />
             )}
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`text-neutral-600 hover:text-white transition-colors cursor-pointer ${showFilters ? "text-white" : ""}`}
-            >
-              <Filter className="w-4 h-4" />
-            </button>
           </div>
 
-          {/* Suggestions dropdown */}
-          {suggestions.length > 0 && searchQuery && (
-            <div className="border border-neutral-800 bg-black">
-              {suggestions.map((suggestion, i) => (
+          {/* Twitter-Style Horizontal Category Scroll */}
+          <div className="flex space-x-1 overflow-x-auto scrollbar-none pt-1">
+            {SEARCH_CATEGORY_TABS.map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
                 <button
-                  key={i}
-                  onClick={() => handleSuggestionClick(suggestion)}
-                  className="w-full text-left px-4 py-2 font-mono text-xs text-neutral-400 hover:text-white hover:bg-neutral-900 transition-colors cursor-pointer"
-                >
-                  {suggestion}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Filter panel */}
-          {showFilters && (
-            <div className="flex items-center gap-2 pt-2 border-t border-neutral-900">
-              <span className="font-mono text-[10px] text-neutral-600 uppercase">Filter:</span>
-              {(["all", "recent", "trending", "short", "long"] as SearchFilter[]).map((filter) => (
-                <button
-                  key={filter}
-                  onClick={() => setTimeFilter(filter)}
-                  className={`font-mono text-[10px] uppercase px-2 py-1 border transition-colors cursor-pointer ${
-                    timeFilter === filter
-                      ? "border-white text-white"
-                      : "border-neutral-800 text-neutral-600 hover:border-white hover:text-white"
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`text-[11px] px-3 py-1.5 whitespace-nowrap transition-colors uppercase cursor-pointer ${
+                    isActive
+                      ? "bg-white text-black font-bold"
+                      : "text-neutral-500 hover:text-white border border-neutral-900 hover:border-neutral-700"
                   }`}
                 >
-                  {filter === "all" && "ALL"}
-                  {filter === "recent" && <><Clock className="w-3 h-3 inline mr-1" />RECENT</>}
-                  {filter === "trending" && <><TrendingUp className="w-3 h-3 inline mr-1" />TRENDING</>}
-                  {filter === "short" && "≤30S"}
-                  {filter === "long" && ">60S"}
+                  {tab.label}
                 </button>
-              ))}
-            </div>
-          )}
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      <main className="max-w-2xl mx-auto px-5 pt-6 space-y-8">
-        {!searchQuery ? (
-          /* Default discovery view with Top 10 Suggested Voices & History */
+      <main className="max-w-3xl mx-auto px-4 pt-6 space-y-8">
+        
+        {/* ───────────────────────────────────────────────────────────── */}
+        {/* VIEW 1: DEFAULT DISCOVERY (TWITTER EXPLORE TELEMETRY)          */}
+        {/* ───────────────────────────────────────────────────────────── */}
+        {!isSearchActive ? (
           <div className="space-y-8 pb-12">
-            {/* Top 10 Suggested Voices to Orbit */}
-            {suggestedUsers.length > 0 && (
-              <section className="space-y-4">
-                <div className="flex items-center justify-between border-b border-neutral-900 pb-3">
-                  <span className="font-mono text-xs text-white tracking-widest uppercase font-bold flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-purple-400" />
-                    // TOP SUGGESTED VOICES TO ORBIT (TOP 10)
+            
+            {/* Top Trending Audio Frequencies */}
+            <section className="space-y-3">
+              <div className="border-b border-neutral-900 pb-2.5 flex justify-between items-center text-xs text-neutral-500">
+                <div className="flex items-center gap-2">
+                  <Flame className="w-3.5 h-3.5 text-white" />
+                  <span className="text-white font-bold tracking-widest uppercase">
+                    &gt;&gt; REAL-TIME TRENDING FREQUENCIES
                   </span>
-                  <span className="font-mono text-[10px] text-neutral-500 uppercase">
-                    FEATURED PROFILES
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-white">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                  <span>● LIVE SOCKET</span>
+                </div>
+              </div>
+
+              {trendingFrequencies.length === 0 ? (
+                <div className="p-6 border border-neutral-900 bg-neutral-950 text-center text-xs text-neutral-500 tracking-widest">
+                  SYNCHRONIZING GLOBAL ACOUSTIC VELOCITY...
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {trendingFrequencies.map((topic, index) => (
+                    <div
+                      key={topic.tag}
+                      onClick={() => {
+                        const tagClean = topic.tag.replace("#", "");
+                        router.push(`/hashtag/${encodeURIComponent(tagClean)}`);
+                      }}
+                      className="p-3.5 border border-neutral-900 bg-black hover:border-white transition-all cursor-pointer group"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-1">
+                          <div className="text-[10px] text-neutral-500 flex items-center gap-2">
+                            <span>0{index + 1} // {topic.category?.toUpperCase() || "TRENDING"}</span>
+                            <span>•</span>
+                            <span className="text-neutral-400">VELOCITY: <strong className="text-white">{topic.velocity_score}</strong></span>
+                          </div>
+                          <h3 className="text-base font-bold text-white tracking-tight">
+                            {topic.tag}
+                          </h3>
+                          {topic.headline && (
+                            <p className="text-xs text-neutral-400 line-clamp-1">
+                              {topic.headline}
+                            </p>
+                          )}
+                        </div>
+
+                        {topic.live_rooms > 0 && (
+                          <span className="text-[10px] bg-white text-black font-bold px-2 py-0.5 border border-white shrink-0">
+                            {topic.live_rooms} LIVE NODE{topic.live_rooms > 1 ? "S" : ""}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="mt-2.5 pt-2 border-t border-neutral-900/80 flex justify-between items-center text-[10px] text-neutral-500">
+                        <span>[ {topic.voice_replies || 0} REVERBS ] [ {topic.total_pulses || 0} PULSES ]</span>
+                        <span className="text-white flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                          &gt;&gt; INTERCEPT <ArrowRight className="w-3 h-3" />
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* Top Suggested Voices to Orbit */}
+            {suggestedUsers.length > 0 && (
+              <section className="space-y-3">
+                <div className="border-b border-neutral-900 pb-2.5 flex justify-between items-center text-xs text-neutral-500">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-3.5 h-3.5 text-white" />
+                    <span className="text-white font-bold tracking-widest uppercase">
+                      // TOP VERIFIED VOICES TO ORBIT
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-neutral-500 uppercase">
+                    HIGH AURA SIGNALS
                   </span>
                 </div>
 
@@ -445,121 +523,221 @@ export default function SearchPage() {
               </section>
             )}
 
-            {/* Search History */}
+            {/* Search History Chips */}
             {searchHistory.length > 0 && (
-              <div className="space-y-3 pt-4 border-t border-neutral-900">
+              <section className="space-y-2.5 pt-4 border-t border-neutral-900">
                 <div className="flex items-center justify-between">
-                  <p className="font-mono text-xs text-neutral-500 tracking-widest uppercase flex items-center gap-2">
-                    <Clock className="w-3.5 h-3.5" /> RECENT SEARCHES
+                  <p className="text-xs text-neutral-500 tracking-widest uppercase flex items-center gap-2">
+                    <Clock className="w-3.5 h-3.5 text-white" /> RECENT QUERIES
                   </p>
                   <button
                     onClick={clearHistory}
-                    className="font-mono text-[10px] text-neutral-600 hover:text-white uppercase transition-colors cursor-pointer"
+                    className="text-[10px] text-neutral-600 hover:text-white uppercase transition-colors cursor-pointer"
                   >
-                    CLEAR
+                    [ CLEAR ALL ]
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {searchHistory.map((queryStr, i) => (
+                  {searchHistory.map((queryStr) => (
                     <button
-                      key={i}
+                      key={queryStr}
                       onClick={() => setSearchQuery(queryStr)}
-                      className="px-3 py-1.5 border border-neutral-800 font-mono text-xs text-neutral-400 hover:border-white hover:text-white transition-colors cursor-pointer"
+                      className="px-3 py-1.5 border border-neutral-800 text-xs text-neutral-300 hover:border-white hover:text-white transition-colors cursor-pointer bg-neutral-950"
                     >
                       {queryStr}
                     </button>
                   ))}
                 </div>
-              </div>
-            )}
-          </div>
-        ) : loading ? (
-          <div className="py-20 flex flex-col items-center gap-4">
-            <Loader2 className="w-5 h-5 text-neutral-600 animate-spin" />
-            <p className="font-mono text-xs text-neutral-600 tracking-widest uppercase">
-              SEARCHING...
-            </p>
-          </div>
-        ) : totalResults === 0 ? (
-          <div className="py-20 text-center space-y-3">
-            <p className="font-mono text-xs text-neutral-600 tracking-widest uppercase">
-              NO RESULTS FOR "{searchQuery.toUpperCase()}"
-            </p>
-            <p className="font-serif italic text-neutral-700 text-sm">
-              Try a different handle or keyword
-            </p>
-          </div>
-        ) : (
-          <>
-            {/* Result count + tabs */}
-            <div className="flex items-center justify-between border-b border-neutral-900 pb-3">
-              <p className="font-mono text-[10px] text-neutral-600 tracking-widest uppercase">
-                {totalResults} RESULT{totalResults !== 1 ? "S" : ""} FOUND
-              </p>
-              <div className="flex gap-4 font-mono text-[10px] tracking-widest">
-                {(["ALL", "VOICES", "ECHOES"] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`uppercase transition-colors cursor-pointer ${
-                      activeTab === tab ? "text-white font-bold" : "text-neutral-600 hover:text-white"
-                    }`}
-                  >
-                    {tab}
-                    {tab === "ALL"    && ` (${totalResults})`}
-                    {tab === "VOICES" && ` (${users.length})`}
-                    {tab === "ECHOES" && ` (${posts.length})`}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Users */}
-            {(activeTab === "ALL" || activeTab === "VOICES") && users.length > 0 && (
-              <section className="space-y-3">
-                <p className="font-mono text-xs text-neutral-500 tracking-widest uppercase flex items-center gap-2">
-                  <Users className="w-3.5 h-3.5" /> MATCHING VOICES ({users.length})
-                </p>
-                <div className="space-y-2">
-                  {users.map((targetUser) => (
-                    <UserSearchResultCard key={targetUser.uid} targetUser={targetUser} />
-                  ))}
-                </div>
               </section>
             )}
 
-            {/* Posts */}
-            {(activeTab === "ALL" || activeTab === "ECHOES") && posts.length > 0 && (
+          </div>
+        ) : loading ? (
+          /* Loading State */
+          <div className="py-20 flex flex-col items-center gap-3">
+            <Loader2 className="w-5 h-5 text-white animate-spin" />
+            <p className="text-xs text-neutral-400 tracking-widest uppercase">
+              SCANNING MULTI-VECTOR FREQUENCIES...
+            </p>
+          </div>
+        ) : totalResultsCount === 0 ? (
+          /* Empty Search Results */
+          <div className="py-16 text-center space-y-3 border border-neutral-900 bg-neutral-950 p-8">
+            <p className="text-xs text-neutral-400 tracking-widest uppercase font-bold">
+              NO FREQUENCIES MATCHED &quot;{searchQuery.toUpperCase()}&quot;
+            </p>
+            <p className="text-[11px] text-neutral-600">
+              TRY SEARCHING FOR TOPIC HASHTAGS (#TECH), CREATOR HANDLES (@HANDLE), OR POPULAR CATEGORIES
+            </p>
+          </div>
+        ) : (
+          /* ───────────────────────────────────────────────────────────── */
+          /* VIEW 2: MULTI-VECTOR SEARCH RESULTS MATRIX                     */
+          /* ───────────────────────────────────────────────────────────── */
+          <div className="space-y-8">
+            
+            {/* 1. MATCHING ACTIVE LIVE ROOMS / STAGES */}
+            {results.liveRooms.length > 0 && (
               <section className="space-y-3">
-                <p className="font-mono text-xs text-neutral-500 tracking-widest uppercase flex items-center gap-2">
-                  <Mic2 className="w-3.5 h-3.5" /> MATCHING ECHOES ({posts.length})
-                </p>
-                <div className="border border-neutral-900 divide-y divide-neutral-900 bg-neutral-950/40">
-                  {posts.map((p) => (
-                    <div key={p.id} className="p-4 space-y-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 space-y-1">
-                          <Link href={`/${p.authorHandle?.replace("@", "")}`} className="font-mono text-xs text-neutral-400 hover:text-white tracking-widest">
-                            {p.authorHandle}
-                          </Link>
-                          <p className="font-serif italic text-white text-base leading-snug">
-                            "{p.caption}"
-                          </p>
+                <div className="border-b border-neutral-900 pb-2 flex justify-between items-center text-xs text-neutral-500">
+                  <span className="text-white font-bold tracking-wider flex items-center gap-1.5">
+                    <Radio className="w-3.5 h-3.5 text-white" />
+                    LIVE AUDIO NODES &amp; DEBATES ({results.liveRooms.length})
+                  </span>
+                  <span className="text-white text-[10px] bg-white text-black font-bold px-1.5 py-0.5">
+                    ● ACTIVE STREAM
+                  </span>
+                </div>
+
+                <div className="space-y-2.5">
+                  {results.liveRooms.map((room) => (
+                    <div
+                      key={room.id}
+                      onClick={() => router.push(`/room/${room.id}`)}
+                      className="p-4 border border-white bg-black hover:bg-neutral-950 transition-colors cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                    >
+                      <div className="space-y-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] bg-white text-black font-bold px-2 py-0.5">
+                            LIVE STAGE
+                          </span>
+                          <span className="text-[10px] text-neutral-500">HOST: {room.hostHandle}</span>
                         </div>
-                        {p.audioUrl && <MiniPlay url={p.audioUrl} />}
+                        <h4 className="text-sm font-bold text-white tracking-wide truncate">
+                          {room.name}
+                        </h4>
+                        {room.description && (
+                          <p className="text-xs text-neutral-400 truncate">
+                            {room.description}
+                          </p>
+                        )}
                       </div>
-                      <div className="flex items-center gap-4 font-mono text-[10px] text-neutral-700 uppercase">
-                        <span>{p.pulseCount || 0} PULSES</span>
-                        <span>{p.duration || "0:00"}</span>
-                        {p.reverbOf && <span className="text-neutral-600">[ REPLY ]</span>}
-                        {p.orbitOf  && <span className="text-neutral-600">[ RE-ECHO ]</span>}
+
+                      <div className="flex items-center gap-3 self-end sm:self-auto shrink-0">
+                        <span className="text-xs text-neutral-400">
+                          {room.listenerCount} LISTENERS
+                        </span>
+                        <button className="text-xs bg-white text-black font-bold px-3 py-1.5 hover:bg-neutral-200 transition-colors">
+                          &gt;&gt; ENTER STAGE
+                        </button>
                       </div>
                     </div>
                   ))}
                 </div>
               </section>
             )}
-          </>
+
+            {/* 2. MATCHING TRENDING HASHTAGS & ACOUSTIC VELOCITY */}
+            {results.hashtags.length > 0 && (
+              <section className="space-y-3">
+                <div className="border-b border-neutral-900 pb-2 flex justify-between items-center text-xs text-neutral-500">
+                  <span className="text-white font-bold tracking-wider flex items-center gap-1.5">
+                    <Hash className="w-3.5 h-3.5 text-white" />
+                    MATCHING HASHTAG FREQUENCIES ({results.hashtags.length})
+                  </span>
+                  <span className="text-[10px] text-neutral-500">ACOUSTIC VELOCITY</span>
+                </div>
+
+                <div className="space-y-2.5">
+                  {results.hashtags.map((topic) => (
+                    <div
+                      key={topic.tag}
+                      onClick={() => {
+                        const cleanTag = topic.tag.replace("#", "");
+                        router.push(`/hashtag/${encodeURIComponent(cleanTag)}`);
+                      }}
+                      className="p-3.5 border border-neutral-900 bg-black hover:border-white transition-colors cursor-pointer group"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-1">
+                          <h4 className="text-base font-bold text-white tracking-tight">
+                            {topic.tag}
+                          </h4>
+                          {topic.headline && (
+                            <p className="text-xs text-neutral-400 line-clamp-1">
+                              {topic.headline}
+                            </p>
+                          )}
+                        </div>
+                        <span className="text-[10px] border border-neutral-800 px-2 py-0.5 text-neutral-300 font-bold shrink-0">
+                          VELOCITY: {topic.velocity_score}
+                        </span>
+                      </div>
+
+                      <div className="mt-2.5 pt-2 border-t border-neutral-900 flex justify-between items-center text-[10px] text-neutral-500">
+                        <span>[ {topic.voice_replies || 0} REVERBS ] [ {topic.total_pulses || 0} PULSES ]</span>
+                        <span className="text-white flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                          &gt;&gt; INTERCEPT FREQUENCY <ArrowRight className="w-3 h-3" />
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* 3. MATCHING VERIFIED VOICES / CREATORS */}
+            {results.users.length > 0 && (
+              <section className="space-y-3">
+                <div className="border-b border-neutral-900 pb-2 flex justify-between items-center text-xs text-neutral-500">
+                  <span className="text-white font-bold tracking-wider flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5 text-white" />
+                    MATCHING VOICES &amp; HANDLES ({results.users.length})
+                  </span>
+                  <span className="text-[10px] text-neutral-500">AURA RANK</span>
+                </div>
+
+                <div className="space-y-2">
+                  {results.users.map((targetUser) => (
+                    <UserSearchResultCard key={targetUser.uid} targetUser={targetUser} />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* 4. MATCHING AUDIO ECHOES / POSTS */}
+            {results.posts.length > 0 && (
+              <section className="space-y-3">
+                <div className="border-b border-neutral-900 pb-2 flex justify-between items-center text-xs text-neutral-500">
+                  <span className="text-white font-bold tracking-wider flex items-center gap-1.5">
+                    <Mic2 className="w-3.5 h-3.5 text-white" />
+                    MATCHING AUDIO ECHOES ({results.posts.length})
+                  </span>
+                  <span className="text-[10px] text-neutral-500">TRANSMISSIONS</span>
+                </div>
+
+                <div className="border border-neutral-900 divide-y divide-neutral-900 bg-black">
+                  {results.posts.map((p) => (
+                    <div key={p.id} className="p-4 space-y-2.5 hover:bg-neutral-950 transition-colors">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 space-y-1">
+                          <Link
+                            href={`/${p.authorHandle?.replace("@", "")}`}
+                            className="text-xs text-neutral-400 hover:text-white tracking-widest font-bold"
+                          >
+                            {p.authorHandle}
+                          </Link>
+                          <p className="italic text-white text-sm leading-snug">
+                            &quot;{p.caption}&quot;
+                          </p>
+                        </div>
+                        {p.audioUrl && <MiniPlay url={p.audioUrl} />}
+                      </div>
+
+                      <div className="flex items-center gap-4 text-[10px] text-neutral-500 uppercase">
+                        <span>{p.pulseCount || 0} PULSES</span>
+                        <span>{p.duration || "0:00"}</span>
+                        {p.category && <span className="border border-neutral-800 px-1.5 py-0.5 text-neutral-400">[{p.category.toUpperCase()}]</span>}
+                        {p.reverbOf && <span className="text-neutral-400">[ VOICE REPLY ]</span>}
+                        {p.orbitOf && <span className="text-neutral-400">[ RE-ECHO ]</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+          </div>
         )}
       </main>
     </div>

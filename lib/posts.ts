@@ -70,6 +70,8 @@ export interface PostItem {
   duetOfHandle?:   string;
   duetPartnerUid?: string;
   duetPartnerHandle?: string;
+  category?:       string;
+  tags?:           string[];
 }
 
 /** Inline voice comment on a post — stored in posts/{id}/reverbs subcollection */
