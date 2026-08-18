@@ -30,10 +30,40 @@ function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate:
   const [openMic, setOpenMic] = useState(false);
 
   const CATEGORIES = ["GENERAL", "TECH", "MARKETS", "MUSIC", "DEBATE", "CRICKET", "CASUAL"];
-  const canCreate = name.trim().length >= 3 && user && (!scheduleMode || scheduledFor.length > 0);
+
+  const getDefaultScheduledTime = (hoursAhead = 1) => {
+    const d = new Date(Date.now() + hoursAhead * 3600 * 1000);
+    d.setMinutes(Math.ceil(d.getMinutes() / 5) * 5, 0, 0);
+    const pad = (n: number) => (n < 10 ? "0" + n : String(n));
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
+  const getTomorrowTime = (hour = 20) => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    d.setHours(hour, 0, 0, 0);
+    const pad = (n: number) => (n < 10 ? "0" + n : String(n));
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
+  const toggleScheduleMode = () => {
+    const nextMode = !scheduleMode;
+    setScheduleMode(nextMode);
+    if (nextMode && !scheduledFor) {
+      setScheduledFor(getDefaultScheduledTime(1));
+    }
+  };
+
+  const canCreate = name.trim().length >= 3 && user;
 
   const handleCreate = async () => {
     if (!canCreate || !user) return;
+
+    if (scheduleMode && !scheduledFor) {
+      alert("Please select a transmission date & time.");
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await fetch("/api/rooms", {
@@ -138,9 +168,9 @@ function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate:
           <div className="pt-1">
             <button
               type="button"
-              onClick={() => setScheduleMode(!scheduleMode)}
-              className={`flex items-center gap-2 text-[10px] tracking-widest uppercase transition-colors ${
-                scheduleMode ? "text-white font-bold" : "text-neutral-600 hover:text-white"
+              onClick={toggleScheduleMode}
+              className={`flex items-center gap-2 text-[10px] tracking-widest uppercase transition-colors cursor-pointer ${
+                scheduleMode ? "text-white font-bold" : "text-neutral-500 hover:text-white"
               }`}
             >
               <Calendar size={12} /> {scheduleMode ? "[ SCHEDULED MODE ACTIVE ]" : "[+] SCHEDULE FOR LATER"}
@@ -148,14 +178,43 @@ function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate:
           </div>
 
           {scheduleMode && (
-            <div>
-              <label className="text-[10px] tracking-widest text-neutral-500 block mb-1">TRANSMISSION DATE & TIME</label>
+            <div className="space-y-2 border border-neutral-900 bg-neutral-950 p-3">
+              <label className="text-[10px] tracking-widest text-neutral-400 block uppercase font-bold">
+                TRANSMISSION DATE & TIME
+              </label>
               <input
                 type="datetime-local"
                 value={scheduledFor}
+                min={getDefaultScheduledTime(0)}
+                style={{ colorScheme: "dark" }}
                 onChange={e => setScheduledFor(e.target.value)}
-                className="w-full bg-neutral-950 border border-neutral-800 p-2.5 text-xs text-white outline-none focus:border-white"
+                className="w-full bg-black border border-neutral-700 p-2.5 text-xs text-white outline-none focus:border-white cursor-pointer"
               />
+
+              {/* Quick 1-Tap Time Presets */}
+              <div className="flex items-center gap-1.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setScheduledFor(getDefaultScheduledTime(1))}
+                  className="px-2 py-1 text-[9px] border border-neutral-800 hover:border-white text-neutral-400 hover:text-white uppercase transition-colors cursor-pointer"
+                >
+                  +1 HR
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setScheduledFor(getDefaultScheduledTime(3))}
+                  className="px-2 py-1 text-[9px] border border-neutral-800 hover:border-white text-neutral-400 hover:text-white uppercase transition-colors cursor-pointer"
+                >
+                  +3 HRS
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setScheduledFor(getTomorrowTime(20))}
+                  className="px-2 py-1 text-[9px] border border-neutral-800 hover:border-white text-neutral-400 hover:text-white uppercase transition-colors cursor-pointer"
+                >
+                  TOMORROW 8 PM
+                </button>
+              </div>
             </div>
           )}
         </div>
