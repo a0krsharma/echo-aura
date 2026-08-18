@@ -108,6 +108,7 @@ export function RoomAudioProvider({ children }: { children: React.ReactNode }) {
 
       // Dynamically load AgoraRTC in browser
       const AgoraRTC = (await import("agora-rtc-sdk-ng")).default;
+      try { AgoraRTC.setLogLevel(3); } catch {}
 
       // Fetch room doc if not provided
       const db = getFirebaseDb();
@@ -246,8 +247,15 @@ export function RoomAudioProvider({ children }: { children: React.ReactNode }) {
       remoteTracksRef.current.clear();
 
       if (clientRef.current) {
-        await clientRef.current.leave();
+        const client = clientRef.current;
         clientRef.current = null;
+        try {
+          if (client.connectionState === "CONNECTED" || client.connectionState === "CONNECTING") {
+            await client.leave();
+          }
+        } catch {
+          // Gracefully suppress Agora internal websocket disconnect aborts
+        }
       }
 
       if (currentRoomIdRef.current && user) {
