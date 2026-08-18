@@ -362,43 +362,8 @@ function WaveCard({
         )}
       </div>
 
-      {/* Interactive Progress Scrubber Bar at top */}
-      <div
-        className="absolute top-0 left-0 right-0 h-4 flex items-start z-30 cursor-pointer group py-1 select-none"
-        onClick={(e) => {
-          e.stopPropagation();
-          const r = e.currentTarget.getBoundingClientRect();
-          const pos = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
-          seek(pos * dur);
-        }}
-        title="Click to seek / scrub audio"
-      >
-        <div className="w-full h-1 group-hover:h-2 bg-white/20 transition-all relative">
-          <div className="h-full bg-white transition-none" style={{ width: `${pct}%` }} />
-        </div>
-      </div>
-
       {/* ── BOTTOM CREATOR INFO & EXPANDABLE DESCRIPTION ── */}
       <div className="absolute bottom-20 sm:bottom-6 left-3 right-16 sm:left-6 sm:right-20 z-20 space-y-2 pointer-events-none max-w-[calc(100%-4.5rem)]">
-        {/* Interactive Scrub Timeline Slider */}
-        <div className="flex items-center gap-2 pointer-events-auto w-full select-none">
-          <input
-            type="range"
-            min={0}
-            max={dur || 15}
-            step={0.1}
-            value={current}
-            onChange={(e) => {
-              seek(parseFloat(e.target.value));
-            }}
-            className="w-full h-1.5 bg-white/20 hover:bg-white/40 rounded-none appearance-none cursor-pointer accent-white transition-all focus:outline-none"
-            title="Drag slider to seek audio"
-          />
-          <span className="font-mono text-[9px] text-white tabular-nums shrink-0 uppercase tracking-widest bg-black/70 px-1.5 py-0.5 border border-white/20">
-            {Math.floor(current)}s / {dur}s
-          </span>
-        </div>
-
         {/* Creator Row: Avatar, Handle, and Orbit Follow Button */}
         <div className="flex items-center gap-2 pointer-events-auto flex-wrap">
           <button
@@ -481,6 +446,29 @@ function WaveCard({
         <div className="flex items-center gap-1.5 font-mono text-[9px] text-neutral-400 tracking-wider uppercase pointer-events-auto">
           <Music2 className="w-2.5 h-2.5 text-white animate-pulse" />
           <span className="truncate">ORIGINAL VOICE ECHO — {post.authorHandle}</span>
+        </div>
+
+        {/* ── Instagram Reels Inspired Interactive Scrub Line below Title ── */}
+        <div className="pt-1 pointer-events-auto w-full select-none">
+          <div className="flex items-center gap-2 group relative">
+            <div className="relative flex-1 flex items-center h-4 cursor-pointer">
+              <input
+                type="range"
+                min={0}
+                max={dur || 15}
+                step={0.1}
+                value={current}
+                onChange={(e) => {
+                  seek(parseFloat(e.target.value));
+                }}
+                className="w-full h-1 bg-white/20 hover:bg-white/40 group-hover:h-1.5 rounded-full appearance-none cursor-pointer accent-white transition-all focus:outline-none"
+                title="Slide to scrub audio"
+              />
+            </div>
+            <span className="font-mono text-[9px] text-white/80 tabular-nums shrink-0 uppercase tracking-widest bg-black/60 px-1.5 py-0.5 border border-white/20 rounded">
+              {Math.floor(current)}s / {dur}s
+            </span>
+          </div>
         </div>
       </div>
 
