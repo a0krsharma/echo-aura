@@ -99,8 +99,9 @@ export default function RoomClient({ roomId }: RoomClientProps) {
   const [chatInput, setChatInput] = useState("");
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
 
-  // 1.5-Second Auto-Expiring Floating Stage Reactions (Not Sticky)
-  const [activeReactions, setActiveReactions] = useState<Record<string, string>>({});
+  // 1.8-Second Auto-Expiring Floating Stage Reactions (Instant Non-Sticky)
+  const [activeReactions, setActiveReactions] = useState<Record<string, { emoji: string; key: number }>>({});
+  const [floatingParticles, setFloatingParticles] = useState<Array<{ id: string; emoji: string; left: number }>>([]);
   const reactionTimersRef = useRef<Record<string, NodeJS.Timeout>>({});
   const REACTIONS = ["👏", "❤️", "🔥", "😂", "👍"];
 
@@ -154,49 +155,60 @@ export default function RoomClient({ roomId }: RoomClientProps) {
     return () => unsub();
   }, [roomId]);
 
-  // Subscribe to Realtime Reactions with 1.5-Second Pop-Up Animation
+  // Trigger Reaction Display (Optimistic & Real-time)
+  const triggerReactionDisplay = (uid: string, emoji: string) => {
+    // 1. Clear any existing timer for this UID so emojis change INSTANTLY
+    if (reactionTimersRef.current[uid]) {
+      clearTimeout(reactionTimersRef.current[uid]);
+    }
+
+    // 2. Set new active reaction with unique key (re-triggers animation every single tap!)
+    setActiveReactions((prev) => ({
+      ...prev,
+      [uid]: { emoji, key: Date.now() + Math.random() },
+    }));
+
+    // 3. Spawn floating upward particle on stage
+    const particleId = `${uid}_${Date.now()}_${Math.random()}`;
+    const left = Math.floor(Math.random() * 60) + 20; // 20% - 80% horizontal range
+    setFloatingParticles((prev) => [...prev.slice(-15), { id: particleId, emoji, left }]);
+
+    // Auto-remove particle after 1.8s
+    setTimeout(() => {
+      setFloatingParticles((prev) => prev.filter((p) => p.id !== particleId));
+    }, 1800);
+
+    // 4. Auto-clear avatar reaction after 1.8 seconds (Zero stickiness!)
+    reactionTimersRef.current[uid] = setTimeout(() => {
+      setActiveReactions((prev) => {
+        const copy = { ...prev };
+        delete copy[uid];
+        return copy;
+      });
+    }, 1800);
+  };
+
+  // Subscribe to Realtime Reactions
   useEffect(() => {
-    const unsub = subscribeToRoomReactions(roomId, (newReactions) => {
-      if (newReactions && newReactions.length > 0) {
-        const latest = newReactions[0];
-        if (latest && latest.uid && latest.emoji) {
-          // Clear any existing timer for this user
-          if (reactionTimersRef.current[latest.uid]) {
-            clearTimeout(reactionTimersRef.current[latest.uid]);
-          }
-
-          // Show floating emoji
-          setActiveReactions((prev) => ({
-            ...prev,
-            [latest.uid]: latest.emoji,
-          }));
-
-          // Automatically clear reaction after 1.5 seconds (Not Sticky!)
-          reactionTimersRef.current[latest.uid] = setTimeout(() => {
-            setActiveReactions((prev) => {
-              const copy = { ...prev };
-              delete copy[latest.uid];
-              return copy;
-            });
-          }, 1500);
-        }
-      }
+    const unsub = subscribeToRoomReactions(roomId, (reaction) => {
+      triggerReactionDisplay(reaction.uid, reaction.emoji);
     });
     return () => unsub();
   }, [roomId]);
 
-  // Send Floating Reaction
-  const handleSendReaction = async (emoji: string) => {
+  // Send Floating Reaction (INSTANT local feedback + Broadcast)
+  const handleSendReaction = (emoji: string) => {
     if (!user) return;
-    try {
-      await sendRoomReaction(roomId, {
-        uid: user.uid,
-        handle: user.handle || "@ANON",
-        emoji,
-      });
-    } catch (err) {
-      console.error("[Room] Error sending reaction:", err);
-    }
+
+    // 1. Instant local optimistic trigger
+    triggerReactionDisplay(user.uid, emoji);
+
+    // 2. Broadcast to room via Firestore
+    sendRoomReaction(roomId, {
+      uid: user.uid,
+      handle: user.handle || "@ANON",
+      emoji,
+    }).catch((err) => console.error("[Room] Error sending reaction:", err));
   };
 
   // Send Chat Message
@@ -441,10 +453,13 @@ export default function RoomClient({ roomId }: RoomClientProps) {
                       : "border-neutral-800 bg-black"
                   }`}
                 >
-                  {/* 1.5s Floating Pop-Up Emoji Reaction (Non-Sticky!) */}
+                  {/* Instant 1.8s Floating Pop-Up Emoji Reaction (Non-Sticky!) */}
                   {floatingEmoji && (
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-30 text-3xl animate-bounce drop-shadow-2xl pointer-events-none">
-                      {floatingEmoji}
+                    <div
+                      key={floatingEmoji.key}
+                      className="absolute -top-6 left-1/2 -translate-x-1/2 z-30 text-3xl animate-bounce drop-shadow-[0_4px_10px_rgba(255,255,255,0.4)] pointer-events-none transition-all"
+                    >
+                      {floatingEmoji.emoji}
                     </div>
                   )}
 
@@ -508,6 +523,19 @@ export default function RoomClient({ roomId }: RoomClientProps) {
           </div>
         </div>
       </main>
+
+      {/* ── Real-Time Floating Stage Particle Stream (Listener & Speaker Reactions) ── */}
+      <div className="pointer-events-none fixed inset-0 z-40 overflow-hidden">
+        {floatingParticles.map((p) => (
+          <div
+            key={p.id}
+            style={{ left: `${p.left}%` }}
+            className="absolute bottom-20 text-3xl sm:text-4xl animate-float-up drop-shadow-[0_4px_12px_rgba(255,255,255,0.4)]"
+          >
+            {p.emoji}
+          </div>
+        ))}
+      </div>
 
       {/* ── Fixed Bottom Command Bar ── */}
       <footer className="fixed bottom-0 left-0 right-0 z-30 bg-black border-t border-neutral-800 px-4 py-3 font-mono">

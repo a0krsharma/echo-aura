@@ -21,6 +21,7 @@ import {
   serverTimestamp,
   increment,
   orderBy,
+  limit,
   type Timestamp,
 } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
@@ -573,32 +574,49 @@ export async function sendRoomReaction(roomId: string, reaction: {
   await addDoc(reactionsRef, {
     roomId,
     ...reaction,
+    createdAt: Date.now(),
     timestamp: serverTimestamp(),
   });
 }
 
 // ── Subscribe to room reactions ───────────────────────────────────────────
-export function subscribeToRoomReactions(roomId: string, callback: (reactions: Array<{uid: string; handle: string; emoji: string; timestamp: any}>) => void): () => void {
+export function subscribeToRoomReactions(
+  roomId: string,
+  onReaction: (reaction: { id: string; uid: string; handle: string; emoji: string }) => void
+): () => void {
   const db = getFirebaseDb();
   const reactionsQuery = query(
     collection(db, "room_reactions"),
-    where("roomId", "==", roomId)
+    where("roomId", "==", roomId),
+    limit(40)
   );
 
-  const unsubscribe = onSnapshot(reactionsQuery, (querySnap) => {
-    const reactions = querySnap.docs.map(doc => {
-      const data = doc.data();
-      return {
-        uid: data.uid,
-        handle: data.handle,
-        emoji: data.emoji,
-        timestamp: data.timestamp,
-      };
-    });
-    callback(reactions);
-  }, (error) => {
-    console.error("[subscribeToRoomReactions] Error:", error);
-  });
+  let initialLoad = true;
+  const unsubscribe = onSnapshot(
+    reactionsQuery,
+    (querySnap) => {
+      if (initialLoad) {
+        initialLoad = false;
+        return;
+      }
+      querySnap.docChanges().forEach((change) => {
+        if (change.type === "added") {
+          const data = change.doc.data();
+          if (data.emoji && data.uid) {
+            onReaction({
+              id: change.doc.id,
+              uid: data.uid,
+              handle: data.handle || "@ANON",
+              emoji: data.emoji,
+            });
+          }
+        }
+      });
+    },
+    (error) => {
+      console.error("[subscribeToRoomReactions] Error:", error);
+    }
+  );
 
   return unsubscribe;
 }
