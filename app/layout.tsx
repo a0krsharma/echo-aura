@@ -26,6 +26,15 @@ export const metadata: Metadata = {
   description: "Audio-first social platform. Raw audio, real people, no filters. Drop an Echo. Lock in.",
   metadataBase: new URL("https://echo.fm"),
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
