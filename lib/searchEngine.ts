@@ -162,24 +162,28 @@ export async function executeMultiVectorSearch(
         : (['trending', 'tech', 'sports', 'news', 'startup', 'markets', 'music', 'entertainment'] as RadarCategoryId[]);
 
     for (const cat of categoriesToScan) {
-      const feedSnap = await getDoc(doc(db, 'radar_feeds', cat));
-      if (feedSnap.exists()) {
-        const topics = (feedSnap.data()?.topics || []) as RadarTopicItem[];
-        for (const t of topics) {
-          const tagClean = t.tag.toLowerCase().replace('#', '');
-          if (!cleanQ || tagClean.includes(cleanQ) || t.headline?.toLowerCase().includes(cleanQ)) {
-            if (!results.hashtags.some((h) => h.tag.toLowerCase() === t.tag.toLowerCase())) {
-              results.hashtags.push(t);
+      try {
+        const feedSnap = await getDoc(doc(db, 'radar_feeds', cat));
+        if (feedSnap.exists()) {
+          const topics = (feedSnap.data()?.topics || []) as RadarTopicItem[];
+          for (const t of topics) {
+            const tagClean = t.tag.toLowerCase().replace('#', '');
+            if (!cleanQ || tagClean.includes(cleanQ) || t.headline?.toLowerCase().includes(cleanQ)) {
+              if (!results.hashtags.some((h) => h.tag.toLowerCase() === t.tag.toLowerCase())) {
+                results.hashtags.push(t);
+              }
             }
           }
         }
+      } catch {
+        // Fallback silently without throwing unhandled permission error
       }
     }
 
     // Sort hashtags by velocity score
     results.hashtags.sort((a, b) => b.velocity_score - a.velocity_score);
-  } catch (e) {
-    console.warn('[SearchEngine] Hashtags search error:', e);
+  } catch {
+    // Silent fallback
   }
 
   // 5. Search Audio Posts (Echoes)

@@ -47,6 +47,7 @@ import { useAuth } from "@/app/components/AuthProvider";
 import { RadarCategoryId, RadarTopicItem } from "@/lib/categories";
 import { executeMultiVectorSearch, SearchResultsMatrix, LiveRoomResult } from "@/lib/searchEngine";
 import { NewsDispatch } from "@/lib/newsService";
+import { aggregateRadarCategory } from "@/lib/radarAggregator";
 import SearchAutocomplete from "./components/SearchAutocomplete";
 import LiveNewsDispatches from "./components/LiveNewsDispatches";
 
@@ -182,32 +183,42 @@ function MiniPlay({ url }: { url: string }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    if (typeof window === "undefined" || !url) return;
-    const playable = getPlayableUrl(url);
-    const a = new Audio(playable);
-    a.preload = "none";
-    audioRef.current = a;
-    a.onended = () => setPlaying(false);
-
     return () => {
-      a.pause();
-      a.src = "";
-      audioRef.current = null;
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = "";
+        audioRef.current = null;
+      }
     };
-  }, [url]);
+  }, []);
 
   const toggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const a = audioRef.current;
-    if (!a) return;
+    if (!url) return;
+
     if (playing) {
-      a.pause();
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
       setPlaying(false);
     } else {
       try {
-        await a.play();
+        if (!audioRef.current) {
+          const playable = getPlayableUrl(url);
+          const a = new Audio(playable);
+          a.preload = "auto";
+          a.onended = () => setPlaying(false);
+          a.onerror = () => {
+            setPlaying(false);
+            console.warn("[MiniPlay] Audio unavailable or removed");
+          };
+          audioRef.current = a;
+        }
+        await audioRef.current.play();
         setPlaying(true);
-      } catch {}
+      } catch {
+        setPlaying(false);
+      }
     }
   };
 
@@ -278,21 +289,37 @@ export default function SearchPage() {
     }
 
     const db = getFirebaseDb();
-
-    // 1. Subscribe to Regional Trending Feed
+    const regionKey = activeRegion === "world" ? "world" : "india";
     const docId = activeRegion === "world" ? "world_trending" : "india_trending";
-    const unsubTrending = onSnapshot(
-      doc(db, "radar_feeds", docId),
-      (snap) => {
-        if (snap.exists()) {
-          const data = snap.data();
-          if (Array.isArray(data?.topics)) {
-            setTrendingFrequencies(data.topics.slice(0, 5));
+
+    // 1. Subscribe to Regional Trending Feed with graceful fallback
+    let unsubTrending: () => void = () => {};
+    try {
+      unsubTrending = onSnapshot(
+        doc(db, "radar_feeds", docId),
+        (snap) => {
+          if (snap.exists()) {
+            const data = snap.data();
+            if (Array.isArray(data?.topics) && data.topics.length > 0) {
+              setTrendingFrequencies(data.topics.slice(0, 5));
+              return;
+            }
           }
+          aggregateRadarCategory("trending", regionKey).then((list) => {
+            setTrendingFrequencies(list.slice(0, 5));
+          });
+        },
+        () => {
+          aggregateRadarCategory("trending", regionKey).then((list) => {
+            setTrendingFrequencies(list.slice(0, 5));
+          });
         }
-      },
-      (e) => console.warn("[SearchPage] Failed loading trending feeds:", e)
-    );
+      );
+    } catch {
+      aggregateRadarCategory("trending", regionKey).then((list) => {
+        setTrendingFrequencies(list.slice(0, 5));
+      });
+    }
 
     // 2. Load Top Voices to Orbit
     async function loadSuggested() {
