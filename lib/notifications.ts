@@ -22,6 +22,7 @@ import {
   limit,
   onSnapshot,
   updateDoc,
+  deleteDoc,
   writeBatch,
   getDocs,
   where,
@@ -101,23 +102,18 @@ export function subscribeToNotifications(
   return onSnapshot(
     q,
     (snap) => {
-      const nowSec = Date.now() / 1000;
-      const twentyFourHoursAgo = nowSec - 24 * 60 * 60; // 24 hours in seconds
-
-      const notifs: EchoNotification[] = snap.docs
-        .map((d) => ({
-          id: d.id,
-          ...(d.data() as Omit<EchoNotification, "id">),
-        }))
-        .filter((n) => {
-          // If created recently without seconds timestamp yet, include it
-          if (!n.createdAt?.seconds) return true;
-          // Only keep notifications created in the last 24 hours
-          return n.createdAt.seconds >= twentyFourHoursAgo;
-        });
+      const notifs: EchoNotification[] = snap.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as Omit<EchoNotification, "id">),
+      }));
 
       // Sort newest first
-      notifs.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+      notifs.sort((a, b) => {
+        const timeA = a.createdAt?.seconds || 0;
+        const timeB = b.createdAt?.seconds || 0;
+        return timeB - timeA;
+      });
+
       callback(notifs);
     },
     (err) => {
@@ -156,6 +152,37 @@ export async function markAllNotificationsRead(uid: string): Promise<void> {
     snap.docs.forEach((d) => batch.update(d.ref, { read: true }));
     await batch.commit();
   } catch {}
+}
+
+/**
+ * deleteNotification
+ * Delete a single notification.
+ */
+export async function deleteNotification(uid: string, notifId: string): Promise<void> {
+  if (!uid || !notifId) return;
+  try {
+    const db = getFirebaseDb();
+    await deleteDoc(doc(db, "notifications", uid, "items", notifId));
+  } catch (err) {
+    console.error("[deleteNotification] Error:", err);
+  }
+}
+
+/**
+ * clearAllNotifications
+ * Delete all notifications for a user.
+ */
+export async function clearAllNotifications(uid: string): Promise<void> {
+  if (!uid) return;
+  try {
+    const db = getFirebaseDb();
+    const snap = await getDocs(collection(db, "notifications", uid, "items"));
+    const batch = writeBatch(db);
+    snap.docs.forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  } catch (err) {
+    console.error("[clearAllNotifications] Error:", err);
+  }
 }
 
 /**

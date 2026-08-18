@@ -6,20 +6,38 @@ export const dynamic = "force-dynamic";
  * app/notifications/page.tsx
  * ─────────────────────────────────────────────────────
  * Real-time Firestore notifications for pulses, reverbs, orbiters, stage events.
- * Automatically vanishes notifications older than 24 hours.
  */
 
 import React, { useState, useEffect } from "react";
-import { Bell, CheckCheck, ArrowUp, Repeat2, RefreshCw, Swords, Mic2, Loader2, Hand, Users, LogOut, Mic, MicOff, AtSign, Star } from "lucide-react";
+import {
+  Bell,
+  CheckCheck,
+  Check,
+  ArrowUp,
+  Repeat2,
+  RefreshCw,
+  Swords,
+  Mic2,
+  Loader2,
+  Hand,
+  Users,
+  LogOut,
+  Mic,
+  MicOff,
+  AtSign,
+  Star,
+  Trash2,
+} from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
 import {
   subscribeToNotifications,
   markAllNotificationsRead,
   markNotificationRead,
+  deleteNotification,
+  clearAllNotifications,
   type EchoNotification,
 } from "@/lib/notifications";
 import Link from "next/link";
-import OrbitLogo from "@/app/components/OrbitLogo";
 
 // ─── Notification icon by type ────────────────────────────────────────────────
 function NotifIcon({ type }: { type: EchoNotification["type"] }) {
@@ -75,6 +93,7 @@ export default function NotificationsPage() {
   const [notifs,   setNotifs]   = useState<EchoNotification[]>([]);
   const [loading,  setLoading]  = useState(true);
   const [marking,  setMarking]  = useState(false);
+  const [clearing, setClearing] = useState(false);
 
   useEffect(() => {
     if (!user) { setLoading(false); return; }
@@ -93,9 +112,24 @@ export default function NotificationsPage() {
     setMarking(false);
   };
 
-  const handleMarkOne = async (notif: EchoNotification) => {
+  const handleClearAll = async () => {
+    if (!user || clearing || notifs.length === 0) return;
+    if (!confirm("Are you sure you want to delete all notifications?")) return;
+    setClearing(true);
+    await clearAllNotifications(user.uid);
+    setClearing(false);
+  };
+
+  const handleMarkOne = async (notif: EchoNotification, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     if (!user || notif.read) return;
     await markNotificationRead(user.uid, notif.id);
+  };
+
+  const handleDeleteOne = async (notifId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) return;
+    await deleteNotification(user.uid, notifId);
   };
 
   // Filter by tab accurately
@@ -111,27 +145,47 @@ export default function NotificationsPage() {
   const unreadCount = notifs.filter((n) => !n.read).length;
 
   return (
-    <div className="min-h-screen bg-black text-white pb-24 md:pb-8 font-mono">
-      <main className="max-w-2xl mx-auto px-4 sm:px-6 pt-5 space-y-6">
-        {/* Header Unread & Mark All Read */}
-        {unreadCount > 0 && (
-          <div className="flex items-center justify-between border-b border-neutral-900 pb-2">
-            <span className="font-mono text-[10px] text-neutral-400 tracking-widest font-bold">
-              [{unreadCount} UNREAD SIGNALS]
+    <div className="min-h-screen bg-black text-white pb-28 md:pb-12 font-mono">
+      <main className="max-w-2xl mx-auto px-4 sm:px-6 pt-6 space-y-6 w-full">
+        {/* Top Header & Actions */}
+        <div className="flex items-center justify-between border-b border-neutral-900 pb-3 gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-white uppercase tracking-widest">
+              NOTIFICATIONS
             </span>
-            <button
-              onClick={handleMarkAll}
-              disabled={marking}
-              className="font-mono text-[10px] tracking-widest uppercase text-neutral-400 hover:text-white border border-neutral-800 hover:border-white px-2.5 py-1 transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-30"
-            >
-              {marking
-                ? <Loader2 className="w-3 h-3 animate-spin" />
-                : <CheckCheck className="w-3 h-3" />
-              }
-              MARK ALL READ
-            </button>
+            {unreadCount > 0 && (
+              <span className="px-2 py-0.5 bg-white text-black text-[10px] font-bold">
+                {unreadCount} NEW
+              </span>
+            )}
           </div>
-        )}
+
+          <div className="flex items-center gap-2">
+            {unreadCount > 0 && (
+              <button
+                onClick={handleMarkAll}
+                disabled={marking}
+                className="text-[10px] tracking-wider uppercase text-neutral-400 hover:text-white border border-neutral-800 hover:border-white px-2.5 py-1 transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-30"
+                title="Mark all notifications as read"
+              >
+                {marking ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCheck className="w-3 h-3" />}
+                <span>MARK ALL READ</span>
+              </button>
+            )}
+
+            {notifs.length > 0 && (
+              <button
+                onClick={handleClearAll}
+                disabled={clearing}
+                className="text-[10px] tracking-wider uppercase text-neutral-500 hover:text-red-400 border border-neutral-900 hover:border-red-900 px-2.5 py-1 transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-30"
+                title="Delete all notifications"
+              >
+                {clearing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                <span>CLEAR ALL</span>
+              </button>
+            )}
+          </div>
+        </div>
 
         {/* Filter Tabs */}
         <div className="overflow-x-auto no-scrollbar">
@@ -177,9 +231,9 @@ export default function NotificationsPage() {
             <Bell className="w-8 h-8 text-neutral-800 mx-auto" />
             <div className="space-y-1">
               <p className="font-mono text-xs text-neutral-400 tracking-widest uppercase">
-                NO {filter === "ALL" ? "" : filter + " "}NOTIFICATIONS IN THE LAST 24 HOURS.
+                NO {filter === "ALL" ? "" : filter + " "}NOTIFICATIONS LOGGED
               </p>
-              <p className="font-serif italic text-neutral-600 text-sm">
+              <p className="text-neutral-600 text-xs">
                 Real-time activity from user orbits, pulses, reverbs &amp; stage events will appear here instantly.
               </p>
             </div>
@@ -190,77 +244,95 @@ export default function NotificationsPage() {
               <div
                 key={notif.id}
                 onClick={() => handleMarkOne(notif)}
-                className={`flex items-start gap-4 p-4 cursor-pointer transition-colors hover:bg-neutral-950/80 ${
+                className={`flex items-start justify-between gap-3 p-4 cursor-pointer transition-colors hover:bg-neutral-950/80 group ${
                   !notif.read ? "bg-neutral-950 border-l-2 border-l-white" : ""
                 }`}
               >
-                {/* Unread dot */}
-                <div className="mt-1 shrink-0 flex items-center gap-2">
-                  <div
-                    className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                      !notif.read ? "bg-white animate-pulse" : "bg-transparent"
-                    }`}
-                  />
-                  <div className="w-7 h-7 border border-neutral-800 flex items-center justify-center text-neutral-400">
-                    <NotifIcon type={notif.type} />
+                <div className="flex items-start gap-3 min-w-0 flex-1">
+                  {/* Unread dot */}
+                  <div className="mt-1 shrink-0 flex items-center gap-2">
+                    <div
+                      className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                        !notif.read ? "bg-white animate-pulse" : "bg-transparent"
+                      }`}
+                    />
+                    <div className="w-7 h-7 border border-neutral-800 flex items-center justify-center text-neutral-400">
+                      <NotifIcon type={notif.type} />
+                    </div>
+                  </div>
+
+                  <div className="min-w-0 space-y-1 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Link
+                        href={`/${notif.fromHandle.replace("@", "")}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="font-mono text-xs text-white hover:underline tracking-widest font-bold"
+                      >
+                        {notif.fromHandle}
+                      </Link>
+                      <span className="font-mono text-[10px] text-neutral-500 uppercase">
+                        {typeLabel(notif.type)}
+                      </span>
+                    </div>
+
+                    {notif.postCaption && (
+                      <p className="font-mono text-neutral-400 text-xs leading-snug truncate">
+                        "{notif.postCaption}"
+                      </p>
+                    )}
+
+                    <p className="font-mono text-[9px] text-neutral-600 tracking-widest uppercase">
+                      {timeAgo(notif.createdAt)}
+                    </p>
                   </div>
                 </div>
 
-                <div className="flex-1 min-w-0 space-y-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Link
-                      href={`/${notif.fromHandle.replace("@", "")}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="font-mono text-xs text-white hover:text-amber-300 tracking-widest font-bold"
+                {/* Card Action Controls */}
+                <div className="flex items-center gap-2 shrink-0">
+                  {/* Mark as read single button */}
+                  {!notif.read && (
+                    <button
+                      onClick={(e) => handleMarkOne(notif, e)}
+                      className="p-1 border border-neutral-800 hover:border-white text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                      title="Mark as read"
                     >
-                      {notif.fromHandle}
-                    </Link>
-                    <span className="font-mono text-[10px] text-neutral-500 uppercase">
-                      {typeLabel(notif.type)}
-                    </span>
-                  </div>
-
-                  {notif.postCaption && (
-                    <p className="font-mono text-neutral-400 text-xs leading-snug truncate">
-                      "{notif.postCaption}"
-                    </p>
+                      <Check size={12} />
+                    </button>
                   )}
 
-                  <p className="font-mono text-[9px] text-neutral-600 tracking-widest uppercase">
-                    {timeAgo(notif.createdAt)}
-                  </p>
+                  {notif.type === "orbiter" && (
+                    <Link
+                      href={`/${notif.fromHandle.replace("@", "")}`}
+                      className="font-mono text-[9px] border border-neutral-800 px-2 py-1 text-neutral-400 hover:border-white hover:text-white uppercase transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      [ PROFILE ]
+                    </Link>
+                  )}
+
+                  {(notif.type === "whisper" || notif.type === "wire") && (
+                    <Link
+                      href="/wire"
+                      className="font-mono text-[9px] border border-neutral-800 px-2 py-1 text-neutral-400 hover:border-white hover:text-white uppercase transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      [ WIRE ]
+                    </Link>
+                  )}
+
+                  {/* Delete button */}
+                  <button
+                    onClick={(e) => handleDeleteOne(notif.id, e)}
+                    className="p-1 text-neutral-600 hover:text-red-400 transition-colors cursor-pointer"
+                    title="Delete notification"
+                  >
+                    <Trash2 size={12} />
+                  </button>
                 </div>
-
-                {/* Actions */}
-                {notif.type === "orbiter" && (
-                  <Link
-                    href={`/${notif.fromHandle.replace("@", "")}`}
-                    className="shrink-0 font-mono text-[9px] border border-neutral-800 px-2 py-1 text-neutral-400 hover:border-white hover:text-white uppercase transition-colors"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    [ VIEW PROFILE ]
-                  </Link>
-                )}
-
-                {(notif.type === "whisper" || notif.type === "wire") && (
-                  <Link
-                    href="/wire"
-                    className="shrink-0 font-mono text-[9px] border border-neutral-800 px-2 py-1 text-neutral-400 hover:border-white hover:text-white uppercase transition-colors"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    [ WIRE ]
-                  </Link>
-                )}
               </div>
             ))}
           </div>
         )}
-
-        <div className="pt-4 text-center">
-          <p className="font-mono text-[10px] text-neutral-600 tracking-widest uppercase">
-            // NOTIFICATIONS AUTOMATICALLY VANISH AFTER 24 HOURS
-          </p>
-        </div>
       </main>
     </div>
   );
