@@ -5,7 +5,8 @@ import Link from "next/link";
 import {
   ArrowUp, Flame, Mic2, Share2, RefreshCw,
   Loader2, Send, Trash2, ChevronDown, ChevronUp,
-  Heart, AtSign, Repeat2, MessageSquare
+  Heart, AtSign, Repeat2, MessageSquare,
+  RotateCcw, RotateCw
 } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
 import {
@@ -351,13 +352,25 @@ function AudioPlayer({ audioUrl, fallbackDurationSec, isActive, onPlayToggle, sm
   };
 
   const seek = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
     const a = audioRef.current; if (!a || !isFinite(a.duration)) return;
     const r = e.currentTarget.getBoundingClientRect();
-    a.currentTime = Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)) * a.duration;
-    setCurrent(a.currentTime);
+    const pos = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+    const target = pos * a.duration;
+    a.currentTime = target;
+    setCurrent(target);
   };
 
-  const changeSpeed = () => {
+  const skip = (delta: number, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    const a = audioRef.current; if (!a || !isFinite(a.duration)) return;
+    const target = Math.max(0, Math.min(a.duration, a.currentTime + delta));
+    a.currentTime = target;
+    setCurrent(target);
+  };
+
+  const changeSpeed = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
     const speeds = [0.5, 0.75, 1, 1.25, 1.5, 2];
     const currentIndex = speeds.indexOf(speed);
     const nextIndex = (currentIndex + 1) % speeds.length;
@@ -374,7 +387,7 @@ function AudioPlayer({ audioUrl, fallbackDurationSec, isActive, onPlayToggle, sm
   );
 
   return (
-    <div className={`border border-neutral-800 ${small?"p-3":"p-4"} space-y-2`}>
+    <div className={`border border-neutral-800 ${small?"p-3":"p-4"} space-y-2.5`}>
       <audio key={src} ref={audioRef} src={src} preload="auto" playsInline crossOrigin="anonymous"
         onLoadedMetadata={e=>{const el=e.currentTarget;if(isFinite(el.duration)&&el.duration>0)setDur(Math.ceil(el.duration));}}
         onTimeUpdate={e=>setCurrent(e.currentTarget.currentTime)}
@@ -382,21 +395,57 @@ function AudioPlayer({ audioUrl, fallbackDurationSec, isActive, onPlayToggle, sm
         onPause={()=>setPlaying(false)}
         onEnded={()=>{setPlaying(false);setCurrent(0);onPlayToggle?.(false);}}
         onError={onErr} style={{display:"none"}} />
-      <div className="flex items-center gap-3">
+      
+      <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
         <button onClick={toggle} disabled={loading}
           className={`font-mono text-xs tracking-widest uppercase border border-white px-3 py-1.5 text-white hover:bg-white hover:text-black transition-colors cursor-pointer shrink-0 disabled:opacity-50 ${small?"min-w-[80px]":"min-w-[100px]"} flex items-center justify-center gap-1.5`}>
           {loading?<><Loader2 className="w-3 h-3 animate-spin"/>LOADING</>:playing?"[ ⏸ PAUSE ]":"[ ▶ PLAY ]"}
         </button>
-        <div className="flex-1 overflow-hidden"><Waveform playing={playing} small={small} audioRef={audioRef}/></div>
+
+        {/* Rewind & Fast Forward 5s */}
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            onClick={(e) => skip(-5, e)}
+            className="px-1.5 py-1 border border-neutral-800 hover:border-white text-neutral-400 hover:text-white transition-colors cursor-pointer flex items-center gap-1 font-mono text-[9px] uppercase tracking-wider"
+            title="Rewind 5 seconds"
+          >
+            <RotateCcw className="w-3 h-3" />
+            <span className="hidden xs:inline">-5S</span>
+          </button>
+          <button
+            onClick={(e) => skip(5, e)}
+            className="px-1.5 py-1 border border-neutral-800 hover:border-white text-neutral-400 hover:text-white transition-colors cursor-pointer flex items-center gap-1 font-mono text-[9px] uppercase tracking-wider"
+            title="Forward 5 seconds"
+          >
+            <span className="hidden xs:inline">+5S</span>
+            <RotateCw className="w-3 h-3" />
+          </button>
+        </div>
+
+        <div className="flex-1 min-w-[80px] overflow-hidden cursor-pointer" onClick={seek} title="Click to seek">
+          <Waveform playing={playing} small={small} audioRef={audioRef}/>
+        </div>
+
         {!small && (
-          <button onClick={changeSpeed} className="font-mono text-[10px] text-neutral-500 hover:text-white tracking-widest uppercase transition-colors cursor-pointer">
+          <button onClick={changeSpeed} className="font-mono text-[10px] text-neutral-500 hover:text-white tracking-widest uppercase transition-colors cursor-pointer shrink-0">
             {speed}x
           </button>
         )}
         <span className="font-mono text-[10px] text-neutral-500 tracking-widest shrink-0 tabular-nums">{fmt(current)}/{fmt(dur)}</span>
       </div>
-      <div className="w-full h-[2px] bg-neutral-900 cursor-pointer overflow-hidden" onClick={seek}>
-        <div className="h-full bg-white transition-none" style={{width:`${dur>0?Math.min(100,(current/dur)*100):0}%`}}/>
+
+      {/* Interactive Timeline Scrubber */}
+      <div
+        className="w-full h-3 flex items-center cursor-pointer group select-none py-1"
+        onClick={seek}
+        title="Click to jump / scrub audio"
+      >
+        <div className="w-full h-1.5 bg-neutral-900 group-hover:h-2 transition-all relative overflow-hidden">
+          <div
+            className="h-full bg-white transition-none"
+            style={{ width: `${dur > 0 ? Math.min(100, (current / dur) * 100) : 0}%` }}
+          />
+        </div>
       </div>
     </div>
   );

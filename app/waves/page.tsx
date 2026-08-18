@@ -35,6 +35,8 @@ import {
   X,
   MessageSquare,
   Sparkles,
+  RotateCcw,
+  RotateCw,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -239,8 +241,24 @@ function useWaveAudio(src: string, durationSec: number, active: boolean, muted: 
     }
   };
 
+  const seek = (time: number) => {
+    const a = audioRef.current;
+    if (!a || !isFinite(a.duration)) return;
+    const target = Math.max(0, Math.min(a.duration, time));
+    a.currentTime = target;
+    setCurrent(target);
+  };
+
+  const skip = (seconds: number) => {
+    const a = audioRef.current;
+    if (!a || !isFinite(a.duration)) return;
+    const target = Math.max(0, Math.min(a.duration, a.currentTime + seconds));
+    a.currentTime = target;
+    setCurrent(target);
+  };
+
   const pct = dur > 0 ? Math.min(100, (current / dur) * 100) : 0;
-  return { playing, current, dur, pct, loading, failed, toggle };
+  return { playing, current, dur, pct, loading, failed, toggle, seek, skip };
 }
 
 // ── Accent palette for cards ───────────────────────────────────────────────────
@@ -290,7 +308,7 @@ function WaveCard({
   isReEchoed: boolean;
 }) {
   const { bg, wave, tag } = ACCENTS[index % ACCENTS.length];
-  const { playing, current, dur, pct, loading, failed, toggle } = useWaveAudio(post.audioUrl, post.durationSec, active, muted);
+  const { playing, current, dur, pct, loading, failed, toggle, seek, skip } = useWaveAudio(post.audioUrl, post.durationSec, active, muted);
   const [expandedDesc, setExpandedDesc] = useState(false);
 
   // Derive short title vs full description
@@ -300,24 +318,42 @@ function WaveCard({
 
   return (
     <div className={`relative w-full h-[calc(100dvh-4rem)] md:h-screen flex-shrink-0 snap-start overflow-hidden bg-gradient-to-b ${bg} select-none`}>
-      {/* Center waveform & Interactive Play/Pause Controls */}
+      {/* Center waveform & Interactive Play/Pause + Fast Forward/Rewind Controls */}
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 sm:gap-6 pointer-events-none">
         <BigWaveform playing={playing} color={wave} />
 
-        {/* Functional Play / Pause Button */}
-        <button
-          onClick={toggle}
-          className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border border-white/40 bg-black/60 backdrop-blur-md flex items-center justify-center hover:scale-110 active:scale-95 transition-all cursor-pointer shadow-2xl pointer-events-auto z-20 hover:border-white"
-          aria-label={playing ? "Pause" : "Play"}
-        >
-          {loading ? (
-            <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 text-white animate-spin" />
-          ) : playing ? (
-            <Pause className="w-6 h-6 sm:w-7 sm:h-7 text-white fill-white" />
-          ) : (
-            <Play className="w-6 h-6 sm:w-7 sm:h-7 text-white fill-white ml-1" />
-          )}
-        </button>
+        {/* Center Playback Controls with 5s Skip */}
+        <div className="flex items-center gap-3 sm:gap-4 pointer-events-auto z-20">
+          <button
+            onClick={(e) => { e.stopPropagation(); skip(-5); }}
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-white/30 bg-black/60 backdrop-blur-md flex items-center justify-center hover:scale-110 active:scale-95 text-white/80 hover:text-white hover:border-white transition-all cursor-pointer shadow-xl"
+            title="Rewind 5 seconds"
+          >
+            <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          </button>
+
+          <button
+            onClick={toggle}
+            className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border border-white/40 bg-black/60 backdrop-blur-md flex items-center justify-center hover:scale-110 active:scale-95 transition-all cursor-pointer shadow-2xl hover:border-white"
+            aria-label={playing ? "Pause" : "Play"}
+          >
+            {loading ? (
+              <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 text-white animate-spin" />
+            ) : playing ? (
+              <Pause className="w-6 h-6 sm:w-7 sm:h-7 text-white fill-white" />
+            ) : (
+              <Play className="w-6 h-6 sm:w-7 sm:h-7 text-white fill-white ml-1" />
+            )}
+          </button>
+
+          <button
+            onClick={(e) => { e.stopPropagation(); skip(5); }}
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-white/30 bg-black/60 backdrop-blur-md flex items-center justify-center hover:scale-110 active:scale-95 text-white/80 hover:text-white hover:border-white transition-all cursor-pointer shadow-xl"
+            title="Forward 5 seconds"
+          >
+            <RotateCw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          </button>
+        </div>
 
         {failed && (
           <span className="font-mono text-[10px] text-red-400 tracking-widest uppercase bg-black/80 px-3 py-1 border border-red-500/30">
@@ -326,9 +362,20 @@ function WaveCard({
         )}
       </div>
 
-      {/* Progress bar at top */}
-      <div className="absolute top-0 left-0 right-0 h-1 bg-white/10 z-20 pointer-events-none">
-        <div className="h-full transition-none bg-white" style={{ width: `${pct}%` }} />
+      {/* Interactive Progress Scrubber Bar at top */}
+      <div
+        className="absolute top-0 left-0 right-0 h-4 flex items-start z-30 cursor-pointer group py-1 select-none"
+        onClick={(e) => {
+          e.stopPropagation();
+          const r = e.currentTarget.getBoundingClientRect();
+          const pos = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+          seek(pos * dur);
+        }}
+        title="Click to seek / scrub audio"
+      >
+        <div className="w-full h-1 group-hover:h-2 bg-white/20 transition-all relative">
+          <div className="h-full bg-white transition-none" style={{ width: `${pct}%` }} />
+        </div>
       </div>
 
       {/* ── BOTTOM CREATOR INFO & EXPANDABLE DESCRIPTION ── */}
