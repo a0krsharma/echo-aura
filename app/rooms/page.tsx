@@ -275,7 +275,7 @@ export default function RoomsPage() {
                 onClick={() => setShowCreateModal(true)}
                 className="inline-block px-4 py-2 border border-white text-white text-[11px] tracking-widest uppercase hover:bg-white hover:text-black transition-colors cursor-pointer"
               >
-                [ + START FIRST FREQUENCY ]
+                [ + START YOUR FIRST ROOM ]
               </button>
             </div>
           ) : (
