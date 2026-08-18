@@ -5,9 +5,10 @@ export const dynamic = "force-dynamic";
 /**
  * app/search/page.tsx
  * ─────────────────────────────────────────────────────
- * Twitter/X-Style Enhanced Search & Discovery Engine for Echo:
+ * Twitter/X-Style Enhanced Search & Real-Time Discovery Engine:
  *  - Real-time predictive autocomplete (#tags, @mentions, platform terms)
  *  - Twitter-style category filter tabs (Trending, Tech, Startup, News, Sports, etc.)
+ *  - Real-Time World News Aggregator & Live Stage Debate creation
  *  - Live Acoustic Velocity telemetry
  *  - Active stage rooms, voices, and audio echoes in strict monochrome.
  */
@@ -33,6 +34,7 @@ import {
   UserPlus,
   UserCheck,
   Sparkles,
+  Globe,
 } from "lucide-react";
 import { collection, query, getDocs, limit, doc, onSnapshot } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
@@ -42,9 +44,11 @@ import { followUser, unfollowUser, subscribeToFollowStatus } from "@/lib/follows
 import { startOrGetConversation } from "@/lib/wire";
 import { getPlayableUrl } from "@/lib/cloudinary";
 import { useAuth } from "@/app/components/AuthProvider";
-import { RADAR_CATEGORIES, RadarCategoryId, RadarTopicItem } from "@/lib/categories";
+import { RadarCategoryId, RadarTopicItem } from "@/lib/categories";
 import { executeMultiVectorSearch, SearchResultsMatrix, LiveRoomResult } from "@/lib/searchEngine";
+import { NewsDispatch } from "@/lib/newsService";
 import SearchAutocomplete from "./components/SearchAutocomplete";
+import LiveNewsDispatches from "./components/LiveNewsDispatches";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // User Card with Real-time ORBIT Toggle & Direct WIRE Trigger
@@ -223,9 +227,9 @@ function MiniPlay({ url }: { url: string }) {
 const SEARCH_CATEGORY_TABS = [
   { id: "ALL", label: "ALL" },
   { id: "TRENDING", label: "TRENDING" },
+  { id: "NEWS", label: "WORLD NEWS" },
   { id: "TECH", label: "TECH" },
   { id: "STARTUP", label: "STARTUP" },
-  { id: "NEWS", label: "NEWS" },
   { id: "SPORTS", label: "SPORTS" },
   { id: "MARKETS", label: "MARKETS" },
   { id: "MUSIC", label: "MUSIC" },
@@ -253,6 +257,10 @@ export default function SearchPage() {
     posts: [],
     shortcuts: [],
   });
+
+  // World News Dispatches
+  const [newsDispatches, setNewsDispatches] = useState<NewsDispatch[]>([]);
+  const [newsLoading, setNewsLoading] = useState(false);
 
   // Default Discovery State (Explore View)
   const [trendingFrequencies, setTrendingFrequencies] = useState<RadarTopicItem[]>([]);
@@ -299,6 +307,29 @@ export default function SearchPage() {
 
     return () => unsubTrending();
   }, []);
+
+  // Fetch Live World News Dispatches (Client Cache Friendly)
+  useEffect(() => {
+    async function loadNews() {
+      setNewsLoading(true);
+      try {
+        const catParam = activeTab === "ALL" ? "all" : activeTab.toLowerCase();
+        const res = await fetch(`/api/news?category=${encodeURIComponent(catParam)}&q=${encodeURIComponent(searchQuery)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.dispatches)) {
+            setNewsDispatches(data.dispatches);
+          }
+        }
+      } catch (err) {
+        console.warn("[SearchPage] Error loading news:", err);
+      } finally {
+        setNewsLoading(false);
+      }
+    }
+
+    loadNews();
+  }, [activeTab, searchQuery]);
 
   // Save query to localStorage
   const saveToHistory = useCallback((queryStr: string) => {
@@ -357,7 +388,8 @@ export default function SearchPage() {
     results.users.length +
     results.hashtags.length +
     results.liveRooms.length +
-    results.posts.length;
+    results.posts.length +
+    newsDispatches.length;
 
   const isSearchActive = searchQuery.trim().length > 0 || activeTab !== "ALL";
 
@@ -376,7 +408,7 @@ export default function SearchPage() {
                 value={searchQuery}
                 onFocus={() => setIsFocused(true)}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="SEARCH HASHTAGS (#), VOICES (@), OR PLATFORM TERMS..."
+                placeholder="SEARCH HASHTAGS (#), VOICES (@), OR WORLD NEWS..."
                 className="w-full bg-transparent text-xs text-white placeholder-neutral-600 outline-none tracking-wider"
               />
               {searchQuery && (
@@ -434,7 +466,14 @@ export default function SearchPage() {
         {!isSearchActive ? (
           <div className="space-y-8 pb-12">
             
-            {/* Top Trending Audio Frequencies */}
+            {/* 1. Real-time World News Wire Dispatches */}
+            <LiveNewsDispatches
+              dispatches={newsDispatches.slice(0, 4)}
+              loading={newsLoading}
+              categoryTitle="LIVE BREAKING WORLD DISPATCHES"
+            />
+
+            {/* 2. Top Trending Audio Frequencies */}
             <section className="space-y-3">
               <div className="border-b border-neutral-900 pb-2.5 flex justify-between items-center text-xs text-neutral-500">
                 <div className="flex items-center gap-2">
@@ -500,7 +539,7 @@ export default function SearchPage() {
               )}
             </section>
 
-            {/* Top Suggested Voices to Orbit */}
+            {/* 3. Top Suggested Voices to Orbit */}
             {suggestedUsers.length > 0 && (
               <section className="space-y-3">
                 <div className="border-b border-neutral-900 pb-2.5 flex justify-between items-center text-xs text-neutral-500">
@@ -523,7 +562,7 @@ export default function SearchPage() {
               </section>
             )}
 
-            {/* Search History Chips */}
+            {/* 4. Search History Chips */}
             {searchHistory.length > 0 && (
               <section className="space-y-2.5 pt-4 border-t border-neutral-900">
                 <div className="flex items-center justify-between">
@@ -567,7 +606,7 @@ export default function SearchPage() {
               NO FREQUENCIES MATCHED &quot;{searchQuery.toUpperCase()}&quot;
             </p>
             <p className="text-[11px] text-neutral-600">
-              TRY SEARCHING FOR TOPIC HASHTAGS (#TECH), CREATOR HANDLES (@HANDLE), OR POPULAR CATEGORIES
+              TRY SEARCHING FOR TOPIC HASHTAGS (#TECH), CREATOR HANDLES (@HANDLE), OR WORLD NEWS HEADLINES
             </p>
           </div>
         ) : (
@@ -627,7 +666,16 @@ export default function SearchPage() {
               </section>
             )}
 
-            {/* 2. MATCHING TRENDING HASHTAGS & ACOUSTIC VELOCITY */}
+            {/* 2. MATCHING WORLD NEWS WIRE DISPATCHES */}
+            {newsDispatches.length > 0 && (
+              <LiveNewsDispatches
+                dispatches={newsDispatches.slice(0, 5)}
+                loading={newsLoading}
+                categoryTitle={`GLOBAL WIRE: ${activeTab === 'ALL' ? 'BREAKING' : activeTab}`}
+              />
+            )}
+
+            {/* 3. MATCHING TRENDING HASHTAGS & ACOUSTIC VELOCITY */}
             {results.hashtags.length > 0 && (
               <section className="space-y-3">
                 <div className="border-b border-neutral-900 pb-2 flex justify-between items-center text-xs text-neutral-500">
@@ -676,7 +724,7 @@ export default function SearchPage() {
               </section>
             )}
 
-            {/* 3. MATCHING VERIFIED VOICES / CREATORS */}
+            {/* 4. MATCHING VERIFIED VOICES / CREATORS */}
             {results.users.length > 0 && (
               <section className="space-y-3">
                 <div className="border-b border-neutral-900 pb-2 flex justify-between items-center text-xs text-neutral-500">
@@ -695,7 +743,7 @@ export default function SearchPage() {
               </section>
             )}
 
-            {/* 4. MATCHING AUDIO ECHOES / POSTS */}
+            {/* 5. MATCHING AUDIO ECHOES / POSTS */}
             {results.posts.length > 0 && (
               <section className="space-y-3">
                 <div className="border-b border-neutral-900 pb-2 flex justify-between items-center text-xs text-neutral-500">
