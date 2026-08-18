@@ -229,5 +229,16 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // ── RADAR & TRENDING FEEDS ─────────────────────────────────────
+    match /radar_feeds/{category} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    match /trending_topics/{topicId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
   }
 }
