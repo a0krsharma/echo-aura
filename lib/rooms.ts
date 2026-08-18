@@ -388,26 +388,32 @@ export async function removeParticipant(roomId: string, uid: string): Promise<vo
     }
 
     // Update room participant count using atomic operations
-    const roomRef = doc(db, ROOMS_COLLECTION, roomId);
-    const updates: any = {
-      participantCount: increment(-1),
-      updatedAt: serverTimestamp(),
-    };
-  
-    // Also decrement speaker count if they were a speaker
-    if (wasSpeaker) {
-      updates.speakerCount = increment(-1);
+    try {
+      const roomRef = doc(db, ROOMS_COLLECTION, roomId);
+      const roomSnap = await getDoc(roomRef);
+      if (roomSnap.exists()) {
+        const updates: any = {
+          participantCount: increment(-1),
+          updatedAt: serverTimestamp(),
+        };
+      
+        // Also decrement speaker count if they were a speaker
+        if (wasSpeaker) {
+          updates.speakerCount = increment(-1);
+        }
+      
+        await updateDoc(roomRef, updates);
+        
+        // Trigger reconciliation after participant removal to ensure counts stay in sync
+        reconcileParticipantCounts(roomId).catch(err => {
+          console.error("[removeParticipant] Reconciliation failed:", err);
+        });
+      }
+    } catch (e) {
+      console.warn("[removeParticipant] Room doc not found or already deleted:", e);
     }
-  
-    await updateDoc(roomRef, updates);
-    
-    // Trigger reconciliation after participant removal to ensure counts stay in sync
-    reconcileParticipantCounts(roomId).catch(err => {
-      console.error("[removeParticipant] Reconciliation failed:", err);
-    });
   } catch (error) {
     console.error("[removeParticipant] Error removing participant:", error);
-    throw error;
   }
 }
 
@@ -416,31 +422,46 @@ export async function deleteRoom(roomId: string): Promise<void> {
   try {
     const db = getFirebaseDb();
     
-    // Delete the room
-    await deleteDoc(doc(db, ROOMS_COLLECTION, roomId));
+    // 1. Delete the room doc
+    await deleteDoc(doc(db, ROOMS_COLLECTION, roomId)).catch(() => {});
     
-    // Delete all participants
-    const participantsQuery = query(
-      collection(db, PARTICIPANTS_COLLECTION),
-      where("roomId", "==", roomId)
-    );
-    const participantsSnap = await getDocs(participantsQuery);
-    for (const doc of participantsSnap.docs) {
-      await deleteDoc(doc.ref);
-    }
+    // 2. Delete all participants
+    try {
+      const participantsQuery = query(
+        collection(db, PARTICIPANTS_COLLECTION),
+        where("roomId", "==", roomId)
+      );
+      const participantsSnap = await getDocs(participantsQuery);
+      for (const d of participantsSnap.docs) {
+        await deleteDoc(d.ref).catch(() => {});
+      }
+    } catch {}
     
-    // Delete all chat messages
-    const messagesQuery = query(
-      collection(db, "room_messages"),
-      where("roomId", "==", roomId)
-    );
-    const messagesSnap = await getDocs(messagesQuery);
-    for (const doc of messagesSnap.docs) {
-      await deleteDoc(doc.ref);
-    }
+    // 3. Delete all chat messages
+    try {
+      const messagesQuery = query(
+        collection(db, "room_messages"),
+        where("roomId", "==", roomId)
+      );
+      const messagesSnap = await getDocs(messagesQuery);
+      for (const d of messagesSnap.docs) {
+        await deleteDoc(d.ref).catch(() => {});
+      }
+    } catch {}
+
+    // 4. Delete all reactions
+    try {
+      const reactionsQuery = query(
+        collection(db, "room_reactions"),
+        where("roomId", "==", roomId)
+      );
+      const reactionsSnap = await getDocs(reactionsQuery);
+      for (const d of reactionsSnap.docs) {
+        await deleteDoc(d.ref).catch(() => {});
+      }
+    } catch {}
   } catch (error) {
     console.error("[deleteRoom] Error deleting room:", error);
-    throw error;
   }
 }
 
@@ -827,19 +848,20 @@ export function subscribeToRoom(roomId: string, callback: (room: Room | null) =>
 export function subscribeToPublicRooms(callback: (rooms: Room[]) => void): () => void {
   const db = getFirebaseDb();
   console.log("[subscribeToPublicRooms] Setting up query for public rooms");
+  // Query single-field (createdAt desc) to eliminate any composite index requirement
   const roomsQuery = query(
     collection(db, ROOMS_COLLECTION),
-    where("isPublic", "==", true),
     orderBy("createdAt", "desc"),
     limit(60)
   );
 
   const unsubscribe = onSnapshot(roomsQuery, (querySnap) => {
     const now = Date.now();
-    const rooms = querySnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Room[];
+    const allDocs = querySnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Room[];
     
-    // Filter out expired rooms to save bandwidth, storage, and RTC compute
-    const validRooms = rooms.filter(r => {
+    // Filter public & non-expired rooms client-side
+    const validRooms = allDocs.filter(r => {
+      if (r.isPublic === false) return false;
       if (r.expiresAt) {
         try {
           const s = r.expiresAt as any;
@@ -858,7 +880,13 @@ export function subscribeToPublicRooms(callback: (rooms: Room[]) => void): () =>
     validRooms.sort((a, b) => (b.participantCount || 0) - (a.participantCount || 0));
     callback(validRooms);
   }, (error) => {
-    console.error("[subscribeToPublicRooms] Error subscribing to public rooms:", error);
+    console.warn("[subscribeToPublicRooms] Warning subscribing with order:", error);
+    // Fallback: fetch without order
+    const fallbackQuery = query(collection(db, ROOMS_COLLECTION), limit(60));
+    onSnapshot(fallbackQuery, (snap) => {
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Room[];
+      callback(list.filter(r => r.isPublic !== false));
+    }, () => callback([]));
   });
 
   return unsubscribe;

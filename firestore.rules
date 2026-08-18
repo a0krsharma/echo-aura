@@ -152,16 +152,24 @@ service cloud.firestore {
     // Room chat messages
     match /room_messages/{messageId} {
       allow read: if true;
-      allow create: if request.auth != null;
-      allow update, delete: if false;
+      allow create, delete: if true;
+      allow update: if false;
     }
 
     // ── ROOM REACTIONS ────────────────────────────────────────────────
     // Room emoji reactions
     match /room_reactions/{reactionId} {
       allow read: if true;
-      allow create: if request.auth != null;
-      allow update, delete: if false;
+      allow create, delete: if true;
+      allow update: if false;
+    }
+
+    // ── FREQUENCY+ EPISODES & SERIES ──────────────────────────────────
+    match /frequency_plus_episodes/{episodeId} {
+      allow read, write: if true;
+      match /voice_replies/{replyId} {
+        allow read, write: if true;
+      }
     }
 
     // ── USER BOOKMARKS ────────────────────────────────────────────────
