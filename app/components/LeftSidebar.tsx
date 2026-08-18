@@ -23,18 +23,18 @@ export default function LeftSidebar() {
 
   const navItems = [
     { href: "/",                 icon: Radio,         label: "[ FREQUENCY ]",  hasNotifDot: false },
-    { href: "/frequency-plus",   icon: Headphones,    label: "[ FREQUENCY+ ]", hasNotifDot: false },
     { href: "/waves",            icon: Waves,         label: "[ WAVES ]",      hasNotifDot: false },
     { href: "/studio",           icon: Mic2,          label: "[ STUDIO ]",     hasNotifDot: false },
     { href: "/clash",            icon: Swords,        label: "[ STAGE ]",      hasNotifDot: false },
     { href: "/rooms",            icon: Users,         label: "[ ROOMS ]",      hasNotifDot: false },
     { href: "/radar",            icon: Compass,       label: "[ RADAR ]",      hasNotifDot: false },
+    { href: "/frequency-plus",   icon: Headphones,    label: "[ FREQUENCY+ ]", hasNotifDot: false },
   ] as const;
 
   return (
-    <aside className="hidden md:flex flex-col fixed left-0 top-0 h-screen w-52 bg-black border-r border-neutral-900 px-5 py-8 z-40">
+    <aside className="hidden md:flex flex-col fixed left-0 top-0 h-screen w-52 bg-black border-r border-neutral-900 px-4 py-8 z-40">
       <div className="flex-1">
-        <div className="mb-8">
+        <div className="mb-8 px-1">
           <OrbitLogo />
         </div>
         
@@ -47,15 +47,15 @@ export default function LeftSidebar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 font-mono text-xs tracking-widest uppercase transition-colors ${
+                className={`flex items-center gap-2.5 px-2.5 py-2.5 font-mono text-xs tracking-wider uppercase transition-colors whitespace-nowrap ${
                   isActive ? "text-white font-bold" : "text-neutral-500 hover:text-white"
                 }`}
               >
                 <Icon size={14} strokeWidth={1.5} className="shrink-0" />
-                <span className="flex items-center gap-2">
+                <span className="flex items-center gap-1.5 whitespace-nowrap">
                   {item.label}
                   {item.hasNotifDot && (
-                    <span className="w-1.5 h-1.5 bg-white rounded-full inline-block"></span>
+                    <span className="w-1.5 h-1.5 bg-white rounded-full inline-block shrink-0"></span>
                   )}
                 </span>
               </Link>

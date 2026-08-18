@@ -22,7 +22,7 @@ import {
   increment,
   orderBy,
   limit,
-  type Timestamp,
+  Timestamp,
 } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 import { createNotification } from "@/lib/notifications";
@@ -41,6 +41,7 @@ export interface Room {
   tags: string[];
   createdAt: Timestamp;
   updatedAt: Timestamp;
+  expiresAt?: Timestamp | null;
   isActive: boolean;
   agoraChannel: string;
   scheduledFor: Timestamp | null;
@@ -69,13 +70,10 @@ export interface RoomParticipant {
 
 export interface BreakoutRoom {
   id: string;
-  parentRoomId: string;
   name: string;
-  maxParticipants: number;
+  roomId: string;
   participantCount: number;
-  agoraChannel: string;
   createdAt: Timestamp;
-  isActive: boolean;
 }
 
 const ROOMS_COLLECTION = "rooms";
@@ -103,6 +101,19 @@ export async function createRoom(roomData: {
     // Generate Agora channel name from room ID
     const agoraChannel = `echo_room_${roomId}`;
 
+    // TTL: 4-hour max lifespan for live rooms, 8 hours after start for scheduled rooms (Saves tech costs & Agora minutes)
+    const nowMs = Date.now();
+    let expiresMs = nowMs + 4 * 60 * 60 * 1000;
+    if (roomData.scheduledFor) {
+      try {
+        const s = roomData.scheduledFor as any;
+        const schedMs = typeof s?.toDate === "function" ? s.toDate().getTime() : s?.seconds ? s.seconds * 1000 : new Date(s).getTime();
+        if (schedMs && !isNaN(schedMs)) {
+          expiresMs = schedMs + 8 * 60 * 60 * 1000;
+        }
+      } catch {}
+    }
+
     const newRoom: Room = {
       id: roomId,
       name: roomData.name,
@@ -117,6 +128,7 @@ export async function createRoom(roomData: {
       tags: roomData.tags,
       createdAt: serverTimestamp() as Timestamp,
       updatedAt: serverTimestamp() as Timestamp,
+      expiresAt: Timestamp.fromDate(new Date(expiresMs)),
       isActive: !roomData.scheduledFor, // Inactive if scheduled for future
       agoraChannel,
       scheduledFor: roomData.scheduledFor || null,
@@ -812,35 +824,41 @@ export function subscribeToRoom(roomId: string, callback: (room: Room | null) =>
 }
 
 // ── Subscribe to public rooms (real-time) ──────────────────────────────
-// NOTE: This query requires a Firestore composite index on:
-// - isPublic (equality)
-// - isActive (equality) 
-// - createdAt (descending)
-// Create the index in Firebase Console or let Firestore create it automatically on first query
 export function subscribeToPublicRooms(callback: (rooms: Room[]) => void): () => void {
   const db = getFirebaseDb();
   console.log("[subscribeToPublicRooms] Setting up query for public rooms");
   const roomsQuery = query(
     collection(db, ROOMS_COLLECTION),
     where("isPublic", "==", true),
-    where("isActive", "==", true),
-    orderBy("createdAt", "desc")
+    orderBy("createdAt", "desc"),
+    limit(60)
   );
 
   const unsubscribe = onSnapshot(roomsQuery, (querySnap) => {
-    console.log("[subscribeToPublicRooms] Query snapshot received, docs count:", querySnap.docs.length);
+    const now = Date.now();
     const rooms = querySnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Room[];
+    
+    // Filter out expired rooms to save bandwidth, storage, and RTC compute
+    const validRooms = rooms.filter(r => {
+      if (r.expiresAt) {
+        try {
+          const s = r.expiresAt as any;
+          const expMs = typeof s?.toDate === "function" ? s.toDate().getTime() : s?.seconds ? s.seconds * 1000 : new Date(s).getTime();
+          if (expMs && expMs < now) {
+            // Clean up expired room asynchronously
+            deleteRoom(r.id).catch(() => {});
+            return false;
+          }
+        } catch {}
+      }
+      return true;
+    });
+
     // Secondary sort by participantCount on client side
-    rooms.sort((a, b) => b.participantCount - a.participantCount);
-    console.log("[subscribeToPublicRooms] Public rooms updated:", rooms);
-    callback(rooms);
+    validRooms.sort((a, b) => (b.participantCount || 0) - (a.participantCount || 0));
+    callback(validRooms);
   }, (error) => {
     console.error("[subscribeToPublicRooms] Error subscribing to public rooms:", error);
-    // If error is about missing index, provide helpful message
-    if (error.code === 'failed-precondition') {
-      console.error("[subscribeToPublicRooms] Missing Firestore composite index. Please create index in Firebase Console:");
-      console.error("[subscribeToPublicRooms] Collection: rooms, Fields: isPublic (ASC), isActive (ASC), createdAt (DESC)");
-    }
   });
 
   return unsubscribe;

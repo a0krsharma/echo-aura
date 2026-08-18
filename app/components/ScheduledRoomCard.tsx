@@ -6,9 +6,12 @@ import type { Room } from "@/lib/rooms";
 
 interface ScheduledRoomCardProps {
   room: Room;
+  isHost?: boolean;
+  onDelete?: () => void;
+  onStartNow?: () => void;
 }
 
-export function ScheduledRoomCard({ room }: ScheduledRoomCardProps) {
+export function ScheduledRoomCard({ room, isHost, onDelete, onStartNow }: ScheduledRoomCardProps) {
   const [alarmSet, setAlarmSet] = useState(false);
   const [shared, setShared] = useState(false);
 
@@ -75,6 +78,28 @@ export function ScheduledRoomCard({ room }: ScheduledRoomCardProps) {
           {room.participantCount || 1} NODES SUBSCRIBED
         </span>
         <div className="flex items-center gap-2">
+          {isHost && (
+            <>
+              {onStartNow && (
+                <button
+                  onClick={onStartNow}
+                  className="px-2.5 py-1 text-[10px] font-bold border border-white bg-white text-black hover:bg-neutral-200 uppercase tracking-wider transition-colors cursor-pointer"
+                  title="Launch Scheduled Room Live"
+                >
+                  [ GO LIVE NOW ]
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  onClick={onDelete}
+                  className="p-1 text-[10px] border border-red-900 text-red-400 hover:border-red-500 hover:text-red-300 transition-colors cursor-pointer"
+                  title="Delete Scheduled Room"
+                >
+                  DELETE
+                </button>
+              )}
+            </>
+          )}
           <button
             onClick={handleShare}
             className="p-1.5 border border-neutral-800 hover:border-white text-neutral-400 hover:text-white transition-colors cursor-pointer"

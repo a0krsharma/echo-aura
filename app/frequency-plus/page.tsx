@@ -17,14 +17,20 @@ import {
   Sparkles,
   ArrowRight,
   ShieldCheck,
+  ShieldAlert,
+  Lock,
+  X,
 } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
 import { ShareButton } from "@/app/components/ShareButton";
 import {
   subscribeToEpisodes,
   type FrequencyPlusEpisode,
-  logShareAction,
+  checkFrequencyPlusClearance,
+  type UserMetrics,
 } from "@/lib/frequencyPlus";
+import { doc, getDoc } from "firebase/firestore";
+import { getFirebaseDb } from "@/lib/firebase";
 
 export default function FrequencyPlusPage() {
   const { user } = useAuth();
@@ -35,6 +41,17 @@ export default function FrequencyPlusPage() {
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
 
+  // Clearance Modal state
+  const [showClearanceModal, setShowClearanceModal] = useState(false);
+  const [userMetrics, setUserMetrics] = useState<UserMetrics>({
+    orbiters_count: 0,
+    pulses_received: 0,
+    total_shares: 0,
+    rooms_and_stages_hosted: 0,
+    own_room_shares: 0,
+    is_verified_creator: false,
+  });
+
   const CATEGORIES = ["ALL", "TECH", "MARKETS", "STORYTELLING", "DEBATES", "CRICKET", "GENERAL"];
 
   useEffect(() => {
@@ -43,6 +60,32 @@ export default function FrequencyPlusPage() {
     });
     return () => unsub();
   }, [selectedCategory]);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchMetrics = async () => {
+      try {
+        const db = getFirebaseDb();
+        const snap = await getDoc(doc(db, "users", user.uid));
+        if (snap.exists()) {
+          const data = snap.data();
+          setUserMetrics({
+            orbiters_count: data.followerCount || data.metrics?.orbiters_count || 0,
+            pulses_received: data.metrics?.pulses_received || 0,
+            total_shares: data.metrics?.total_shares || 0,
+            rooms_and_stages_hosted: data.metrics?.rooms_and_stages_hosted || 0,
+            own_room_shares: data.metrics?.own_room_shares || 0,
+            is_verified_creator: Boolean(data.is_verified_creator || data.is_verified_podcaster || data.isVerified),
+          });
+        }
+      } catch (err) {
+        console.warn("Failed to load metrics:", err);
+      }
+    };
+    fetchMetrics();
+  }, [user]);
+
+  const clearance = checkFrequencyPlusClearance(userMetrics);
 
   const handleTogglePlay = (ep: FrequencyPlusEpisode, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -83,12 +126,16 @@ export default function FrequencyPlusPage() {
             <h1 className="text-2xl font-bold tracking-widest text-white uppercase">
               [ FREQUENCY+ ]
             </h1>
-            <p className="text-xs text-neutral-400 max-w-xl pt-1">
-              15-minute proof-of-work podcasts, investigative deep dives, and episodic series. 100% free listening across all nodes.
-            </p>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+            <button
+              onClick={() => setShowClearanceModal(true)}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs border border-neutral-800 text-neutral-400 hover:border-neutral-500 hover:text-white bg-neutral-950 uppercase tracking-wider transition-colors cursor-pointer"
+            >
+              <Lock size={12} />
+              <span>[ CRITERIA ]</span>
+            </button>
             <Link
               href="/frequency-plus/yield"
               className="flex items-center gap-1.5 px-3 py-2 text-xs border border-neutral-800 text-neutral-400 hover:border-yellow-400 hover:text-yellow-400 bg-neutral-950 uppercase tracking-wider transition-colors"
@@ -198,7 +245,7 @@ export default function FrequencyPlusPage() {
                       {/* Stats */}
                       <div className="flex items-center gap-3 text-neutral-500">
                         <span className="flex items-center gap-1 text-yellow-500 font-bold">
-                          <Zap size={11} className="fill-yellow-500" />
+                          <Zap size={11} className="fill-yellow-400" />
                           +{ep.totalVoltsGenerated}V
                         </span>
                         <span className="flex items-center gap-1">
@@ -218,6 +265,105 @@ export default function FrequencyPlusPage() {
           )}
         </div>
       </main>
+
+      {/* ── Blurred Unlock Criteria Pop-Up Modal ── */}
+      {showClearanceModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in font-mono">
+          <div className="w-full max-w-lg bg-black border-2 border-white p-6 sm:p-8 space-y-6 shadow-2xl animate-slide-up">
+            <div className="flex items-start justify-between border-b border-neutral-900 pb-4">
+              <div>
+                <p className="text-[10px] text-yellow-500 uppercase tracking-widest flex items-center gap-1.5 font-bold">
+                  <ShieldAlert size={14} />
+                  [ ACCESS CLEARANCE PROTOCOL ]
+                </p>
+                <h2 className="text-lg font-bold text-white uppercase mt-1">
+                  FREQUENCY+ // CREATOR STUDIO
+                </h2>
+              </div>
+              <button
+                onClick={() => setShowClearanceModal(false)}
+                className="text-neutral-500 hover:text-white transition-colors cursor-pointer p-1"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Criteria Checklist */}
+            <div className="space-y-3 text-xs">
+              <p className="text-[10px] text-neutral-500 uppercase tracking-widest font-bold">
+                // PROOF-OF-WORK REQUIREMENTS TO UNLOCK STUDIO ({clearance.progressPercent}% CLEARED)
+              </p>
+
+              <div className="space-y-2">
+                <div className="border border-neutral-900 bg-neutral-950 p-2.5 flex justify-between items-center">
+                  <span className="text-neutral-300">1. ORBIT COMMAND (50 Orbiters)</span>
+                  <span className={clearance.goals.orbiters.met ? "text-white font-bold" : "text-neutral-500"}>
+                    {clearance.goals.orbiters.current}/50 {clearance.goals.orbiters.met && "✓"}
+                  </span>
+                </div>
+
+                <div className="border border-neutral-900 bg-neutral-950 p-2.5 flex justify-between items-center">
+                  <span className="text-neutral-300">2. RESONANCE (200 Pulses Received)</span>
+                  <span className={clearance.goals.pulses.met ? "text-white font-bold" : "text-neutral-500"}>
+                    {clearance.goals.pulses.current}/200 {clearance.goals.pulses.met && "✓"}
+                  </span>
+                </div>
+
+                <div className="border border-neutral-900 bg-neutral-950 p-2.5 flex justify-between items-center">
+                  <span className="text-neutral-300">3. SIGNAL BOOSTER (100 External Shares)</span>
+                  <span className={clearance.goals.shares.met ? "text-white font-bold" : "text-neutral-500"}>
+                    {clearance.goals.shares.current}/100 {clearance.goals.shares.met && "✓"}
+                  </span>
+                </div>
+
+                <div className="border border-neutral-900 bg-neutral-950 p-2.5 flex justify-between items-center">
+                  <span className="text-neutral-300">4. HOST PROTOCOL (20 Rooms/Stages Hosted)</span>
+                  <span className={clearance.goals.hosted.met ? "text-white font-bold" : "text-neutral-500"}>
+                    {clearance.goals.hosted.current}/20 {clearance.goals.hosted.met && "✓"}
+                  </span>
+                </div>
+
+                <div className="border border-neutral-900 bg-neutral-950 p-2.5 flex justify-between items-center">
+                  <span className="text-neutral-300">5. PROMOTER (20 Own-Room Shares)</span>
+                  <span className={clearance.goals.ownShares.met ? "text-white font-bold" : "text-neutral-500"}>
+                    {clearance.goals.ownShares.current}/20 {clearance.goals.ownShares.met && "✓"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Features list */}
+            <div className="border border-neutral-800 bg-neutral-950 p-4 space-y-1.5 text-xs">
+              <p className="text-[10px] font-bold text-white uppercase tracking-widest">// UNLOCKED CREATOR PRIVILEGES</p>
+              <ul className="text-neutral-400 space-y-1 text-[11px]">
+                <li>⚡ Broadcast 15-minute long-form audio series (.mp3/.m4a)</li>
+                <li>⚡ Mine platform Volts passively based on listener engagement</li>
+                <li>⚡ Receive timestamped async voice replies from the network</li>
+                <li>⚡ 100% free streaming for all nodes worldwide</li>
+              </ul>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <button
+                onClick={() => {
+                  setShowClearanceModal(false);
+                  router.push("/rooms");
+                }}
+                className="flex-1 py-3 bg-white text-black font-bold text-xs uppercase tracking-widest hover:bg-neutral-200 transition-colors cursor-pointer text-center"
+              >
+                [ BROADCAST ON ECHO TO RANK UP ➔ ]
+              </button>
+              <button
+                onClick={() => setShowClearanceModal(false)}
+                className="py-3 px-4 border border-neutral-800 text-neutral-400 hover:text-white hover:border-white text-xs uppercase tracking-widest transition-colors cursor-pointer"
+              >
+                [ CLOSE ]
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

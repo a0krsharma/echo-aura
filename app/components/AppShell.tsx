@@ -139,12 +139,12 @@ function ShellContent({ children }: { children: React.ReactNode }) {
 
   const drawerNav = [
     { label: "[ FREQUENCY ]",  href: "/",               icon: Radio      },
-    { label: "[ FREQUENCY+ ]", href: "/frequency-plus", icon: Headphones },
     { label: "[ WAVES ]",      href: "/waves",          icon: Waves      },
     { label: "[ STUDIO ]",     href: "/studio",         icon: Mic2       },
     { label: "[ STAGE ]",      href: "/clash",          icon: Swords     },
-    { label: "[ ROOMS ]",     href: "/rooms",          icon: Users      },
-    { label: "[ RADAR ]",     href: "/radar",          icon: Compass    },
+    { label: "[ ROOMS ]",      href: "/rooms",          icon: Users      },
+    { label: "[ RADAR ]",      href: "/radar",          icon: Compass    },
+    { label: "[ FREQUENCY+ ]", href: "/frequency-plus", icon: Headphones },
   ];
 
   return (

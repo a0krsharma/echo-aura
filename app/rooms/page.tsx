@@ -10,7 +10,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Radio, Swords, Plus, X, Calendar, Flame, Lock } from "lucide-react";
 import { subscribeToClashes, type ClashItem } from "@/lib/clashes";
-import { subscribeToPublicRooms, getTrendingRooms, getRoomsByCategory, type Room } from "@/lib/rooms";
+import { subscribeToPublicRooms, getTrendingRooms, getRoomsByCategory, deleteRoom, type Room } from "@/lib/rooms";
 import { useAuth } from "@/app/components/AuthProvider";
 import QuickRoomCard from "@/app/components/QuickRoomCard";
 import { ScheduledRoomCard } from "@/app/components/ScheduledRoomCard";
@@ -30,7 +30,7 @@ function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate:
   const [openMic, setOpenMic] = useState(false);
 
   const CATEGORIES = ["GENERAL", "TECH", "MARKETS", "MUSIC", "DEBATE", "CRICKET", "CASUAL"];
-  const canCreate = name.trim().length >= 3 && user;
+  const canCreate = name.trim().length >= 3 && user && (!scheduleMode || scheduledFor.length > 0);
 
   const handleCreate = async () => {
     if (!canCreate || !user) return;
@@ -60,7 +60,13 @@ function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate:
       }
 
       onCreate(data.roomId);
-      router.push(`/room/${data.roomId}`);
+
+      if (scheduleMode) {
+        alert("[ TRANSMISSION SCHEDULED ] Your transmission is listed on the scheduled board.");
+        onClose();
+      } else {
+        router.push(`/room/${data.roomId}`);
+      }
     } catch (error) {
       console.error("Error creating room:", error);
       alert("Error: Failed to create room. Please try again.");
@@ -199,6 +205,15 @@ export default function RoomsPage() {
     ? liveRooms
     : liveRooms.filter(r => (r.category || "").toUpperCase() === selectedCategory);
 
+  const handleDeleteRoom = async (roomId: string) => {
+    if (!confirm("Are you sure you want to end and delete this frequency?")) return;
+    try {
+      await deleteRoom(roomId);
+    } catch (err) {
+      alert("Failed to delete room.");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black text-white pb-28 md:pb-12 font-mono">
       {showCreateModal && <CreateRoomModal onClose={() => setShowCreateModal(false)} onCreate={() => {}} />}
@@ -266,7 +281,12 @@ export default function RoomsPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {filteredLiveRooms.map(room => (
-                <QuickRoomCard key={room.id} room={room} />
+                <QuickRoomCard
+                  key={room.id}
+                  room={room}
+                  isHost={user?.uid === room.hostUid}
+                  onDelete={() => handleDeleteRoom(room.id)}
+                />
               ))}
             </div>
           )}
@@ -293,7 +313,15 @@ export default function RoomsPage() {
           ) : (
             <div className="space-y-3">
               {scheduledRooms.map(room => (
-                <ScheduledRoomCard key={room.id} room={room} />
+                <ScheduledRoomCard
+                  key={room.id}
+                  room={room}
+                  isHost={user?.uid === room.hostUid}
+                  onDelete={() => handleDeleteRoom(room.id)}
+                  onStartNow={() => {
+                    window.location.href = `/room/${room.id}`;
+                  }}
+                />
               ))}
             </div>
           )}

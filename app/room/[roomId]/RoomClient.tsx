@@ -55,6 +55,7 @@ import {
   bookmarkRoom,
   removeRoomBookmark,
   endRoom,
+  deleteRoom,
   type Room,
   type RoomParticipant,
 } from "@/lib/rooms";
@@ -234,6 +235,19 @@ export default function RoomClient({ roomId }: RoomClientProps) {
     router.push("/rooms");
   };
 
+  // Host End & Delete Room
+  const handleHostEndRoom = async () => {
+    if (!confirm("Terminate live frequency and delete room for all nodes?")) return;
+    try {
+      await deleteRoom(roomId);
+      await disconnect();
+      router.push("/rooms");
+    } catch (err) {
+      console.error("Failed to delete room:", err);
+      alert("Failed to terminate room.");
+    }
+  };
+
   // Moderator Handlers
   const handlePromoteSpeaker = async (uid: string) => {
     try {
@@ -385,12 +399,22 @@ export default function RoomClient({ roomId }: RoomClientProps) {
             variant="button"
             className="px-2.5 py-1 text-[10px] sm:text-xs uppercase"
           />
-          <button
-            onClick={handleLeave}
-            className="text-neutral-400 hover:text-red-400 hover:border-red-500 border border-neutral-800 px-2.5 py-1 text-[10px] sm:text-xs uppercase font-bold transition-colors cursor-pointer"
-          >
-            [!] LEAVE
-          </button>
+          {user?.uid === room.hostUid ? (
+            <button
+              onClick={handleHostEndRoom}
+              className="text-red-400 hover:text-white hover:bg-red-950/80 border border-red-800 px-2.5 py-1 text-[10px] sm:text-xs uppercase font-bold transition-colors cursor-pointer"
+              title="Terminate and delete live room"
+            >
+              [!] END ROOM
+            </button>
+          ) : (
+            <button
+              onClick={handleLeave}
+              className="text-neutral-400 hover:text-red-400 hover:border-red-500 border border-neutral-800 px-2.5 py-1 text-[10px] sm:text-xs uppercase font-bold transition-colors cursor-pointer"
+            >
+              [!] LEAVE
+            </button>
+          )}
         </div>
       </header>
 

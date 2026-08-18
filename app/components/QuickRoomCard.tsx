@@ -1,21 +1,28 @@
 "use client";
 
 import React from "react";
-import { Radio, Users, Volume2 } from "lucide-react";
+import { Radio, Users, Volume2, Trash2 } from "lucide-react";
 import type { Room } from "@/lib/rooms";
 import { useRoomAudio } from "@/lib/context/RoomAudioContext";
 
 interface QuickRoomCardProps {
   room: Room;
+  isHost?: boolean;
+  onDelete?: () => void;
 }
 
-export default function QuickRoomCard({ room }: QuickRoomCardProps) {
+export default function QuickRoomCard({ room, isHost, onDelete }: QuickRoomCardProps) {
   const { activeRoomId, tuneIn } = useRoomAudio();
   const isActive = activeRoomId === room.id;
 
   const handleCardClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     tuneIn(room.id, room);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onDelete) onDelete();
   };
 
   return (
@@ -32,10 +39,21 @@ export default function QuickRoomCard({ room }: QuickRoomCardProps) {
         <span className="uppercase tracking-wider">
           [{room.category || "STAGE"}] • {room.hostHandle || "@ANON"}
         </span>
-        <span className="flex items-center gap-1.5 font-bold text-white">
-          <span className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-white animate-ping" : "bg-white"}`} />
-          {room.participantCount || 1} NODES
-        </span>
+        <div className="flex items-center gap-2">
+          {isHost && onDelete && (
+            <button
+              onClick={handleDeleteClick}
+              className="text-red-500 hover:text-red-300 p-0.5 transition-colors cursor-pointer"
+              title="Delete Frequency"
+            >
+              <Trash2 size={12} />
+            </button>
+          )}
+          <span className="flex items-center gap-1.5 font-bold text-white">
+            <span className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-white animate-ping" : "bg-white"}`} />
+            {room.participantCount || 1} NODES
+          </span>
+        </div>
       </div>
 
       {/* Room Title */}
