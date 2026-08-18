@@ -46,82 +46,88 @@ function ChallengeModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/90 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-md bg-black border border-neutral-700 p-6 md:p-8 animate-slide-up space-y-4">
-        <div className="flex items-start justify-between">
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/90 backdrop-blur-sm animate-fade-in font-mono">
+      <div className="w-full max-w-md bg-black border border-white p-6 md:p-8 animate-slide-up space-y-4 shadow-2xl">
+        <div className="flex items-start justify-between border-b border-neutral-900 pb-3">
           <div>
-            <p className="font-mono text-xs tracking-widest text-neutral-500 mb-1">// CHALLENGE TO [ STAGE ]</p>
-            <p className="font-serif italic text-white text-lg">Set the debate motion.</p>
+            <p className="text-[10px] tracking-widest text-neutral-500 uppercase">// CHALLENGE TO [ STAGE ]</p>
+            <h2 className="text-sm font-bold text-white uppercase mt-0.5">SET DEBATE MOTION</h2>
           </div>
-          <button onClick={onClose} className="text-neutral-600 hover:text-white transition-colors cursor-pointer">
+          <button onClick={onClose} className="text-neutral-500 hover:text-white transition-colors cursor-pointer p-1">
             <X size={18} />
           </button>
         </div>
 
-        <div>
-          <label className="font-mono text-[10px] tracking-widest text-neutral-600 block mb-1">DEBATE TITLE</label>
-          <input
-            value={title}
-            onChange={e => setTitle(e.target.value)}
-            placeholder="e.g. AI vs Human Creativity"
-            className="w-full bg-transparent border-b border-neutral-800 focus:border-white outline-none font-mono text-xs text-white py-1 tracking-widest"
-          />
-        </div>
-
-        <div>
-          <label className="font-mono text-[10px] tracking-widest text-neutral-600 block mb-1">OPPONENT HANDLE</label>
-          <input
-            value={handle}
-            onChange={e => setHandle(e.target.value)}
-            placeholder="@HANDLE"
-            className="w-full bg-transparent border-b border-neutral-800 focus:border-white outline-none font-mono text-xs text-white py-1 tracking-widest"
-          />
-        </div>
-
-        <div>
-          <label className="font-mono text-[10px] tracking-widest text-neutral-600 block mb-1">DEBATE TOPIC / MOTION</label>
-          <textarea
-            value={topic}
-            onChange={e => setTopic(e.target.value)}
-            placeholder="State the debate question..."
-            rows={2}
-            className="w-full bg-transparent border border-neutral-800 focus:border-neutral-600 outline-none font-serif italic text-white p-2 text-sm leading-relaxed resize-none"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="space-y-3 text-xs">
           <div>
-            <label className="font-mono text-[9px] tracking-widest text-neutral-600 block mb-1">SIDE A STANCE</label>
-            <textarea
-              value={posA}
-              onChange={e => setPosA(e.target.value)}
-              placeholder="Side A stance..."
-              rows={2}
-              className="w-full bg-transparent border border-neutral-800 p-2 font-serif text-xs italic text-white"
+            <label className="text-[10px] tracking-widest text-neutral-500 block mb-1 uppercase">DEBATE TITLE</label>
+            <input
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder="e.g. AI VS HUMAN CREATIVITY"
+              className="w-full bg-neutral-950 border border-neutral-800 p-2.5 text-xs text-white placeholder-neutral-700 outline-none focus:border-white uppercase"
             />
           </div>
+
           <div>
-            <label className="font-mono text-[9px] tracking-widest text-neutral-600 block mb-1">SIDE B STANCE</label>
-            <textarea
-              value={posB}
-              onChange={e => setPosB(e.target.value)}
-              placeholder="Side B stance..."
-              rows={2}
-              className="w-full bg-transparent border border-neutral-800 p-2 font-serif text-xs italic text-white"
+            <label className="text-[10px] tracking-widest text-neutral-500 block mb-1 uppercase">OPPONENT HANDLE</label>
+            <input
+              value={handle}
+              onChange={e => setHandle(e.target.value)}
+              placeholder="@HANDLE"
+              className="w-full bg-neutral-950 border border-neutral-800 p-2.5 text-xs text-white placeholder-neutral-700 outline-none focus:border-white uppercase"
             />
+          </div>
+
+          <div>
+            <label className="text-[10px] tracking-widest text-neutral-500 block mb-1 uppercase">DEBATE TOPIC / MOTION</label>
+            <textarea
+              value={topic}
+              onChange={e => setTopic(e.target.value)}
+              placeholder="State the debate question..."
+              rows={2}
+              className="w-full bg-neutral-950 border border-neutral-800 p-2.5 text-xs text-white placeholder-neutral-700 outline-none focus:border-white resize-none"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-[9px] tracking-widest text-neutral-500 block mb-1 uppercase">SIDE A STANCE</label>
+              <textarea
+                value={posA}
+                onChange={e => setPosA(e.target.value)}
+                placeholder="Side A stance..."
+                rows={2}
+                className="w-full bg-neutral-950 border border-neutral-800 p-2 text-xs text-white placeholder-neutral-700 outline-none focus:border-white resize-none"
+              />
+            </div>
+            <div>
+              <label className="text-[9px] tracking-widest text-neutral-500 block mb-1 uppercase">SIDE B STANCE</label>
+              <textarea
+                value={posB}
+                onChange={e => setPosB(e.target.value)}
+                placeholder="Side B stance..."
+                rows={2}
+                className="w-full bg-neutral-950 border border-neutral-800 p-2 text-xs text-white placeholder-neutral-700 outline-none focus:border-white resize-none"
+              />
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-4 pt-2">
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-neutral-900">
+          <button
+            onClick={onClose}
+            className="text-xs tracking-widest uppercase text-neutral-500 hover:text-white transition-colors cursor-pointer"
+          >
+            CANCEL
+          </button>
           <button
             disabled={!canSend || busy}
             onClick={handleSend}
-            className="flex items-center gap-2 font-mono text-xs tracking-widest uppercase text-black bg-white px-5 py-3 hover:opacity-80 transition-opacity cursor-pointer disabled:opacity-30"
+            className="flex items-center gap-2 text-xs tracking-widest uppercase border border-white bg-white text-black font-bold px-5 py-2.5 hover:bg-neutral-200 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
           >
-            <Swords size={12} strokeWidth={2} /> [ LAUNCH DEBATE ]
-          </button>
-          <button onClick={onClose} className="font-mono text-xs tracking-widest uppercase text-neutral-600 hover:text-white transition-colors cursor-pointer">
-            CANCEL
+            <Swords size={13} strokeWidth={2.5} />
+            <span>{busy ? "INITIALIZING..." : "[ LAUNCH DEBATE ]"}</span>
           </button>
         </div>
       </div>
@@ -154,7 +160,7 @@ export default function StagePage() {
   };
 
   const handleDeleteClash = async (clashId: string) => {
-    if (!confirm("Delete this debate?")) return;
+    if (!confirm("Are you sure you want to end and delete this debate?")) return;
     try {
       await deleteClash(clashId);
     } catch (error) {
@@ -173,50 +179,57 @@ export default function StagePage() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white pb-24 md:pb-8">
+    <div className="min-h-screen bg-black text-white pb-28 md:pb-12 font-mono">
       {showChallenge && <ChallengeModal onClose={() => setShowChallenge(false)} />}
 
-      {/* Top bar */}
-      <div className="md:hidden flex items-center justify-between px-5 pt-10 pb-6 border-b border-neutral-900">
-        <span className="font-serif text-xl font-bold text-white">Echo.</span>
-        <span className="font-mono text-xs tracking-widest uppercase text-white">[ STAGE ]</span>
-      </div>
-
-      <div className="max-w-2xl mx-auto px-5 pt-8 md:pt-12">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4 mb-10">
-          <div>
-            <p className="font-mono text-xs tracking-widest text-neutral-700 mb-3">// [ STAGE ] — WHERE VOICES CLASH</p>
-            <h1 className="font-serif text-4xl italic text-white leading-tight">
-              Two voices.<br />One truth.
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-8 space-y-8 w-full">
+        {/* Top Header */}
+        <div className="flex items-start justify-between gap-4 border-b border-neutral-900 pb-6">
+          <div className="space-y-1">
+            <p className="text-[10px] tracking-widest text-neutral-500 uppercase flex items-center gap-2">
+              <Swords className="w-3.5 h-3.5 text-white animate-pulse" />
+              // 1V1 LIVE AUDIO DEBATES
+            </p>
+            <h1 className="text-2xl font-bold tracking-widest text-white uppercase">
+              [ STAGE ]
             </h1>
           </div>
           <button
             onClick={() => setShowChallenge(true)}
-            className="shrink-0 flex items-center gap-2 font-mono text-xs tracking-widest uppercase text-black bg-white px-4 py-2.5 hover:opacity-80 transition-opacity cursor-pointer"
+            className="shrink-0 flex items-center gap-2 text-xs font-bold tracking-widest uppercase text-black bg-white px-4 py-2.5 hover:bg-neutral-200 transition-colors cursor-pointer"
           >
-            <Swords size={11} strokeWidth={2} />
-            CHALLENGE
+            <Swords size={13} strokeWidth={2.5} />
+            [ + CHALLENGE ]
           </button>
         </div>
 
         {/* Live Clashes Stream */}
-        <section className="space-y-6 mb-12">
-          <p className="font-mono text-xs tracking-widest text-white">// LIVE DEBATES ON [ STAGE ]</p>
+        <section className="space-y-4">
+          <div className="flex items-center justify-between text-[10px] text-neutral-500 uppercase tracking-widest font-bold">
+            <span>// LIVE DEBATES ON [ STAGE ] ({clashes.length})</span>
+            <span>AUDIENCE VOTE ARENA</span>
+          </div>
+
           {clashes.length === 0 ? (
-            <div className="border border-neutral-900 p-8 text-center space-y-4">
-              <p className="font-serif italic text-neutral-500 text-lg">
-                No active debates on [ STAGE ] right now.
-              </p>
+            <div className="border border-neutral-900 bg-neutral-950 p-12 text-center space-y-4">
+              <Swords className="w-8 h-8 text-neutral-700 mx-auto animate-pulse" />
+              <div className="space-y-1">
+                <p className="text-xs text-neutral-400 font-bold uppercase tracking-widest">
+                  NO ACTIVE DEBATES ON [ STAGE ] RIGHT NOW
+                </p>
+                <p className="text-[10px] text-neutral-600 max-w-sm mx-auto">
+                  Challenge any node to a 1v1 live audio debate on stage.
+                </p>
+              </div>
               <button
                 onClick={() => setShowChallenge(true)}
-                className="px-4 py-2 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors"
+                className="inline-block mt-2 px-4 py-2 border border-white bg-white text-black text-xs font-bold uppercase tracking-widest hover:bg-neutral-200 cursor-pointer"
               >
-                [ ⚔ LAUNCH FIRST DEBATE ]
+                [ + LAUNCH FIRST DEBATE ]
               </button>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {clashes.map((c) => {
                 const totalVotes = (c.sideA?.votes || 0) + (c.sideB?.votes || 0);
                 const pctA = totalVotes > 0 ? ((c.sideA?.votes || 0) / totalVotes) * 100 : 50;
@@ -232,57 +245,72 @@ export default function StagePage() {
                 );
 
                 return (
-                  <div key={c.id} className="border border-neutral-800 p-6 space-y-5">
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs text-white tracking-widest truncate mr-2 min-w-0 flex-1">{c.title}</span>
-                      <span className="font-mono text-[10px] text-neutral-600 uppercase shrink-0 whitespace-nowrap">{fmt(totalVotes)} VOTES</span>
+                  <div key={c.id} className="border border-neutral-800 bg-neutral-950 p-5 space-y-4 hover:border-neutral-700 transition-colors">
+                    {/* Header */}
+                    <div className="flex items-center justify-between text-[10px] text-neutral-400">
+                      <span className="uppercase tracking-wider font-bold text-white">
+                        {c.title || "LIVE STAGE DEBATE"}
+                      </span>
+                      <span className="text-neutral-500 uppercase tracking-wider font-bold">
+                        {fmt(totalVotes)} VOTES // {c.listeners || 1} NODES
+                      </span>
                     </div>
 
-                    <h3 className="font-serif italic text-xl text-white">
+                    {/* Debate Topic */}
+                    <h3 className="text-sm sm:text-base font-bold text-white uppercase tracking-tight">
                       "{c.topic}"
                     </h3>
 
-                    {/* Side A & B */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
-                      <div className="p-3 border border-neutral-900 space-y-2">
-                        <div className="text-neutral-500">{c.sideA?.handle || "SIDE A"}</div>
-                        <p className="font-serif italic text-neutral-300">"{c.sideA?.position}"</p>
+                    {/* Side A & B Boxes */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                      <div className="p-3 border border-neutral-900 bg-black space-y-2">
+                        <div className="text-[10px] text-neutral-400 font-bold uppercase">
+                          {c.sideA?.handle || "SIDE A"}
+                        </div>
+                        <p className="text-xs text-neutral-300 line-clamp-2">
+                          "{c.sideA?.position}"
+                        </p>
                         <button
                           onClick={() => handleVote(c.id, "A")}
                           disabled={!!userVote}
-                          className={`w-full py-1.5 border tracking-widest uppercase transition-colors ${
+                          className={`w-full py-2 text-[10px] font-bold border uppercase tracking-wider transition-colors cursor-pointer ${
                             userVote === "A"
-                              ? "border-white text-white"
-                              : "border-neutral-800 text-neutral-500 hover:border-white hover:text-white"
+                              ? "border-white bg-white text-black"
+                              : "border-neutral-800 text-neutral-400 hover:border-white hover:text-white bg-neutral-950"
                           }`}
                         >
-                          {userVote === "A" ? "✓ VOTED A" : `VOTE SIDE A (${c.sideA?.votes || 0})`}
+                          {userVote === "A" ? "[ ✓ VOTED A ]" : `VOTE SIDE A (${c.sideA?.votes || 0})`}
                         </button>
                       </div>
 
-                      <div className="p-3 border border-neutral-900 space-y-2">
-                        <div className="text-neutral-500">{c.sideB?.handle || "SIDE B"}</div>
-                        <p className="font-serif italic text-neutral-300">"{c.sideB?.position}"</p>
+                      <div className="p-3 border border-neutral-900 bg-black space-y-2">
+                        <div className="text-[10px] text-neutral-400 font-bold uppercase">
+                          {c.sideB?.handle || "SIDE B"}
+                        </div>
+                        <p className="text-xs text-neutral-300 line-clamp-2">
+                          "{c.sideB?.position}"
+                        </p>
                         <button
                           onClick={() => handleVote(c.id, "B")}
                           disabled={!!userVote}
-                          className={`w-full py-1.5 border tracking-widest uppercase transition-colors ${
+                          className={`w-full py-2 text-[10px] font-bold border uppercase tracking-wider transition-colors cursor-pointer ${
                             userVote === "B"
-                              ? "border-white text-white"
-                              : "border-neutral-800 text-neutral-500 hover:border-white hover:text-white"
+                              ? "border-white bg-white text-black"
+                              : "border-neutral-800 text-neutral-400 hover:border-white hover:text-white bg-neutral-950"
                           }`}
                         >
-                          {userVote === "B" ? "✓ VOTED B" : `VOTE SIDE B (${c.sideB?.votes || 0})`}
+                          {userVote === "B" ? "[ ✓ VOTED B ]" : `VOTE SIDE B (${c.sideB?.votes || 0})`}
                         </button>
                       </div>
                     </div>
 
-                    {/* Progress Bar & Enter Live Relay Link */}
+                    {/* Progress Bar & Actions */}
                     <div className="space-y-3 pt-2">
                       <div className="w-full h-1 bg-neutral-900 relative">
                         <div className="h-full bg-white transition-all duration-500" style={{ width: `${pctA}%` }} />
                       </div>
-                      <div className="flex justify-between items-center gap-2">
+
+                      <div className="flex justify-between items-center gap-2 pt-1 border-t border-neutral-900 text-xs">
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleShareClash(c.id)}
@@ -294,7 +322,7 @@ export default function StagePage() {
                           {isCreator && (
                             <button
                               onClick={() => handleDeleteClash(c.id)}
-                              className="flex items-center gap-1 font-mono text-[10px] text-red-400 hover:text-red-200 border border-red-900/60 hover:border-red-500 bg-red-950/30 px-2 py-1 uppercase tracking-wider transition-colors cursor-pointer"
+                              className="flex items-center gap-1 text-[10px] font-bold text-red-400 hover:text-red-200 border border-red-900/60 hover:border-red-500 bg-red-950/30 px-2 py-1 uppercase tracking-wider transition-colors cursor-pointer"
                               title="Delete debate"
                             >
                               <Trash2 size={11} />
@@ -304,9 +332,9 @@ export default function StagePage() {
                         </div>
                         <Link
                           href={`/stage/${c.id}`}
-                          className="font-mono text-xs text-white border border-white px-3 py-1.5 hover:bg-white hover:text-black uppercase transition-colors whitespace-nowrap shrink-0"
+                          className="text-xs font-bold text-white border border-white px-4 py-2 hover:bg-white hover:text-black uppercase tracking-wider transition-colors whitespace-nowrap shrink-0"
                         >
-                          [ 🎧 RELAY ]
+                          [ 🎧 ENTER STAGE ]
                         </Link>
                       </div>
                     </div>
