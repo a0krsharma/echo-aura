@@ -343,33 +343,33 @@ export default function NeuralSynthesisTerminal({
         <button
           type="button"
           onClick={() => setEngineMode("ONE_SHOT")}
-          className={`py-2.5 px-2 text-[11px] sm:text-xs font-bold uppercase tracking-wider border transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
+          className={`py-2.5 px-2 text-[10px] sm:text-xs font-bold uppercase tracking-wider border transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
             engineMode === "ONE_SHOT"
               ? "border-white bg-white text-black shadow-lg"
               : "border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-600 hover:text-white"
           }`}
         >
           <Sparkles className="w-3.5 h-3.5" />
-          <span>[ ⚡ ONE-SHOT ]</span>
+          <span>[ ✨ FULL SONG AI ]</span>
         </button>
 
         <button
           type="button"
           onClick={() => setEngineMode("CLONE")}
-          className={`py-2.5 px-2 text-[11px] sm:text-xs font-bold uppercase tracking-wider border transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
+          className={`py-2.5 px-2 text-[10px] sm:text-xs font-bold uppercase tracking-wider border transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
             engineMode === "CLONE"
               ? "border-white bg-white text-black shadow-lg"
               : "border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-600 hover:text-white"
           }`}
         >
           <Fingerprint className="w-3.5 h-3.5" />
-          <span>[ 🧬 CLONE ]</span>
+          <span>[ 🧬 VOICE CLONE ]</span>
         </button>
 
         <button
           type="button"
           onClick={() => setEngineMode("PRESETS")}
-          className={`py-2.5 px-2 text-[11px] sm:text-xs font-bold uppercase tracking-wider border transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
+          className={`py-2.5 px-2 text-[10px] sm:text-xs font-bold uppercase tracking-wider border transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
             engineMode === "PRESETS"
               ? "border-white bg-white text-black shadow-lg"
               : "border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-600 hover:text-white"
