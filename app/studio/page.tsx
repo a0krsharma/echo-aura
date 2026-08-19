@@ -14,11 +14,13 @@
 import React, { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader2, Play, Square, Trash2, Send, Radio, Cpu, Mic, Sparkles } from "lucide-react";
+import { Loader2, Play, Square, Trash2, Send, Radio, Cpu, Mic, Sparkles, Music, X } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
 import { uploadAudio } from "@/lib/cloudinary";
 import { createPost } from "@/lib/posts";
 import NeuralSynthesisTerminal from "@/app/components/NeuralSynthesisTerminal";
+import SoundPickerModal from "@/app/components/SoundPickerModal";
+import { SoundItem, getSoundById } from "@/lib/soundCatalog";
 
 type StudioState = "idle" | "recording" | "preview" | "uploading";
 
@@ -32,9 +34,41 @@ function StudioContent() {
   const newsUrlParam = searchParams.get("url") || searchParams.get("link") || "";
   const categoryParam = searchParams.get("category") || "";
 
+  // Community Sound / "Use This Audio" Query Params
+  const soundIdParam = searchParams.get("soundId") || "";
+  const soundUrlParam = searchParams.get("soundUrl") || "";
+  const soundTitleParam = searchParams.get("soundTitle") || "";
+  const soundArtistParam = searchParams.get("soundArtist") || "";
+  const isMemeParam = searchParams.get("isMeme") === "true";
+
   const [studioMode, setStudioMode] = useState<"MIC" | "NEURAL">("MIC");
   const [studioState, setStudioState] = useState<StudioState>("idle");
   const [elapsedMs, setElapsedMs] = useState(0);
+
+  // Attached Sound State
+  const [showSoundPicker, setShowSoundPicker] = useState(false);
+  const [attachedSound, setAttachedSound] = useState<SoundItem | null>(() => {
+    if (soundIdParam) {
+      const catalogSound = getSoundById(soundIdParam);
+      if (catalogSound) return catalogSound;
+      if (soundUrlParam && soundTitleParam) {
+        return {
+          id: soundIdParam,
+          title: soundTitleParam,
+          artist: soundArtistParam || "@ANON",
+          category: isMemeParam ? "VOICE_MEME" : "COMMUNITY",
+          audioUrl: soundUrlParam,
+          durationSec: 15,
+          usageCount: 1,
+          isVoiceMeme: isMemeParam,
+        };
+      }
+    }
+    return null;
+  });
+
+  const backingAudioRef = useRef<HTMLAudioElement | null>(null);
+
   const [caption, setCaption] = useState(() => {
     if (topicParam) {
       const clean = topicParam.replace(/^#+/, "");
@@ -154,6 +188,11 @@ function StudioContent() {
 
       // onstop fires AFTER all ondataavailable events have fired
       recorder.onstop = () => {
+        if (backingAudioRef.current) {
+          backingAudioRef.current.pause();
+          backingAudioRef.current.currentTime = 0;
+        }
+
         const finalBlob = new Blob(chunksRef.current, { type: mimeType });
 
         if (finalBlob.size < 100) {
@@ -171,6 +210,19 @@ function StudioContent() {
         setStudioState("preview");
       };
 
+      // If backing sound is attached, play it in sync during recording
+      if (attachedSound?.audioUrl) {
+        if (!backingAudioRef.current) {
+          backingAudioRef.current = new Audio(attachedSound.audioUrl);
+          backingAudioRef.current.volume = 0.6;
+        } else {
+          backingAudioRef.current.src = attachedSound.audioUrl;
+          backingAudioRef.current.volume = 0.6;
+        }
+        backingAudioRef.current.currentTime = 0;
+        backingAudioRef.current.play().catch(() => {});
+      }
+
       recorder.start();
       setStudioState("recording");
     } catch (err: any) {
@@ -187,12 +239,13 @@ function StudioContent() {
   // ── STOP RECORDING ───────────────────────────────────────────
   const stopRecording = () => {
     const recorder = mediaRecorderRef.current;
-    if (!recorder) return;
-    // Only call stop() if actively recording — prevents double-stop
-    if (recorder.state === "recording" || recorder.state === "paused") {
-      recorder.stop(); // triggers onstop after final ondataavailable
+    if (backingAudioRef.current) {
+      backingAudioRef.current.pause();
     }
-    // Do NOT set state here — let onstop handle the state transition
+    if (!recorder) return;
+    if (recorder.state === "recording" || recorder.state === "paused") {
+      recorder.stop();
+    }
   };
 
   // ── PREVIEW PLAYBACK ─────────────────────────────────────────
@@ -227,6 +280,9 @@ function StudioContent() {
 
   // ── DISCARD RECORDING ────────────────────────────────────────
   const discardRecording = () => {
+    if (backingAudioRef.current) {
+      backingAudioRef.current.pause();
+    }
     if (previewAudioRef.current) {
       previewAudioRef.current.pause();
       previewAudioRef.current = null;
@@ -279,6 +335,10 @@ function StudioContent() {
         newsLink: newsUrlParam || null,
         category: categoryParam || null,
         tags: topicParam ? [topicParam.replace(/^#+/, "").toUpperCase()] : [],
+        audioTrackId: attachedSound?.id || null,
+        audioTrackTitle: attachedSound?.title || null,
+        audioTrackArtist: attachedSound?.artist || null,
+        isVoiceMeme: Boolean(attachedSound?.isVoiceMeme),
       });
 
       // Revoke blob URL
@@ -377,6 +437,58 @@ function StudioContent() {
             )}
           </div>
         )}
+
+        {/* Community Sound / Voice Meme Attachment Bar */}
+        <div className="w-full">
+          {attachedSound ? (
+            <div className="border border-white bg-neutral-950 p-3 flex items-center justify-between gap-3 font-mono shadow-lg">
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <Music className="w-4 h-4 text-white animate-pulse shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-white uppercase truncate">
+                      {attachedSound.title}
+                    </span>
+                    {attachedSound.isVoiceMeme && (
+                      <span className="text-[9px] bg-white text-black font-extrabold px-1 uppercase shrink-0">
+                        MEME
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-neutral-400 truncate">
+                    {attachedSound.artist} • BACKING AUDIO SYNC ON
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowSoundPicker(true)}
+                  className="text-[10px] uppercase font-bold text-neutral-300 hover:text-white border border-neutral-800 px-2 py-1 hover:border-white transition-colors cursor-pointer"
+                >
+                  CHANGE
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAttachedSound(null)}
+                  className="text-[10px] uppercase font-bold text-red-400 hover:text-red-300 border border-neutral-800 px-2 py-1 hover:border-red-500 transition-colors cursor-pointer flex items-center gap-1"
+                >
+                  <X className="w-3 h-3" />
+                  REMOVE
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowSoundPicker(true)}
+              className="w-full border border-dashed border-neutral-800 hover:border-white bg-neutral-950 p-3 font-mono text-xs uppercase tracking-widest text-neutral-400 hover:text-white transition-colors cursor-pointer flex items-center justify-center gap-2"
+            >
+              <Music className="w-3.5 h-3.5" />
+              <span>[ + ATTACH SOUND STEM OR VIRAL VOICE MEME ]</span>
+            </button>
+          )}
+        </div>
 
         {/* Timer */}
         <div className="text-center">
@@ -518,6 +630,14 @@ function StudioContent() {
             : "AUDIO CLOUD ENGINE"}
         </span>
       </footer>
+
+      {/* ── Sound Hub / Meme Picker Modal ── */}
+      <SoundPickerModal
+        isOpen={showSoundPicker}
+        onClose={() => setShowSoundPicker(false)}
+        onSelectSound={(s) => setAttachedSound(s)}
+        activeSoundId={attachedSound?.id}
+      />
     </div>
   );
 }

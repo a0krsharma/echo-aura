@@ -6,7 +6,7 @@ import {
   ArrowUp, Flame, Mic2, Share2, RefreshCw,
   Loader2, Send, Trash2, ChevronDown, ChevronUp,
   Heart, AtSign, Repeat2, MessageSquare,
-  RotateCcw, RotateCw
+  RotateCcw, RotateCw, Music
 } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
 import {
@@ -21,6 +21,7 @@ import { createNotification } from "@/lib/notifications";
 import { followUser, unfollowUser, isFollowing, subscribeToFollowing } from "@/lib/follows";
 import { audioManager } from "@/lib/audioManager";
 import { subscribeToPostComments, createComment, toggleLikeComment, deleteComment, type CommentItem } from "@/lib/comments";
+import { SOUND_CATALOG } from "@/lib/soundCatalog";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface FeedPost {
@@ -36,6 +37,10 @@ interface FeedPost {
   category?: string;
   isNeural?: boolean;
   isCloned?: boolean;
+  audioTrackId?: string;
+  audioTrackTitle?: string;
+  audioTrackArtist?: string;
+  isVoiceMeme?: boolean;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -544,7 +549,64 @@ function ReplyRecordModal({ postId, postCaption, postAuthorHandle, postAuthorUid
         </div>
         <div className="font-mono text-3xl text-white text-center tabular-nums">{fmtMs(ms)}</div>
         <div className="space-y-3">
-          {state==="idle"&&<button onClick={startRec} className="w-full border border-neutral-700 text-white font-mono text-xs tracking-widest uppercase py-4 hover:border-white hover:bg-neutral-950 transition-colors cursor-pointer">[ 🎙 TAP TO RECORD REPLY ]</button>}
+          {state==="idle"&& (
+            <>
+              <button onClick={startRec} className="w-full border border-neutral-700 text-white font-mono text-xs tracking-widest uppercase py-4 hover:border-white hover:bg-neutral-950 transition-colors cursor-pointer">
+                [ 🎙 TAP TO RECORD VOICE REPLY ]
+              </button>
+
+              {/* 1-Tap Viral Voice Meme Soundboard */}
+              <div className="space-y-1.5 pt-2 border-t border-neutral-900">
+                <span className="font-mono text-[9px] text-neutral-500 uppercase tracking-widest block font-bold">
+                  // 1-TAP VIRAL VOICE MEMES (INSTANT DROP)
+                </span>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {SOUND_CATALOG.filter(s => s.isVoiceMeme).map((meme) => (
+                    <button
+                      key={meme.id}
+                      type="button"
+                      onClick={async () => {
+                        if (!currentUser) return;
+                        setState("uploading");
+                        setMsg(`DROPPING "${meme.title}"...`);
+                        try {
+                          await addPostReverb(postId, {
+                            uid: currentUser.uid,
+                            handle: currentUser.handle || "@ANON",
+                            audioUrl: meme.audioUrl,
+                            caption: caption.trim() || `[ V-MEME: "${meme.title}" ]`,
+                            durationSec: meme.durationSec,
+                            reverbOfReverbId,
+                            reverbOfHandle,
+                            isVoiceMeme: true,
+                            audioTrackTitle: meme.title,
+                          });
+                          await createNotification(postAuthorUid, {
+                            type: "reverb",
+                            fromUid: currentUser.uid,
+                            fromHandle: currentUser.handle || "@ANON",
+                            postId,
+                            postCaption,
+                            text: `${currentUser.handle} dropped a voice meme on your echo.`,
+                          });
+                          onClose();
+                        } catch (e: any) {
+                          setMsg(`ERROR: ${e?.message || "FAILED"}`);
+                          setState("idle");
+                        }
+                      }}
+                      className="p-2 border border-neutral-900 bg-neutral-950 hover:border-white text-left font-mono text-[10px] text-neutral-300 hover:text-white transition-colors cursor-pointer flex items-center justify-between"
+                    >
+                      <span className="truncate">{meme.title}</span>
+                      <span className="text-[8px] bg-neutral-800 text-neutral-400 px-1 py-0.2 shrink-0">
+                        {meme.durationSec}s
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
           {state==="recording"&&<button onClick={stopRec} className="w-full border border-white bg-white text-black font-mono text-xs tracking-widest uppercase py-4 animate-pulse cursor-pointer font-bold">[ ⏹ STOP RECORDING ]</button>}
           {state==="preview"&&(
             <div className="flex gap-3">
@@ -631,10 +693,16 @@ function PostReverbSection({ post, currentUser, onReplyClick, onProfileClick }: 
             return(
               <div key={rv.id} className="space-y-2 border-b border-neutral-900/60 pb-3">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <button onClick={()=>onProfileClick(rv.handle)} className="font-mono text-[10px] tracking-widest text-neutral-400 hover:text-white uppercase cursor-pointer">
                       {rv.handle}
                     </button>
+                    {rv.isVoiceMeme && (
+                      <span className="font-mono text-[8px] bg-white text-black font-extrabold px-1.5 py-0.2 uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                        <span className="w-1 h-1 rounded-full bg-black animate-pulse" />
+                        V-MEME
+                      </span>
+                    )}
                     {rv.reverbOfHandle&&<span className="font-mono text-[10px] text-neutral-700">↩ {rv.reverbOfHandle}</span>}
                   </div>
                   {userReactedEmoji && (
@@ -1047,6 +1115,25 @@ function PostCard({ post, user, orbitedPosts, activePostId, deletingId, onPulse,
       <h2 className="font-mono text-sm md:text-base font-bold text-white tracking-wide leading-relaxed">
         "{parseCaption(post.caption)}"
       </h2>
+
+      {/* Community Sound Attribution Ticker & Use This Audio */}
+      <div className="flex items-center justify-between text-[10px] text-neutral-400 font-mono py-1 border-t border-b border-neutral-900">
+        <Link
+          href={`/audio/${post.audioTrackId || post.id}`}
+          className="flex items-center gap-1.5 hover:text-white transition-colors truncate max-w-[220px] sm:max-w-xs"
+        >
+          <Music className="w-3 h-3 text-white shrink-0" />
+          <span className="truncate uppercase font-bold text-neutral-300 hover:text-white">
+            {post.audioTrackTitle || "Original Audio"} • {post.audioTrackArtist || post.authorHandle}
+          </span>
+        </Link>
+        <Link
+          href={`/studio?soundId=${encodeURIComponent(post.audioTrackId || post.id)}&soundUrl=${encodeURIComponent(post.audioUrl)}&soundTitle=${encodeURIComponent(post.audioTrackTitle || post.caption.slice(0, 30) || "Original Audio")}&soundArtist=${encodeURIComponent(post.audioTrackArtist || post.authorHandle)}${post.isVoiceMeme ? "&isMeme=true" : ""}`}
+          className="text-[9px] border border-neutral-800 hover:border-white px-2 py-0.5 uppercase tracking-wider text-neutral-300 hover:text-white transition-colors shrink-0 font-bold"
+        >
+          [ 🎵 USE AUDIO ]
+        </Link>
+      </div>
 
       {/* Player */}
       <AudioPlayer audioUrl={post.audioUrl} fallbackDurationSec={post.durationSec || 15}

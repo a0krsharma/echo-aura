@@ -77,6 +77,12 @@ export interface PostItem {
   newsLink?:       string | null;
   isNeural?:       boolean;
   isCloned?:       boolean;
+  // [ COMMUNITY SOUND HUB / USE THIS AUDIO ]
+  audioTrackId?:    string;
+  audioTrackTitle?: string;
+  audioTrackArtist?: string;
+  isVoiceMeme?:     boolean;
+  audioUsageCount?: number;
 }
 
 /** Inline voice comment on a post — stored in posts/{id}/reverbs subcollection */
@@ -95,6 +101,8 @@ export interface PostReverbItem {
   reverbOfReverbId?: string;
   reverbOfHandle?:   string;
   createdAt:         Timestamp | null;
+  isVoiceMeme?:      boolean;
+  audioTrackTitle?:  string;
 }
 
 /**
@@ -120,6 +128,10 @@ export async function createPost(data: {
   category?:        string | null;
   isNeural?:        boolean;
   isCloned?:        boolean;
+  audioTrackId?:    string | null;
+  audioTrackTitle?: string | null;
+  audioTrackArtist?: string | null;
+  isVoiceMeme?:     boolean;
 }): Promise<string> {
   try {
     const db = getFirebaseDb();
@@ -151,6 +163,11 @@ export async function createPost(data: {
       category:        data.category        || null,
       isNeural:        Boolean(data.isNeural),
       isCloned:        Boolean(data.isCloned),
+      audioTrackId:    data.audioTrackId    || null,
+      audioTrackTitle: data.audioTrackTitle || null,
+      audioTrackArtist: data.audioTrackArtist || null,
+      isVoiceMeme:     Boolean(data.isVoiceMeme),
+      audioUsageCount: 1,
       createdAt:       serverTimestamp(),
       // [ SPIKE ] - Initialize trending metrics
       spikeScore:      0,
@@ -674,6 +691,8 @@ export async function addPostReverb(
     durationSec:       number;
     reverbOfReverbId?: string;
     reverbOfHandle?:   string;
+    isVoiceMeme?:      boolean;
+    audioTrackTitle?:  string;
   }
 ): Promise<string> {
   const db = getFirebaseDb();
@@ -690,6 +709,8 @@ export async function addPostReverb(
     reverbCount:      0,
     reverbOfReverbId: data.reverbOfReverbId || null,
     reverbOfHandle:   data.reverbOfHandle   || null,
+    isVoiceMeme:      Boolean(data.isVoiceMeme),
+    audioTrackTitle:  data.audioTrackTitle  || null,
     createdAt:        serverTimestamp(),
   });
   try {
@@ -744,7 +765,6 @@ export async function toggleReverbReaction(
       await updateDoc(reverbRef, {
         [`reactions.${user.uid}`]: deleteField(),
       });
-    } else {
       // Set new reaction with full log attribution
       await updateDoc(reverbRef, {
         [`reactions.${user.uid}`]: {
@@ -760,4 +780,50 @@ export async function toggleReverbReaction(
     console.debug("[toggleReverbReaction] notice:", err);
   }
 }
+
+/**
+ * getPostsByAudioTrackId — fetch all derivative posts created using a specific audio stem or voice meme
+ */
+export async function getPostsByAudioTrackId(audioTrackId: string): Promise<PostItem[]> {
+  try {
+    const db = getFirebaseDb();
+    const q = query(
+      collection(db, "posts"),
+      where("audioTrackId", "==", audioTrackId),
+      limit(50)
+    );
+    const snap = await getDocs(q);
+    const posts = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<PostItem, "id">) }));
+    posts.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    return posts;
+  } catch (err) {
+    console.error("[getPostsByAudioTrackId] error:", err);
+    return [];
+  }
+}
+
+/**
+ * subscribeToPostsByAudioTrackId — real-time listener for posts using a sound
+ */
+export function subscribeToPostsByAudioTrackId(
+  audioTrackId: string,
+  callback: (posts: PostItem[]) => void
+): () => void {
+  const db = getFirebaseDb();
+  const q = query(
+    collection(db, "posts"),
+    where("audioTrackId", "==", audioTrackId),
+    limit(50)
+  );
+  return onSnapshot(
+    q,
+    (snap) => {
+      const posts = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<PostItem, "id">) }));
+      posts.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+      callback(posts);
+    },
+    () => callback([])
+  );
+}
+
 

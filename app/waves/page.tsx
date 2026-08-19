@@ -77,6 +77,10 @@ interface WavePost {
   isNeural?: boolean;
   isCloned?: boolean;
   category?: string;
+  audioTrackId?: string;
+  audioTrackTitle?: string;
+  audioTrackArtist?: string;
+  isVoiceMeme?: boolean;
 }
 
 function fmt(s: number) {
@@ -452,10 +456,21 @@ function WaveCard({
           </div>
         </div>
 
-        {/* Audio Track Tag */}
-        <div className="flex items-center gap-1.5 font-mono text-[9px] text-neutral-400 tracking-wider uppercase pointer-events-auto">
-          <Music2 className="w-2.5 h-2.5 text-white animate-pulse" />
-          <span className="truncate">ORIGINAL VOICE ECHO — {post.authorHandle}</span>
+        {/* Audio Track Tag & Use This Audio button */}
+        <div className="flex items-center justify-between font-mono text-[9px] text-neutral-300 tracking-wider uppercase pointer-events-auto gap-2">
+          <Link
+            href={`/audio/${post.audioTrackId || post.id}`}
+            className="flex items-center gap-1.5 hover:text-white truncate"
+          >
+            <Music2 className="w-3 h-3 text-white animate-pulse shrink-0" />
+            <span className="truncate">{post.audioTrackTitle || "ORIGINAL VOICE ECHO"} — {post.audioTrackArtist || post.authorHandle}</span>
+          </Link>
+          <Link
+            href={`/studio?soundId=${encodeURIComponent(post.audioTrackId || post.id)}&soundUrl=${encodeURIComponent(post.audioUrl)}&soundTitle=${encodeURIComponent(post.audioTrackTitle || post.caption.slice(0, 30) || "Original Sound")}&soundArtist=${encodeURIComponent(post.audioTrackArtist || post.authorHandle)}`}
+            className="border border-white/40 bg-black/60 hover:bg-white text-white hover:text-black px-2 py-0.5 font-bold uppercase transition-colors shrink-0"
+          >
+            [ 🎵 USE AUDIO ]
+          </Link>
         </div>
 
         {/* ── Instagram Reels Inspired Interactive Scrub Line below Title ── */}
