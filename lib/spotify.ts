@@ -6,10 +6,48 @@
  * and playback coordination for Echo Party Mode ($0 server overhead).
  */
 
-const SPOTIFY_CLIENT_ID = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID || "e2bfb72a6a574a629b35048d0cf48bb8";
-const SPOTIFY_REDIRECT_URI = typeof window !== "undefined"
-  ? `${window.location.origin}/rooms`
-  : "http://localhost:3000/rooms";
+export const STORAGE_KEYS = {
+  CLIENT_ID: "echo_custom_spotify_client_id",
+  ACCESS_TOKEN: "echo_spotify_access_token",
+  REFRESH_TOKEN: "echo_spotify_refresh_token",
+  EXPIRES_AT: "echo_spotify_expires_at",
+  CODE_VERIFIER: "echo_spotify_code_verifier",
+  RETURN_URL: "echo_spotify_return_url",
+};
+
+export function getSpotifyClientId(): string {
+  if (typeof window !== "undefined") {
+    const custom = window.localStorage.getItem(STORAGE_KEYS.CLIENT_ID);
+    if (custom && custom.trim().length > 10) return custom.trim();
+  }
+  const envId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID || "";
+  // Check if envId is not the old invalid placeholder
+  if (envId && envId !== "e2bfb72a6a574a629b35048d0cf48bb8") {
+    return envId;
+  }
+  return "";
+}
+
+export function setCustomSpotifyClientId(clientId: string) {
+  if (typeof window !== "undefined") {
+    if (clientId.trim()) {
+      window.localStorage.setItem(STORAGE_KEYS.CLIENT_ID, clientId.trim());
+    } else {
+      window.localStorage.removeItem(STORAGE_KEYS.CLIENT_ID);
+    }
+  }
+}
+
+export function isSpotifyConfigured(): boolean {
+  return !!getSpotifyClientId();
+}
+
+export function getSpotifyRedirectUri(): string {
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}/rooms`;
+  }
+  return "https://echo-aura.vercel.app/rooms";
+}
 
 const SPOTIFY_SCOPES = [
   "user-read-playback-state",
@@ -19,13 +57,6 @@ const SPOTIFY_SCOPES = [
   "user-read-email",
   "user-read-private",
 ].join(" ");
-
-const STORAGE_KEYS = {
-  ACCESS_TOKEN: "echo_spotify_access_token",
-  REFRESH_TOKEN: "echo_spotify_refresh_token",
-  EXPIRES_AT: "echo_spotify_expires_at",
-  CODE_VERIFIER: "echo_spotify_code_verifier",
-};
 
 // ── PKCE Helper Functions ──────────────────────────────────────────────────
 function generateRandomString(length: number): string {
@@ -45,42 +76,53 @@ async function generateCodeChallenge(codeVerifier: string): Promise<string> {
 }
 
 // ── Step 1: Redirect User to Spotify Auth Dialog ───────────────────────────
-export async function initiateSpotifyLogin(returnUrl?: string): Promise<void> {
-  if (typeof window === "undefined") return;
+export async function initiateSpotifyLogin(returnUrl?: string): Promise<{ success: boolean; error?: string }> {
+  if (typeof window === "undefined") return { success: false, error: "Window unavailable" };
+
+  const clientId = getSpotifyClientId();
+  if (!clientId) {
+    return { success: false, error: "MISSING_CLIENT_ID" };
+  }
 
   const codeVerifier = generateRandomString(64);
   const codeChallenge = await generateCodeChallenge(codeVerifier);
 
   window.localStorage.setItem(STORAGE_KEYS.CODE_VERIFIER, codeVerifier);
   if (returnUrl) {
-    window.localStorage.setItem("echo_spotify_return_url", returnUrl);
+    window.localStorage.setItem(STORAGE_KEYS.RETURN_URL, returnUrl);
   }
+
+  const redirectUri = getSpotifyRedirectUri();
 
   const params = new URLSearchParams({
     response_type: "code",
-    client_id: SPOTIFY_CLIENT_ID,
+    client_id: clientId,
     scope: SPOTIFY_SCOPES,
     code_challenge_method: "S256",
     code_challenge: codeChallenge,
-    redirect_uri: SPOTIFY_REDIRECT_URI,
+    redirect_uri: redirectUri,
   });
 
   window.location.href = `https://accounts.spotify.com/authorize?${params.toString()}`;
+  return { success: true };
 }
 
 // ── Step 2: Handle OAuth Callback & Exchange Code ──────────────────────────
 export async function handleSpotifyCallback(code: string): Promise<boolean> {
   if (typeof window === "undefined") return false;
 
+  const clientId = getSpotifyClientId();
   const codeVerifier = window.localStorage.getItem(STORAGE_KEYS.CODE_VERIFIER);
-  if (!codeVerifier) return false;
+  if (!clientId || !codeVerifier) return false;
+
+  const redirectUri = getSpotifyRedirectUri();
 
   try {
     const payload = new URLSearchParams({
-      client_id: SPOTIFY_CLIENT_ID,
+      client_id: clientId,
       grant_type: "authorization_code",
       code,
-      redirect_uri: SPOTIFY_REDIRECT_URI,
+      redirect_uri: redirectUri,
       code_verifier: codeVerifier,
     });
 
@@ -90,7 +132,10 @@ export async function handleSpotifyCallback(code: string): Promise<boolean> {
       body: payload.toString(),
     });
 
-    if (!response.ok) return false;
+    if (!response.ok) {
+      console.error("[Spotify Token Exchange Failed]:", await response.text());
+      return false;
+    }
 
     const data = await response.json();
     const expiresAt = Date.now() + data.expires_in * 1000;
@@ -117,10 +162,49 @@ export function getSpotifyToken(): string | null {
 
   if (!token || !expiresAt) return null;
   if (Date.now() > Number(expiresAt)) {
-    // Token expired
+    // Token expired - attempt refresh if available
+    refreshSpotifyToken();
     return null;
   }
+
   return token;
+}
+
+export async function refreshSpotifyToken(): Promise<string | null> {
+  if (typeof window === "undefined") return null;
+
+  const clientId = getSpotifyClientId();
+  const refreshToken = window.localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
+  if (!clientId || !refreshToken) return null;
+
+  try {
+    const payload = new URLSearchParams({
+      client_id: clientId,
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+    });
+
+    const response = await fetch("https://accounts.spotify.com/api/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: payload.toString(),
+    });
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    const expiresAt = Date.now() + data.expires_in * 1000;
+
+    window.localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, data.access_token);
+    if (data.refresh_token) {
+      window.localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, data.refresh_token);
+    }
+    window.localStorage.setItem(STORAGE_KEYS.EXPIRES_AT, String(expiresAt));
+
+    return data.access_token;
+  } catch {
+    return null;
+  }
 }
 
 export function disconnectSpotify(): void {
@@ -128,29 +212,32 @@ export function disconnectSpotify(): void {
   window.localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
   window.localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
   window.localStorage.removeItem(STORAGE_KEYS.EXPIRES_AT);
+  window.localStorage.removeItem(STORAGE_KEYS.CODE_VERIFIER);
 }
 
-// ── Spotify Web API Operations ─────────────────────────────────────────────
+// ── Search Spotify Tracks ──────────────────────────────────────────────────
 export async function searchSpotifyTracks(query: string): Promise<any[]> {
   const token = getSpotifyToken();
   if (!token || !query.trim()) return [];
 
   try {
     const res = await fetch(
-      `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=8`,
+      `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=10`,
       {
         headers: { Authorization: `Bearer ${token}` },
       }
     );
+
     if (!res.ok) return [];
     const data = await res.json();
     return data.tracks?.items || [];
-  } catch (e) {
-    console.error("[Spotify Search Error]:", e);
+  } catch (error) {
+    console.error("[Spotify Search Error]:", error);
     return [];
   }
 }
 
+// ── Spotify Web API Playback Controls ──────────────────────────────────────
 export async function playSpotifyTrack(trackUri: string, positionMs = 0): Promise<boolean> {
   const token = getSpotifyToken();
   if (!token) return false;
@@ -164,12 +251,13 @@ export async function playSpotifyTrack(trackUri: string, positionMs = 0): Promis
       },
       body: JSON.stringify({
         uris: [trackUri],
-        position_ms: Math.max(0, positionMs),
+        position_ms: positionMs,
       }),
     });
-    return res.ok || res.status === 204;
-  } catch (e) {
-    console.error("[Spotify Play Error]:", e);
+
+    return res.status === 204;
+  } catch (error) {
+    console.error("[Spotify Playback Error]:", error);
     return false;
   }
 }
@@ -183,9 +271,9 @@ export async function pauseSpotifyPlayback(): Promise<boolean> {
       method: "PUT",
       headers: { Authorization: `Bearer ${token}` },
     });
-    return res.ok || res.status === 204;
-  } catch (e) {
-    console.error("[Spotify Pause Error]:", e);
+
+    return res.status === 204;
+  } catch {
     return false;
   }
 }
@@ -196,15 +284,15 @@ export async function seekSpotifyPlayback(positionMs: number): Promise<boolean> 
 
   try {
     const res = await fetch(
-      `https://api.spotify.com/v1/me/player/seek?position_ms=${Math.max(0, positionMs)}`,
+      `https://api.spotify.com/v1/me/player/seek?position_ms=${positionMs}`,
       {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}` },
       }
     );
-    return res.ok || res.status === 204;
-  } catch (e) {
-    console.error("[Spotify Seek Error]:", e);
+
+    return res.status === 204;
+  } catch {
     return false;
   }
 }

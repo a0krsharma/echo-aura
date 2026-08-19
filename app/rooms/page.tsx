@@ -5,15 +5,16 @@
  * 1-Tap Tune-In audio frequencies & scheduled transmissions.
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Radio, Swords, Plus, X, Calendar, Flame, Lock, Zap, Music, Mic } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Radio, Swords, Plus, X, Calendar, Flame, Lock, Zap, Music, Mic, CheckCircle2 } from "lucide-react";
 import { subscribeToClashes, type ClashItem } from "@/lib/clashes";
 import { subscribeToPublicRooms, getTrendingRooms, getRoomsByCategory, deleteRoom, type Room } from "@/lib/rooms";
 import { useAuth } from "@/app/components/AuthProvider";
 import QuickRoomCard from "@/app/components/QuickRoomCard";
 import { ScheduledRoomCard } from "@/app/components/ScheduledRoomCard";
+import { handleSpotifyCallback } from "@/lib/spotify";
 
 function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate: (roomId: string) => void }) {
   const { user } = useAuth();
@@ -291,14 +292,35 @@ function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate:
   );
 }
 
-export default function RoomsPage() {
+function RoomsPageContent() {
   const { user } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const spotifyCode = searchParams.get("code");
+
   const [rooms, setRooms] = useState<Room[]>([]);
   const [clashes, setClashes] = useState<ClashItem[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
+  const [spotifyStatus, setSpotifyStatus] = useState<string | null>(null);
 
   const CATEGORIES = ["ALL", "TECH", "MARKETS", "DEBATE", "MUSIC", "CRICKET", "GENERAL"];
+
+  // Handle Spotify OAuth Callback
+  useEffect(() => {
+    if (spotifyCode) {
+      handleSpotifyCallback(spotifyCode).then((success) => {
+        if (success) {
+          setSpotifyStatus("SPOTIFY CO-LISTENING AUTHENTICATED!");
+          const returnUrl = window.localStorage.getItem("echo_spotify_return_url");
+          if (returnUrl) {
+            window.localStorage.removeItem("echo_spotify_return_url");
+            router.push(returnUrl);
+          }
+        }
+      });
+    }
+  }, [spotifyCode]);
 
   useEffect(() => {
     const unsubClashes = subscribeToClashes((list) => setClashes(list));
@@ -330,6 +352,22 @@ export default function RoomsPage() {
       {showCreateModal && <CreateRoomModal onClose={() => setShowCreateModal(false)} onCreate={() => {}} />}
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 pt-8 space-y-8 w-full">
+        {/* Spotify OAuth Success Banner */}
+        {spotifyStatus && (
+          <div className="border border-[#1DB954] bg-[#1DB954]/10 p-3 text-xs text-[#1DB954] font-bold uppercase tracking-wider flex items-center justify-between animate-fade-in">
+            <span className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4" />
+              {spotifyStatus}
+            </span>
+            <button
+              onClick={() => setSpotifyStatus(null)}
+              className="text-neutral-400 hover:text-white"
+            >
+              [ ✕ ]
+            </button>
+          </div>
+        )}
+
         {/* Top Header */}
         <div className="flex items-start justify-between gap-4 border-b border-neutral-900 pb-6">
           <div className="space-y-1">
@@ -467,5 +505,19 @@ export default function RoomsPage() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function RoomsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-black text-white p-8 font-mono text-xs uppercase tracking-widest flex items-center justify-center">
+          LOADING FREQUENCIES...
+        </div>
+      }
+    >
+      <RoomsPageContent />
+    </Suspense>
   );
 }
