@@ -19,7 +19,8 @@ import {
   X,
   Disc3,
   Flame,
-  RadioTower
+  RadioTower,
+  PlusCircle
 } from "lucide-react";
 import { 
   getSpotifyToken, 
@@ -61,7 +62,7 @@ const QUICK_PARTY_PRESETS = [
     durationMs: 261000,
   },
   {
-    id: "3yHyi9c165DHvL8r999999",
+    id: "0VjIjW4GlUZAMYd2vXMi3b",
     uri: "spotify:track:0VjIjW4GlUZAMYd2vXMi3b",
     name: "Blinding Lights",
     artist: "The Weeknd",
@@ -75,6 +76,14 @@ const QUICK_PARTY_PRESETS = [
     artist: "Diljit Dosanjh",
     albumArt: "https://i.scdn.co/image/ab67616d0000b27301bcfeae3a2be1fc64b4c730",
     durationMs: 191000,
+  },
+  {
+    id: "1BxfuPKGuaTgP7aM0XbdCe",
+    uri: "spotify:track:1BxfuPKGuaTgP7aM0XbdCe",
+    name: "Hona Tha Pyar",
+    artist: "Atif Aslam, Hadiqa Kiani",
+    albumArt: "https://i.scdn.co/image/ab67616d0000b273b4d24177bcf7bba1ebff2f44",
+    durationMs: 220000,
   },
 ];
 
@@ -173,7 +182,7 @@ export default function SpotifySyncDock({ room, isHost, currentUserUid }: Spotif
     setTimeout(() => setCopiedUri(false), 2000);
   };
 
-  // ── Host Search Spotify ───────────────────────────────────────────────────
+  // ── Search Spotify Tracks ─────────────────────────────────────────────────
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
@@ -183,7 +192,7 @@ export default function SpotifySyncDock({ room, isHost, currentUserUid }: Spotif
     if (results.length > 0) {
       setSearchResults(results);
     } else {
-      // If Web API search returns empty or token lacks search permissions, fall back to filtered presets
+      // Fallback search over presets
       const q = searchQuery.toLowerCase();
       const fallback = QUICK_PARTY_PRESETS.filter(
         p => p.name.toLowerCase().includes(q) || p.artist.toLowerCase().includes(q)
@@ -193,8 +202,8 @@ export default function SpotifySyncDock({ room, isHost, currentUserUid }: Spotif
     setIsSearching(false);
   };
 
-  // ── Host Controls Broadcast ───────────────────────────────────────────────
-  const handleHostPlayTrack = async (track: any) => {
+  // ── Queue / Play Track Action (Host or Listener) ───────────────────────────
+  const handlePlayOrQueueTrack = async (track: any) => {
     setShowSearchModal(false);
     const uri = track.uri || `spotify:track:${track.id}`;
     const newSyncState: SpotifySyncState = {
@@ -208,31 +217,31 @@ export default function SpotifySyncDock({ room, isHost, currentUserUid }: Spotif
       durationMs: track.duration_ms || track.durationMs || 180000,
     };
 
-    // 1. Attempt remote play on Host's Spotify if token exists
+    // 1. If user has active token, start remote playback
     if (token) {
       await playSpotifyTrack(uri, 0);
     }
-    // 2. Broadcast timestamp to Firebase Realtime / Firestore
+    // 2. Broadcast timestamp to Firebase Realtime state
     await updateSpotifySyncState(room.id, newSyncState);
   };
 
-  const handleHostCustomUrl = async (e: React.FormEvent) => {
+  const handleCustomUrlSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trackId = extractTrackId(customTrackUrl.trim());
     if (!trackId) return;
 
-    handleHostPlayTrack({
+    handlePlayOrQueueTrack({
       id: trackId,
       uri: `spotify:track:${trackId}`,
-      name: "Spotify Custom Selection",
-      artist: "Selected Track",
+      name: "Requested Track",
+      artist: "Spotify Selection",
       albumArt: "",
       durationMs: 210000,
     });
     setCustomTrackUrl("");
   };
 
-  const handleHostTogglePlay = async () => {
+  const handleTogglePlay = async () => {
     if (!syncState) return;
 
     const nextPlaying = !syncState.isPlaying;
@@ -275,26 +284,25 @@ export default function SpotifySyncDock({ room, isHost, currentUserUid }: Spotif
           <span className="w-2 h-2 rounded-full bg-[#1DB954] animate-pulse" />
           <span className="font-bold tracking-widest text-[#1DB954] uppercase flex items-center gap-1.5">
             <Disc3 className="w-3.5 h-3.5 animate-spin text-[#1DB954]" style={{ animationDuration: "6s" }} />
-            // SPOTIFY DJ PARTY · LIVE MIC & MUSIC SYNC
+            // SPOTIFY DJ PARTY · CO-LISTENING SYNC
           </span>
         </div>
         <div className="flex items-center gap-2 text-[10px]">
-          {isHost && (
-            <button
-              type="button"
-              onClick={() => setShowSearchModal(true)}
-              className="border border-[#1DB954] bg-[#1DB954] text-black font-bold px-2.5 py-1 uppercase tracking-wider hover:bg-[#1ed760] transition-colors cursor-pointer flex items-center gap-1"
-            >
-              <Search className="w-3 h-3" />
-              <span>[ DJ QUEUE TRACK ]</span>
-            </button>
-          )}
+          {/* Allow Both Host & Listeners to Queue / Request Tracks */}
+          <button
+            type="button"
+            onClick={() => setShowSearchModal(true)}
+            className="border border-[#1DB954] bg-[#1DB954] text-black font-bold px-2.5 py-1 uppercase tracking-wider hover:bg-[#1ed760] transition-colors cursor-pointer flex items-center gap-1"
+          >
+            <Search className="w-3 h-3" />
+            <span>[ {isHost ? "DJ QUEUE TRACK" : "REQUEST SONG"} ]</span>
+          </button>
 
           {token ? (
             <div className="flex items-center gap-1.5">
               <span className="text-[#1DB954] border border-[#1DB954]/40 px-2 py-0.5 uppercase tracking-wider flex items-center gap-1">
                 <CheckCircle2 className="w-3 h-3" />
-                SPOTIFY SYNC ACTIVE
+                FULL TRACK ON
               </span>
               <button
                 type="button"
@@ -313,6 +321,7 @@ export default function SpotifySyncDock({ room, isHost, currentUserUid }: Spotif
               type="button"
               onClick={handleConnect}
               className="border border-neutral-800 hover:border-[#1DB954] bg-black text-neutral-300 hover:text-[#1DB954] px-2 py-0.5 uppercase tracking-wider transition-colors cursor-pointer"
+              title="Connect Spotify Account for Full Track Playback"
             >
               [ CONNECT ACCOUNT ]
             </button>
@@ -322,7 +331,7 @@ export default function SpotifySyncDock({ room, isHost, currentUserUid }: Spotif
 
       {/* Now Playing Monitor */}
       {syncState ? (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           <div className="bg-black border border-neutral-900 p-3 flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-3 overflow-hidden flex-1 min-w-[200px]">
               {syncState.albumArt ? (
@@ -351,27 +360,42 @@ export default function SpotifySyncDock({ room, isHost, currentUserUid }: Spotif
               </div>
             </div>
 
-            {/* Host Controls */}
-            {isHost && (
-              <div className="flex items-center gap-2">
+            {/* Play/Pause & Actions Bar */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {isHost && (
                 <button
                   type="button"
-                  onClick={handleHostTogglePlay}
+                  onClick={handleTogglePlay}
                   className="p-2 border border-white bg-white text-black hover:bg-neutral-200 transition-colors cursor-pointer"
                   title={syncState.isPlaying ? "Pause Broadcast" : "Resume Broadcast"}
                 >
                   {syncState.isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setShowSearchModal(true)}
-                  className="px-2.5 py-2 border border-neutral-800 bg-neutral-900 text-neutral-300 hover:text-white hover:border-white font-mono text-[10px] uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5"
+              )}
+
+              {/* 1-Tap Open Full Track in Spotify App */}
+              {activeTrackId && (
+                <a
+                  href={`https://open.spotify.com/track/${activeTrackId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2.5 py-1.5 border border-[#1DB954]/50 bg-[#1DB954]/10 text-[#1DB954] hover:bg-[#1DB954] hover:text-black font-mono text-[10px] uppercase font-bold tracking-wider transition-colors flex items-center gap-1.5"
+                  title="Open in Spotify App for Lossless Full Track"
                 >
-                  <Disc3 className="w-3 h-3 text-[#1DB954]" />
-                  <span>CHANGE TRACK</span>
-                </button>
-              </div>
-            )}
+                  <span>FULL SONG</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setShowSearchModal(true)}
+                className="px-2.5 py-1.5 border border-neutral-800 bg-neutral-900 text-neutral-300 hover:text-white hover:border-white font-mono text-[10px] uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                <Disc3 className="w-3 h-3 text-[#1DB954]" />
+                <span>{isHost ? "QUEUE" : "REQUEST"}</span>
+              </button>
+            </div>
           </div>
 
           {/* Embedded Spotify Interactive Player */}
@@ -388,6 +412,16 @@ export default function SpotifySyncDock({ room, isHost, currentUserUid }: Spotif
               />
             </div>
           )}
+
+          {/* Full Song Guidance Tip */}
+          <div className="flex items-center justify-between text-[9px] text-neutral-500 pt-0.5 px-1">
+            <span>
+              {token
+                ? "✨ SPOTIFY ACCOUNT CONNECTED • FULL LOSSLESS PLAYBACK ENABLED"
+                : "💡 TIP: TAP 'FULL SONG' OR 'CONNECT ACCOUNT' FOR UNINTERRUPTED PLAYBACK"}
+            </span>
+            <span className="text-[#1DB954]">● REAL-TIME SYNC</span>
+          </div>
         </div>
       ) : (
         /* Standby state when no track is playing */
@@ -399,21 +433,19 @@ export default function SpotifySyncDock({ room, isHost, currentUserUid }: Spotif
             </p>
             <p className="text-[10px] text-neutral-500 uppercase tracking-wide">
               {isHost 
-                ? "You are the Room DJ. Queue any song to start synchronized co-listening for all listeners."
-                : "Waiting for Room DJ to drop the first track..."}
+                ? "You are the Room DJ. Search or paste any song to start synchronized co-listening for all listeners."
+                : "Select or request a song to kickstart the DJ party!"}
             </p>
           </div>
 
-          {isHost && (
-            <button
-              type="button"
-              onClick={() => setShowSearchModal(true)}
-              className="border border-[#1DB954] bg-[#1DB954] text-black font-bold px-4 py-2 text-xs uppercase tracking-widest hover:bg-[#1ed760] transition-colors cursor-pointer inline-flex items-center gap-2 shadow-lg"
-            >
-              <Search className="w-3.5 h-3.5" />
-              <span>[ SELECT & BROADCAST TRACK ]</span>
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setShowSearchModal(true)}
+            className="border border-[#1DB954] bg-[#1DB954] text-black font-bold px-4 py-2 text-xs uppercase tracking-widest hover:bg-[#1ed760] transition-colors cursor-pointer inline-flex items-center gap-2 shadow-lg"
+          >
+            <Search className="w-3.5 h-3.5" />
+            <span>[ {isHost ? "SELECT & BROADCAST TRACK" : "REQUEST FIRST SONG"} ]</span>
+          </button>
         </div>
       )}
 
@@ -510,14 +542,14 @@ export default function SpotifySyncDock({ room, isHost, currentUserUid }: Spotif
         </div>
       )}
 
-      {/* ── Host Track Search & DJ Queue Modal ── */}
+      {/* ── Track Search & DJ Queue Modal ── */}
       {showSearchModal && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-black border border-white max-w-lg w-full p-5 font-mono text-white space-y-4 shadow-2xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
               <span className="text-xs font-bold uppercase tracking-widest text-[#1DB954] flex items-center gap-2">
                 <Disc3 className="w-4 h-4 text-[#1DB954]" />
-                // SPOTIFY DJ QUEUE SELECTION
+                // {isHost ? "SPOTIFY DJ QUEUE" : "SONG REQUEST SELECTION"}
               </span>
               <button
                 type="button"
@@ -529,7 +561,7 @@ export default function SpotifySyncDock({ room, isHost, currentUserUid }: Spotif
             </div>
 
             {/* Direct URL Paste Form */}
-            <form onSubmit={handleHostCustomUrl} className="space-y-1.5">
+            <form onSubmit={handleCustomUrlSubmit} className="space-y-1.5">
               <span className="text-[10px] text-neutral-500 uppercase tracking-widest font-bold block">
                 PASTE SPOTIFY TRACK LINK / URI:
               </span>
@@ -546,21 +578,21 @@ export default function SpotifySyncDock({ room, isHost, currentUserUid }: Spotif
                   disabled={!customTrackUrl.trim()}
                   className="px-3 py-2 border border-white bg-white text-black font-bold text-xs uppercase tracking-wider hover:bg-neutral-200 transition-colors disabled:opacity-30 cursor-pointer shrink-0"
                 >
-                  BROADCAST
+                  QUEUE
                 </button>
               </div>
             </form>
 
             <div className="relative border-t border-neutral-900 pt-3">
               <span className="text-[10px] text-neutral-500 uppercase tracking-widest font-bold block mb-1.5">
-                OR SEARCH SPOTIFY CATALOG:
+                OR SEARCH FULL TRACK CATALOG:
               </span>
               <form onSubmit={handleSearch} className="flex gap-2">
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search song title or artist (e.g. Lucky Ali, Arijit, Weekend)..."
+                  placeholder="Search song title or artist (e.g. Lucky Ali, Arijit, Atif Aslam)..."
                   className="flex-1 bg-neutral-950 border border-neutral-800 focus:border-[#1DB954] text-xs p-2.5 text-white outline-none uppercase"
                 />
                 <button
@@ -576,12 +608,12 @@ export default function SpotifySyncDock({ room, isHost, currentUserUid }: Spotif
             {/* Quick Presets / Results */}
             <div className="flex-1 overflow-y-auto space-y-1.5 divide-y divide-neutral-900 pr-1 max-h-60">
               <span className="text-[9px] text-neutral-500 uppercase tracking-widest block pt-1">
-                {searchResults.length > 0 ? "SEARCH RESULTS:" : "POPULAR DJ PRESETS:"}
+                {searchResults.length > 0 ? "SEARCH RESULTS:" : "POPULAR PARTY PRESETS:"}
               </span>
               {(searchResults.length > 0 ? searchResults : QUICK_PARTY_PRESETS).map((t) => (
                 <div
                   key={t.id}
-                  onClick={() => handleHostPlayTrack(t)}
+                  onClick={() => handlePlayOrQueueTrack(t)}
                   className="pt-2 flex items-center justify-between gap-3 hover:bg-neutral-950 p-2 cursor-pointer transition-colors"
                 >
                   <div className="flex items-center gap-2.5 overflow-hidden">
