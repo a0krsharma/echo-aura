@@ -20,12 +20,7 @@ export function getSpotifyClientId(): string {
     const custom = window.localStorage.getItem(STORAGE_KEYS.CLIENT_ID);
     if (custom && custom.trim().length > 10) return custom.trim();
   }
-  const envId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID || "";
-  // Check if envId is not the old invalid placeholder
-  if (envId && envId !== "e2bfb72a6a574a629b35048d0cf48bb8") {
-    return envId;
-  }
-  return "";
+  return process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID || "3a2f1ee29fd047eba7144916c2c42291";
 }
 
 export function setCustomSpotifyClientId(clientId: string) {
