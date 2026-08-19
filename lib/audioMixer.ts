@@ -19,26 +19,26 @@ export const BG_PRESETS: BackgroundTrack[] = [
   {
     id: "lofi_chill",
     label: "LO-FI // NOCTURNE BEAT",
-    description: "Mellow vinyl lo-fi hip-hop drum groove",
-    url: "https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3",
+    description: "Mellow ambient lo-fi groove",
+    url: "https://upload.wikimedia.org/wikipedia/commons/3/30/Synth_Beat.ogg",
   },
   {
     id: "acoustic_noir",
     label: "ACOUSTIC // NOIR GUITAR LOOP",
     description: "Melancholic acoustic guitar chords for poetry & ghazals",
-    url: "https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3",
+    url: "https://upload.wikimedia.org/wikipedia/commons/7/7b/Acoustic_Guitar_Solo.ogg",
   },
   {
     id: "synthwave_ambient",
     label: "SYNTH // AMBIENT TERMINAL DRONE",
     description: "Deep atmospheric cyberpunk synthesizer pads",
-    url: "https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3",
+    url: "https://upload.wikimedia.org/wikipedia/commons/3/30/Synth_Beat.ogg",
   },
   {
     id: "rain_ambient",
     label: "NATURE // NOCTURNE RAIN & STORM",
-    description: "Gentle rain and distant thunder ambience",
-    url: "https://cdn.pixabay.com/download/audio/2021/09/06/audio_73138b36a1.mp3",
+    description: "Gentle rain and distant ambience",
+    url: "https://upload.wikimedia.org/wikipedia/commons/4/4d/Rain_sound.ogg",
   },
   {
     id: "none",

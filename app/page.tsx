@@ -285,13 +285,13 @@ function AudioPlayer({ audioUrl, fallbackDurationSec, isActive, onPlayToggle, sm
     };
   }, [src]);
 
-  // Ensure src is always attached to audio element
+  // Ensure src is attached only when needed with preload="none"
   useEffect(() => {
     const a = audioRef.current;
     if (!a) return;
     if (a.src !== src) {
       a.src = src;
-      a.preload = "metadata";
+      a.preload = "none";
     }
   }, [src]);
 
