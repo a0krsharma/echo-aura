@@ -1,10 +1,8 @@
 /**
  * lib/soundCatalog.ts
  * ─────────────────────────────────────────────────────────────
- * Community Sound Catalog, Viral Voice Memes & CC0 Audio Stems
- * Powers the Instagram-style "Use This Audio" feature ($0 DMCA-free).
- * 
- * All audio URLs use CORS-friendly open media CDNs with zero 403/hotlinking errors.
+ * Community Sound Vault, Viral Audio Memes & CC0 Audio Stems.
+ * Powers zero-friction audio attachments and acoustic soundboards.
  */
 
 export interface SoundItem {
@@ -23,50 +21,50 @@ export const SOUND_CATALOG: SoundItem[] = [
   // ── Viral Voice Memes (3–6s micro-reactions) ──────────────────────────────
   {
     id: "meme_emotional_damage",
-    title: "Dramatic Impact Fanfare",
+    title: "Dramatic Impact Sub-Boom",
     artist: "Cinema SFX Vault",
     category: "VOICE_MEME",
-    audioUrl: "https://upload.wikimedia.org/wikipedia/commons/4/4b/Dramatic_sound_effect.ogg",
-    durationSec: 4,
+    audioUrl: "",
+    durationSec: 3,
     usageCount: 890,
     isVoiceMeme: true,
   },
   {
     id: "meme_bruh",
-    title: "Pop & Echo Boom",
+    title: "Pop & Harmonic Boing",
     artist: "Classic Soundboard",
     category: "VOICE_MEME",
-    audioUrl: "https://upload.wikimedia.org/wikipedia/commons/f/fc/Pop_sound_effect.ogg",
+    audioUrl: "",
     durationSec: 2,
     usageCount: 1420,
     isVoiceMeme: true,
   },
   {
     id: "meme_wah_wah",
-    title: "Sad Trombone Slide",
+    title: "Sad Slide (Wah Wah Wah)",
     artist: "Comedy Brass Vault",
     category: "VOICE_MEME",
-    audioUrl: "https://upload.wikimedia.org/wikipedia/commons/e/ec/Trombone-slide.ogg",
+    audioUrl: "",
     durationSec: 3,
     usageCount: 650,
     isVoiceMeme: true,
   },
   {
     id: "meme_ghazal_wah",
-    title: "Gong & Classical Resonator",
+    title: "Mehfil Gong & Resonator",
     artist: "Classical Mehfil",
     category: "VOICE_MEME",
-    audioUrl: "https://upload.wikimedia.org/wikipedia/commons/3/36/Gong_sound.ogg",
+    audioUrl: "",
     durationSec: 3,
     usageCount: 510,
     isVoiceMeme: true,
   },
   {
     id: "meme_vine_boom",
-    title: "Cinematic Sub Boom",
+    title: "Cinematic Sub Bass Impact",
     artist: "Trailer SFX",
     category: "VOICE_MEME",
-    audioUrl: "https://upload.wikimedia.org/wikipedia/commons/4/4b/Dramatic_sound_effect.ogg",
+    audioUrl: "",
     durationSec: 3,
     usageCount: 1890,
     isVoiceMeme: true,
@@ -75,19 +73,19 @@ export const SOUND_CATALOG: SoundItem[] = [
   // ── AI Stems, Lo-Fi Loops & Instrumental Beats ───────────────────────────
   {
     id: "stem_nocturne_trading",
-    title: "Nocturne Ambient Synth Beat",
+    title: "Nocturne Ambient Synth Drone",
     artist: "Echo Neural Engine",
     category: "AI_STEM",
-    audioUrl: "https://upload.wikimedia.org/wikipedia/commons/3/30/Synth_Beat.ogg",
+    audioUrl: "",
     durationSec: 45,
     usageCount: 340,
   },
   {
     id: "stem_acoustic_noir",
-    title: "Acoustic Guitar Harmony",
+    title: "Acoustic Harmony Chords",
     artist: "Echo Acoustics",
     category: "ACOUSTIC",
-    audioUrl: "https://upload.wikimedia.org/wikipedia/commons/7/7b/Acoustic_Guitar_Solo.ogg",
+    audioUrl: "",
     durationSec: 42,
     usageCount: 280,
   },
@@ -96,7 +94,7 @@ export const SOUND_CATALOG: SoundItem[] = [
     title: "Midnight Rain & Ambient Drone",
     artist: "Cyber Ambient Node",
     category: "LOFI_BEAT",
-    audioUrl: "https://upload.wikimedia.org/wikipedia/commons/4/4d/Rain_sound.ogg",
+    audioUrl: "",
     durationSec: 55,
     usageCount: 410,
   },
@@ -105,7 +103,7 @@ export const SOUND_CATALOG: SoundItem[] = [
     title: "Coffeehouse Ambient Lo-Fi",
     artist: "Echo Beatmakers",
     category: "LOFI_BEAT",
-    audioUrl: "https://upload.wikimedia.org/wikipedia/commons/3/30/Synth_Beat.ogg",
+    audioUrl: "",
     durationSec: 45,
     usageCount: 195,
   },
@@ -114,7 +112,7 @@ export const SOUND_CATALOG: SoundItem[] = [
     title: "Stage Clash Drift Pulse",
     artist: "Stage Clash Beats",
     category: "AI_STEM",
-    audioUrl: "https://upload.wikimedia.org/wikipedia/commons/3/30/Synth_Beat.ogg",
+    audioUrl: "",
     durationSec: 45,
     usageCount: 160,
   },
