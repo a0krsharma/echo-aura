@@ -238,16 +238,7 @@ function Waveform({ playing, small, audioRef }: { playing: boolean; small?: bool
 function buildUrlVariants(rawUrl: string): string[] {
   if (!rawUrl) return [];
   const playable = getPlayableUrl(rawUrl);
-  if (playable.startsWith("blob:")) return [playable];
-  const v: string[] = [playable];
-  if (playable.includes(".webm")) {
-    v.push(playable.replace(/\.webm$/, ""));
-    v.push(playable.replace(/\.webm$/, ".mp3"));
-  } else if (!playable.endsWith(".mp3")) {
-    v.push(`${playable}.mp3`);
-  }
-  if (rawUrl !== playable) v.push(rawUrl);
-  return Array.from(new Set(v));
+  return [playable];
 }
 
 // ─── Audio Player ─────────────────────────────────────────────────────────────

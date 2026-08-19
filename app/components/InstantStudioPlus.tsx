@@ -8,22 +8,12 @@ import {
   Pause, 
   Send, 
   RefreshCw, 
-  Flame, 
-  Volume2, 
-  CheckCircle2, 
-  Clock, 
-  Music, 
-  Radio, 
-  Zap,
   ArrowRight,
   Download,
-  Sliders,
-  Layers,
-  Heart,
-  VolumeX
+  Music,
+  CheckCircle2
 } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
-import { mixVocalWithBackground } from "@/lib/audioMixer";
 import { uploadAudio } from "@/lib/cloudinary";
 import { createPost } from "@/lib/posts";
 import type { SongSection } from "@/app/api/instant-generate/route";
@@ -37,11 +27,23 @@ const QUICK_GENRE_PROMPTS = [
 ];
 
 const VOCAL_PROFILES = [
-  { id: "hi-IN-MadhurNeural", name: "Deep Ghazal Male", desc: "Soulful, emotive baritone for poetry & ballads", tag: "GHAZAL / SOUL" },
-  { id: "en-US-JennyNeural", name: "Melodic Pop Female", desc: "Silky, warm indie tone for modern lo-fi & pop", tag: "INDIE / POP" },
-  { id: "ur-PK-AsadNeural", name: "Classical Urdu Poet", desc: "Traditional mehfil cadence with classical rhythm", tag: "CLASSICAL URDU" },
-  { id: "en-US-ChristopherNeural", name: "Deep Cinematic Voice", desc: "Rich, resonant narrator for dark noir & storytelling", tag: "CINEMATIC NOIR" },
+  { id: "hi-IN-MadhurNeural", name: "Deep Ghazal Male", desc: "Soulful baritone for poetry & ballads" },
+  { id: "en-US-JennyNeural", name: "Melodic Pop Female", desc: "Silky, warm indie tone for modern lo-fi" },
+  { id: "ur-PK-AsadNeural", name: "Classical Urdu Poet", desc: "Traditional mehfil cadence & rhythm" },
+  { id: "en-US-ChristopherNeural", name: "Deep Cinematic Voice", desc: "Rich narrator for dark noir & ballads" },
 ];
+
+// ── Bulletproof Base64 to MP3 Blob Converter (Zero Web Audio API decoding errors) ──
+function base64ToBlob(base64Data: string, contentType = "audio/mpeg"): Blob {
+  const base64Clean = base64Data.replace(/^data:audio\/\w+;base64,/, "");
+  const byteCharacters = atob(base64Clean);
+  const byteNumbers = new Array(byteCharacters.length);
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteNumbers[i] = byteCharacters.charCodeAt(i);
+  }
+  const byteArray = new Uint8Array(byteNumbers);
+  return new Blob([byteArray], { type: contentType });
+}
 
 export default function InstantStudioPlus({
   onPublishSuccess,
@@ -77,8 +79,6 @@ export default function InstantStudioPlus({
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(1.0);
-  const [isMuted, setIsMuted] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -105,7 +105,7 @@ export default function InstantStudioPlus({
     setLoading(true);
     setGeneratedSong(null);
     setCurrentTime(0);
-    setStatusLog(">> [1/3] COMPOSING MULTI-STANZA LYRICS & MATCHING ACOUSTICS...");
+    setStatusLog(">> [1/2] COMPOSING 100% ORIGINAL MULTI-STANZA LYRICS & MATCHING ACOUSTICS...");
 
     try {
       const res = await fetch("/api/instant-generate", {
@@ -124,17 +124,13 @@ export default function InstantStudioPlus({
       }
 
       const data = await res.json();
-      setStatusLog(">> [2/3] SYNTHESIZING VOCAL STEM & MASTERING INSTRUMENTAL BEAT...");
+      setStatusLog(">> [2/2] COMPILING MASTER MP3 AUDIO STREAM...");
 
-      // Mix vocal with background loop in browser via Web Audio API ($0 compute)
-      const mixedWavBlob = await mixVocalWithBackground(
-        data.audioBase64,
-        data.bgTrackUrl,
-        data.defaultDucking || 0.22
-      );
+      // Convert base64 directly to native MP3 Blob (100% reliable, zero decoding errors)
+      const mp3Blob = base64ToBlob(data.audioBase64, "audio/mpeg");
+      const audioUrl = URL.createObjectURL(mp3Blob);
 
-      const mixedUrl = URL.createObjectURL(mixedWavBlob);
-      const estimatedSecs = Math.max(1, Math.round(mixedWavBlob.size / 176400));
+      const estimatedSecs = data.estimatedDurationSec || 60;
 
       setGeneratedSong({
         title: data.title,
@@ -142,13 +138,13 @@ export default function InstantStudioPlus({
         sections: data.sections || [],
         fullLyrics: data.fullLyrics || "",
         vocalVoice: data.vocalVoice || targetVoice,
-        masterAudioUrl: mixedUrl,
-        masterBlob: mixedWavBlob,
+        masterAudioUrl: audioUrl,
+        masterBlob: mp3Blob,
         durationSec: estimatedSecs,
       });
 
       setDuration(estimatedSecs);
-      setStatusLog(`>> [3/3] FULL TRACK COMPILED: "${data.title}" (${estimatedSecs}s) • READY FOR AUDITION.`);
+      setStatusLog(`>> [READY]: "${data.title}" • AUDITION FULL SONG BELOW.`);
     } catch (err: any) {
       console.error("[Studio+ Error]:", err);
       setStatusLog(`>> [ERROR]: ${err?.message || "Failed to generate track"}`);
@@ -182,7 +178,7 @@ export default function InstantStudioPlus({
     if (!generatedSong) return;
     const a = document.createElement("a");
     a.href = generatedSong.masterAudioUrl;
-    a.download = `${generatedSong.title.replace(/[^a-zA-Z0-9_-]/g, "_")}.wav`;
+    a.download = `${generatedSong.title.replace(/[^a-zA-Z0-9_-]/g, "_")}.mp3`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -242,14 +238,14 @@ export default function InstantStudioPlus({
 
   return (
     <div className="bg-neutral-950 border border-white p-4 sm:p-7 font-mono text-white space-y-6 shadow-2xl">
-      {/* Top Telemetry Header */}
+      {/* Top Header */}
       <div className="flex items-center justify-between border-b border-neutral-800 pb-3 text-xs flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-white animate-pulse" />
-          <span className="font-bold tracking-widest uppercase">// STUDIO+ · FULL AI SONG GENERATOR</span>
+          <span className="font-bold tracking-widest uppercase">// STUDIO+ · AI MUSIC & SHAYARI GENERATOR</span>
         </div>
         <span className="text-[10px] bg-white text-black font-extrabold px-2 py-0.5 uppercase tracking-widest">
-          ZERO FRICTION • 100% ORIGINAL
+          1-CLICK • 100% ORIGINAL
         </span>
       </div>
 
@@ -270,7 +266,7 @@ export default function InstantStudioPlus({
       {/* ── 1-Tap Genre Inspiration Chips ── */}
       <div className="space-y-1.5">
         <span className="text-[9px] text-neutral-500 uppercase tracking-widest block font-bold">
-          [ 💡 1-TAP GENRE INSPIRATION ]
+          [ 💡 1-TAP INSPIRATION PROMPTS ]
         </span>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
           {QUICK_GENRE_PROMPTS.map((item) => (
@@ -291,12 +287,12 @@ export default function InstantStudioPlus({
         </div>
       </div>
 
-      {/* ── STEP 2: Vocal Style & Track Duration Pickers ── */}
+      {/* ── STEP 2: Vocal Tone & Song Length ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-neutral-900">
         {/* Vocal Profile Cards */}
         <div className="space-y-2">
           <label className="block text-[10px] text-neutral-400 font-bold uppercase tracking-widest">
-            2. SELECT VOCAL ARTIST TONE
+            2. SELECT VOCAL ARTIST
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {VOCAL_PROFILES.map((vp) => (
@@ -310,9 +306,7 @@ export default function InstantStudioPlus({
                     : "border-neutral-800 bg-black text-neutral-400 hover:border-neutral-600 hover:text-white"
                 }`}
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs uppercase font-extrabold">{vp.name}</span>
-                </div>
+                <span className="text-xs uppercase font-extrabold block">{vp.name}</span>
                 <p className={`text-[9px] mt-0.5 line-clamp-1 ${selectedVoice === vp.id ? "text-neutral-700" : "text-neutral-500"}`}>
                   {vp.desc}
                 </p>
@@ -321,10 +315,10 @@ export default function InstantStudioPlus({
           </div>
         </div>
 
-        {/* Track Duration Selection */}
+        {/* Song Length Selection */}
         <div className="space-y-2">
           <label className="block text-[10px] text-neutral-400 font-bold uppercase tracking-widest">
-            3. TRACK STRUCTURE & LENGTH
+            3. SONG STRUCTURE & LENGTH
           </label>
           <div className="grid grid-cols-2 gap-2">
             <button
@@ -338,7 +332,7 @@ export default function InstantStudioPlus({
             >
               <span className="text-xs block font-bold uppercase">🎶 FULL SONG</span>
               <span className={`text-[9px] block mt-0.5 ${songLength === "full" ? "text-neutral-700 font-semibold" : "text-neutral-500"}`}>
-                60–90s • Multi-Verse & Chorus
+                60–90s • Multi-Verse
               </span>
             </button>
 
@@ -353,7 +347,7 @@ export default function InstantStudioPlus({
             >
               <span className="text-xs block font-bold uppercase">⚡ QUICK VERSE</span>
               <span className={`text-[9px] block mt-0.5 ${songLength === "quick" ? "text-neutral-700 font-semibold" : "text-neutral-500"}`}>
-                25–30s • Single Hook Take
+                25–30s • Single Hook
               </span>
             </button>
           </div>
@@ -381,7 +375,7 @@ export default function InstantStudioPlus({
         <span>{loading ? ">> COMPILING FULL MASTER SONG..." : ">> GENERATE FULL SONG & MASTER TRACK"}</span>
       </button>
 
-      {/* ── Generated Master Song Audition & Live Karaoke Stage ── */}
+      {/* ── Generated Master Song Audition & Live Lyrics Stage ── */}
       {generatedSong && (
         <div className="pt-6 border-t border-white space-y-4 animate-fade-in">
           {/* Hidden Master Audio */}
@@ -391,7 +385,14 @@ export default function InstantStudioPlus({
             onTimeUpdate={() => {
               if (audioRef.current) {
                 setCurrentTime(audioRef.current.currentTime);
-                setDuration(audioRef.current.duration || generatedSong.durationSec);
+                if (audioRef.current.duration && !isNaN(audioRef.current.duration)) {
+                  setDuration(audioRef.current.duration);
+                }
+              }
+            }}
+            onLoadedMetadata={() => {
+              if (audioRef.current && audioRef.current.duration && !isNaN(audioRef.current.duration)) {
+                setDuration(audioRef.current.duration);
               }
             }}
             onEnded={() => {
@@ -412,11 +413,11 @@ export default function InstantStudioPlus({
               </span>
             </div>
             <span className="text-[10px] bg-white text-black font-extrabold px-2 py-0.5 uppercase tracking-wider">
-              [+] STUDIO+ MASTER READY
+              [+] STUDIO+ READY
             </span>
           </div>
 
-          {/* Live Karaoke / Synchronized Structured Lyrics Display */}
+          {/* Live Structured Lyrics Display */}
           <div className="bg-black border border-neutral-800 p-4 max-h-56 overflow-y-auto space-y-3 scrollbar-thin">
             <span className="text-[9px] text-neutral-500 uppercase tracking-widest block font-bold border-b border-neutral-900 pb-1">
               // STRUCTURED LYRICS & COMPOSITION
@@ -455,10 +456,10 @@ export default function InstantStudioPlus({
                 type="button"
                 onClick={handleDownload}
                 className="px-3 py-1.5 border border-neutral-700 bg-black hover:border-white text-neutral-300 hover:text-white text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5 cursor-pointer"
-                title="Download Master WAV"
+                title="Download Master MP3"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>DOWNLOAD WAV</span>
+                <span>DOWNLOAD MP3</span>
               </button>
             </div>
 
@@ -484,7 +485,7 @@ export default function InstantStudioPlus({
             className={`w-full py-4 text-xs font-black uppercase tracking-widest border transition-all cursor-pointer flex items-center justify-center gap-2 ${
               isPublishing
                 ? "border-neutral-700 bg-neutral-900 text-neutral-400 cursor-not-allowed"
-                : "border-white bg-white text-black hover:bg-neutral-200 shadow-2xl"
+                : "border-white bg-white text-black hover:bg-neutral-200 shadow-2xl font-extrabold"
             }`}
           >
             <Send className="w-4 h-4" />
