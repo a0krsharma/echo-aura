@@ -8,7 +8,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Radio, Swords, Plus, X, Calendar, Flame, Lock } from "lucide-react";
+import { Radio, Swords, Plus, X, Calendar, Flame, Lock, Zap, Music, Mic } from "lucide-react";
 import { subscribeToClashes, type ClashItem } from "@/lib/clashes";
 import { subscribeToPublicRooms, getTrendingRooms, getRoomsByCategory, deleteRoom, type Room } from "@/lib/rooms";
 import { useAuth } from "@/app/components/AuthProvider";
@@ -28,6 +28,7 @@ function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate:
   const [scheduleMode, setScheduleMode] = useState(false);
   const [scheduledFor, setScheduledFor] = useState("");
   const [openMic, setOpenMic] = useState(false);
+  const [broadcastEngine, setBroadcastEngine] = useState<"STAGE" | "SPOTIFY" | "NEURAL_RADIO">("STAGE");
 
   const CATEGORIES = ["GENERAL", "TECH", "MARKETS", "MUSIC", "DEBATE", "CRICKET", "CASUAL"];
 
@@ -80,6 +81,7 @@ function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate:
           tags: tags.split(",").map(t => t.trim()).filter(Boolean),
           scheduledFor: scheduleMode && scheduledFor ? new Date(scheduledFor).toISOString() : null,
           openMic,
+          broadcastEngine,
         }),
       });
 
@@ -119,6 +121,56 @@ function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate:
         </div>
 
         <div className="space-y-3">
+          {/* Broadcast Engine Selection */}
+          <div>
+            <label className="text-[10px] tracking-widest text-neutral-400 block mb-1 uppercase font-bold">
+              // SELECT BROADCAST ENGINE
+            </label>
+            <div className="grid grid-cols-3 gap-1.5">
+              <button
+                type="button"
+                onClick={() => setBroadcastEngine("STAGE")}
+                className={`p-2 text-center border transition-all cursor-pointer ${
+                  broadcastEngine === "STAGE"
+                    ? "border-white bg-white text-black font-bold shadow-md"
+                    : "border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-600 hover:text-white"
+                }`}
+              >
+                <Mic className="w-3.5 h-3.5 mx-auto mb-1" />
+                <span className="text-[9px] block uppercase font-bold leading-tight">STAGE</span>
+                <span className="text-[8px] opacity-60 block">VOICE DEBATE</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setBroadcastEngine("SPOTIFY")}
+                className={`p-2 text-center border transition-all cursor-pointer ${
+                  broadcastEngine === "SPOTIFY"
+                    ? "border-[#1DB954] bg-[#1DB954] text-black font-bold shadow-md"
+                    : "border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-[#1DB954]/60 hover:text-[#1DB954]"
+                }`}
+              >
+                <Music className="w-3.5 h-3.5 mx-auto mb-1" />
+                <span className="text-[9px] block uppercase font-bold leading-tight">SPOTIFY</span>
+                <span className="text-[8px] opacity-75 block">PARTY SYNC</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setBroadcastEngine("NEURAL_RADIO")}
+                className={`p-2 text-center border transition-all cursor-pointer ${
+                  broadcastEngine === "NEURAL_RADIO"
+                    ? "border-amber-400 bg-amber-400 text-black font-bold shadow-md"
+                    : "border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-amber-400/60 hover:text-amber-400"
+                }`}
+              >
+                <Zap className="w-3.5 h-3.5 mx-auto mb-1" />
+                <span className="text-[9px] block uppercase font-bold leading-tight">NEURAL</span>
+                <span className="text-[8px] opacity-75 block">VOLT MINING</span>
+              </button>
+            </div>
+          </div>
+
           <div>
             <label className="text-[10px] tracking-widest text-neutral-500 block mb-1">FREQUENCY TITLE</label>
             <input

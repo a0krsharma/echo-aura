@@ -27,6 +27,35 @@ import {
 import { getFirebaseDb } from "@/lib/firebase";
 import { createNotification } from "@/lib/notifications";
 
+export interface SpotifySyncState {
+  activeTrackUri: string;
+  trackName: string;
+  artistName: string;
+  albumArt?: string;
+  startedAt: number; // Date.now() timestamp
+  isPlaying: boolean;
+  hostUid: string;
+  durationMs?: number;
+}
+
+export interface NeuralQueueTrack {
+  trackId: string;
+  title: string;
+  creatorUid: string;
+  creatorHandle: string;
+  url: string;
+  durationSec: number;
+  isCloned?: boolean;
+}
+
+export interface NeuralQueueState {
+  currentIndex: number;
+  startedAt: number; // Date.now() timestamp
+  isPlaying: boolean;
+  queue: NeuralQueueTrack[];
+  voltsMinedTotal?: number;
+}
+
 export interface Room {
   id: string;
   name: string;
@@ -46,6 +75,10 @@ export interface Room {
   agoraChannel: string;
   scheduledFor: Timestamp | null;
   openMic: boolean;
+  // [ PARTY MODE ] - Broadcast Engine & Co-Listening Synchronizer
+  broadcastEngine?: "STAGE" | "SPOTIFY" | "NEURAL_RADIO";
+  spotifySyncState?: SpotifySyncState | null;
+  neuralQueueState?: NeuralQueueState | null;
   // [ TRANSMIT ] - Live broadcasting metadata
   transmitEnabled?: boolean;
   transmitUrl?: string;
@@ -92,6 +125,7 @@ export async function createRoom(roomData: {
   tags: string[];
   scheduledFor?: Timestamp | null;
   openMic?: boolean;
+  broadcastEngine?: "STAGE" | "SPOTIFY" | "NEURAL_RADIO";
 }): Promise<string> {
   try {
     const db = getFirebaseDb();
@@ -133,6 +167,7 @@ export async function createRoom(roomData: {
       agoraChannel,
       scheduledFor: roomData.scheduledFor || null,
       openMic: roomData.openMic || false, // Default to raise hand mode
+      broadcastEngine: roomData.broadcastEngine || "STAGE",
     };
 
     console.log("[createRoom] Attempting to save room to Firestore:", newRoom);
@@ -1527,5 +1562,43 @@ export async function reconcileAllRoomCounts(): Promise<{ processed: number; fix
     console.error("[reconcileAllRoomCounts] Error:", error);
     return { processed: 0, fixed: 0, errors: 1 };
   }
+}
+
+// ── Party Mode Synchronization Helpers ─────────────────────────────────────
+export async function updateSpotifySyncState(roomId: string, syncData: SpotifySyncState | null): Promise<void> {
+  const db = getFirebaseDb();
+  const roomRef = doc(db, ROOMS_COLLECTION, roomId);
+  await updateDoc(roomRef, {
+    spotifySyncState: syncData,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function updateNeuralQueue(roomId: string, queueData: NeuralQueueState): Promise<void> {
+  const db = getFirebaseDb();
+  const roomRef = doc(db, ROOMS_COLLECTION, roomId);
+  await updateDoc(roomRef, {
+    neuralQueueState: queueData,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function advanceNeuralTrack(roomId: string, nextIndex: number): Promise<void> {
+  const db = getFirebaseDb();
+  const roomRef = doc(db, ROOMS_COLLECTION, roomId);
+  const snap = await getDoc(roomRef);
+  if (!snap.exists()) return;
+
+  const currentQueue = snap.data()?.neuralQueueState as NeuralQueueState;
+  if (!currentQueue || !currentQueue.queue) return;
+
+  const safeIndex = nextIndex < currentQueue.queue.length ? nextIndex : 0;
+
+  await updateDoc(roomRef, {
+    "neuralQueueState.currentIndex": safeIndex,
+    "neuralQueueState.startedAt": Date.now(),
+    "neuralQueueState.isPlaying": true,
+    updatedAt: serverTimestamp(),
+  });
 }
 

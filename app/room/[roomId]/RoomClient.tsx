@@ -36,6 +36,8 @@ import { useAuth } from "@/app/components/AuthProvider";
 import { useRoomAudio } from "@/lib/context/RoomAudioContext";
 import { ShareButton } from "@/app/components/ShareButton";
 import { FormattedText } from "@/app/components/FormattedText";
+import SpotifySyncDock from "@/app/components/SpotifySyncDock";
+import NeuralRadioDock from "@/app/components/NeuralRadioDock";
 import {
   getRoom,
   subscribeToRoom,
@@ -437,6 +439,25 @@ export default function RoomClient({ roomId }: RoomClientProps) {
 
       {/* ── Main Stage Area ── */}
       <main className="flex-1 max-w-5xl mx-auto w-full p-4 sm:p-6 space-y-6 pb-32">
+        {/* Party Mode: Spotify Co-Listening Dock */}
+        {room.broadcastEngine === "SPOTIFY" && (
+          <SpotifySyncDock
+            room={room}
+            isHost={isHost}
+            currentUserUid={user?.uid || ""}
+          />
+        )}
+
+        {/* Party Mode: Neural Radio & Volt Mining Dock */}
+        {room.broadcastEngine === "NEURAL_RADIO" && (
+          <NeuralRadioDock
+            room={room}
+            isHost={isHost}
+            currentUserUid={user?.uid || ""}
+            currentUserHandle={user?.handle || "@ANON"}
+          />
+        )}
+
         {/* Host/Speaker Mic Action Banner */}
         {isSpeaker && isMuted && (
           <div 

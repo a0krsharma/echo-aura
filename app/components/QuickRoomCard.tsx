@@ -36,9 +36,21 @@ export default function QuickRoomCard({ room, isHost, onDelete }: QuickRoomCardP
     >
       {/* Top Telemetry Header */}
       <div className="flex justify-between items-center text-[10px] text-neutral-400">
-        <span className="uppercase tracking-wider">
-          [{room.category || "STAGE"}] • {room.hostHandle || "@ANON"}
-        </span>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="uppercase tracking-wider">
+            [{room.category || "STAGE"}] • {room.hostHandle || "@ANON"}
+          </span>
+          {room.broadcastEngine === "SPOTIFY" && (
+            <span className="bg-[#1DB954] text-black font-extrabold px-1.5 py-0.2 uppercase text-[9px]">
+              SPOTIFY SYNC
+            </span>
+          )}
+          {room.broadcastEngine === "NEURAL_RADIO" && (
+            <span className="bg-amber-400 text-black font-extrabold px-1.5 py-0.2 uppercase text-[9px]">
+              ⚡ NEURAL RADIO
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           {isHost && onDelete && (
             <button
