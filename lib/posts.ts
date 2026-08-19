@@ -76,6 +76,7 @@ export interface PostItem {
   newsHeadline?:   string | null;
   newsLink?:       string | null;
   isNeural?:       boolean;
+  isCloned?:       boolean;
 }
 
 /** Inline voice comment on a post — stored in posts/{id}/reverbs subcollection */
@@ -118,6 +119,7 @@ export async function createPost(data: {
   tags?:            string[] | null;
   category?:        string | null;
   isNeural?:        boolean;
+  isCloned?:        boolean;
 }): Promise<string> {
   try {
     const db = getFirebaseDb();
@@ -148,6 +150,7 @@ export async function createPost(data: {
       tags:            data.tags            || (data.newsTopic ? [data.newsTopic.replace(/^#/, '').toUpperCase()] : []),
       category:        data.category        || null,
       isNeural:        Boolean(data.isNeural),
+      isCloned:        Boolean(data.isCloned),
       createdAt:       serverTimestamp(),
       // [ SPIKE ] - Initialize trending metrics
       spikeScore:      0,

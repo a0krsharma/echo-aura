@@ -75,6 +75,7 @@ interface WavePost {
   reverbCount: number;
   createdAt: any;
   isNeural?: boolean;
+  isCloned?: boolean;
   category?: string;
 }
 
@@ -382,10 +383,10 @@ function WaveCard({
             {post.authorHandle}
           </button>
 
-          {(post.isNeural || post.category === "NEURAL_LAB") && (
+          {(post.isCloned || post.isNeural || post.category === "NEURAL_LAB") && (
             <span className="font-mono text-[9px] bg-white text-black font-extrabold px-1.5 py-0.2 uppercase tracking-wider flex items-center gap-1 shadow-sm">
               <span className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
-              [+] SYNTH AI
+              {post.isCloned ? "[+] CLONE AI" : "[+] SYNTH AI"}
             </span>
           )}
 

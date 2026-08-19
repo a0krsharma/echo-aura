@@ -18,12 +18,17 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
-  Flame
+  Flame,
+  Shield,
+  Fingerprint,
+  Mic
 } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
 import { BG_PRESETS, mixVocalWithBackground } from "@/lib/audioMixer";
 import { uploadAudio } from "@/lib/cloudinary";
 import { createPost } from "@/lib/posts";
+import IdentityCalibrator from "@/app/components/IdentityCalibrator";
+import { CURATED_STYLE_VAULT } from "@/lib/cloneStyles";
 
 export const ACOUSTIC_VOICES = [
   { id: "hi-IN-MadhurNeural", label: "HINDI // MASCULINE (GHAZAL / SHAYARI)", lang: "HI", style: "EMOTIVE" },
@@ -40,15 +45,17 @@ const TEMPLATES = [
   {
     title: "SHAYARI / GHAZAL",
     voice: "hi-IN-MadhurNeural",
+    styleId: "vintage_baritone",
     bg: "acoustic_noir",
-    rate: -5,
-    pitch: -1,
+    rate: -6,
+    pitch: -2,
     ducking: 22,
     text: "ख़ामोशियों की अपनी एक ज़ुबान होती है,\nजो लफ़्ज़ों में ना आए वो बात बयां होती है।\nइस शहर के शोर में कभी खुद को भी सुन लेना,\nहर गूंज के पीछे एक अनकही दास्तान होती है।",
   },
   {
     title: "NOIR MONOLOGUE",
     voice: "en-US-ChristopherNeural",
+    styleId: "noir_whisper",
     bg: "synthwave_ambient",
     rate: -8,
     pitch: -2,
@@ -56,11 +63,12 @@ const TEMPLATES = [
     text: "Midnight in the terminal. The neon flickers against rain-slicked glass. We build architectures out of pure thought, broadcasting echoes into the void, waiting for a signal to bounce back.",
   },
   {
-    title: "MARKET DEBRIEF",
+    title: "TRADING PIT DISPATCH",
     voice: "en-US-GuyNeural",
+    styleId: "trading_pit",
     bg: "lofi_chill",
-    rate: 0,
-    pitch: 0,
+    rate: 10,
+    pitch: 1,
     ducking: 25,
     text: "Frequency Node 047 online. Telemetry verified. Zero cloud overhead achieved through client-side browser synthesis. The future of decentralized audio is streaming live.",
   },
@@ -75,6 +83,14 @@ export default function NeuralSynthesisTerminal({
 }) {
   const { user } = useAuth();
   const router = useRouter();
+
+  // Engine Mode: Standard Presets vs Clone Protocol
+  const [engineMode, setEngineMode] = useState<"PRESETS" | "CLONE">("CLONE");
+  
+  // Clone Identity Source: Personal Node vs Curated Archetypes
+  const [cloneIdentitySource, setCloneIdentitySource] = useState<"PERSONAL" | "CURATED">("PERSONAL");
+  const [selectedStyleId, setSelectedStyleId] = useState<string>("vintage_baritone");
+  const [calibratedIdentityBlob, setCalibratedIdentityBlob] = useState<Blob | null>(null);
 
   // Form State
   const [text, setText] = useState("");
@@ -92,7 +108,7 @@ export default function NeuralSynthesisTerminal({
   // Processing & Audio State
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
-  const [statusLog, setStatusLog] = useState(">> SYSTEM READY. ZERO-COST NEURAL PIPELINE ACTIVE.");
+  const [statusLog, setStatusLog] = useState(">> SYSTEM READY. CLONE PROTOCOL & ZERO-COST ENGINE ACTIVE.");
   const [masterAudioUrl, setMasterAudioUrl] = useState<string | null>(null);
   const [masterBlob, setMasterBlob] = useState<Blob | null>(null);
   const [durationSec, setDurationSec] = useState(0);
@@ -114,6 +130,7 @@ export default function NeuralSynthesisTerminal({
   const handleApplyTemplate = (tmpl: typeof TEMPLATES[0]) => {
     setText(tmpl.text);
     setSelectedVoice(tmpl.voice);
+    setSelectedStyleId(tmpl.styleId);
     setSelectedBg(tmpl.bg);
     setRate(tmpl.rate);
     setPitch(tmpl.pitch);
@@ -125,7 +142,12 @@ export default function NeuralSynthesisTerminal({
   // ── Step 1 & 2: Synthesize Voice & Mix Locally ─────────────────────────────
   const handleGenerateAndMix = async () => {
     if (!text.trim()) {
-      setStatusLog(">> [ERROR]: PLEASE ENTER TEXT TO SYNTHESIZE.");
+      setStatusLog(">> [ERROR]: PLEASE ENTER SCRIPT OR TEXT TO SYNTHESIZE.");
+      return;
+    }
+
+    if (engineMode === "CLONE" && cloneIdentitySource === "PERSONAL" && !calibratedIdentityBlob) {
+      setStatusLog(">> [CALIBRATION REQUIRED]: INITIATE 10s MIC CHECK ABOVE OR SELECT CURATED STYLE.");
       return;
     }
 
@@ -135,20 +157,44 @@ export default function NeuralSynthesisTerminal({
     }
 
     setIsProcessing(true);
-    setStatusLog(">> [1/2] TRANSMITTING TO EDGE-TTS NEURAL ENGINE ($0 COMPUTE)...");
+    setStatusLog(
+      engineMode === "CLONE"
+        ? ">> [1/2] TRANSMITTING TO ZERO-SHOT VOICE CLONING ENGINE..."
+        : ">> [1/2] TRANSMITTING TO EDGE-TTS NEURAL ENGINE ($0 COMPUTE)..."
+    );
 
     try {
-      // 1. Fetch synthesized raw vocal MP3 from Edge-TTS
-      const ttsResponse = await fetch("/api/synthesize", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text: text.trim(),
-          voice: selectedVoice,
-          rate: `${rate >= 0 ? "+" : ""}${rate}%`,
-          pitch: `${pitch >= 0 ? "+" : ""}${pitch}Hz`,
-        }),
-      });
+      let ttsResponse: Response;
+
+      if (engineMode === "CLONE") {
+        // Route to Clone Endpoint
+        const formData = new FormData();
+        formData.append("text", text.trim());
+        formData.append("styleId", cloneIdentitySource === "CURATED" ? selectedStyleId : "custom_personal");
+        formData.append("rate", `${rate >= 0 ? "+" : ""}${rate}%`);
+        formData.append("pitch", `${pitch >= 0 ? "+" : ""}${pitch}Hz`);
+        
+        if (calibratedIdentityBlob && cloneIdentitySource === "PERSONAL") {
+          formData.append("referenceAudio", calibratedIdentityBlob, "acoustic_signature.webm");
+        }
+
+        ttsResponse = await fetch("/api/synthesize/clone", {
+          method: "POST",
+          body: formData,
+        });
+      } else {
+        // Route to Standard Preset Synthesis Endpoint
+        ttsResponse = await fetch("/api/synthesize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: text.trim(),
+            voice: selectedVoice,
+            rate: `${rate >= 0 ? "+" : ""}${rate}%`,
+            pitch: `${pitch >= 0 ? "+" : ""}${pitch}Hz`,
+          }),
+        });
+      }
 
       if (!ttsResponse.ok) {
         const errJson = await ttsResponse.json().catch(() => ({}));
@@ -159,7 +205,7 @@ export default function NeuralSynthesisTerminal({
       const vocalUrl = URL.createObjectURL(vocalBlob);
 
       // 2. Client-Side Browser Audio Mixing with OfflineAudioContext
-      setStatusLog(">> [2/2] BROWSER MULTI-TRACK MIXING & ACOUSTIC DUCKING ($0 CLOUD)...");
+      setStatusLog(">> [2/2] BROWSER MULTI-TRACK MIXING & DUCKING ($0 CLOUD COMPUTE)...");
       const targetBg = BG_PRESETS.find((bg) => bg.id === selectedBg);
       const bgUrl = targetBg && targetBg.id !== "none" ? targetBg.url : "";
 
@@ -214,7 +260,7 @@ export default function NeuralSynthesisTerminal({
     }
   };
 
-  // ── Step 3: Publish Master Audio to Frequency Feed with isNeural ───────────
+  // ── Step 3: Publish Master Audio to Frequency Feed with isNeural / isCloned ──
   const handlePublish = async () => {
     if (!masterBlob) {
       setStatusLog(">> [ERROR]: COMPILE A MASTER TRACK FIRST.");
@@ -251,8 +297,9 @@ export default function NeuralSynthesisTerminal({
         duration: formattedDuration,
         durationSec: Math.max(1, durationSec),
         category: category || "NEURAL_LAB",
-        tags: ["NEURALLAB", "SYNTHESIS", "AI_VOICE"],
-        isNeural: true, // Tags post as AI-generated for high-status feed badge
+        tags: ["NEURALLAB", "SYNTHESIS", engineMode === "CLONE" ? "VOICE_CLONE" : "AI_VOICE"],
+        isNeural: true,
+        isCloned: engineMode === "CLONE",
       });
 
       setStatusLog(">> [SUCCESS]: TRANSMISSION PUBLISHED TO FREQUENCY!");
@@ -275,7 +322,7 @@ export default function NeuralSynthesisTerminal({
   return (
     <div className={`bg-black border border-white p-4 sm:p-6 font-mono text-white select-none ${embedded ? "w-full" : "max-w-3xl mx-auto shadow-2xl my-4"}`}>
       {/* ── Terminal Telemetry Header ── */}
-      <div className="flex items-center justify-between border-b border-neutral-800 pb-3 mb-5 text-xs">
+      <div className="flex items-center justify-between border-b border-neutral-800 pb-3 mb-5 text-xs flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <Cpu className="w-4 h-4 text-white animate-pulse" />
           <span className="font-bold tracking-widest uppercase">// NEURAL SYNTHESIS LAB</span>
@@ -289,6 +336,122 @@ export default function NeuralSynthesisTerminal({
           </span>
         </div>
       </div>
+
+      {/* ── Engine Mode Switcher Tabs ── */}
+      <div className="grid grid-cols-2 gap-2 mb-5">
+        <button
+          type="button"
+          onClick={() => setEngineMode("CLONE")}
+          className={`py-2.5 px-3 text-xs font-bold uppercase tracking-wider border transition-colors cursor-pointer flex items-center justify-center gap-2 ${
+            engineMode === "CLONE"
+              ? "border-white bg-white text-black shadow-lg"
+              : "border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-600 hover:text-white"
+          }`}
+        >
+          <Fingerprint className="w-4 h-4" />
+          <span>[ 🧬 CLONE PROTOCOL ]</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setEngineMode("PRESETS")}
+          className={`py-2.5 px-3 text-xs font-bold uppercase tracking-wider border transition-colors cursor-pointer flex items-center justify-center gap-2 ${
+            engineMode === "PRESETS"
+              ? "border-white bg-white text-black shadow-lg"
+              : "border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-600 hover:text-white"
+          }`}
+        >
+          <Radio className="w-4 h-4" />
+          <span>[ 🎙️ STANDARD PRESETS ]</span>
+        </button>
+      </div>
+
+      {/* ── Clone Protocol Settings ── */}
+      {engineMode === "CLONE" && (
+        <div className="border border-neutral-800 bg-neutral-950 p-4 mb-5 space-y-4">
+          <div className="flex items-center justify-between border-b border-neutral-900 pb-2">
+            <span className="text-xs font-bold text-white uppercase tracking-widest flex items-center gap-1.5">
+              <Fingerprint className="w-3.5 h-3.5 text-white" />
+              // ACOUSTIC IDENTITY SOURCE
+            </span>
+            <span className="text-[10px] text-neutral-500 uppercase">ZERO-SHOT EXTRACTION</span>
+          </div>
+
+          {/* Sub-Tabs: Personal Node vs Curated Vault */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setCloneIdentitySource("PERSONAL")}
+              className={`py-2 text-[11px] font-bold uppercase tracking-wider border transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
+                cloneIdentitySource === "PERSONAL"
+                  ? "border-white bg-white text-black"
+                  : "border-neutral-800 bg-black text-neutral-400 hover:border-neutral-700 hover:text-white"
+              }`}
+            >
+              <Mic className="w-3.5 h-3.5" />
+              <span>[ PERSONAL 10s MIC CHECK ]</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setCloneIdentitySource("CURATED")}
+              className={`py-2 text-[11px] font-bold uppercase tracking-wider border transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
+                cloneIdentitySource === "CURATED"
+                  ? "border-white bg-white text-black"
+                  : "border-neutral-800 bg-black text-neutral-400 hover:border-neutral-700 hover:text-white"
+              }`}
+            >
+              <Shield className="w-3.5 h-3.5" />
+              <span>[ CURATED STYLISTIC VAULT ]</span>
+            </button>
+          </div>
+
+          {/* Personal Node: 10-Second Mic Check Calibrator */}
+          {cloneIdentitySource === "PERSONAL" ? (
+            <IdentityCalibrator
+              onIdentityCaptured={(blob) => {
+                setCalibratedIdentityBlob(blob);
+                setStatusLog(">> ACOUSTIC SIGNATURE REGISTERED. READY FOR CLONE SYNTHESIS.");
+              }}
+              onReset={() => {
+                setCalibratedIdentityBlob(null);
+                setStatusLog(">> MIC STANDBY. CLICK TO CALIBRATE.");
+              }}
+            />
+          ) : (
+            /* Curated Archetypes Vault */
+            <div className="space-y-2">
+              <label className="block text-[10px] text-neutral-400 uppercase tracking-widest mb-1">
+                SELECT STYLISTIC ARCHETYPE (LEGAL ALIASES)
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {Object.entries(CURATED_STYLE_VAULT).map(([id, style]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedStyleId(id);
+                      setRate(Number(style.defaultRate.replace("%", "")));
+                      setPitch(Number(style.defaultPitch.replace("Hz", "")));
+                      setStatusLog(`>> SELECTED STYLISTIC PROFILE: ${style.name}`);
+                    }}
+                    className={`p-3 text-left border transition-all cursor-pointer ${
+                      selectedStyleId === id
+                        ? "border-white bg-white text-black font-bold shadow-md"
+                        : "border-neutral-800 bg-black text-neutral-400 hover:border-neutral-600 hover:text-white"
+                    }`}
+                  >
+                    <p className="text-xs font-bold uppercase">{style.name}</p>
+                    <p className={`text-[10px] mt-1 ${selectedStyleId === id ? "text-neutral-700" : "text-neutral-500"}`}>
+                      {style.description}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Quick Templates ── */}
       <div className="mb-5 space-y-2">
@@ -316,26 +479,40 @@ export default function NeuralSynthesisTerminal({
         </div>
       </div>
 
-      {/* ── Acoustic Voice & Ambient Backing Selectors ── */}
+      {/* ── Acoustic Voice (Standard Mode) & Ambient Backing Selectors ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
-        {/* Voice Selector */}
-        <div>
-          <label className="block text-[10px] text-neutral-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-            <Radio className="w-3 h-3 text-white" />
-            1. ACOUSTIC VOICE PROFILE
-          </label>
-          <select
-            value={selectedVoice}
-            onChange={(e) => setSelectedVoice(e.target.value)}
-            className="w-full bg-neutral-950 border border-neutral-800 focus:border-white text-xs p-2.5 text-white outline-none cursor-pointer uppercase"
-          >
-            {ACOUSTIC_VOICES.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Voice Selector (Shown in Standard Mode) */}
+        {engineMode === "PRESETS" ? (
+          <div>
+            <label className="block text-[10px] text-neutral-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+              <Radio className="w-3 h-3 text-white" />
+              1. ACOUSTIC VOICE PROFILE
+            </label>
+            <select
+              value={selectedVoice}
+              onChange={(e) => setSelectedVoice(e.target.value)}
+              className="w-full bg-neutral-950 border border-neutral-800 focus:border-white text-xs p-2.5 text-white outline-none cursor-pointer uppercase"
+            >
+              {ACOUSTIC_VOICES.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <div>
+            <label className="block text-[10px] text-neutral-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+              <Fingerprint className="w-3 h-3 text-white" />
+              1. CLONED VOICE IDENTITY
+            </label>
+            <div className="p-2.5 bg-neutral-950 border border-neutral-800 text-xs text-white font-bold uppercase truncate">
+              {cloneIdentitySource === "PERSONAL"
+                ? (calibratedIdentityBlob ? "✅ PERSONAL NODE (CALIBRATED)" : "⚠️ AWAITING 10s MIC CHECK")
+                : (CURATED_STYLE_VAULT[selectedStyleId]?.name || "CUSTOM")}
+            </div>
+          </div>
+        )}
 
         {/* Ambient Backing Stem */}
         <div>
@@ -458,7 +635,13 @@ export default function NeuralSynthesisTerminal({
         }`}
       >
         <Cpu className="w-4 h-4" />
-        <span>{isProcessing ? "[ 1/2 COMPILING MASTER WAV... ]" : "[ SYNTHESIZE & MASTER TRACK ($0) ]"}</span>
+        <span>
+          {isProcessing
+            ? "[ 1/2 COMPILING MASTER CLONED AUDIO... ]"
+            : engineMode === "CLONE"
+            ? "[ 🧬 EXECUTE ZERO-SHOT CLONE & MASTER ($0) ]"
+            : "[ SYNTHESIZE & MASTER TRACK ($0) ]"}
+        </span>
       </button>
 
       {/* ── Audition Player & Broadcast Dock ── */}
@@ -467,7 +650,7 @@ export default function NeuralSynthesisTerminal({
           <div className="flex items-center justify-between text-xs">
             <span className="font-bold text-white uppercase tracking-widest flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4 text-white" />
-              // MASTER TRACK AUDITION READY
+              // MASTER CLONED TRACK AUDITION READY
             </span>
             <span className="text-[10px] text-neutral-400 flex items-center gap-1">
               <Clock className="w-3 h-3 text-neutral-400" />
