@@ -14,7 +14,7 @@
 import React, { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader2, Play, Square, Trash2, Send, Radio, Cpu, Mic } from "lucide-react";
+import { Loader2, Play, Square, Trash2, Send, Radio, Cpu, Mic, Sparkles } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
 import { uploadAudio } from "@/lib/cloudinary";
 import { createPost } from "@/lib/posts";
@@ -327,14 +327,14 @@ function StudioContent() {
                 : "border-neutral-800 text-neutral-400 hover:border-neutral-600 hover:text-white bg-neutral-950"
             }`}
           >
-            <Cpu className="w-3.5 h-3.5" />
-            <span>[ NEURAL LAB ($0) ]</span>
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>[ ✨ STUDIO+ (AI) ]</span>
           </button>
         </div>
 
         <div className="font-mono text-xs tracking-widest text-neutral-500 uppercase hidden sm:block">
           {studioMode === "NEURAL"
-            ? "// NEURAL ENGINE · READY"
+            ? "// STUDIO+ AI ENGINE · READY"
             : `// STUDIO · ${
                 studioState === "idle"
                   ? "READY"

@@ -981,10 +981,10 @@ function PostCard({ post, user, orbitedPosts, activePostId, deletingId, onPulse,
             className="font-mono text-xs tracking-widest text-white hover:underline uppercase cursor-pointer">
             {post.authorHandle}
           </button>
-          {(post.isCloned || post.isNeural || post.category === "NEURAL_LAB") && (
+          {(post.isCloned || post.isNeural || post.category === "STUDIO_PLUS" || post.category === "NEURAL_LAB") && (
             <span className="font-mono text-[9px] bg-white text-black font-extrabold px-1.5 py-0.2 uppercase tracking-wider flex items-center gap-1 shadow-sm">
               <span className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
-              {post.isCloned ? "[+] CLONE AI" : "[+] SYNTH AI"}
+              {post.isCloned ? "[+] CLONE AI" : "[+] STUDIO+"}
             </span>
           )}
           {!isOwn && user && (

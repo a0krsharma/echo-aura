@@ -20,8 +20,8 @@ export default function SynthPage() {
           </Link>
           <span className="text-neutral-700">//</span>
           <span className="text-white font-bold text-xs tracking-widest uppercase flex items-center gap-1.5">
-            <Cpu className="w-4 h-4 text-white animate-pulse" />
-            SYNTHESIS LAB
+            <Sparkles className="w-4 h-4 text-white animate-pulse" />
+            STUDIO+ [ AI ENGINE ]
           </span>
         </div>
 

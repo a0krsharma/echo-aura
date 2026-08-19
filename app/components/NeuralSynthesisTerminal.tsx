@@ -29,6 +29,7 @@ import { uploadAudio } from "@/lib/cloudinary";
 import { createPost } from "@/lib/posts";
 import IdentityCalibrator from "@/app/components/IdentityCalibrator";
 import { CURATED_STYLE_VAULT } from "@/lib/cloneStyles";
+import InstantStudioPlus from "@/app/components/InstantStudioPlus";
 
 export const ACOUSTIC_VOICES = [
   { id: "hi-IN-MadhurNeural", label: "HINDI // MASCULINE (GHAZAL / SHAYARI)", lang: "HI", style: "EMOTIVE" },
@@ -84,8 +85,8 @@ export default function NeuralSynthesisTerminal({
   const { user } = useAuth();
   const router = useRouter();
 
-  // Engine Mode: Standard Presets vs Clone Protocol
-  const [engineMode, setEngineMode] = useState<"PRESETS" | "CLONE">("CLONE");
+  // Engine Mode: One-Shot vs Clone Protocol vs Pro Acoustic Presets
+  const [engineMode, setEngineMode] = useState<"ONE_SHOT" | "CLONE" | "PRESETS">("ONE_SHOT");
   
   // Clone Identity Source: Personal Node vs Curated Archetypes
   const [cloneIdentitySource, setCloneIdentitySource] = useState<"PERSONAL" | "CURATED">("PERSONAL");
@@ -103,12 +104,12 @@ export default function NeuralSynthesisTerminal({
   const [ducking, setDucking] = useState<number>(22); // 5% to 50%
   
   const [caption, setCaption] = useState("");
-  const [category, setCategory] = useState("NEURAL_LAB");
+  const [category, setCategory] = useState("STUDIO_PLUS");
 
   // Processing & Audio State
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
-  const [statusLog, setStatusLog] = useState(">> SYSTEM READY. CLONE PROTOCOL & ZERO-COST ENGINE ACTIVE.");
+  const [statusLog, setStatusLog] = useState(">> SYSTEM READY. STUDIO+ ENGINE ACTIVE.");
   const [masterAudioUrl, setMasterAudioUrl] = useState<string | null>(null);
   const [masterBlob, setMasterBlob] = useState<Blob | null>(null);
   const [durationSec, setDurationSec] = useState(0);
@@ -278,7 +279,7 @@ export default function NeuralSynthesisTerminal({
 
     try {
       const finalCaption = caption.trim() || text.trim().slice(0, 80);
-      const filename = `neural-echo-${user.uid}-${Date.now()}`;
+      const filename = `studio-plus-${user.uid}-${Date.now()}`;
       
       // Upload master WAV to Cloudinary audio pipeline
       const uploadResult = await uploadAudio(masterBlob, filename);
@@ -296,8 +297,8 @@ export default function NeuralSynthesisTerminal({
         authorHandle: user.handle || "@ANON",
         duration: formattedDuration,
         durationSec: Math.max(1, durationSec),
-        category: category || "NEURAL_LAB",
-        tags: ["NEURALLAB", "SYNTHESIS", engineMode === "CLONE" ? "VOICE_CLONE" : "AI_VOICE"],
+        category: category || "STUDIO_PLUS",
+        tags: ["STUDIOPLUS", "SYNTHESIS", engineMode === "CLONE" ? "VOICE_CLONE" : "AI_VOICE"],
         isNeural: true,
         isCloned: engineMode === "CLONE",
       });
@@ -324,8 +325,8 @@ export default function NeuralSynthesisTerminal({
       {/* ── Terminal Telemetry Header ── */}
       <div className="flex items-center justify-between border-b border-neutral-800 pb-3 mb-5 text-xs flex-wrap gap-2">
         <div className="flex items-center gap-2">
-          <Cpu className="w-4 h-4 text-white animate-pulse" />
-          <span className="font-bold tracking-widest uppercase">// NEURAL SYNTHESIS LAB</span>
+          <Sparkles className="w-4 h-4 text-white animate-pulse" />
+          <span className="font-bold tracking-widest uppercase">// STUDIO+ · AI ACOUSTIC ENGINE</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-[10px] bg-white text-black font-bold px-1.5 py-0.5 uppercase tracking-widest">
@@ -337,34 +338,52 @@ export default function NeuralSynthesisTerminal({
         </div>
       </div>
 
-      {/* ── Engine Mode Switcher Tabs ── */}
-      <div className="grid grid-cols-2 gap-2 mb-5">
+      {/* ── Engine Mode Switcher Tabs (3 Modes) ── */}
+      <div className="grid grid-cols-3 gap-1.5 mb-5">
+        <button
+          type="button"
+          onClick={() => setEngineMode("ONE_SHOT")}
+          className={`py-2.5 px-2 text-[11px] sm:text-xs font-bold uppercase tracking-wider border transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
+            engineMode === "ONE_SHOT"
+              ? "border-white bg-white text-black shadow-lg"
+              : "border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-600 hover:text-white"
+          }`}
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>[ ⚡ ONE-SHOT ]</span>
+        </button>
+
         <button
           type="button"
           onClick={() => setEngineMode("CLONE")}
-          className={`py-2.5 px-3 text-xs font-bold uppercase tracking-wider border transition-colors cursor-pointer flex items-center justify-center gap-2 ${
+          className={`py-2.5 px-2 text-[11px] sm:text-xs font-bold uppercase tracking-wider border transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
             engineMode === "CLONE"
               ? "border-white bg-white text-black shadow-lg"
               : "border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-600 hover:text-white"
           }`}
         >
-          <Fingerprint className="w-4 h-4" />
-          <span>[ 🧬 CLONE PROTOCOL ]</span>
+          <Fingerprint className="w-3.5 h-3.5" />
+          <span>[ 🧬 CLONE ]</span>
         </button>
 
         <button
           type="button"
           onClick={() => setEngineMode("PRESETS")}
-          className={`py-2.5 px-3 text-xs font-bold uppercase tracking-wider border transition-colors cursor-pointer flex items-center justify-center gap-2 ${
+          className={`py-2.5 px-2 text-[11px] sm:text-xs font-bold uppercase tracking-wider border transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
             engineMode === "PRESETS"
               ? "border-white bg-white text-black shadow-lg"
               : "border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-600 hover:text-white"
           }`}
         >
-          <Radio className="w-4 h-4" />
-          <span>[ 🎙️ STANDARD PRESETS ]</span>
+          <Sliders className="w-3.5 h-3.5" />
+          <span>[ 🎛️ PRO BOARD ]</span>
         </button>
       </div>
+
+      {/* ── Mode 1: One-Shot AI Music & Shayari Generator ── */}
+      {engineMode === "ONE_SHOT" && (
+        <InstantStudioPlus onPublishSuccess={onPublishSuccess} />
+      )}
 
       {/* ── Clone Protocol Settings ── */}
       {engineMode === "CLONE" && (
@@ -453,8 +472,11 @@ export default function NeuralSynthesisTerminal({
         </div>
       )}
 
-      {/* ── Quick Templates ── */}
-      <div className="mb-5 space-y-2">
+      {/* ── Mode 2 & 3: Manual Clone & Pro Acoustic Board Controls ── */}
+      {engineMode !== "ONE_SHOT" && (
+        <>
+          {/* ── Quick Templates ── */}
+          <div className="mb-5 space-y-2">
         <div className="flex items-center justify-between text-[10px] text-neutral-400 uppercase tracking-wider">
           <span className="flex items-center gap-1">
             <Sparkles className="w-3 h-3 text-white" />
@@ -721,6 +743,8 @@ export default function NeuralSynthesisTerminal({
             <span>{isPublishing ? "[ TRANSMITTING TO FREQUENCY... ]" : "[ >> PUBLISH TO FREQUENCY FEED ]"}</span>
           </button>
         </div>
+      )}
+      </>
       )}
     </div>
   );
