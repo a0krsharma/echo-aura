@@ -30,6 +30,7 @@ function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate:
   const [scheduledFor, setScheduledFor] = useState("");
   const [openMic, setOpenMic] = useState(false);
   const [broadcastEngine, setBroadcastEngine] = useState<"STAGE" | "SPOTIFY" | "NEURAL_RADIO">("STAGE");
+  const [lifespanHours, setLifespanHours] = useState(2);
 
   const CATEGORIES = ["GENERAL", "TECH", "MARKETS", "MUSIC", "DEBATE", "CRICKET", "CASUAL"];
 
@@ -83,6 +84,7 @@ function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate:
           scheduledFor: scheduleMode && scheduledFor ? new Date(scheduledFor).toISOString() : null,
           openMic,
           broadcastEngine,
+          lifespanHours,
         }),
       });
 
@@ -215,6 +217,28 @@ function CreateRoomModal({ onClose, onCreate }: { onClose: () => void; onCreate:
               >
                 {openMic ? "OPEN MIC" : "HAND RAISE"}
               </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[10px] tracking-widest text-neutral-500 block mb-1 uppercase">
+              ROOM AUTO-EXPIRY (SAVES AGORA MINUTES)
+            </label>
+            <div className="grid grid-cols-3 gap-1.5">
+              {[1, 2, 4].map((hours) => (
+                <button
+                  key={hours}
+                  type="button"
+                  onClick={() => setLifespanHours(hours)}
+                  className={`py-2 px-2 text-center text-[10px] font-bold uppercase transition-colors border cursor-pointer ${
+                    lifespanHours === hours
+                      ? "border-white bg-white text-black"
+                      : "border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-600 hover:text-white"
+                  }`}
+                >
+                  {hours} {hours === 1 ? "HOUR" : "HOURS"}
+                </button>
+              ))}
             </div>
           </div>
 

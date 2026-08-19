@@ -126,6 +126,7 @@ export async function createRoom(roomData: {
   scheduledFor?: Timestamp | null;
   openMic?: boolean;
   broadcastEngine?: "STAGE" | "SPOTIFY" | "NEURAL_RADIO";
+  lifespanHours?: number;
 }): Promise<string> {
   try {
     const db = getFirebaseDb();
@@ -135,15 +136,16 @@ export async function createRoom(roomData: {
     // Generate Agora channel name from room ID
     const agoraChannel = `echo_room_${roomId}`;
 
-    // TTL: 4-hour max lifespan for live rooms, 8 hours after start for scheduled rooms (Saves tech costs & Agora minutes)
+    // TTL: User-configured lifespan (default 2 hours) to preserve Agora quota & server costs
     const nowMs = Date.now();
-    let expiresMs = nowMs + 4 * 60 * 60 * 1000;
+    const durationHours = Math.max(0.5, Math.min(8, roomData.lifespanHours || 2));
+    let expiresMs = nowMs + durationHours * 60 * 60 * 1000;
     if (roomData.scheduledFor) {
       try {
         const s = roomData.scheduledFor as any;
         const schedMs = typeof s?.toDate === "function" ? s.toDate().getTime() : s?.seconds ? s.seconds * 1000 : new Date(s).getTime();
         if (schedMs && !isNaN(schedMs)) {
-          expiresMs = schedMs + 8 * 60 * 60 * 1000;
+          expiresMs = schedMs + durationHours * 60 * 60 * 1000;
         }
       } catch {}
     }

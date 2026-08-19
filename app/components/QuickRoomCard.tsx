@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Radio, Users, Volume2, Trash2 } from "lucide-react";
+import { Radio, Users, Volume2, Trash2, Clock } from "lucide-react";
 import type { Room } from "@/lib/rooms";
 import { useRoomAudio } from "@/lib/context/RoomAudioContext";
 
@@ -11,9 +11,33 @@ interface QuickRoomCardProps {
   onDelete?: () => void;
 }
 
+function formatRemainingTtl(expiresAt: any): string | null {
+  if (!expiresAt) return null;
+  try {
+    const expireMs = typeof expiresAt.toDate === "function" 
+      ? expiresAt.toDate().getTime() 
+      : expiresAt.seconds 
+        ? expiresAt.seconds * 1000 
+        : new Date(expiresAt).getTime();
+    
+    const diffMs = expireMs - Date.now();
+    if (diffMs <= 0) return "EXPIRED";
+    const mins = Math.floor(diffMs / 60000);
+    const hrs = Math.floor(mins / 60);
+    const remMins = mins % 60;
+    if (hrs > 0) {
+      return `${hrs}H ${remMins}M LEFT`;
+    }
+    return `${mins}M LEFT`;
+  } catch {
+    return null;
+  }
+}
+
 export default function QuickRoomCard({ room, isHost, onDelete }: QuickRoomCardProps) {
   const { activeRoomId, tuneIn } = useRoomAudio();
   const isActive = activeRoomId === room.id;
+  const ttlString = formatRemainingTtl(room.expiresAt);
 
   const handleCardClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -22,7 +46,9 @@ export default function QuickRoomCard({ room, isHost, onDelete }: QuickRoomCardP
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (onDelete) onDelete();
+    if (confirm(`Are you sure you want to end and delete "${room.name}"?`)) {
+      if (onDelete) onDelete();
+    }
   };
 
   return (
@@ -35,7 +61,7 @@ export default function QuickRoomCard({ room, isHost, onDelete }: QuickRoomCardP
       }`}
     >
       {/* Top Telemetry Header */}
-      <div className="flex justify-between items-center text-[10px] text-neutral-400">
+      <div className="flex justify-between items-center text-[10px] text-neutral-400 gap-2 flex-wrap">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="uppercase tracking-wider">
             [{room.category || "STAGE"}] • {room.hostHandle || "@ANON"}
@@ -50,15 +76,23 @@ export default function QuickRoomCard({ room, isHost, onDelete }: QuickRoomCardP
               ⚡ NEURAL RADIO
             </span>
           )}
+          {ttlString && (
+            <span className="text-[9px] border border-neutral-800 bg-black px-1.5 py-0.2 text-neutral-400 flex items-center gap-1">
+              <Clock className="w-2.5 h-2.5" />
+              {ttlString}
+            </span>
+          )}
         </div>
+        
         <div className="flex items-center gap-2">
           {isHost && onDelete && (
             <button
               onClick={handleDeleteClick}
-              className="text-red-500 hover:text-red-300 p-0.5 transition-colors cursor-pointer"
-              title="Delete Frequency"
+              className="flex items-center gap-1 text-[9px] font-bold text-red-400 hover:text-white border border-red-900/80 bg-red-950/40 hover:bg-red-900 px-1.5 py-0.5 uppercase tracking-wider transition-colors cursor-pointer"
+              title="Delete and end this live frequency"
             >
-              <Trash2 size={12} />
+              <Trash2 size={10} />
+              <span>[ DELETE ]</span>
             </button>
           )}
           <span className="flex items-center gap-1.5 font-bold text-white">

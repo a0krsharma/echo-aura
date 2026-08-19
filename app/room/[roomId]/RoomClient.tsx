@@ -424,7 +424,7 @@ export default function RoomClient({ roomId }: RoomClientProps) {
               className="text-red-400 hover:text-white hover:bg-red-950/80 border border-red-800 px-2.5 py-1 text-[10px] sm:text-xs uppercase font-bold transition-colors cursor-pointer"
               title="Terminate and delete live room"
             >
-              [!] END ROOM
+              [!] END & DELETE ROOM
             </button>
           ) : (
             <button

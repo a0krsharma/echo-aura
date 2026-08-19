@@ -677,11 +677,11 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
           {isHost && (
             <button
               onClick={handleDeleteStage}
-              className="px-2.5 py-1 text-[10px] sm:text-xs bg-neutral-900 border border-neutral-800 hover:border-white text-neutral-300 hover:text-white font-mono uppercase tracking-wider flex items-center gap-1 cursor-pointer"
-              title="Delete Stage Debate"
+              className="px-2.5 py-1 text-[10px] sm:text-xs bg-red-950/40 border border-red-800 hover:border-red-500 text-red-400 hover:text-white font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-colors"
+              title="Terminate and delete this live stage debate"
             >
               <Trash2 className="w-3 h-3" />
-              <span>END STAGE</span>
+              <span>[!] END & DELETE STAGE</span>
             </button>
           )}
 
