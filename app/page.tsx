@@ -34,6 +34,7 @@ interface FeedPost {
   newsLink?: string | null;
   tags?: string[];
   category?: string;
+  isNeural?: boolean;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -974,11 +975,17 @@ function PostCard({ post, user, orbitedPosts, activePostId, deletingId, onPulse,
     >
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button onClick={() => onProfileClick(post.authorHandle)}
             className="font-mono text-xs tracking-widest text-white hover:underline uppercase cursor-pointer">
             {post.authorHandle}
           </button>
+          {(post.isNeural || post.category === "NEURAL_LAB") && (
+            <span className="font-mono text-[9px] bg-white text-black font-extrabold px-1.5 py-0.2 uppercase tracking-wider flex items-center gap-1 shadow-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
+              [+] SYNTH AI
+            </span>
+          )}
           {!isOwn && user && (
             <button
               onClick={() => following.has(post.authorUid) ? onUnfollow(post.authorUid) : onFollow(post.authorUid, post.authorHandle)}

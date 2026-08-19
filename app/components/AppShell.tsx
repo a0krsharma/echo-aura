@@ -39,6 +39,7 @@ import {
   Mic2,
   Waves,
   Headphones,
+  Cpu,
 } from "lucide-react";
 
 // ─── Inner shell (needs AuthProvider above it) ───────────────────
@@ -141,6 +142,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
     { label: "[ FREQUENCY ]",  href: "/",               icon: Radio      },
     { label: "[ WAVES ]",      href: "/waves",          icon: Waves      },
     { label: "[ STUDIO ]",     href: "/studio",         icon: Mic2       },
+    { label: "[ NEURAL LAB ]", href: "/synth",          icon: Cpu        },
     { label: "[ STAGE ]",      href: "/clash",          icon: Swords     },
     { label: "[ ROOMS ]",      href: "/rooms",          icon: Users      },
     { label: "[ RADAR ]",      href: "/radar",          icon: Compass    },
@@ -171,6 +173,8 @@ function ShellContent({ children }: { children: React.ReactNode }) {
                 ? "WAVES"
                 : pathname === "/studio"
                 ? "STUDIO"
+                : pathname === "/synth"
+                ? "NEURAL LAB"
                 : pathname === "/clash"
                 ? "STAGE"
                 : pathname === "/rooms"

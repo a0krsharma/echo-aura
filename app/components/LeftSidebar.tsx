@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Radio, Compass, Mic2, Swords, Search, MessageSquare, Bell, User, Terminal, LogOut, Waves, Users, Flame, Headphones } from "lucide-react";
+import { Radio, Compass, Mic2, Swords, Search, MessageSquare, Bell, User, Terminal, LogOut, Waves, Users, Flame, Headphones, Cpu } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
 import { getStreak } from "@/lib/userDoc";
 import { useEffect, useState } from "react";
@@ -25,6 +25,7 @@ export default function LeftSidebar() {
     { href: "/",                 icon: Radio,         label: "[ FREQUENCY ]",  hasNotifDot: false },
     { href: "/waves",            icon: Waves,         label: "[ WAVES ]",      hasNotifDot: false },
     { href: "/studio",           icon: Mic2,          label: "[ STUDIO ]",     hasNotifDot: false },
+    { href: "/synth",            icon: Cpu,           label: "[ NEURAL LAB ]", hasNotifDot: false },
     { href: "/clash",            icon: Swords,        label: "[ STAGE ]",      hasNotifDot: false },
     { href: "/rooms",            icon: Users,         label: "[ ROOMS ]",      hasNotifDot: false },
     { href: "/radar",            icon: Compass,       label: "[ RADAR ]",      hasNotifDot: false },

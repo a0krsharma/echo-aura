@@ -14,10 +14,11 @@
 import React, { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader2, Play, Square, Trash2, Send, Radio } from "lucide-react";
+import { Loader2, Play, Square, Trash2, Send, Radio, Cpu, Mic } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
 import { uploadAudio } from "@/lib/cloudinary";
 import { createPost } from "@/lib/posts";
+import NeuralSynthesisTerminal from "@/app/components/NeuralSynthesisTerminal";
 
 type StudioState = "idle" | "recording" | "preview" | "uploading";
 
@@ -31,6 +32,7 @@ function StudioContent() {
   const newsUrlParam = searchParams.get("url") || searchParams.get("link") || "";
   const categoryParam = searchParams.get("category") || "";
 
+  const [studioMode, setStudioMode] = useState<"MIC" | "NEURAL">("MIC");
   const [studioState, setStudioState] = useState<StudioState>("idle");
   const [elapsedMs, setElapsedMs] = useState(0);
   const [caption, setCaption] = useState(() => {
@@ -293,27 +295,66 @@ function StudioContent() {
   return (
     <div className="min-h-screen bg-black text-white flex flex-col justify-between p-6 md:p-12 pb-28 md:pb-12 font-sans">
       {/* ── Top Bar ── */}
-      <header className="flex items-center justify-between border-b border-neutral-900 pb-4">
+      <header className="flex items-center justify-between border-b border-neutral-900 pb-4 flex-wrap gap-3">
         <Link
           href="/"
           className="font-mono font-bold text-xl tracking-tight text-white hover:text-neutral-400 transition-colors uppercase"
         >
           Echo. [ STUDIO ]
         </Link>
-        <div className="font-mono text-xs tracking-widest text-neutral-500 uppercase">
-          // STUDIO ·{" "}
-          {studioState === "idle"
-            ? "READY"
-            : studioState === "recording"
-            ? "🔴 LIVE"
-            : studioState === "preview"
-            ? "PREVIEW"
-            : "UPLOADING"}
+        
+        {/* Studio Mode Switcher Tabs */}
+        <div className="flex items-center gap-1.5 font-mono text-xs">
+          <button
+            type="button"
+            onClick={() => setStudioMode("MIC")}
+            className={`px-3 py-1.5 font-bold uppercase tracking-wider border transition-colors cursor-pointer flex items-center gap-1.5 ${
+              studioMode === "MIC"
+                ? "border-white bg-white text-black"
+                : "border-neutral-800 text-neutral-400 hover:border-neutral-600 hover:text-white bg-neutral-950"
+            }`}
+          >
+            <Mic className="w-3.5 h-3.5" />
+            <span>[ MIC RECORD ]</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setStudioMode("NEURAL")}
+            className={`px-3 py-1.5 font-bold uppercase tracking-wider border transition-colors cursor-pointer flex items-center gap-1.5 ${
+              studioMode === "NEURAL"
+                ? "border-white bg-white text-black"
+                : "border-neutral-800 text-neutral-400 hover:border-neutral-600 hover:text-white bg-neutral-950"
+            }`}
+          >
+            <Cpu className="w-3.5 h-3.5" />
+            <span>[ NEURAL LAB ($0) ]</span>
+          </button>
+        </div>
+
+        <div className="font-mono text-xs tracking-widest text-neutral-500 uppercase hidden sm:block">
+          {studioMode === "NEURAL"
+            ? "// NEURAL ENGINE · READY"
+            : `// STUDIO · ${
+                studioState === "idle"
+                  ? "READY"
+                  : studioState === "recording"
+                  ? "🔴 LIVE"
+                  : studioState === "preview"
+                  ? "PREVIEW"
+                  : "UPLOADING"
+              }`}
         </div>
       </header>
 
-      {/* ── Main ── */}
-      <main className="flex-1 flex flex-col items-center justify-center max-w-xl mx-auto w-full my-8 space-y-8">
+      {/* ── Mode 1: Neural Synthesis Lab ── */}
+      {studioMode === "NEURAL" ? (
+        <main className="flex-1 w-full max-w-3xl mx-auto my-6">
+          <NeuralSynthesisTerminal embedded onPublishSuccess={() => router.push("/")} />
+        </main>
+      ) : (
+        /* ── Mode 2: Microphone Studio ── */
+        <main className="flex-1 flex flex-col items-center justify-center max-w-xl mx-auto w-full my-8 space-y-8">
         {/* Tagged Wire News Dispatch Banner (when recording a take from Search / Radar) */}
         {(topicParam || headlineParam) && (
           <div className="w-full p-4 border border-white bg-neutral-950 space-y-1.5 font-mono shadow-xl">
@@ -464,6 +505,7 @@ function StudioContent() {
           </div>
         )}
       </main>
+      )}
 
       {/* ── Footer ── */}
       <footer className="border-t border-neutral-900 pt-4 flex justify-between items-center font-mono text-[10px] text-neutral-600 tracking-widest uppercase">
