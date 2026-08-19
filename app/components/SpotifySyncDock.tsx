@@ -275,7 +275,7 @@ export default function SpotifySyncDock({ room, isHost, currentUserUid }: Spotif
           <span className="w-2 h-2 rounded-full bg-[#1DB954] animate-pulse" />
           <span className="font-bold tracking-widest text-[#1DB954] uppercase flex items-center gap-1.5">
             <Disc3 className="w-3.5 h-3.5 animate-spin text-[#1DB954]" style={{ animationDuration: "6s" }} />
-            // SPOTIFY CO-LISTENING DJ PARTY
+            // SPOTIFY DJ PARTY · LIVE MIC & MUSIC SYNC
           </span>
         </div>
         <div className="flex items-center gap-2 text-[10px]">
