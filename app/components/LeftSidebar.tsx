@@ -25,7 +25,6 @@ export default function LeftSidebar() {
     { href: "/",                 icon: Radio,         label: "[ FREQUENCY ]",  hasNotifDot: false },
     { href: "/waves",            icon: Waves,         label: "[ WAVES ]",      hasNotifDot: false },
     { href: "/studio",           icon: Mic2,          label: "[ STUDIO ]",     hasNotifDot: false },
-    { href: "/studio-plus",      icon: Sparkles,      label: "[ STUDIO+ ]",    hasNotifDot: false },
     { href: "/clash",            icon: Swords,        label: "[ STAGE ]",      hasNotifDot: false },
     { href: "/rooms",            icon: Users,         label: "[ ROOMS ]",      hasNotifDot: false },
     { href: "/radar",            icon: Compass,       label: "[ RADAR ]",      hasNotifDot: false },

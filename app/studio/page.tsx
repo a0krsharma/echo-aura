@@ -1,24 +1,25 @@
 "use client";
 
-/**
- * ECHO — The Studio ( /studio )
- * ─────────────────────────────────────────────────────────────
- * Root cause of 1-sec audio fixed: MediaRecorder was getting
- * conflicting stop() calls. Now uses clean state machine:
- * IDLE → RECORDING → PREVIEW → POSTED
- *
- * Also adds a preview playback before posting so user can
- * hear what they recorded.
- */
-
 import React, { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader2, Play, Square, Trash2, Send, Radio, Cpu, Mic, Sparkles, Music, X } from "lucide-react";
+import { 
+  Loader2, 
+  Play, 
+  Square, 
+  Trash2, 
+  Send, 
+  Radio, 
+  Mic, 
+  Music, 
+  X,
+  Pause,
+  Headphones,
+  CheckCircle2
+} from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
 import { uploadAudio } from "@/lib/cloudinary";
 import { createPost } from "@/lib/posts";
-import NeuralSynthesisTerminal from "@/app/components/NeuralSynthesisTerminal";
 import SoundPickerModal from "@/app/components/SoundPickerModal";
 import { SoundItem, getSoundById } from "@/lib/soundCatalog";
 
@@ -41,7 +42,6 @@ function StudioContent() {
   const soundArtistParam = searchParams.get("soundArtist") || "";
   const isMemeParam = searchParams.get("isMeme") === "true";
 
-  const [studioMode, setStudioMode] = useState<"MIC" | "NEURAL">("MIC");
   const [studioState, setStudioState] = useState<StudioState>("idle");
   const [elapsedMs, setElapsedMs] = useState(0);
 
@@ -107,50 +107,40 @@ function StudioContent() {
     };
   }, [studioState]);
 
-  // Cleanup on unmount
+  // Clean up media streams and audio on unmount
   useEffect(() => {
     return () => {
-      stopStream();
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
       if (previewAudioRef.current) {
         previewAudioRef.current.pause();
-        previewAudioRef.current = null;
       }
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      if (backingAudioRef.current) {
+        backingAudioRef.current.pause();
+      }
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
     };
   }, []);
 
-  const stopStream = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
-    }
-  };
-
-  const formatTimer = (ms: number) => {
-    const totalSecs = Math.floor(ms / 1000);
-    const mins = Math.floor(totalSecs / 60).toString().padStart(2, "0");
-    const secs = (totalSecs % 60).toString().padStart(2, "0");
-    const hundredths = Math.floor((ms % 1000) / 10).toString().padStart(2, "0");
-    return `${mins}:${secs}.${hundredths}`;
-  };
-
   const formatSeconds = (ms: number) => {
     const totalSecs = Math.floor(ms / 1000);
-    const mins = Math.floor(totalSecs / 60).toString().padStart(2, "0");
-    const secs = (totalSecs % 60).toString().padStart(2, "0");
-    return `${mins}:${secs}`;
+    const m = Math.floor(totalSecs / 60);
+    const s = totalSecs % 60;
+    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
-  // ── START RECORDING ──────────────────────────────────────────
+  // ── Recording Actions ───────────────────────────────────────────────────────
   const startRecording = async () => {
-    // Clean up any previous state
     chunksRef.current = [];
+    setElapsedMs(0);
     setAudioBlob(null);
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
       setPreviewUrl(null);
     }
-    setElapsedMs(0);
     setStatusMessage(null);
 
     try {
@@ -158,97 +148,83 @@ function StudioContent() {
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
-          sampleRate: 44100,
+          autoGainControl: true,
         },
       });
       streamRef.current = stream;
 
-      // Pick best supported mime type for universal playback
       let mimeType = "audio/webm";
-      if (MediaRecorder.isTypeSupported("audio/mp4")) {
-        mimeType = "audio/mp4";
-      } else if (MediaRecorder.isTypeSupported("audio/aac")) {
-        mimeType = "audio/aac";
-      } else if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+      if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
         mimeType = "audio/webm;codecs=opus";
-      } else if (MediaRecorder.isTypeSupported("audio/webm")) {
-        mimeType = "audio/webm";
+      } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
+        mimeType = "audio/mp4";
       }
       setRecordedMimeType(mimeType);
 
       const recorder = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = recorder;
 
-      // Collect data every 250ms — critical: gives us proper audio segments
-      recorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) {
-          chunksRef.current.push(e.data);
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          chunksRef.current.push(event.data);
         }
       };
 
-      // onstop fires AFTER all ondataavailable events have fired
       recorder.onstop = () => {
+        const rawType = mimeType.split(";")[0];
+        const blob = new Blob(chunksRef.current, { type: rawType });
+
+        if (blob.size < 100) {
+          setStatusMessage("ERROR: Recording too short or empty.");
+          setStudioState("idle");
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        setAudioBlob(blob);
+        const url = URL.createObjectURL(blob);
+        setPreviewUrl(url);
+
+        stream.getTracks().forEach((track) => track.stop());
+        setStudioState("preview");
+
         if (backingAudioRef.current) {
           backingAudioRef.current.pause();
           backingAudioRef.current.currentTime = 0;
         }
-
-        const finalBlob = new Blob(chunksRef.current, { type: mimeType });
-
-        if (finalBlob.size < 100) {
-          setStatusMessage("RECORDING TOO SHORT. TRY AGAIN.");
-          setStudioState("idle");
-          stopStream();
-          return;
-        }
-
-        // Create a local URL for preview playback
-        const url = URL.createObjectURL(finalBlob);
-        setAudioBlob(finalBlob);
-        setPreviewUrl(url);
-        stopStream();
-        setStudioState("preview");
       };
-
-      // If backing sound is attached, play it in sync during recording
-      if (attachedSound?.audioUrl) {
-        if (!backingAudioRef.current) {
-          backingAudioRef.current = new Audio(attachedSound.audioUrl);
-          backingAudioRef.current.volume = 0.6;
-        } else {
-          backingAudioRef.current.src = attachedSound.audioUrl;
-          backingAudioRef.current.volume = 0.6;
-        }
-        backingAudioRef.current.currentTime = 0;
-        backingAudioRef.current.play().catch(() => {});
-      }
 
       recorder.start();
       setStudioState("recording");
-    } catch (err: any) {
-      console.error("Microphone error:", err);
-      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
-        setStatusMessage("MICROPHONE PERMISSION DENIED. ALLOW MIC IN SETTINGS.");
-      } else {
-        setStatusMessage("MICROPHONE NOT AVAILABLE ON THIS DEVICE.");
+
+      // Play attached backing stem simultaneously in real-time
+      if (attachedSound?.audioUrl) {
+        if (!backingAudioRef.current) {
+          backingAudioRef.current = new Audio(attachedSound.audioUrl);
+          backingAudioRef.current.loop = true;
+          backingAudioRef.current.volume = 0.35;
+        } else {
+          backingAudioRef.current.src = attachedSound.audioUrl;
+          backingAudioRef.current.currentTime = 0;
+        }
+        backingAudioRef.current.play().catch(() => {});
       }
+    } catch (err: any) {
+      console.error("[Studio Error]: Microphone access denied:", err);
+      setStatusMessage("MICROPHONE ACCESS DENIED. Check browser permissions.");
       setStudioState("idle");
     }
   };
 
-  // ── STOP RECORDING ───────────────────────────────────────────
   const stopRecording = () => {
-    const recorder = mediaRecorderRef.current;
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+      mediaRecorderRef.current.stop();
+    }
     if (backingAudioRef.current) {
       backingAudioRef.current.pause();
     }
-    if (!recorder) return;
-    if (recorder.state === "recording" || recorder.state === "paused") {
-      recorder.stop();
-    }
   };
 
-  // ── PREVIEW PLAYBACK ─────────────────────────────────────────
   const togglePreview = () => {
     if (!previewUrl) return;
 
@@ -259,163 +235,127 @@ function StudioContent() {
     }
 
     if (!previewAudioRef.current) {
-      const a = new Audio(previewUrl);
-      a.volume = 1.0;
-      a.muted = false;
-      a.onended = () => setIsPreviewPlaying(false);
-      previewAudioRef.current = a;
+      previewAudioRef.current = new Audio(previewUrl);
+      previewAudioRef.current.onended = () => setIsPreviewPlaying(false);
+      previewAudioRef.current.onerror = () => setIsPreviewPlaying(false);
     } else {
-      previewAudioRef.current.volume = 1.0;
-      previewAudioRef.current.muted = false;
+      previewAudioRef.current.src = previewUrl;
     }
 
     previewAudioRef.current
       .play()
       .then(() => setIsPreviewPlaying(true))
-      .catch((e) => {
-        console.warn("Preview play failed:", e);
-        setIsPreviewPlaying(false);
-      });
+      .catch(() => setIsPreviewPlaying(false));
   };
 
-  // ── DISCARD RECORDING ────────────────────────────────────────
-  const discardRecording = () => {
-    if (backingAudioRef.current) {
-      backingAudioRef.current.pause();
-    }
+  const resetRecording = () => {
     if (previewAudioRef.current) {
       previewAudioRef.current.pause();
       previewAudioRef.current = null;
     }
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setPreviewUrl(null);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
     setAudioBlob(null);
     setElapsedMs(0);
     setIsPreviewPlaying(false);
-    chunksRef.current = [];
-    setStudioState("idle");
     setStatusMessage(null);
+    setStudioState("idle");
   };
 
-  // ── PUBLISH ──────────────────────────────────────────────────
+  // ── Publish Action ─────────────────────────────────────────────────────────
   const handlePublish = async () => {
-    if (!caption.trim()) {
-      setStatusMessage("ADD A CAPTION TO YOUR ECHO FIRST.");
-      return;
-    }
-    if (!audioBlob || audioBlob.size < 100) {
-      setStatusMessage("RECORD AN ECHO FIRST.");
+    if (!audioBlob) {
+      setStatusMessage("No audio recorded to publish.");
       return;
     }
 
-    // Stop preview
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+
     if (previewAudioRef.current) {
       previewAudioRef.current.pause();
-      previewAudioRef.current = null;
+      setIsPreviewPlaying(false);
     }
-    setIsPreviewPlaying(false);
+
     setStudioState("uploading");
-    setStatusMessage("UPLOADING YOUR VOICE TO THE FREQUENCY...");
+    setStatusMessage("UPLOADING TO ECHO FREQUENCY...");
 
     try {
-      const secSec = Math.max(1, Math.floor(elapsedMs / 1000));
-      const uploadResult = await uploadAudio(audioBlob, `echo-${user?.uid || "anon"}-${Date.now()}`);
+      const filename = `echo-${user.uid}-${Date.now()}`;
+      const uploadResult = await uploadAudio(audioBlob, filename);
 
-      setStatusMessage("SAVING TO THE FREQUENCY...");
+      const totalSeconds = Math.max(1, Math.floor(elapsedMs / 1000));
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      const formattedDuration = `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
+
+      // Extract tags
+      const hashMatches = caption.match(/#[a-zA-Z0-9_]+/g) || [];
+      const cleanedTags = hashMatches.map((tag) => tag.replace(/^#+/, "").toUpperCase());
 
       await createPost({
         audioUrl: uploadResult.secureUrl,
-        caption: caption.trim(),
-        authorUid: user?.uid || "anon",
-        authorHandle: user?.handle || "@ANON",
-        duration: formatSeconds(elapsedMs),
-        durationSec: secSec,
+        caption: caption.trim() || `Transmission from ${user.handle || "@ANON"}`,
+        authorUid: user.uid,
+        authorHandle: user.handle || "@ANON",
+        duration: formattedDuration,
+        durationSec: totalSeconds,
+        category: categoryParam || "MICROPHONE",
         newsTopic: topicParam ? topicParam.replace(/^#+/, "") : null,
         newsHeadline: headlineParam || null,
         newsLink: newsUrlParam || null,
-        category: categoryParam || null,
-        tags: topicParam ? [topicParam.replace(/^#+/, "").toUpperCase()] : [],
-        audioTrackId: attachedSound?.id || null,
-        audioTrackTitle: attachedSound?.title || null,
-        audioTrackArtist: attachedSound?.artist || null,
-        isVoiceMeme: Boolean(attachedSound?.isVoiceMeme),
+        tags: cleanedTags,
+        audioTrackId: attachedSound?.id || undefined,
+        audioTrackTitle: attachedSound?.title || undefined,
+        audioTrackArtist: attachedSound?.artist || undefined,
+        isVoiceMeme: attachedSound?.isVoiceMeme || false,
       });
 
-      // Revoke blob URL
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setStatusMessage("TRANSMISSION BROADCAST SUCCESSFUL!");
 
-      router.push("/");
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+
+      setTimeout(() => {
+        router.push("/");
+      }, 500);
     } catch (err: any) {
-      console.error("Publish error:", err);
-      setStatusMessage(`ERROR: ${err?.message?.toUpperCase() || "UPLOAD FAILED. TRY AGAIN."}`);
+      console.error("[Studio Publish Error]:", err);
+      setStatusMessage(`UPLOAD FAILED: ${err?.message || "Check network connection."}`);
       setStudioState("preview");
     }
   };
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col justify-between p-6 md:p-12 pb-28 md:pb-12 font-sans">
-      {/* ── Top Bar ── */}
-      <header className="flex items-center justify-between border-b border-neutral-900 pb-4 flex-wrap gap-3">
+    <div className="min-h-screen bg-black text-white p-4 sm:p-8 font-sans pb-28 md:pb-12 flex flex-col justify-between max-w-2xl mx-auto">
+      {/* ── Top Header ── */}
+      <header className="flex items-center justify-between border-b border-neutral-900 pb-4">
         <Link
           href="/"
-          className="font-mono font-bold text-xl tracking-tight text-white hover:text-neutral-400 transition-colors uppercase"
+          className="font-mono font-bold text-lg sm:text-xl tracking-tight text-white hover:text-neutral-400 transition-colors uppercase flex items-center gap-2"
         >
-          Echo. [ STUDIO ]
+          <Radio className="w-5 h-5 text-white" />
+          <span>Echo. [ STUDIO ]</span>
         </Link>
-        
-        {/* Studio Mode Switcher Tabs */}
-        <div className="flex items-center gap-1.5 font-mono text-xs">
-          <button
-            type="button"
-            onClick={() => setStudioMode("MIC")}
-            className={`px-3 py-1.5 font-bold uppercase tracking-wider border transition-colors cursor-pointer flex items-center gap-1.5 ${
-              studioMode === "MIC"
-                ? "border-white bg-white text-black"
-                : "border-neutral-800 text-neutral-400 hover:border-neutral-600 hover:text-white bg-neutral-950"
-            }`}
-          >
-            <Mic className="w-3.5 h-3.5" />
-            <span>[ MIC RECORD ]</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setStudioMode("NEURAL")}
-            className={`px-3 py-1.5 font-bold uppercase tracking-wider border transition-colors cursor-pointer flex items-center gap-1.5 ${
-              studioMode === "NEURAL"
-                ? "border-white bg-white text-black"
-                : "border-neutral-800 text-neutral-400 hover:border-neutral-600 hover:text-white bg-neutral-950"
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>[ ✨ STUDIO+ (AI) ]</span>
-          </button>
-        </div>
-
-        <div className="font-mono text-xs tracking-widest text-neutral-500 uppercase hidden sm:block">
-          {studioMode === "NEURAL"
-            ? "// STUDIO+ AI ENGINE · READY"
-            : `// STUDIO · ${
-                studioState === "idle"
-                  ? "READY"
-                  : studioState === "recording"
-                  ? "🔴 LIVE"
-                  : studioState === "preview"
-                  ? "PREVIEW"
-                  : "UPLOADING"
-              }`}
+        <div className="font-mono text-xs tracking-widest text-neutral-500 uppercase">
+          {studioState === "idle"
+            ? "// READY TO RECORD"
+            : studioState === "recording"
+            ? "🔴 RECORDING LIVE"
+            : studioState === "preview"
+            ? "// PREVIEW TAKE"
+            : "// UPLOADING"}
         </div>
       </header>
 
-      {/* ── Mode 1: Neural Synthesis Lab ── */}
-      {studioMode === "NEURAL" ? (
-        <main className="flex-1 w-full max-w-3xl mx-auto my-6">
-          <NeuralSynthesisTerminal embedded onPublishSuccess={() => router.push("/")} />
-        </main>
-      ) : (
-        /* ── Mode 2: Microphone Studio ── */
-        <main className="flex-1 flex flex-col items-center justify-center max-w-xl mx-auto w-full my-8 space-y-8">
-        {/* Tagged Wire News Dispatch Banner (when recording a take from Search / Radar) */}
+      {/* ── Main Voice Recorder ── */}
+      <main className="flex-1 flex flex-col items-center justify-center w-full my-8 space-y-8">
+        {/* Tagged Wire News Dispatch Banner (if navigated from search/radar) */}
         {(topicParam || headlineParam) && (
           <div className="w-full p-4 border border-white bg-neutral-950 space-y-1.5 font-mono shadow-xl">
             <div className="flex items-center justify-between">
@@ -430,18 +370,13 @@ function StudioContent() {
             <p className="text-xs sm:text-sm font-bold text-white tracking-wide">
               #{topicParam.replace(/^#+/, "")} {headlineParam ? `— "${headlineParam}"` : ""}
             </p>
-            {categoryParam && (
-              <span className="text-[9px] text-neutral-500 uppercase tracking-widest block">
-                CATEGORY: {categoryParam}
-              </span>
-            )}
           </div>
         )}
 
-        {/* Community Sound / Voice Meme Attachment Bar */}
+        {/* Attached Sound / Voice Meme / Backing Track Bar */}
         <div className="w-full">
           {attachedSound ? (
-            <div className="border border-white bg-neutral-950 p-3 flex items-center justify-between gap-3 font-mono shadow-lg">
+            <div className="border border-white bg-neutral-950 p-3.5 flex items-center justify-between gap-3 font-mono shadow-lg">
               <div className="flex items-center gap-2.5 min-w-0 flex-1">
                 <Music className="w-4 h-4 text-white animate-pulse shrink-0" />
                 <div className="min-w-0 flex-1">
@@ -460,21 +395,22 @@ function StudioContent() {
                   </p>
                 </div>
               </div>
+
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowSoundPicker(true)}
-                  className="text-[10px] uppercase font-bold text-neutral-300 hover:text-white border border-neutral-800 px-2 py-1 hover:border-white transition-colors cursor-pointer"
+                  className="text-[10px] border border-neutral-700 hover:border-white px-2 py-1 uppercase text-neutral-300 hover:text-white transition-colors cursor-pointer"
                 >
                   CHANGE
                 </button>
                 <button
                   type="button"
                   onClick={() => setAttachedSound(null)}
-                  className="text-[10px] uppercase font-bold text-red-400 hover:text-red-300 border border-neutral-800 px-2 py-1 hover:border-red-500 transition-colors cursor-pointer flex items-center gap-1"
+                  className="text-neutral-500 hover:text-white p-1 cursor-pointer"
+                  title="Remove sound"
                 >
-                  <X className="w-3 h-3" />
-                  REMOVE
+                  <X className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
@@ -482,142 +418,133 @@ function StudioContent() {
             <button
               type="button"
               onClick={() => setShowSoundPicker(true)}
-              className="w-full border border-dashed border-neutral-800 hover:border-white bg-neutral-950 p-3 font-mono text-xs uppercase tracking-widest text-neutral-400 hover:text-white transition-colors cursor-pointer flex items-center justify-center gap-2"
+              className="w-full border border-dashed border-neutral-800 hover:border-white bg-black/40 hover:bg-neutral-950 p-3 font-mono text-xs text-neutral-400 hover:text-white transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <Music className="w-3.5 h-3.5" />
-              <span>[ + ATTACH SOUND STEM OR VIRAL VOICE MEME ]</span>
+              <Music className="w-4 h-4 text-neutral-500" />
+              <span className="uppercase tracking-wider">
+                [ + ATTACH BACKING BEAT / VIRAL AUDIO MEME ]
+              </span>
             </button>
           )}
         </div>
 
-        {/* Timer */}
-        <div className="text-center">
-          <div className="font-mono text-6xl md:text-7xl lg:text-8xl tracking-tighter text-white font-extralight select-none tabular-nums">
-            {formatTimer(elapsedMs)}
+        {/* Center Clock & Waveform */}
+        <div className="text-center space-y-3">
+          <div className="font-mono text-5xl sm:text-7xl font-bold tracking-tight tabular-nums select-none text-white">
+            {formatSeconds(elapsedMs)}
           </div>
-          <p className="font-mono text-[10px] tracking-[0.3em] uppercase text-neutral-600 mt-3">
-            {studioState === "idle" && "TAP RECORD TO CAPTURE YOUR ECHO"}
-            {studioState === "recording" && "🔴 CAPTURING YOUR VOICE — TAP STOP WHEN DONE"}
-            {studioState === "preview" && "LISTEN BACK · ADD CAPTION · POST"}
-            {studioState === "uploading" && "UPLOADING TO THE FREQUENCY..."}
-          </p>
-        </div>
-
-        {/* Caption */}
-        <div className="w-full">
-          <textarea
-            value={caption}
-            onChange={(e) => setCaption(e.target.value)}
-            maxLength={180}
-            placeholder="What's on your mind? Add caption or @tag..."
-            rows={3}
-            disabled={studioState === "uploading"}
-            className="w-full bg-transparent border-b border-neutral-800 pb-4 font-mono text-xl md:text-2xl text-white placeholder:text-neutral-700 focus:outline-none focus:border-white transition-colors resize-none disabled:opacity-50"
-          />
-          <div className="flex justify-between mt-1 font-mono text-[10px] text-neutral-600 tracking-widest">
-            <span>UNFILTERED THOUGHT</span>
-            <span>{caption.length}/180</span>
+          <div className="font-mono text-xs uppercase tracking-widest text-neutral-500">
+            {studioState === "recording" ? (
+              <span className="text-red-500 animate-pulse font-bold">
+                ● TRANSMITTING MICROPHONE FEED
+              </span>
+            ) : studioState === "preview" ? (
+              "TAKE RECORDED • READY FOR BROADCAST"
+            ) : (
+              "MAX BROADCAST DURATION: 180s"
+            )}
           </div>
         </div>
 
-        {/* Controls */}
-        <div className="w-full space-y-3">
+        {/* Recording Visualizer Bar */}
+        <div className="w-full max-w-md h-12 flex items-center justify-center gap-1.5 px-4 bg-neutral-950 border border-neutral-900">
+          {Array.from({ length: 24 }).map((_, i) => {
+            const isRec = studioState === "recording";
+            const height = isRec ? Math.max(15, (Math.sin(i + elapsedMs / 80) + 1) * 45) : 8;
+            return (
+              <div
+                key={i}
+                className={`w-1 transition-all duration-75 ${
+                  isRec ? "bg-white" : "bg-neutral-800"
+                }`}
+                style={{ height: `${height}%` }}
+              />
+            );
+          })}
+        </div>
 
-          {/* IDLE STATE */}
+        {/* Main Controls Bar */}
+        <div className="flex items-center gap-4">
           {studioState === "idle" && (
             <button
+              type="button"
               onClick={startRecording}
-              className="w-full border border-neutral-800 text-white font-mono text-xs tracking-[0.2em] uppercase py-5 px-6 hover:border-white hover:bg-neutral-950 transition-colors cursor-pointer"
+              className="px-8 py-5 border-2 border-white bg-white text-black font-mono font-bold text-sm tracking-widest uppercase hover:bg-neutral-200 transition-colors shadow-2xl flex items-center gap-2 cursor-pointer"
             >
-              [ 🔴 TAP TO START RECORDING ]
+              <Mic className="w-5 h-5" />
+              <span>[ RECORD TAKE ]</span>
             </button>
           )}
 
-          {/* RECORDING STATE */}
           {studioState === "recording" && (
             <button
+              type="button"
               onClick={stopRecording}
-              className="w-full border border-white bg-white text-black font-mono text-xs tracking-[0.2em] uppercase py-5 px-6 animate-pulse cursor-pointer font-bold"
+              className="px-8 py-5 border-2 border-red-500 bg-red-600 text-white font-mono font-bold text-sm tracking-widest uppercase hover:bg-red-700 transition-colors shadow-2xl animate-pulse flex items-center gap-2 cursor-pointer"
             >
-              [ ⏹ TAP TO STOP RECORDING ]
+              <Square className="w-5 h-5 fill-white" />
+              <span>[ STOP RECORDING ]</span>
             </button>
           )}
 
-          {/* PREVIEW STATE */}
           {studioState === "preview" && (
-            <div className="space-y-3">
-              {/* Preview playback */}
-              <div className="w-full border border-neutral-800 p-4 flex items-center gap-4">
-                <button
-                  onClick={togglePreview}
-                  className="font-mono text-xs tracking-widest uppercase border border-white px-4 py-2 text-white hover:bg-white hover:text-black transition-colors cursor-pointer shrink-0"
-                >
-                  {isPreviewPlaying ? "[ ⏸ PAUSE ]" : "[ ▶ PREVIEW ]"}
-                </button>
-                <div className="flex-1">
-                  <div className="flex items-end gap-[2px] h-6">
-                    {Array.from({ length: 20 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className={isPreviewPlaying ? "waveform-bar" : "opacity-20"}
-                        style={{
-                          height: `${6 + Math.sin(i * 0.7) * 12 + 6}px`,
-                          width: "2px",
-                          backgroundColor: "white",
-                          animationDelay: isPreviewPlaying ? `${i * 0.05}s` : undefined,
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <span className="font-mono text-xs text-neutral-600 tracking-widest shrink-0">
-                  {formatSeconds(elapsedMs)}
-                </span>
-              </div>
+            <div className="flex items-center gap-3 flex-wrap justify-center">
+              <button
+                type="button"
+                onClick={togglePreview}
+                className="px-6 py-3.5 border border-white bg-white text-black font-mono font-bold text-xs uppercase tracking-wider hover:bg-neutral-200 transition-colors flex items-center gap-2 cursor-pointer"
+              >
+                {isPreviewPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                <span>{isPreviewPlaying ? "PAUSE" : "AUDITION TAKE"}</span>
+              </button>
 
-              {/* Post or Discard row */}
-              <div className="flex gap-3">
-                <button
-                  onClick={discardRecording}
-                  className="flex items-center justify-center gap-1.5 border border-neutral-800 text-neutral-500 hover:border-white hover:text-white font-mono text-xs tracking-widest uppercase px-4 py-4 transition-colors cursor-pointer"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  DISCARD
-                </button>
-                <button
-                  onClick={handlePublish}
-                  disabled={!caption.trim()}
-                  className="flex-1 flex items-center justify-center gap-2 border border-white bg-white text-black font-mono text-xs tracking-[0.2em] uppercase py-4 px-6 hover:bg-neutral-200 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  [ POST TO FREQUENCY ]
-                </button>
-              </div>
-              {!caption.trim() && (
-                <p className="font-mono text-[10px] text-neutral-700 tracking-widest uppercase text-center">
-                  ↑ ADD A CAPTION ABOVE FIRST
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* UPLOADING STATE */}
-          {studioState === "uploading" && (
-            <div className="w-full border border-neutral-800 py-5 flex items-center justify-center gap-3 font-mono text-xs tracking-widest uppercase text-neutral-400">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              TRANSMITTING TO THE FREQUENCY...
+              <button
+                type="button"
+                onClick={resetRecording}
+                className="px-4 py-3.5 border border-neutral-700 hover:border-white text-neutral-400 hover:text-white font-mono text-xs uppercase tracking-wider transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>RETAKE</span>
+              </button>
             </div>
           )}
         </div>
 
-        {/* Status message */}
+        {/* Caption & Post Form */}
+        {studioState === "preview" && (
+          <div className="w-full space-y-4 pt-4 border-t border-neutral-900 animate-fade-in">
+            <div className="space-y-1">
+              <label className="font-mono text-xs text-neutral-400 tracking-widest uppercase block">
+                [ ADD CAPTION / TAGS ]
+              </label>
+              <textarea
+                value={caption}
+                onChange={(e) => setCaption(e.target.value)}
+                placeholder="What is this transmission about? Add #topics..."
+                rows={2}
+                maxLength={280}
+                className="w-full bg-neutral-950 border border-neutral-800 focus:border-white p-3 font-mono text-xs text-white outline-none resize-none transition-colors"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={handlePublish}
+              className="w-full py-4 border-2 border-white bg-white text-black font-mono font-bold text-xs tracking-widest uppercase hover:bg-neutral-200 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xl"
+            >
+              <Send className="w-4 h-4" />
+              <span>[ BROADCAST TO ECHO FREQUENCY ]</span>
+            </button>
+          </div>
+        )}
+
+        {/* Status Notification Message */}
         {statusMessage && (
-          <div className="w-full border border-neutral-800 p-3 text-center font-mono text-xs text-neutral-400 tracking-widest uppercase">
+          <div className="font-mono text-xs text-neutral-400 uppercase tracking-widest text-center animate-fade-in">
             {statusMessage}
           </div>
         )}
       </main>
-      )}
 
       {/* ── Footer ── */}
       <footer className="border-t border-neutral-900 pt-4 flex justify-between items-center font-mono text-[10px] text-neutral-600 tracking-widest uppercase">
@@ -648,7 +575,7 @@ export default function StudioPage() {
       fallback={
         <div className="min-h-screen bg-black text-white flex items-center justify-center p-8 font-mono text-xs tracking-widest uppercase">
           <Loader2 className="w-4 h-4 animate-spin mr-2" />
-          INITIALIZING AUDIO STUDIO...
+          INITIALIZING STUDIO ENGINE...
         </div>
       }
     >

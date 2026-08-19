@@ -143,7 +143,6 @@ function ShellContent({ children }: { children: React.ReactNode }) {
     { label: "[ FREQUENCY ]",  href: "/",               icon: Radio      },
     { label: "[ WAVES ]",      href: "/waves",          icon: Waves      },
     { label: "[ STUDIO ]",     href: "/studio",         icon: Mic2       },
-    { label: "[ STUDIO+ ]",    href: "/studio-plus",    icon: Sparkles   },
     { label: "[ STAGE ]",      href: "/clash",          icon: Swords     },
     { label: "[ ROOMS ]",      href: "/rooms",          icon: Users      },
     { label: "[ RADAR ]",      href: "/radar",          icon: Compass    },
@@ -174,8 +173,6 @@ function ShellContent({ children }: { children: React.ReactNode }) {
                 ? "WAVES"
                 : pathname === "/studio"
                 ? "STUDIO"
-                : pathname === "/studio-plus" || pathname === "/synth"
-                ? "STUDIO+"
                 : pathname === "/clash"
                 ? "STAGE"
                 : pathname === "/rooms"
