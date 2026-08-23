@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { soundSynth } from "@/lib/soundSynthesizer";
 import { crossBingoNumber, type ArcadeMatch } from "@/lib/arcade";
+import { executeBingoBotTurn } from "@/lib/arcadeBots";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
 import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
@@ -18,6 +19,16 @@ export default function BingoGame({ match, currentUid }: BingoGameProps) {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const bs = match.bingoState;
+
+  // Trigger AI Bot Turn in VS_COMPUTER mode
+  useEffect(() => {
+    if (!bs || match.status !== "PLAYING" || match.mode !== "VS_COMPUTER") return;
+    const botPlayer = Object.values(match.players || {}).find((p) => p.isBot);
+    if (botPlayer) {
+      executeBingoBotTurn(match);
+    }
+  }, [match, bs?.crossedNumbers?.length]);
+
   if (!bs) return <div className="text-white font-mono p-4">Loading 25-Cross Bingo...</div>;
 
   const grids: Record<string, number[][]> = JSON.parse(bs.gridsStr || "{}");

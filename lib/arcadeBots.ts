@@ -4,11 +4,15 @@
  * Echo Arcade // Autonomous AI Bot Engine
  *
  * $0 Infrastructure Solo & Computer AI Bot logic for:
+ * - 8-Ball Pool
+ * - Carrom Board
  * - Cyber Ludo
  * - Chess (Grid Protocol)
  * - Uno / Flow Override
  * - Texas Hold'em Poker
  * - Blackjack 21
+ * - Bingo 25-Cross
+ * - Book Cricket
  * - Liar's Dice / Perudo
  * - Hand Cricket (Odd-Even)
  * - Raja Mantri Chor Sipahi
@@ -21,8 +25,6 @@
  * - Snakes & Ladders
  * - Quoridor Firewall Runner
  * - Yahtzee / Yacht
- * - Hangman Word Scaffold
- * - Matrix Math Blitz
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -34,10 +36,14 @@ import {
   makeChessMove,
   dropConnect4Token,
   fireBattleshipShot,
+  fireCarromShot,
+  firePoolShot,
   playUnoCard,
   drawUnoCard,
   betPoker,
   playBlackjackAction,
+  crossBingoNumber,
+  flipBookCricketPage,
   makeLiarsDiceBid,
   callLiarsDiceBluff,
   throwHandCricketNumber,
@@ -53,9 +59,117 @@ import {
   type LudoToken,
   type ChessPiece,
   type UnoCard,
+  type CarromPiece,
+  type PoolBall,
 } from "./arcade";
 
 const activeBotRuns = new Set<string>();
+
+/**
+ * 8-Ball Pool Bot
+ */
+export async function executePoolBotShot(match: ArcadeMatch): Promise<void> {
+  if (!match.poolState || match.status !== "PLAYING") return;
+  const ps = match.poolState;
+  const botPlayer = Object.values(match.players || {}).find(
+    (p) => p.uid === ps.currentTurnUid && p.isBot
+  );
+  if (!botPlayer) return;
+
+  const runKey = `${match.id}_pool_bot_${ps.currentTurnUid}`;
+  if (activeBotRuns.has(runKey)) return;
+  activeBotRuns.add(runKey);
+
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 1400));
+    const balls: PoolBall[] = JSON.parse(ps.ballsStr || "[]");
+    const cueBall = balls.find((b) => b.type === "cue");
+    const targets = balls.filter((b) => b.type !== "cue" && !b.isPocketed);
+
+    if (!cueBall || targets.length === 0) return;
+
+    // Pick a target ball
+    const target = targets[Math.floor(Math.random() * targets.length)];
+    const dx = target.x - cueBall.x;
+    const dy = target.y - cueBall.y;
+    const dist = Math.hypot(dx, dy) || 1;
+
+    const speed = 12 + Math.random() * 6;
+    const impulseX = (dx / dist) * speed + (Math.random() - 0.5) * 1.5;
+    const impulseY = (dy / dist) * speed + (Math.random() - 0.5) * 1.5;
+
+    cueBall.vx = impulseX;
+    cueBall.vy = impulseY;
+
+    await firePoolShot(
+      match.id,
+      botPlayer.uid,
+      impulseX,
+      impulseY,
+      balls
+    );
+  } catch (err) {
+    console.error("[ArcadeBot] Pool error:", err);
+  } finally {
+    setTimeout(() => activeBotRuns.delete(runKey), 2000);
+  }
+}
+
+/**
+ * Carrom Board Bot
+ */
+export async function executeCarromBotShot(match: ArcadeMatch): Promise<void> {
+  if (!match.carromState || match.status !== "PLAYING") return;
+  const cs = match.carromState;
+  const botPlayer = Object.values(match.players || {}).find(
+    (p) => p.uid === cs.currentTurnUid && p.isBot
+  );
+  if (!botPlayer) return;
+
+  const runKey = `${match.id}_carrom_bot_${cs.currentTurnUid}`;
+  if (activeBotRuns.has(runKey)) return;
+  activeBotRuns.add(runKey);
+
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 1300));
+    const pieces: CarromPiece[] = JSON.parse(cs.piecesStr || "[]");
+    const striker = pieces.find((p) => p.type === "striker");
+    const targets = pieces.filter((p) => p.type !== "striker" && !p.isPocketed);
+
+    if (!striker || targets.length === 0) return;
+
+    // Reposition striker along baseline
+    striker.x = 190 + (Math.random() - 0.5) * 60;
+    striker.y = 55; // bot baseline
+
+    // Pick target coin
+    const target = targets[Math.floor(Math.random() * targets.length)];
+    const dx = target.x - striker.x;
+    const dy = target.y - striker.y;
+    const dist = Math.hypot(dx, dy) || 1;
+
+    const speed = 10 + Math.random() * 5;
+    const impulseX = (dx / dist) * speed + (Math.random() - 0.5) * 2;
+    const impulseY = (dy / dist) * speed + (Math.random() - 0.5) * 2;
+
+    striker.vx = impulseX;
+    striker.vy = impulseY;
+
+    await fireCarromShot(
+      match.id,
+      botPlayer.uid,
+      impulseX,
+      impulseY,
+      striker.x,
+      striker.y,
+      pieces
+    );
+  } catch (err) {
+    console.error("[ArcadeBot] Carrom error:", err);
+  } finally {
+    setTimeout(() => activeBotRuns.delete(runKey), 2000);
+  }
+}
 
 /**
  * Ludo Bot
@@ -363,6 +477,84 @@ export async function executePokerBotTurn(match: ArcadeMatch): Promise<void> {
     console.error("[ArcadeBot] Poker error:", err);
   } finally {
     setTimeout(() => activeBotRuns.delete(runKey), 1500);
+  }
+}
+
+/**
+ * Blackjack Bot
+ */
+export async function executeBlackjackBotTurn(match: ArcadeMatch): Promise<void> {
+  if (!match.blackjackState || match.status !== "PLAYING") return;
+  const bs = match.blackjackState;
+  const botPlayer = Object.values(match.players || {}).find((p) => p.isBot);
+  if (!botPlayer) return;
+
+  const runKey = `${match.id}_blackjack_bot`;
+  if (activeBotRuns.has(runKey)) return;
+  activeBotRuns.add(runKey);
+
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const botHand = bs.playerHands[botPlayer.uid] || [];
+    const action = botHand.length >= 3 ? "STAND" : "HIT";
+    await playBlackjackAction(match.id, botPlayer.uid, action);
+  } catch (err) {
+    console.error("[ArcadeBot] Blackjack error:", err);
+  } finally {
+    setTimeout(() => activeBotRuns.delete(runKey), 1500);
+  }
+}
+
+/**
+ * Bingo Bot
+ */
+export async function executeBingoBotTurn(match: ArcadeMatch): Promise<void> {
+  if (!match.bingoState || match.status !== "PLAYING") return;
+  const bs = match.bingoState;
+  const botPlayer = Object.values(match.players || {}).find((p) => p.isBot);
+  if (!botPlayer) return;
+
+  const runKey = `${match.id}_bingo_bot_${bs.crossedNumbers?.length || 0}`;
+  if (activeBotRuns.has(runKey)) return;
+  activeBotRuns.add(runKey);
+
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    const crossed = new Set(bs.crossedNumbers || []);
+    const uncrossed: number[] = [];
+    for (let i = 1; i <= 25; i++) {
+      if (!crossed.has(i)) uncrossed.push(i);
+    }
+    if (uncrossed.length === 0) return;
+    const chosen = uncrossed[Math.floor(Math.random() * uncrossed.length)];
+    await crossBingoNumber(match.id, botPlayer.uid, chosen);
+  } catch (err) {
+    console.error("[ArcadeBot] Bingo error:", err);
+  } finally {
+    setTimeout(() => activeBotRuns.delete(runKey), 2000);
+  }
+}
+
+/**
+ * Book Cricket Bot
+ */
+export async function executeBookCricketBotTurn(match: ArcadeMatch): Promise<void> {
+  if (!match.bookCricketState || match.status !== "PLAYING") return;
+  const bcs = match.bookCricketState;
+  const botPlayer = Object.values(match.players || {}).find((p) => p.isBot);
+  if (!botPlayer) return;
+
+  const runKey = `${match.id}_book_cricket_bot_${bcs.runs}_${bcs.balls}`;
+  if (activeBotRuns.has(runKey)) return;
+  activeBotRuns.add(runKey);
+
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    await flipBookCricketPage(match.id, botPlayer.uid);
+  } catch (err) {
+    console.error("[ArcadeBot] Book Cricket error:", err);
+  } finally {
+    setTimeout(() => activeBotRuns.delete(runKey), 1800);
   }
 }
 

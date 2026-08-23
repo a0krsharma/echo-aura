@@ -3,6 +3,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import { soundSynth } from "@/lib/soundSynthesizer";
 import { fireCarromShot, type ArcadeMatch, type CarromPiece } from "@/lib/arcade";
+import { executeCarromBotShot } from "@/lib/arcadeBots";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
 import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
@@ -33,6 +34,17 @@ export default function CarromGame({ match, currentUid }: CarromGameProps) {
 
   const cs = match.carromState;
   const isMyTurn = cs?.currentTurnUid === currentUid && match.status === "PLAYING";
+
+  // Trigger AI Bot Shot in VS_COMPUTER mode
+  useEffect(() => {
+    if (!cs || match.status !== "PLAYING" || match.mode !== "VS_COMPUTER") return;
+    const botPlayer = Object.values(match.players || {}).find(
+      (p) => p.uid === cs.currentTurnUid && p.isBot
+    );
+    if (botPlayer) {
+      executeCarromBotShot(match);
+    }
+  }, [match, cs?.currentTurnUid]);
 
   const [isAiming, setIsAiming] = useState(false);
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);

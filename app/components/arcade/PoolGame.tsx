@@ -3,6 +3,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import { soundSynth } from "@/lib/soundSynthesizer";
 import { firePoolShot, type ArcadeMatch, type PoolBall } from "@/lib/arcade";
+import { executePoolBotShot } from "@/lib/arcadeBots";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
 import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
@@ -36,6 +37,17 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
 
   const ps = match.poolState;
   const isMyTurn = ps?.currentTurnUid === currentUid && match.status === "PLAYING";
+
+  // Trigger AI Bot Shot in VS_COMPUTER mode
+  useEffect(() => {
+    if (!ps || match.status !== "PLAYING" || match.mode !== "VS_COMPUTER") return;
+    const botPlayer = Object.values(match.players || {}).find(
+      (p) => p.uid === ps.currentTurnUid && p.isBot
+    );
+    if (botPlayer) {
+      executePoolBotShot(match);
+    }
+  }, [match, ps?.currentTurnUid]);
 
   const [isAiming, setIsAiming] = useState(false);
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);

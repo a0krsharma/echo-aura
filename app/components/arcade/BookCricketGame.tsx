@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { soundSynth } from "@/lib/soundSynthesizer";
 import { flipBookCricketPage, type ArcadeMatch } from "@/lib/arcade";
+import { executeBookCricketBotTurn } from "@/lib/arcadeBots";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
 import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
@@ -18,6 +19,16 @@ export default function BookCricketGame({ match, currentUid }: BookCricketGamePr
   const [inviteOpen, setInviteOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const bcs = match.bookCricketState;
+
+  // Trigger AI Bot Turn in VS_COMPUTER mode
+  useEffect(() => {
+    if (!bcs || match.status !== "PLAYING" || match.mode !== "VS_COMPUTER") return;
+    const botPlayer = Object.values(match.players || {}).find((p) => p.isBot);
+    if (botPlayer && bcs.currentBatsmanUid === botPlayer.uid) {
+      executeBookCricketBotTurn(match);
+    }
+  }, [match, bcs?.runs, bcs?.balls, bcs?.currentBatsmanUid]);
+
   if (!bcs) return <div className="text-white font-mono p-4">Loading Book Cricket...</div>;
 
   const handleFlip = async () => {
