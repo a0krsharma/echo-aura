@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useAuth } from "@/app/components/AuthProvider";
+import { useSearchParams } from "next/navigation";
 import {
   createArcadeMatch,
   joinArcadeMatch,
@@ -11,18 +12,41 @@ import {
 } from "@/lib/arcade";
 import SudokuGame from "@/app/components/arcade/SudokuGame";
 import LudoGame from "@/app/components/arcade/LudoGame";
-import { Gamepad2, Trophy, Flame, Swords, Zap, ArrowLeft, Play, RefreshCw, User } from "lucide-react";
+import ArcadeInviteModal from "@/app/components/arcade/ArcadeInviteModal";
+import {
+  Gamepad2,
+  Trophy,
+  Flame,
+  Swords,
+  Zap,
+  ArrowLeft,
+  Play,
+  RefreshCw,
+  User,
+  Share2,
+  Mic2,
+} from "lucide-react";
 import Link from "next/link";
-import { collection, query, orderBy, limit, onSnapshot } from "firebase/firestore";
+import { collection, query, limit, onSnapshot } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 
-export default function ArcadePage() {
+function ArcadeContent() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
   const [activeMatch, setActiveMatch] = useState<ArcadeMatch | null>(null);
   const [activeMatchId, setActiveMatchId] = useState<string | null>(null);
   const [lobbyMatches, setLobbyMatches] = useState<ArcadeMatch[]>([]);
   const [selectedGameType, setSelectedGameType] = useState<ArcadeGameType>("sudoku");
   const [creating, setCreating] = useState(false);
+  const [inviteModalMatch, setInviteModalMatch] = useState<ArcadeMatch | null>(null);
+
+  // Auto-load match from URL param ?matchId=XYZ or ?join=XYZ
+  useEffect(() => {
+    const paramMatchId = searchParams.get("matchId") || searchParams.get("join");
+    if (paramMatchId) {
+      setActiveMatchId(paramMatchId);
+    }
+  }, [searchParams]);
 
   // Subscribe to active match if playing
   useEffect(() => {
@@ -32,6 +56,21 @@ export default function ArcadePage() {
     });
     return () => unsub();
   }, [activeMatchId]);
+
+  // Auto-join if opened via invite link and authenticated
+  useEffect(() => {
+    if (
+      activeMatch &&
+      user &&
+      !activeMatch.players[user.uid] &&
+      activeMatch.status !== "FINISHED"
+    ) {
+      const currentCount = Object.keys(activeMatch.players || {}).length;
+      if (currentCount < activeMatch.maxPlayers) {
+        handleJoinMatch(activeMatch.id);
+      }
+    }
+  }, [activeMatch, user]);
 
   // Subscribe to open arcade matches in the lobby
   useEffect(() => {
@@ -69,14 +108,14 @@ export default function ArcadePage() {
     try {
       const matchId = await createArcadeMatch({
         gameType: type,
-        title: type === "sudoku" ? "SUDOKU BATTLE ARENA" : "CYBER LUDO CLASH",
+        title: type === "sudoku" ? "1V1 SUDOKU DATA-GRID HACK" : "CYBER LUDO DICE CLASH",
         hostUid: user.uid,
         hostHandle: user.handle || "@ANON",
         hostAvatar: user.photoUrl || user.photoURL,
         stakes: 50,
       });
       setActiveMatchId(matchId);
-    } catch (e) {
+    } catch (e: any) {
       console.error("Failed to create match:", e);
     } finally {
       setCreating(false);
@@ -92,46 +131,50 @@ export default function ArcadePage() {
         avatar: user.photoUrl || user.photoURL,
       });
       setActiveMatchId(matchId);
-    } catch (e) {
+    } catch (e: any) {
       console.error("Failed to join match:", e);
+      setActiveMatchId(matchId); // Still allow viewing
     }
   };
 
   return (
-    <div className="min-h-screen bg-black text-white font-mono pb-24 selection:bg-white selection:text-black">
-      {/* ── Top Bar ── */}
-      <header className="sticky top-0 z-30 bg-black/90 backdrop-blur border-b border-neutral-800 px-4 py-3 max-w-4xl mx-auto flex items-center justify-between">
+    <div className="min-h-screen bg-black text-white font-mono pb-24">
+      {/* ── Top Navigation Bar ── */}
+      <header className="sticky top-0 z-30 bg-black/95 backdrop-blur-md border-b border-neutral-900 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           {activeMatchId ? (
             <button
-              type="button"
               onClick={() => {
                 setActiveMatchId(null);
                 setActiveMatch(null);
               }}
-              className="p-1 border border-neutral-800 hover:border-white text-neutral-400 hover:text-white cursor-pointer"
+              className="p-1 border border-neutral-800 hover:border-white text-neutral-400 hover:text-white transition-colors cursor-pointer flex items-center gap-1 text-xs"
             >
               <ArrowLeft className="w-4 h-4" />
+              <span>[ LEAVE ARENA ]</span>
             </button>
           ) : (
             <Link
               href="/"
-              className="p-1 border border-neutral-800 hover:border-white text-neutral-400 hover:text-white"
+              className="p-1 border border-neutral-800 hover:border-white text-neutral-400 hover:text-white transition-colors flex items-center gap-1 text-xs"
             >
               <ArrowLeft className="w-4 h-4" />
+              <span>[ ECHO ]</span>
             </Link>
           )}
+
           <div className="flex items-center gap-2">
-            <Gamepad2 className="w-5 h-5 text-white animate-pulse" />
-            <h1 className="font-bold text-sm sm:text-base uppercase tracking-widest">
-              ECHO ARCADE // SOCIAL GAMING LOUNGE
+            <Gamepad2 className="w-4 h-4 text-white animate-pulse" />
+            <h1 className="font-bold text-sm tracking-widest uppercase text-white">
+              ECHO ARCADE // SOCIAL LOUNGE
             </h1>
           </div>
         </div>
 
         <div className="flex items-center gap-2 text-xs">
-          <span className="text-emerald-400 font-bold border border-emerald-900 bg-emerald-950/50 px-2 py-0.5 hidden sm:inline">
-            ● 0-LATENCY SYNC
+          <span className="text-white font-bold border border-white bg-neutral-900 px-2 py-0.5 hidden sm:inline flex items-center gap-1.5">
+            <Mic2 className="w-3 h-3 text-emerald-400 animate-pulse" />
+            <span>LIVE VOICE CHAT ACTIVE</span>
           </span>
         </div>
       </header>
@@ -140,13 +183,23 @@ export default function ArcadePage() {
         {activeMatch ? (
           /* ── Active Game Arena View ── */
           <div className="space-y-4">
-            <div className="flex items-center justify-between border-b border-neutral-800 pb-2 text-xs">
+            <div className="flex items-center justify-between border-b border-neutral-800 pb-2 text-xs flex-wrap gap-2">
               <span className="text-neutral-400 uppercase tracking-wider">
-                MATCH ID: {activeMatch.id.slice(0, 8)} • HOST: {activeMatch.hostHandle}
+                MATCH: {activeMatch.id.slice(0, 8)} • HOST: {activeMatch.hostHandle}
               </span>
-              <span className="text-white font-bold border border-neutral-700 px-2 py-0.5 uppercase">
-                STATUS: {activeMatch.status}
-              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setInviteModalMatch(activeMatch)}
+                  className="px-2.5 py-1 border border-white bg-black hover:bg-white hover:text-black font-extrabold uppercase text-[10px] transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                >
+                  <Share2 className="w-3 h-3" />
+                  <span>[ 🔗 INVITE PLAYERS & TALK 🎙️ ]</span>
+                </button>
+                <span className="text-white font-bold border border-neutral-700 px-2 py-0.5 uppercase">
+                  STATUS: {activeMatch.status}
+                </span>
+              </div>
             </div>
 
             {activeMatch.gameType === "sudoku" && (
@@ -179,17 +232,17 @@ export default function ArcadePage() {
           /* ── Arcade Hub & Lobby Discovery ── */
           <div className="space-y-8">
             {/* Hero Banner */}
-            <div className="border border-neutral-800 bg-neutral-950 p-6 space-y-3 relative overflow-hidden">
+            <div className="border-2 border-white bg-black p-6 space-y-3 relative overflow-hidden shadow-[0_0_30px_rgba(255,255,255,0.08)]">
               <div className="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-widest">
                 <Flame className="w-4 h-4 text-white animate-bounce" />
                 <span>// VOICE-INTEGRATED MULTIPLAYER RETRO GAMING</span>
               </div>
-              <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-tight text-white leading-tight">
-                Play Retro Terminal Games Live While Talking Trash On Audio.
+              <h2 className="text-xl sm:text-2xl font-extrabold uppercase tracking-tight text-white leading-tight">
+                Play Retro Games Live While Talking Trash On Live Voice.
               </h2>
-              <p className="text-xs text-neutral-400 max-w-2xl leading-relaxed">
-                Compete in real-time Sudoku speed battles or roll high-stakes 3D dice in Cyber Ludo. 
-                Win matches to earn +100 Aura points and unlock the exclusive Arcade Champion badge!
+              <p className="text-xs text-neutral-300 max-w-2xl leading-relaxed">
+                Invite friends via 1-tap link to join your match and voice channel with zero setup.
+                Compete in real-time 15x15 Cyber Ludo or Sudoku speed battles to earn +100 Aura points!
               </p>
             </div>
 
@@ -200,51 +253,61 @@ export default function ArcadePage() {
                 // CHOOSE ARENA PROTOCOL
               </h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Sudoku Card */}
-                <div className="border border-neutral-800 hover:border-white bg-black p-5 space-y-4 transition-all group flex flex-col justify-between">
-                  <div className="space-y-2">
-                    <div className="text-3xl">🧩</div>
-                    <h4 className="font-bold text-base uppercase text-white group-hover:tracking-wider transition-all">
-                      SUDOKU BATTLE GRID
-                    </h4>
-                    <p className="text-xs text-neutral-400 leading-relaxed">
-                      1v1 Speed Data-Grid Hack. Race your opponent to solve the puzzle with zero mistakes.
-                    </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Ludo Game Launch Card */}
+                <div className="border-2 border-white bg-neutral-950 p-5 space-y-4 hover:border-white transition-all">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <span className="text-2xl">🎲</span>
+                      <h4 className="font-extrabold text-base uppercase text-white tracking-wide">
+                        15X15 PHYSICAL CYBER LUDO
+                      </h4>
+                      <p className="text-xs text-neutral-400 leading-relaxed">
+                        Authentic 15x15 board simulation with 3D physical pip die, pawn captures, safe stars, and live audio chat.
+                      </p>
+                    </div>
                   </div>
-                  <div className="pt-2 border-t border-neutral-900 flex items-center justify-between">
-                    <span className="text-[10px] text-neutral-500 font-bold uppercase">2 PLAYERS • +100 AURA</span>
-                    <button
-                      type="button"
-                      disabled={creating || !user}
-                      onClick={() => handleCreateMatch("sudoku")}
-                      className="px-4 py-2 bg-white text-black font-bold text-xs uppercase hover:bg-neutral-200 transition-all active:scale-95 disabled:opacity-40 cursor-pointer"
-                    >
-                      [ CREATE 1V1 ]
-                    </button>
-                  </div>
-                </div>
 
-                {/* Ludo Card */}
-                <div className="border border-neutral-800 hover:border-white bg-black p-5 space-y-4 transition-all group flex flex-col justify-between">
-                  <div className="space-y-2">
-                    <div className="text-3xl">🎲</div>
-                    <h4 className="font-bold text-base uppercase text-white group-hover:tracking-wider transition-all">
-                      CYBER LUDO CLASH
-                    </h4>
-                    <p className="text-xs text-neutral-400 leading-relaxed">
-                      2-to-4 Player Turn-Based Retro Dice Clash. Move your cyber tokens home and capture enemies.
-                    </p>
-                  </div>
-                  <div className="pt-2 border-t border-neutral-900 flex items-center justify-between">
-                    <span className="text-[10px] text-neutral-500 font-bold uppercase">2-4 PLAYERS • +100 AURA</span>
+                  <div className="flex items-center justify-between pt-2 border-t border-neutral-800">
+                    <span className="text-[10px] text-neutral-400 font-bold uppercase">
+                      2-4 PLAYERS • +100 AURA
+                    </span>
                     <button
                       type="button"
                       disabled={creating || !user}
                       onClick={() => handleCreateMatch("ludo")}
-                      className="px-4 py-2 bg-white text-black font-bold text-xs uppercase hover:bg-neutral-200 transition-all active:scale-95 disabled:opacity-40 cursor-pointer"
+                      className="px-5 py-2.5 bg-white text-black font-extrabold text-xs uppercase hover:bg-neutral-200 transition-all active:scale-95 disabled:opacity-40 cursor-pointer shadow-md"
                     >
-                      [ CREATE LOBBY ]
+                      {creating ? "CREATING..." : "[ CREATE ARENA 🎲 ]"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Sudoku Game Launch Card */}
+                <div className="border-2 border-neutral-700 bg-neutral-950 p-5 space-y-4 hover:border-white transition-all">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <span className="text-2xl">🧩</span>
+                      <h4 className="font-extrabold text-base uppercase text-white tracking-wide">
+                        1V1 SUDOKU DATA-GRID BATTLE
+                      </h4>
+                      <p className="text-xs text-neutral-400 leading-relaxed">
+                        Competitive speed puzzle matrix. Race against an opponent to fill numbers with zero mistakes.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-neutral-800">
+                    <span className="text-[10px] text-neutral-400 font-bold uppercase">
+                      1V1 HEAD-TO-HEAD • +100 AURA
+                    </span>
+                    <button
+                      type="button"
+                      disabled={creating || !user}
+                      onClick={() => handleCreateMatch("sudoku")}
+                      className="px-5 py-2.5 border-2 border-white bg-black text-white hover:bg-white hover:text-black font-extrabold text-xs uppercase transition-all active:scale-95 disabled:opacity-40 cursor-pointer"
+                    >
+                      {creating ? "CREATING..." : "[ CREATE MATCH 🧩 ]"}
                     </button>
                   </div>
                 </div>
@@ -273,7 +336,7 @@ export default function ArcadePage() {
                     return (
                       <div
                         key={m.id}
-                        className="border border-neutral-800 hover:border-neutral-700 bg-neutral-950 p-3.5 flex items-center justify-between flex-wrap gap-2 transition-all"
+                        className="border border-neutral-800 hover:border-neutral-700 bg-neutral-950 p-3.5 flex items-center justify-between flex-wrap gap-3 transition-all"
                       >
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
@@ -292,23 +355,34 @@ export default function ArcadePage() {
                           </p>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (m.players[user?.uid || ""]) {
-                              setActiveMatchId(m.id);
-                            } else {
-                              handleJoinMatch(m.id);
-                            }
-                          }}
-                          className="px-4 py-2 border border-white hover:bg-white hover:text-black font-bold text-xs uppercase transition-all cursor-pointer"
-                        >
-                          {m.players[user?.uid || ""]
-                            ? "[ RESUME ]"
-                            : isFull
-                            ? "[ SPECTATE ]"
-                            : "[ JOIN MATCH ⚔️ ]"}
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setInviteModalMatch(m)}
+                            className="p-2 border border-neutral-700 hover:border-white text-white transition-all cursor-pointer"
+                            title="Invite Friends"
+                          >
+                            <Share2 className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (m.players[user?.uid || ""]) {
+                                setActiveMatchId(m.id);
+                              } else {
+                                handleJoinMatch(m.id);
+                              }
+                            }}
+                            className="px-4 py-2 border-2 border-white hover:bg-white hover:text-black font-extrabold text-xs uppercase transition-all cursor-pointer"
+                          >
+                            {m.players[user?.uid || ""]
+                              ? "[ RESUME ]"
+                              : isFull
+                              ? "[ SPECTATE ]"
+                              : "[ JOIN & PLAY ⚔️ ]"}
+                          </button>
+                        </div>
                       </div>
                     );
                   })}
@@ -318,6 +392,23 @@ export default function ArcadePage() {
           </div>
         )}
       </main>
+
+      {/* Global Invite Modal */}
+      {inviteModalMatch && (
+        <ArcadeInviteModal
+          isOpen={!!inviteModalMatch}
+          onClose={() => setInviteModalMatch(null)}
+          match={inviteModalMatch}
+        />
+      )}
     </div>
+  );
+}
+
+export default function ArcadePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black text-white font-mono p-8">Loading Echo Arcade...</div>}>
+      <ArcadeContent />
+    </Suspense>
   );
 }

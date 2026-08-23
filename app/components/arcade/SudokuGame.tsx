@@ -3,7 +3,8 @@
 import React, { useState } from "react";
 import { soundSynth } from "@/lib/soundSynthesizer";
 import { submitSudokuCell, type ArcadeMatch } from "@/lib/arcade";
-import { Trophy, Zap, AlertTriangle, CheckCircle2, User } from "lucide-react";
+import { Trophy, Zap, AlertTriangle, CheckCircle2, User, Share2 } from "lucide-react";
+import ArcadeInviteModal from "./ArcadeInviteModal";
 
 interface SudokuGameProps {
   match: ArcadeMatch;
@@ -15,6 +16,7 @@ export default function SudokuGame({ match, currentUid }: SudokuGameProps) {
   const [selectedCell, setSelectedCell] = useState<{ r: number; c: number } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [lastFeedback, setLastFeedback] = useState<{ r: number; c: number; correct: boolean } | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   const sudokuState = match.sudokuState;
   if (!sudokuState) {
@@ -70,10 +72,31 @@ export default function SudokuGame({ match, currentUid }: SudokuGameProps) {
           <Zap className="w-3.5 h-3.5 text-white animate-pulse" />
           // ARCADE: 1V1 SUDOKU DATA-GRID
         </span>
-        <span className="text-white border border-neutral-700 px-2 py-0.5 font-bold uppercase">
-          STAKES: +{match.stakes * 2} AURA
-        </span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              soundSynth.playSubtlePop();
+              setInviteOpen(true);
+            }}
+            className="px-2.5 py-1 border border-white bg-black hover:bg-white hover:text-black font-extrabold uppercase text-[10px] transition-all flex items-center gap-1.5 cursor-pointer"
+            title="Invite friends to play and talk on voice"
+          >
+            <Share2 className="w-3 h-3" />
+            <span>[ 🔗 INVITE & TALK 🎙️ ]</span>
+          </button>
+          <span className="text-white border border-neutral-700 px-2 py-0.5 font-bold uppercase">
+            STAKES: +{match.stakes * 2} AURA
+          </span>
+        </div>
       </div>
+
+      {/* Invite Modal */}
+      <ArcadeInviteModal
+        isOpen={inviteOpen}
+        onClose={() => setInviteOpen(false)}
+        match={match}
+      />
 
       {/* ── Player Battle Bar ── */}
       <div className="grid grid-cols-2 gap-2 bg-neutral-950 p-2.5 border border-neutral-900 text-xs">

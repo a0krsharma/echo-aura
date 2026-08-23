@@ -10,7 +10,8 @@ import {
   type ArcadeMatch,
   type LudoToken,
 } from "@/lib/arcade";
-import { Dices, Trophy, Star, Shield, Sparkles, CircleDot } from "lucide-react";
+import { Dices, Trophy, Star, Shield, Sparkles, CircleDot, Share2, Users } from "lucide-react";
+import ArcadeInviteModal from "./ArcadeInviteModal";
 
 interface LudoGameProps {
   match: ArcadeMatch;
@@ -50,6 +51,7 @@ const HOME_ARROWS: Record<"RED" | "GREEN" | "YELLOW" | "BLUE", string> = {
 export default function LudoGame({ match, currentUid }: LudoGameProps) {
   const [rolling, setRolling] = useState(false);
   const [movingTokenId, setMovingTokenId] = useState<number | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   const ludoState = match.ludoState;
   if (!ludoState) {
@@ -223,15 +225,34 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
         <div className="flex items-center gap-2">
           <div className="w-2.5 h-2.5 bg-white rounded-full animate-ping" />
           <span className="text-white font-bold uppercase tracking-widest">
-            // PHYSICAL LUDO ARENA [ MONOCHROME EDITION ]
+            // PHYSICAL LUDO ARENA [ MONOCHROME ]
           </span>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              soundSynth.playSubtlePop();
+              setInviteOpen(true);
+            }}
+            className="px-2.5 py-1 border border-white bg-black hover:bg-white hover:text-black font-extrabold uppercase text-[10px] transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+            title="Invite friends to join and talk on voice"
+          >
+            <Share2 className="w-3 h-3" />
+            <span>[ 🔗 INVITE & TALK 🎙️ ]</span>
+          </button>
           <span className="px-2 py-0.5 border-2 border-white bg-white text-black font-extrabold uppercase text-[10px]">
-            ACTIVE: {ludoState.currentTurn} {isMyTurn ? "● (YOUR MOVE)" : ""}
+            TURN: {ludoState.currentTurn} {isMyTurn ? "● (YOU)" : ""}
           </span>
         </div>
       </div>
+
+      {/* Invite Modal */}
+      <ArcadeInviteModal
+        isOpen={inviteOpen}
+        onClose={() => setInviteOpen(false)}
+        match={match}
+      />
 
       {/* ── 4 Monochrome Player HUD Cards ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
