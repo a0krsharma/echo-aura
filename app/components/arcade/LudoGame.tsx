@@ -61,7 +61,7 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
   }
 
   const currentPlayer = match.players[currentUid];
-  const myTeam = currentPlayer?.team;
+  const myTeam = (currentPlayer?.team as ("RED" | "GREEN" | "BLUE" | "YELLOW") | undefined);
   const isMyTurn = ludoState.currentTurn === myTeam && match.status !== "FINISHED";
 
   // Movable tokens calculation

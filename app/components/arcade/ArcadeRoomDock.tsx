@@ -9,8 +9,15 @@ import {
   type ArcadeMatch,
   type ArcadeGameType,
 } from "@/lib/arcade";
-import SudokuGame from "./SudokuGame";
 import LudoGame from "./LudoGame";
+import ChessGame from "./ChessGame";
+import Connect4Game from "./Connect4Game";
+import BattleshipGame from "./BattleshipGame";
+import SudokuGame from "./SudokuGame";
+import MinesweeperGame from "./MinesweeperGame";
+import Game2048 from "./Game2048";
+import SnakeGame from "./SnakeGame";
+import WordleGame from "./WordleGame";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeCreateModal from "./ArcadeCreateModal";
 import { Gamepad2, X, Users, Trophy, Play, Sparkles, Share2, Mic2 } from "lucide-react";
@@ -67,10 +74,10 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
         <div className="flex items-center gap-2 text-xs">
           <Gamepad2 className="w-4 h-4 text-white animate-pulse" />
           <span className="font-extrabold uppercase tracking-widest text-white">
-            // SOCIAL GAMING LOUNGE
+            // SOCIAL GAMING DOCK
           </span>
           <span className="text-[10px] text-neutral-400 hidden sm:inline">
-            • PLAY LUDO & SUDOKU WHILE LIVE ON VOICE
+            • MULTIPLAYER & SOLO RETRO ARCADE ON STAGE
           </span>
         </div>
         <button
@@ -91,7 +98,7 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
         <div className="flex items-center gap-2">
           <Gamepad2 className="w-4 h-4 text-white animate-pulse" />
           <span className="font-extrabold text-xs uppercase tracking-widest text-white">
-            // LIVE AUDIO GAMING ARENA
+            // LIVE STAGE GAMING ARENA
           </span>
           <span className="text-[10px] text-emerald-400 border border-emerald-800 bg-emerald-950/40 px-1.5 py-0.5 hidden sm:inline flex items-center gap-1">
             <Mic2 className="w-2.5 h-2.5" />
@@ -122,34 +129,60 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
       {!match ? (
         <div className="space-y-4">
           <p className="text-[11px] text-neutral-300 uppercase tracking-wider">
-            Project a real-time game board right above the live stage. Everyone in the room can play and talk simultaneously!
+            Project any arcade board directly above the live stage. Everyone in the room can play and talk simultaneously!
           </p>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <button
               type="button"
               onClick={() => setSelectedGameType("ludo")}
-              className={`p-3 border-2 text-left transition-all cursor-pointer ${
+              className={`p-2.5 border-2 text-left transition-all cursor-pointer ${
                 selectedGameType === "ludo"
                   ? "border-white bg-neutral-900 text-white font-extrabold ring-1 ring-white"
                   : "border-neutral-800 bg-black text-neutral-400 hover:border-neutral-600"
               }`}
             >
-              <div className="text-xs uppercase font-extrabold text-white">🎲 15X15 CYBER LUDO</div>
-              <div className="text-[10px] text-neutral-400 mt-1">Solo Bot or 2-4 Player Board Clash</div>
+              <div className="text-xs uppercase font-extrabold text-white">🎲 LUDO</div>
+              <div className="text-[9px] text-neutral-400">15x15 Dice Race</div>
             </button>
 
             <button
               type="button"
-              onClick={() => setSelectedGameType("sudoku")}
-              className={`p-3 border-2 text-left transition-all cursor-pointer ${
-                selectedGameType === "sudoku"
+              onClick={() => setSelectedGameType("chess")}
+              className={`p-2.5 border-2 text-left transition-all cursor-pointer ${
+                selectedGameType === "chess"
                   ? "border-white bg-neutral-900 text-white font-extrabold ring-1 ring-white"
                   : "border-neutral-800 bg-black text-neutral-400 hover:border-neutral-600"
               }`}
             >
-              <div className="text-xs uppercase font-extrabold text-white">🧩 1V1 SUDOKU BATTLE</div>
-              <div className="text-[10px] text-neutral-400 mt-1">Solo AI or 1v1 Data-Grid Race</div>
+              <div className="text-xs uppercase font-extrabold text-white">♟️ CHESS</div>
+              <div className="text-[9px] text-neutral-400">8x8 Grid Protocol</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSelectedGameType("connect4")}
+              className={`p-2.5 border-2 text-left transition-all cursor-pointer ${
+                selectedGameType === "connect4"
+                  ? "border-white bg-neutral-900 text-white font-extrabold ring-1 ring-white"
+                  : "border-neutral-800 bg-black text-neutral-400 hover:border-neutral-600"
+              }`}
+            >
+              <div className="text-xs uppercase font-extrabold text-white">🔴 CONNECT 4</div>
+              <div className="text-[9px] text-neutral-400">7x6 Drop Grid</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSelectedGameType("battleship")}
+              className={`p-2.5 border-2 text-left transition-all cursor-pointer ${
+                selectedGameType === "battleship"
+                  ? "border-white bg-neutral-900 text-white font-extrabold ring-1 ring-white"
+                  : "border-neutral-800 bg-black text-neutral-400 hover:border-neutral-600"
+              }`}
+            >
+              <div className="text-xs uppercase font-extrabold text-white">🚢 BATTLESHIP</div>
+              <div className="text-[9px] text-neutral-400">10x10 Radar Arena</div>
             </button>
           </div>
 
@@ -165,13 +198,33 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
         </div>
       ) : (
         <div className="space-y-4">
-          {/* Active Game Renderer */}
+          {/* Active Game Renderers */}
+          {match.gameType === "ludo" && (
+            <LudoGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "chess" && (
+            <ChessGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "connect4" && (
+            <Connect4Game match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "battleship" && (
+            <BattleshipGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
           {match.gameType === "sudoku" && (
             <SudokuGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
           )}
-
-          {match.gameType === "ludo" && (
-            <LudoGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          {match.gameType === "minesweeper" && (
+            <MinesweeperGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "2048" && (
+            <Game2048 match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "snake" && (
+            <SnakeGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "wordle" && (
+            <WordleGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
           )}
 
           {/* Join button if spectator */}
