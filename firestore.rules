@@ -135,11 +135,13 @@ service cloud.firestore {
       }
     }
 
-    // ── ROOMS ────────────────────────────────────────────────────────────
-    // Public read for room discovery
-    // Authenticated users can create rooms
+    // ── ROOMS & ARCADE ARENAS ────────────────────────────────────────────
+    // Public read for room & arcade discovery, full real-time state sync
     match /rooms/{roomId} {
       allow read, write: if true;
+      match /{document=**} {
+        allow read, write: if true;
+      }
     }
 
     // ── ROOM PARTICIPANTS ───────────────────────────────────────────────
