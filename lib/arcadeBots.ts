@@ -40,6 +40,8 @@ import {
   firePoolShot,
   playUnoCard,
   drawUnoCard,
+  swapUnoHands,
+  acceptUnoDrawPenalty,
   betPoker,
   playBlackjackAction,
   crossBingoNumber,
@@ -359,7 +361,7 @@ export async function executeChessBotTurn(match: ArcadeMatch): Promise<void> {
 }
 
 /**
- * Uno Bot (Smart Strategy & Wild Color Picker)
+ * Uno Bot (Smart Strategy, Stacking Defense & 7-0 Swap AI)
  */
 export async function executeUnoBotTurn(match: ArcadeMatch): Promise<void> {
   if (!match.unoState || match.status !== "PLAYING") return;
@@ -370,7 +372,7 @@ export async function executeUnoBotTurn(match: ArcadeMatch): Promise<void> {
   );
   if (!botPlayer) return;
 
-  const runKey = `${match.id}_uno_bot_${us.currentTurnUid}_${us.discardTop.color}_${us.discardTop.value}`;
+  const runKey = `${match.id}_uno_bot_${us.currentTurnUid}_${us.discardTop.color}_${us.discardTop.value}_${us.pendingDrawStack || 0}`;
   if (activeBotRuns.has(runKey)) return;
   activeBotRuns.add(runKey);
 
@@ -381,15 +383,48 @@ export async function executeUnoBotTurn(match: ArcadeMatch): Promise<void> {
     const botHand = hands[botPlayer.uid] || [];
     const top = us.discardTop;
 
-    // Filter playable cards
+    // 1. Handle Pending 7 Swap (Pick opponent with smallest hand)
+    if (us.pendingSwapUid === botPlayer.uid) {
+      const opponents = Object.entries(hands).filter(([uid]) => uid !== botPlayer.uid);
+      opponents.sort((a, b) => a[1].length - b[1].length);
+      const targetUid = opponents[0]?.[0];
+      if (targetUid) {
+        await swapUnoHands(match.id, botPlayer.uid, targetUid);
+      }
+      return;
+    }
+
+    // 2. Handle Active Draw Penalty Stack (+2 or +4)
+    if (us.pendingDrawStack && us.pendingDrawStack > 0) {
+      const stackType = us.pendingDrawType;
+      const matchingStackCard = botHand.find((c) => c.value === stackType);
+      if (matchingStackCard) {
+        let chosenColor: "RED" | "BLUE" | "GREEN" | "YELLOW" = "RED";
+        if (matchingStackCard.color === "WILD") {
+          const colorCounts: Record<string, number> = { RED: 0, BLUE: 0, GREEN: 0, YELLOW: 0 };
+          botHand.forEach((c) => {
+            if (c.color !== "WILD") colorCounts[c.color] = (colorCounts[c.color] || 0) + 1;
+          });
+          chosenColor = (Object.entries(colorCounts).sort((a, b) => b[1] - a[1])[0][0] as any) || "RED";
+        }
+        await playUnoCard(match.id, botPlayer.uid, matchingStackCard, chosenColor, botHand.length === 2);
+        return;
+      } else {
+        await acceptUnoDrawPenalty(match.id, botPlayer.uid);
+        return;
+      }
+    }
+
+    // 3. Regular Play: Filter playable cards
     const playableCards = botHand.filter(
       (c) => c.color === "WILD" || c.color === top.color || c.value === top.value
     );
 
     if (playableCards.length > 0) {
-      // Prioritize: +4 / +2 / Action cards > same color > same value > Wild
+      // Prioritize: +4 / +2 / Action cards > 7 / 0 > same color > same value > Wild
       const chosenCard =
         playableCards.find((c) => c.value === "+4" || c.value === "+2" || c.value === "SKIP" || c.value === "REVERSE") ||
+        playableCards.find((c) => c.value === "7" || c.value === "0") ||
         playableCards.find((c) => c.color === top.color) ||
         playableCards.find((c) => c.value === top.value) ||
         playableCards[0];
@@ -404,7 +439,16 @@ export async function executeUnoBotTurn(match: ArcadeMatch): Promise<void> {
       }
 
       const willHaveOneCard = botHand.length === 2;
-      await playUnoCard(match.id, botPlayer.uid, chosenCard, chosenColor, willHaveOneCard);
+      const res = await playUnoCard(match.id, botPlayer.uid, chosenCard, chosenColor, willHaveOneCard);
+      if (res.requiresHandSwap) {
+        // If bot played a 7, swap with smallest opponent hand
+        const opponents = Object.entries(hands).filter(([uid]) => uid !== botPlayer.uid);
+        opponents.sort((a, b) => a[1].length - b[1].length);
+        const targetUid = opponents[0]?.[0];
+        if (targetUid) {
+          await swapUnoHands(match.id, botPlayer.uid, targetUid);
+        }
+      }
     } else {
       await drawUnoCard(match.id, botPlayer.uid);
     }

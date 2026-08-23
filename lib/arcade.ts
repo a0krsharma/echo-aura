@@ -368,6 +368,10 @@ export interface UnoState {
   direction: 1 | -1;
   drawCountPenalty: number;
   hasCalledUno?: Record<string, boolean>;
+  pendingDrawStack?: number;
+  pendingDrawType?: "+2" | "+4" | null;
+  pendingSwapUid?: string | null;
+  discardHistoryStr?: string;
   lastActionLog?: string;
 }
 
@@ -3033,13 +3037,14 @@ export async function playBlackjackAction(
 
 // ── Uno Actions ───────────────────────────────────────────────────────────────
 // ── Uno Actions ───────────────────────────────────────────────────────────────
+// ── Uno Actions ───────────────────────────────────────────────────────────────
 export async function playUnoCard(
   matchId: string,
   playerUid: string,
   card: UnoCard,
   chosenWildColor?: "RED" | "BLUE" | "GREEN" | "YELLOW",
   calledUno?: boolean
-): Promise<{ won: boolean }> {
+): Promise<{ won: boolean; requiresHandSwap?: boolean }> {
   const db = getFirebaseDb();
   const matchRef = doc(db, ARCADE_COLLECTION, matchId);
   const snap = await getDoc(matchRef);
@@ -3065,7 +3070,23 @@ export async function playUnoCard(
 
   let direction: 1 | -1 = us.direction || 1;
   let skipNext = false;
-  let drawCount = 0;
+  let pendingStack = us.pendingDrawStack || 0;
+  let pendingType = us.pendingDrawType || null;
+
+  // Stacking logic
+  if (card.value === "+2") {
+    pendingStack += 2;
+    pendingType = "+2";
+    skipNext = false; // Next player has a chance to stack or take penalty
+  } else if (card.value === "+4") {
+    pendingStack += 4;
+    pendingType = "+4";
+    skipNext = false;
+  } else {
+    // Regular non-penalty card resets stack
+    pendingStack = 0;
+    pendingType = null;
+  }
 
   if (card.value === "REVERSE") {
     if (numPlayers === 2) {
@@ -3075,12 +3096,23 @@ export async function playUnoCard(
     }
   } else if (card.value === "SKIP") {
     skipNext = true;
-  } else if (card.value === "+2") {
-    skipNext = true;
-    drawCount = 2;
-  } else if (card.value === "+4") {
-    skipNext = true;
-    drawCount = 4;
+  }
+
+  // 7-0 Hand Rotation rule detection
+  const isSeven = card.value === "7" && numPlayers > 1 && !won;
+  const isZero = card.value === "0" && numPlayers > 1 && !won;
+
+  if (isZero) {
+    // Rotate everyone's hand in active direction
+    const rotatedHands: Record<string, UnoCard[]> = {};
+    for (let i = 0; i < numPlayers; i++) {
+      const fromUid = playerUids[i];
+      let toIdx = (i + direction) % numPlayers;
+      if (toIdx < 0) toIdx += numPlayers;
+      const toUid = playerUids[toIdx];
+      rotatedHands[toUid] = hands[fromUid];
+    }
+    Object.assign(hands, rotatedHands);
   }
 
   // Next player calculation
@@ -3088,26 +3120,6 @@ export async function playUnoCard(
   let nextIdx = (currentIdx + step) % numPlayers;
   if (nextIdx < 0) nextIdx += numPlayers;
   const nextPlayerUid = playerUids[nextIdx] || playerUid;
-
-  // Apply card draw penalties
-  if (drawCount > 0) {
-    let victimIdx = (currentIdx + direction) % numPlayers;
-    if (victimIdx < 0) victimIdx += numPlayers;
-    const victimUid = playerUids[victimIdx];
-    const victimHand = hands[victimUid] || [];
-
-    // Ensure draw deck has cards
-    const colors: ("RED" | "BLUE" | "GREEN" | "YELLOW")[] = ["RED", "BLUE", "GREEN", "YELLOW"];
-    const values = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+2", "SKIP", "REVERSE"];
-    for (let i = 0; i < drawCount; i++) {
-      const drawn = drawDeck.pop() || {
-        color: colors[Math.floor(Math.random() * colors.length)],
-        value: values[Math.floor(Math.random() * values.length)],
-      };
-      victimHand.push(drawn);
-    }
-    hands[victimUid] = victimHand;
-  }
 
   // Final discard top card
   const discardCard: UnoCard = {
@@ -3125,17 +3137,80 @@ export async function playUnoCard(
   let actionLog = `${match.players[playerUid]?.handle || "Player"} played [${card.color} ${card.value}]!`;
   if (card.value === "REVERSE") actionLog += " (REVERSED DIRECTION 🔄)";
   else if (card.value === "SKIP") actionLog += " (SKIPPED NEXT PLAYER 🚫)";
-  else if (card.value === "+2") actionLog += ` (+2 CARDS & SKIPPED ${match.players[nextPlayerUid]?.handle || "PLAYER"}!)`;
-  else if (card.value === "+4") actionLog += ` (+4 WILD! TABLE COLOR: ${chosenWildColor || "WILD"})`;
+  else if (card.value === "+2") actionLog += ` (STACKED +2 ⚡ TOTAL: ${pendingStack} CARDS!)`;
+  else if (card.value === "+4") actionLog += ` (STACKED +4 WILD ⚡ TOTAL: ${pendingStack} CARDS! COLOR: ${chosenWildColor || "WILD"})`;
+  else if (isZero) actionLog += " (0 PLAYED: ALL HANDS ROTATED AROUND THE TABLE 🌀)";
+  else if (isSeven) actionLog += " (7 PLAYED: CHOOSE A PLAYER TO SWAP HANDS 🤝)";
 
   const updates: any = {
     "unoState.discardTop": discardCard,
     "unoState.handsStr": JSON.stringify(hands),
     "unoState.drawDeckStr": JSON.stringify(drawDeck),
-    "unoState.currentTurnUid": nextPlayerUid,
+    "unoState.currentTurnUid": isSeven ? playerUid : nextPlayerUid, // If 7, let player pick swap target
     "unoState.direction": direction,
+    "unoState.pendingDrawStack": pendingStack,
+    "unoState.pendingDrawType": pendingType,
+    "unoState.pendingSwapUid": isSeven ? playerUid : null,
     "unoState.hasCalledUno": hasCalled,
     "unoState.lastActionLog": actionLog,
+    updatedAt: serverTimestamp(),
+  };
+
+  if (won) {
+    updates.status = "FINISHED";
+    updates.winnerUid = playerUid;
+    updates.winnerHandle = match.players[playerUid]?.handle || "@ANON";
+    await awardAura(playerUid, match.stakes * 2 || 100);
+  }
+
+  await updateDoc(matchRef, updates);
+  return { won, requiresHandSwap: isSeven };
+}
+
+export async function jumpInUnoCard(
+  matchId: string,
+  playerUid: string,
+  card: UnoCard
+): Promise<{ won: boolean }> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+  if (!match.unoState || match.status !== "PLAYING") throw new Error("Match inactive");
+
+  const us = match.unoState;
+  const top = us.discardTop;
+
+  // Jump in requires exact match (same color and same value)
+  if (card.color !== top.color || card.value !== top.value) {
+    throw new Error("Cannot jump in without an exact matching card!");
+  }
+
+  const hands: Record<string, UnoCard[]> = JSON.parse(us.handsStr || "{}");
+  const playerHand = hands[playerUid] || [];
+  const cardIdx = playerHand.findIndex((c) => c.color === card.color && c.value === card.value);
+
+  if (cardIdx >= 0) {
+    playerHand.splice(cardIdx, 1);
+  }
+  hands[playerUid] = playerHand;
+
+  const won = playerHand.length === 0;
+  const playerUids = Object.keys(match.players || {});
+  const numPlayers = playerUids.length;
+  const currentIdx = playerUids.indexOf(playerUid);
+  const direction: 1 | -1 = us.direction || 1;
+
+  let nextIdx = (currentIdx + direction) % numPlayers;
+  if (nextIdx < 0) nextIdx += numPlayers;
+  const nextPlayerUid = playerUids[nextIdx] || playerUid;
+
+  const updates: any = {
+    "unoState.discardTop": card,
+    "unoState.handsStr": JSON.stringify(hands),
+    "unoState.currentTurnUid": nextPlayerUid,
+    "unoState.lastActionLog": `⚡ JUMP-IN! ${match.players[playerUid]?.handle || "Player"} jumped in with exact [${card.color} ${card.value}]!`,
     updatedAt: serverTimestamp(),
   };
 
@@ -3150,6 +3225,95 @@ export async function playUnoCard(
   return { won };
 }
 
+export async function swapUnoHands(
+  matchId: string,
+  playerUid: string,
+  targetUid: string
+): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) return;
+  const match = snap.data() as ArcadeMatch;
+  if (!match.unoState) return;
+
+  const us = match.unoState;
+  const hands: Record<string, UnoCard[]> = JSON.parse(us.handsStr || "{}");
+  const myHand = hands[playerUid] || [];
+  const targetHand = hands[targetUid] || [];
+
+  hands[playerUid] = targetHand;
+  hands[targetUid] = myHand;
+
+  const playerUids = Object.keys(match.players || {});
+  const numPlayers = playerUids.length;
+  const currentIdx = playerUids.indexOf(playerUid);
+  const direction: 1 | -1 = us.direction || 1;
+
+  let nextIdx = (currentIdx + direction) % numPlayers;
+  if (nextIdx < 0) nextIdx += numPlayers;
+  const nextPlayerUid = playerUids[nextIdx] || playerUid;
+
+  await updateDoc(matchRef, {
+    "unoState.handsStr": JSON.stringify(hands),
+    "unoState.pendingSwapUid": null,
+    "unoState.currentTurnUid": nextPlayerUid,
+    "unoState.lastActionLog": `🤝 7 RULE! ${match.players[playerUid]?.handle || "Player"} swapped hands with ${match.players[targetUid]?.handle || "Opponent"}!`,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function acceptUnoDrawPenalty(
+  matchId: string,
+  playerUid: string
+): Promise<{ drawnCount: number }> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+  if (!match.unoState) throw new Error("Not an uno match");
+
+  const us = match.unoState;
+  const hands: Record<string, UnoCard[]> = JSON.parse(us.handsStr || "{}");
+  let drawDeck: UnoCard[] = JSON.parse(us.drawDeckStr || "[]");
+  const playerHand = hands[playerUid] || [];
+  const countToDraw = us.pendingDrawStack || 2;
+
+  const colors: ("RED" | "BLUE" | "GREEN" | "YELLOW")[] = ["RED", "BLUE", "GREEN", "YELLOW"];
+  const values = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+2", "SKIP", "REVERSE"];
+
+  for (let i = 0; i < countToDraw; i++) {
+    const drawn = drawDeck.pop() || {
+      color: colors[Math.floor(Math.random() * colors.length)],
+      value: values[Math.floor(Math.random() * values.length)],
+    };
+    playerHand.push(drawn);
+  }
+  hands[playerUid] = playerHand;
+
+  const playerUids = Object.keys(match.players || {});
+  const numPlayers = playerUids.length;
+  const currentIdx = playerUids.indexOf(playerUid);
+  const direction: 1 | -1 = us.direction || 1;
+
+  let nextIdx = (currentIdx + direction) % numPlayers;
+  if (nextIdx < 0) nextIdx += numPlayers;
+  const nextPlayerUid = playerUids[nextIdx] || playerUid;
+
+  await updateDoc(matchRef, {
+    "unoState.handsStr": JSON.stringify(hands),
+    "unoState.drawDeckStr": JSON.stringify(drawDeck),
+    "unoState.pendingDrawStack": 0,
+    "unoState.pendingDrawType": null,
+    "unoState.currentTurnUid": nextPlayerUid,
+    "unoState.lastActionLog": `${match.players[playerUid]?.handle || "Player"} drew ${countToDraw} stacked penalty cards & forfeited turn!`,
+    updatedAt: serverTimestamp(),
+  });
+
+  return { drawnCount: countToDraw };
+}
+
 export async function drawUnoCard(
   matchId: string,
   playerUid: string
@@ -3162,6 +3326,13 @@ export async function drawUnoCard(
   if (!match.unoState) throw new Error("Not an uno match");
 
   const us = match.unoState;
+
+  // If there is an active stacked penalty, handle via acceptUnoDrawPenalty
+  if (us.pendingDrawStack && us.pendingDrawStack > 0) {
+    const res = await acceptUnoDrawPenalty(matchId, playerUid);
+    return { drawnCard: { color: "RED", value: `+${res.drawnCount}` } };
+  }
+
   const hands: Record<string, UnoCard[]> = JSON.parse(us.handsStr || "{}");
   let drawDeck: UnoCard[] = JSON.parse(us.drawDeckStr || "[]");
   const playerHand = hands[playerUid] || [];

@@ -164,6 +164,25 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
     scoring: "+150 Aura upon clearing all 52 cards onto foundations.",
     proTip: "Always prioritize revealing face-down tableau cards before drawing from the stockpile!"
   },
+  uno: {
+    id: "uno",
+    name: "Uno (Flow Override)",
+    rank: 6,
+    category: "Card & Bluffing",
+    icon: "🎴",
+    overview: "World-class fast-paced card battle. Match colors and numbers, stack +2 and +4 penalties, execute 7-0 hand swaps, jump in with identical cards, and shout UNO before your final card!",
+    howToPlay: [
+      "Match the active discard top card by Color or Number/Value.",
+      "Action Cards: Skip cancels next player; Reverse swaps turn order; Wild lets you choose the table color.",
+      "Stacking (+2 / +4): If a +2 or +4 is played, counter-stack another +2 or +4 to pass the compounded penalty to the next player!",
+      "7-0 Hand Rules: Playing a 7 lets you swap entire hands with any opponent; playing a 0 rotates all hands in the active direction.",
+      "Jump-In Rule: Holding an exact duplicate card (same color and value) lets you jump in immediately out of turn!",
+      "Shout UNO: Tap [ 🚨 SHOUT UNO! ] when holding 1 card remaining. If an opponent catches you before you shout, you suffer a +2 penalty."
+    ],
+    voiceGuide: "Shout 'UNO!' into the mic and coordinate counter-stacking banter on live audio.",
+    scoring: "First player to empty hand wins match + Aura rewards.",
+    proTip: "Save your +2 and +4 Wilds to defend against incoming penalty stacks!"
+  },
   ludo: {
     id: "ludo",
     name: "15x15 Cyber Ludo",
