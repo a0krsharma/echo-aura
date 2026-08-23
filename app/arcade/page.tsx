@@ -4,7 +4,6 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useAuth } from "@/app/components/AuthProvider";
 import { useSearchParams } from "next/navigation";
 import {
-  createArcadeMatch,
   joinArcadeMatch,
   subscribeArcadeMatch,
   type ArcadeMatch,
@@ -13,6 +12,7 @@ import {
 import SudokuGame from "@/app/components/arcade/SudokuGame";
 import LudoGame from "@/app/components/arcade/LudoGame";
 import ArcadeInviteModal from "@/app/components/arcade/ArcadeInviteModal";
+import ArcadeCreateModal from "@/app/components/arcade/ArcadeCreateModal";
 import {
   Gamepad2,
   Trophy,
@@ -25,6 +25,8 @@ import {
   User,
   Share2,
   Mic2,
+  Bot,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { collection, query, limit, onSnapshot } from "firebase/firestore";
@@ -36,8 +38,8 @@ function ArcadeContent() {
   const [activeMatch, setActiveMatch] = useState<ArcadeMatch | null>(null);
   const [activeMatchId, setActiveMatchId] = useState<string | null>(null);
   const [lobbyMatches, setLobbyMatches] = useState<ArcadeMatch[]>([]);
-  const [selectedGameType, setSelectedGameType] = useState<ArcadeGameType>("sudoku");
-  const [creating, setCreating] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [defaultGameType, setDefaultGameType] = useState<ArcadeGameType>("ludo");
   const [inviteModalMatch, setInviteModalMatch] = useState<ArcadeMatch | null>(null);
 
   // Auto-load match from URL param ?matchId=XYZ or ?join=XYZ
@@ -102,24 +104,9 @@ function ArcadeContent() {
     };
   }, []);
 
-  const handleCreateMatch = async (type: ArcadeGameType) => {
-    if (!user || creating) return;
-    setCreating(true);
-    try {
-      const matchId = await createArcadeMatch({
-        gameType: type,
-        title: type === "sudoku" ? "1V1 SUDOKU DATA-GRID HACK" : "CYBER LUDO DICE CLASH",
-        hostUid: user.uid,
-        hostHandle: user.handle || "@ANON",
-        hostAvatar: user.photoUrl || user.photoURL,
-        stakes: 50,
-      });
-      setActiveMatchId(matchId);
-    } catch (e: any) {
-      console.error("Failed to create match:", e);
-    } finally {
-      setCreating(false);
-    }
+  const handleOpenCreate = (type: ArcadeGameType) => {
+    setDefaultGameType(type);
+    setCreateModalOpen(true);
   };
 
   const handleJoinMatch = async (matchId: string) => {
@@ -184,8 +171,12 @@ function ArcadeContent() {
           /* ── Active Game Arena View ── */
           <div className="space-y-4">
             <div className="flex items-center justify-between border-b border-neutral-800 pb-2 text-xs flex-wrap gap-2">
-              <span className="text-neutral-400 uppercase tracking-wider">
-                MATCH: {activeMatch.id.slice(0, 8)} • HOST: {activeMatch.hostHandle}
+              <span className="text-neutral-400 uppercase tracking-wider flex items-center gap-2">
+                <span>MATCH: {activeMatch.id.slice(0, 8)}</span>
+                <span>•</span>
+                <span>MODE: {activeMatch.mode === "VS_COMPUTER" ? "🤖 VS AI" : "👥 MULTIPLAYER"}</span>
+                <span>•</span>
+                <span>HOST: {activeMatch.hostHandle}</span>
               </span>
               <div className="flex items-center gap-2">
                 <button
@@ -235,14 +226,14 @@ function ArcadeContent() {
             <div className="border-2 border-white bg-black p-6 space-y-3 relative overflow-hidden shadow-[0_0_30px_rgba(255,255,255,0.08)]">
               <div className="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-widest">
                 <Flame className="w-4 h-4 text-white animate-bounce" />
-                <span>// VOICE-INTEGRATED MULTIPLAYER RETRO GAMING</span>
+                <span>// MULTIPLAYER & SOLO BOT AUDIO GAMING</span>
               </div>
               <h2 className="text-xl sm:text-2xl font-extrabold uppercase tracking-tight text-white leading-tight">
-                Play Retro Games Live While Talking Trash On Live Voice.
+                Play Retro Games Live While Talking Trash On Voice.
               </h2>
               <p className="text-xs text-neutral-300 max-w-2xl leading-relaxed">
-                Invite friends via 1-tap link to join your match and voice channel with zero setup.
-                Compete in real-time 15x15 Cyber Ludo or Sudoku speed battles to earn +100 Aura points!
+                Choose between **Single Player vs Smart Computer AI** or **Multiplayer Battles (2, 3, 4, 6 players)**. 
+                Drop real-time reactions, chat in-game, and earn +100 Aura points!
               </p>
             </div>
 
@@ -263,22 +254,22 @@ function ArcadeContent() {
                         15X15 PHYSICAL CYBER LUDO
                       </h4>
                       <p className="text-xs text-neutral-400 leading-relaxed">
-                        Authentic 15x15 board simulation with 3D physical pip die, pawn captures, safe stars, and live audio chat.
+                        Authentic 15x15 monochrome board with 3D physical pip die, tactical captures, and solo or 2-4 player modes.
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between pt-2 border-t border-neutral-800">
                     <span className="text-[10px] text-neutral-400 font-bold uppercase">
-                      2-4 PLAYERS • +100 AURA
+                      SOLO VS BOT • 2-4 PLAYERS
                     </span>
                     <button
                       type="button"
-                      disabled={creating || !user}
-                      onClick={() => handleCreateMatch("ludo")}
+                      disabled={!user}
+                      onClick={() => handleOpenCreate("ludo")}
                       className="px-5 py-2.5 bg-white text-black font-extrabold text-xs uppercase hover:bg-neutral-200 transition-all active:scale-95 disabled:opacity-40 cursor-pointer shadow-md"
                     >
-                      {creating ? "CREATING..." : "[ CREATE ARENA 🎲 ]"}
+                      [ CONFIGURE & PLAY 🎲 ]
                     </button>
                   </div>
                 </div>
@@ -292,22 +283,22 @@ function ArcadeContent() {
                         1V1 SUDOKU DATA-GRID BATTLE
                       </h4>
                       <p className="text-xs text-neutral-400 leading-relaxed">
-                        Competitive speed puzzle matrix. Race against an opponent to fill numbers with zero mistakes.
+                        Competitive speed puzzle matrix. Race against an AI bot or another player to fill numbers with zero mistakes.
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between pt-2 border-t border-neutral-800">
                     <span className="text-[10px] text-neutral-400 font-bold uppercase">
-                      1V1 HEAD-TO-HEAD • +100 AURA
+                      SOLO VS AI • 1V1 MULTIPLAYER
                     </span>
                     <button
                       type="button"
-                      disabled={creating || !user}
-                      onClick={() => handleCreateMatch("sudoku")}
+                      disabled={!user}
+                      onClick={() => handleOpenCreate("sudoku")}
                       className="px-5 py-2.5 border-2 border-white bg-black text-white hover:bg-white hover:text-black font-extrabold text-xs uppercase transition-all active:scale-95 disabled:opacity-40 cursor-pointer"
                     >
-                      {creating ? "CREATING..." : "[ CREATE MATCH 🧩 ]"}
+                      [ CONFIGURE & PLAY 🧩 ]
                     </button>
                   </div>
                 </div>
@@ -343,7 +334,7 @@ function ArcadeContent() {
                             <span className="text-sm">{m.gameType === "sudoku" ? "🧩" : "🎲"}</span>
                             <span className="font-bold text-xs uppercase text-white">{m.title}</span>
                             <span className="text-[10px] text-neutral-500 border border-neutral-800 px-1.5 py-0.5">
-                              {m.gameType.toUpperCase()}
+                              {m.mode === "VS_COMPUTER" ? "AI BOT" : m.gameType.toUpperCase()}
                             </span>
                           </div>
                           <p className="text-[10px] text-neutral-400 flex items-center gap-2">
@@ -392,6 +383,23 @@ function ArcadeContent() {
           </div>
         )}
       </main>
+
+      {/* Match Configuration Modal */}
+      {user && (
+        <ArcadeCreateModal
+          isOpen={createModalOpen}
+          onClose={() => setCreateModalOpen(false)}
+          user={{
+            uid: user.uid,
+            handle: user.handle || "@ANON",
+            photoUrl: user.photoUrl || user.photoURL,
+          }}
+          defaultGameType={defaultGameType}
+          onMatchCreated={(matchId) => {
+            setActiveMatchId(matchId);
+          }}
+        />
+      )}
 
       {/* Global Invite Modal */}
       {inviteModalMatch && (

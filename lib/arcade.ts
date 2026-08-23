@@ -3,9 +3,9 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * Echo Arcade // Social Audio Gaming Engine
  *
- * $0 Infrastructure real-time multiplayer state synchronization for
+ * $0 Infrastructure real-time multiplayer & AI Bot state synchronization for
  * turn-based and grid games (Sudoku Battle, Cyber Ludo) with integrated
- * voice channels and Aura rewards.
+ * voice channels, real-time chat, and stage-style reaction surge.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -15,15 +15,20 @@ import {
   setDoc,
   getDoc,
   updateDoc,
+  addDoc,
   onSnapshot,
   serverTimestamp,
   increment,
+  query,
+  orderBy,
+  limit,
   type Unsubscribe,
 } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 import { awardAura } from "@/lib/userDoc";
 
 export type ArcadeGameType = "sudoku" | "ludo";
+export type ArcadeMatchMode = "MULTIPLAYER" | "VS_COMPUTER";
 
 // Whitelisted collection in production Firebase
 const ARCADE_COLLECTION = "rooms";
@@ -47,6 +52,7 @@ export interface ArcadePlayer {
   mistakes?: number;
   team?: "RED" | "GREEN" | "BLUE" | "YELLOW";
   ready: boolean;
+  isBot?: boolean;
   joinedAt: number;
 }
 
@@ -85,6 +91,8 @@ export interface ArcadeMatch {
   id: string;
   isArcade?: boolean;
   roomId?: string; // If embedded inside a live audio room
+  mode: ArcadeMatchMode;
+  enableVoice: boolean;
   gameType: ArcadeGameType;
   title: string;
   hostUid: string;
@@ -99,6 +107,23 @@ export interface ArcadeMatch {
   ludoState?: LudoState;
   createdAt: any;
   updatedAt: any;
+}
+
+export interface ArcadeChatMessage {
+  id: string;
+  uid: string;
+  handle: string;
+  avatar?: string;
+  text: string;
+  timestamp: number;
+}
+
+export interface ArcadeReaction {
+  id: string;
+  uid: string;
+  handle: string;
+  emoji: string;
+  timestamp: number;
 }
 
 // ── Sample Valid Sudoku Templates ─────────────────────────────────────────────
@@ -182,7 +207,7 @@ function makeInitialTokens(color: "RED" | "GREEN" | "BLUE" | "YELLOW"): LudoToke
   ];
 }
 
-// ── Create Arcade Match ───────────────────────────────────────────────────────
+// ── Create Arcade Match (Multiplayer or Solo VS Bot) ──────────────────────────
 export async function createArcadeMatch(params: {
   gameType: ArcadeGameType;
   title: string;
@@ -190,11 +215,18 @@ export async function createArcadeMatch(params: {
   hostHandle: string;
   hostAvatar?: string;
   roomId?: string;
+  mode?: ArcadeMatchMode;
+  maxPlayers?: number;
+  enableVoice?: boolean;
   stakes?: number;
 }): Promise<string> {
   const db = getFirebaseDb();
   const matchRef = doc(collection(db, ARCADE_COLLECTION));
   const matchId = matchRef.id;
+
+  const mode = params.mode || "MULTIPLAYER";
+  const enableVoice = params.enableVoice ?? true;
+  const maxPlayers = params.maxPlayers || (params.gameType === "sudoku" ? 2 : 4);
 
   const player: ArcadePlayer = {
     uid: params.hostUid,
@@ -204,8 +236,46 @@ export async function createArcadeMatch(params: {
     mistakes: 0,
     team: params.gameType === "ludo" ? "RED" : undefined,
     ready: true,
+    isBot: false,
     joinedAt: Date.now(),
   };
+
+  const players: { [uid: string]: ArcadePlayer } = {
+    [params.hostUid]: cleanData(player),
+  };
+
+  // If VS Computer, add AI Bots immediately
+  if (mode === "VS_COMPUTER") {
+    if (params.gameType === "ludo") {
+      const botTeams: ("GREEN" | "YELLOW" | "BLUE")[] = ["GREEN", "YELLOW", "BLUE"];
+      const botNames = ["@NEURAL_BOT_01", "@CYBER_AI_02", "@ECHO_BOT_03"];
+      const botCount = Math.min(maxPlayers - 1, 3);
+      for (let i = 0; i < botCount; i++) {
+        const botUid = `bot_${matchId}_${i + 1}`;
+        players[botUid] = {
+          uid: botUid,
+          handle: botNames[i],
+          score: 0,
+          mistakes: 0,
+          team: botTeams[i],
+          ready: true,
+          isBot: true,
+          joinedAt: Date.now(),
+        };
+      }
+    } else if (params.gameType === "sudoku") {
+      const botUid = `bot_${matchId}_ai`;
+      players[botUid] = {
+        uid: botUid,
+        handle: "@NEURAL_SUDOKU_AI",
+        score: 0,
+        mistakes: 0,
+        ready: true,
+        isBot: true,
+        joinedAt: Date.now(),
+      };
+    }
+  }
 
   let sudokuState: SudokuState | undefined;
   let ludoState: LudoState | undefined;
@@ -227,7 +297,7 @@ export async function createArcadeMatch(params: {
       currentTurn: "RED",
       lastDiceRoll: null,
       hasRolled: false,
-      lastActionLog: "Match initiated. RED to roll first.",
+      lastActionLog: mode === "VS_COMPUTER" ? "Match started vs Computer AI! RED to roll first." : "Match initiated. RED to roll first.",
       tokens: {
         RED: makeInitialTokens("RED"),
         GREEN: makeInitialTokens("GREEN"),
@@ -241,15 +311,15 @@ export async function createArcadeMatch(params: {
   const matchData: any = {
     id: matchId,
     isArcade: true,
+    mode,
+    enableVoice,
     gameType: params.gameType,
     title: params.title || (params.gameType === "sudoku" ? "SUDOKU BATTLE" : "CYBER LUDO CLASH"),
     hostUid: params.hostUid,
     hostHandle: params.hostHandle,
-    status: "WAITING",
-    players: {
-      [params.hostUid]: cleanData(player),
-    },
-    maxPlayers: params.gameType === "sudoku" ? 2 : 4,
+    status: mode === "VS_COMPUTER" ? "PLAYING" : "WAITING",
+    players,
+    maxPlayers,
     stakes: params.stakes || 50,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -293,6 +363,7 @@ export async function joinArcadeMatch(
     mistakes: 0,
     team: match.gameType === "ludo" ? freeTeam : undefined,
     ready: true,
+    isBot: false,
     joinedAt: Date.now(),
   };
 
@@ -382,8 +453,9 @@ export async function submitSudokuCell(
     updates.status = "FINISHED";
     updates.winnerUid = playerUid;
     updates.winnerHandle = match.players[playerUid]?.handle || "@ANON";
-    // Award winner Aura reward
-    await awardAura(playerUid, match.stakes * 2 || 100);
+    if (!match.players[playerUid]?.isBot) {
+      await awardAura(playerUid, match.stakes * 2 || 100);
+    }
   }
 
   await updateDoc(matchRef, updates);
@@ -410,7 +482,7 @@ export async function rollLudoDice(matchId: string, playerUid: string): Promise<
   await updateDoc(matchRef, {
     "ludoState.lastDiceRoll": roll,
     "ludoState.hasRolled": true,
-    "ludoState.lastActionLog": `${player.team} rolled a ${roll}!`,
+    "ludoState.lastActionLog": `${player.handle || player.team} rolled a ${roll}!`,
     updatedAt: serverTimestamp(),
   });
 
@@ -418,7 +490,7 @@ export async function rollLudoDice(matchId: string, playerUid: string): Promise<
 }
 
 // Helper to find next player with active team
-function getNextTurn(
+export function getNextTurn(
   current: "RED" | "GREEN" | "BLUE" | "YELLOW",
   players: { [uid: string]: ArcadePlayer }
 ): "RED" | "GREEN" | "BLUE" | "YELLOW" {
@@ -472,7 +544,7 @@ export async function moveLudoToken(
     if (roll === 6) {
       token.stepCount = 1;
       token.boardPosition = LUDO_CONFIG.START_POS[team];
-      actionLog = `${team} deployed Token ${tokenId + 1} onto the track!`;
+      actionLog = `${player.handle || team} deployed Token ${tokenId + 1} onto the track!`;
     } else {
       throw new Error("Need a 6 to deploy token");
     }
@@ -488,7 +560,7 @@ export async function moveLudoToken(
       token.isHome = true;
       token.boardPosition = 999;
       reachedHome = true;
-      actionLog = `🏆 ${team} Token ${tokenId + 1} REACHED THE HOME TRIANGLE!`;
+      actionLog = `🏆 ${player.handle || team} Token ${tokenId + 1} REACHED THE HOME TRIANGLE!`;
     } else if (newStep <= 51) {
       const newPos = (LUDO_CONFIG.START_POS[team] + newStep - 1) % 52;
       token.boardPosition = newPos;
@@ -504,7 +576,7 @@ export async function moveLudoToken(
             const oppTokens = tokens[oTeam].map((opp) => {
               if (opp.boardPosition === newPos && !opp.isHome) {
                 captured = true;
-                actionLog = `⚔️ ${team} CAPTURED ${oTeam}'s Token on square ${newPos}!`;
+                actionLog = `⚔️ ${player.handle || team} CAPTURED ${oTeam}'s Token on square ${newPos}!`;
                 return { ...opp, stepCount: 0, boardPosition: -1 };
               }
               return opp;
@@ -514,12 +586,12 @@ export async function moveLudoToken(
         }
       }
       if (!captured) {
-        actionLog = `${team} moved Token ${tokenId + 1} to track square ${newPos}.`;
+        actionLog = `${player.handle || team} moved Token ${tokenId + 1} to track square ${newPos}.`;
       }
     } else {
       // Home stretch (52..56)
       token.boardPosition = 100 + (newStep - 51);
-      actionLog = `${team} moved Token ${tokenId + 1} into Home Corridor (${newStep - 51}/5).`;
+      actionLog = `${player.handle || team} moved Token ${tokenId + 1} into Home Corridor (${newStep - 51}/5).`;
     }
   }
 
@@ -544,7 +616,9 @@ export async function moveLudoToken(
     updates.status = "FINISHED";
     updates.winnerUid = playerUid;
     updates.winnerHandle = player.handle;
-    await awardAura(playerUid, match.stakes * 2 || 100);
+    if (!player.isBot) {
+      await awardAura(playerUid, match.stakes * 2 || 100);
+    }
   }
 
   await updateDoc(matchRef, updates);
@@ -570,7 +644,92 @@ export async function passLudoTurn(matchId: string, playerUid: string): Promise<
     "ludoState.currentTurn": nextTurn,
     "ludoState.hasRolled": false,
     "ludoState.lastDiceRoll": null,
-    "ludoState.lastActionLog": `${team} had no valid moves. Passed turn to ${nextTurn}.`,
+    "ludoState.lastActionLog": `${player.handle || team} had no valid moves. Passed turn to ${nextTurn}.`,
     updatedAt: serverTimestamp(),
   });
+}
+
+// ── In-Game Live Chat Engine ───────────────────────────────────────────────────
+export async function sendArcadeChatMessage(
+  matchId: string,
+  user: { uid: string; handle: string; avatar?: string },
+  text: string
+): Promise<void> {
+  const db = getFirebaseDb();
+  const msgRef = collection(db, ARCADE_COLLECTION, matchId, "chat_messages");
+  await addDoc(msgRef, {
+    uid: user.uid,
+    handle: user.handle,
+    avatar: user.avatar || "",
+    text: text.trim(),
+    timestamp: Date.now(),
+  });
+}
+
+export function subscribeArcadeChat(
+  matchId: string,
+  callback: (messages: ArcadeChatMessage[]) => void
+): Unsubscribe {
+  const db = getFirebaseDb();
+  const msgRef = collection(db, ARCADE_COLLECTION, matchId, "chat_messages");
+  const q = query(msgRef, orderBy("timestamp", "asc"), limit(50));
+
+  return onSnapshot(
+    q,
+    (snap) => {
+      const msgs: ArcadeChatMessage[] = [];
+      snap.forEach((doc) => {
+        msgs.push({ id: doc.id, ...doc.data() } as ArcadeChatMessage);
+      });
+      callback(msgs);
+    },
+    (err) => {
+      console.warn("[Arcade] chat listener note:", err.message);
+      callback([]);
+    }
+  );
+}
+
+// ── Stage-Style Reaction Surge Engine ─────────────────────────────────────────
+export async function sendArcadeReaction(
+  matchId: string,
+  user: { uid: string; handle: string },
+  emoji: string
+): Promise<void> {
+  const db = getFirebaseDb();
+  const reactionRef = collection(db, ARCADE_COLLECTION, matchId, "reactions");
+  await addDoc(reactionRef, {
+    uid: user.uid,
+    handle: user.handle,
+    emoji,
+    timestamp: Date.now(),
+  });
+}
+
+export function subscribeArcadeReactions(
+  matchId: string,
+  callback: (reaction: ArcadeReaction) => void
+): Unsubscribe {
+  const db = getFirebaseDb();
+  const reactionRef = collection(db, ARCADE_COLLECTION, matchId, "reactions");
+  const q = query(reactionRef, orderBy("timestamp", "desc"), limit(5));
+
+  let initialLoad = true;
+  return onSnapshot(
+    q,
+    (snap) => {
+      if (initialLoad) {
+        initialLoad = false;
+        return;
+      }
+      snap.docChanges().forEach((change) => {
+        if (change.type === "added") {
+          callback({ id: change.doc.id, ...change.doc.data() } as ArcadeReaction);
+        }
+      });
+    },
+    (err) => {
+      console.warn("[Arcade] reaction listener note:", err.message);
+    }
+  );
 }

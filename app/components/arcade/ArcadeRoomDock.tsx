@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "@/app/components/AuthProvider";
 import { useSearchParams } from "next/navigation";
 import {
-  createArcadeMatch,
   joinArcadeMatch,
   subscribeArcadeMatch,
   type ArcadeMatch,
@@ -13,6 +12,7 @@ import {
 import SudokuGame from "./SudokuGame";
 import LudoGame from "./LudoGame";
 import ArcadeInviteModal from "./ArcadeInviteModal";
+import ArcadeCreateModal from "./ArcadeCreateModal";
 import { Gamepad2, X, Users, Trophy, Play, Sparkles, Share2, Mic2 } from "lucide-react";
 
 interface ArcadeRoomDockProps {
@@ -27,7 +27,7 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
   const [activeMatchId, setActiveMatchId] = useState<string | null>(null);
   const [match, setMatch] = useState<ArcadeMatch | null>(null);
   const [selectedGameType, setSelectedGameType] = useState<ArcadeGameType>("ludo");
-  const [creating, setCreating] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
 
   // Auto-open if matchId URL param exists
@@ -47,27 +47,6 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
     });
     return () => unsub();
   }, [activeMatchId]);
-
-  const handleLaunchGame = async () => {
-    if (!user || creating) return;
-    setCreating(true);
-    try {
-      const matchId = await createArcadeMatch({
-        gameType: selectedGameType,
-        title: `${selectedGameType.toUpperCase()} ARENA // ROOM ${roomId.slice(0, 5)}`,
-        hostUid: user.uid,
-        hostHandle: user.handle || "@ANON",
-        hostAvatar: user.photoUrl || user.photoURL,
-        roomId,
-        stakes: 50,
-      });
-      setActiveMatchId(matchId);
-    } catch (e) {
-      console.error("Failed to create match:", e);
-    } finally {
-      setCreating(false);
-    }
-  };
 
   const handleJoinGame = async () => {
     if (!user || !activeMatchId) return;
@@ -157,7 +136,7 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
               }`}
             >
               <div className="text-xs uppercase font-extrabold text-white">🎲 15X15 CYBER LUDO</div>
-              <div className="text-[10px] text-neutral-400 mt-1">2-4 Player Physical Board Clash</div>
+              <div className="text-[10px] text-neutral-400 mt-1">Solo Bot or 2-4 Player Board Clash</div>
             </button>
 
             <button
@@ -170,18 +149,18 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
               }`}
             >
               <div className="text-xs uppercase font-extrabold text-white">🧩 1V1 SUDOKU BATTLE</div>
-              <div className="text-[10px] text-neutral-400 mt-1">1v1 Speed Data-Grid Hack</div>
+              <div className="text-[10px] text-neutral-400 mt-1">Solo AI or 1v1 Data-Grid Race</div>
             </button>
           </div>
 
           <button
             type="button"
-            disabled={creating || !user}
-            onClick={handleLaunchGame}
+            disabled={!user}
+            onClick={() => setCreateModalOpen(true)}
             className="w-full py-3 border-2 border-white bg-white text-black hover:bg-black hover:text-white font-mono font-extrabold text-xs uppercase transition-all active:scale-95 disabled:opacity-40 cursor-pointer flex items-center justify-center gap-2 shadow-xl"
           >
             <Play className="w-3.5 h-3.5 fill-current" />
-            <span>{creating ? "INITIALIZING ARENA..." : `[ START ${selectedGameType.toUpperCase()} ON STAGE ]`}</span>
+            <span>[ CONFIGURE & START {selectedGameType.toUpperCase()} ON STAGE ]</span>
           </button>
         </div>
       ) : (
@@ -206,6 +185,24 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
             </button>
           )}
         </div>
+      )}
+
+      {/* Match Create Modal */}
+      {user && (
+        <ArcadeCreateModal
+          isOpen={createModalOpen}
+          onClose={() => setCreateModalOpen(false)}
+          user={{
+            uid: user.uid,
+            handle: user.handle || "@ANON",
+            photoUrl: user.photoUrl || user.photoURL,
+          }}
+          defaultGameType={selectedGameType}
+          roomId={roomId}
+          onMatchCreated={(matchId) => {
+            setActiveMatchId(matchId);
+          }}
+        />
       )}
 
       {/* Invite Modal */}

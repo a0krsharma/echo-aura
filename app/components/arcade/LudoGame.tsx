@@ -10,8 +10,10 @@ import {
   type ArcadeMatch,
   type LudoToken,
 } from "@/lib/arcade";
-import { Dices, Trophy, Star, Shield, Sparkles, CircleDot, Share2, Users } from "lucide-react";
+import { Dices, Trophy, Star, Shield, Sparkles, CircleDot, Share2, Users, Bot } from "lucide-react";
 import ArcadeInviteModal from "./ArcadeInviteModal";
+import ArcadeSocialDeck from "./ArcadeSocialDeck";
+import { executeLudoBotTurn } from "@/lib/arcadeBots";
 
 interface LudoGameProps {
   match: ArcadeMatch;
@@ -81,6 +83,18 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
   }
 
   const hasValidMoves = validTokenIdsToMove.length > 0;
+
+  // Auto-trigger bot turns if active player is a bot
+  useEffect(() => {
+    if (match.status !== "PLAYING" || !ludoState) return;
+    const currentTurn = ludoState.currentTurn;
+    const activePlayer = Object.values(match.players || {}).find(
+      (p) => p.team === currentTurn && p.isBot
+    );
+    if (activePlayer) {
+      executeLudoBotTurn(match);
+    }
+  }, [ludoState?.currentTurn, ludoState?.hasRolled, match.status]);
 
   // Roll dice handler
   const handleRoll = async () => {
@@ -661,6 +675,9 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
           </p>
         </div>
       )}
+
+      {/* ── Decoupled Social Audio & Reaction Bar ── */}
+      <ArcadeSocialDeck match={match} currentUid={currentUid} />
     </div>
   );
 }

@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { soundSynth } from "@/lib/soundSynthesizer";
 import { submitSudokuCell, type ArcadeMatch } from "@/lib/arcade";
-import { Trophy, Zap, AlertTriangle, CheckCircle2, User, Share2 } from "lucide-react";
+import { Trophy, Zap, AlertTriangle, CheckCircle2, User, Share2, Bot } from "lucide-react";
 import ArcadeInviteModal from "./ArcadeInviteModal";
+import ArcadeSocialDeck from "./ArcadeSocialDeck";
+import { executeSudokuBotMove } from "@/lib/arcadeBots";
 
 interface SudokuGameProps {
   match: ArcadeMatch;
@@ -17,6 +19,15 @@ export default function SudokuGame({ match, currentUid }: SudokuGameProps) {
   const [submitting, setSubmitting] = useState(false);
   const [lastFeedback, setLastFeedback] = useState<{ r: number; c: number; correct: boolean } | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
+
+  // Auto-trigger bot moves in VS Computer mode
+  useEffect(() => {
+    if (match.status !== "PLAYING" || !match.sudokuState) return;
+    const botPlayer = Object.values(match.players || {}).find((p) => p.isBot);
+    if (botPlayer) {
+      executeSudokuBotMove(match);
+    }
+  }, [match.sudokuState?.completedCount, match.status]);
 
   const sudokuState = match.sudokuState;
   if (!sudokuState) {
@@ -198,6 +209,9 @@ export default function SudokuGame({ match, currentUid }: SudokuGameProps) {
           </p>
         </div>
       )}
+
+      {/* ── Decoupled Social Audio & Reaction Bar ── */}
+      <ArcadeSocialDeck match={match} currentUid={currentUid} />
     </div>
   );
 }
