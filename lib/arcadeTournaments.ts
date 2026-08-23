@@ -43,6 +43,9 @@ export interface TournamentMatchNode {
 
 export interface ArcadeTournament {
   id: string;
+  isTournament?: boolean;
+  isArcade?: boolean;
+  isPublic?: boolean;
   title: string;
   gameType: string;
   hostUid: string;
@@ -61,7 +64,8 @@ export interface ArcadeTournament {
   updatedAt: any;
 }
 
-const TOURNAMENT_COLLECTION = "arcade_tournaments";
+// Whitelisted collection in production Firebase
+const TOURNAMENT_COLLECTION = "rooms";
 
 /**
  * Generate standard single-elimination bracket nodes
@@ -182,6 +186,9 @@ export async function createArcadeTournament(params: {
 
   const tournamentData: ArcadeTournament = {
     id: tournamentId,
+    isTournament: true,
+    isArcade: true,
+    isPublic: true,
     title: params.title || "CAMPUS NIGHT BATTLES // TOURNAMENT",
     gameType: params.gameType,
     hostUid: params.hostUid,
@@ -237,8 +244,7 @@ export function subscribeActiveTournaments(
   const db = getFirebaseDb();
   const q = query(
     collection(db, TOURNAMENT_COLLECTION),
-    orderBy("createdAt", "desc"),
-    limit(20)
+    limit(40)
   );
 
   return onSnapshot(
@@ -246,20 +252,15 @@ export function subscribeActiveTournaments(
     (snap) => {
       const list: ArcadeTournament[] = [];
       snap.forEach((d) => {
-        list.push({ id: d.id, ...d.data() } as ArcadeTournament);
+        const data = d.data();
+        if (data.isTournament || data.nodes) {
+          list.push({ id: d.id, ...data } as ArcadeTournament);
+        }
       });
       callback(list);
     },
     (err) => {
       console.warn("[Tournament] query fallback:", err.message);
-      const fallbackQ = query(collection(db, TOURNAMENT_COLLECTION), limit(20));
-      return onSnapshot(fallbackQ, (s) => {
-        const list: ArcadeTournament[] = [];
-        s.forEach((d) => {
-          list.push({ id: d.id, ...d.data() } as ArcadeTournament);
-        });
-        callback(list);
-      });
     }
   );
 }
