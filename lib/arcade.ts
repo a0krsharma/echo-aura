@@ -37,9 +37,9 @@ export interface ArcadePlayer {
 }
 
 export interface SudokuState {
-  initialGrid: number[][];
-  currentGrid: number[][];
-  solutionGrid: number[][];
+  initialGridStr: string;
+  currentGridStr: string;
+  solutionGridStr: string;
   difficulty: "EASY" | "MEDIUM" | "HARD";
   completedCount: number;
   totalEmpty: number;
@@ -186,9 +186,9 @@ export async function createArcadeMatch(params: {
     let emptyCount = 0;
     tmpl.initial.forEach((row) => row.forEach((c) => { if (c === 0) emptyCount++; }));
     sudokuState = {
-      initialGrid: tmpl.initial,
-      currentGrid: tmpl.initial.map((r) => [...r]),
-      solutionGrid: tmpl.solution,
+      initialGridStr: JSON.stringify(tmpl.initial),
+      currentGridStr: JSON.stringify(tmpl.initial),
+      solutionGridStr: JSON.stringify(tmpl.solution),
       difficulty: "MEDIUM",
       completedCount: 0,
       totalEmpty: emptyCount,
@@ -332,17 +332,22 @@ export async function submitSudokuCell(
   const match = snap.data() as ArcadeMatch;
   if (!match.sudokuState) throw new Error("Not a sudoku match");
 
-  const expected = match.sudokuState.solutionGrid[row][col];
+  const initialGrid: number[][] = JSON.parse(match.sudokuState.initialGridStr || "[]");
+  const currentGrid: number[][] = JSON.parse(match.sudokuState.currentGridStr || "[]");
+  const solutionGrid: number[][] = JSON.parse(match.sudokuState.solutionGridStr || "[]");
+
+  const expected = solutionGrid[row]?.[col];
   const isCorrect = val === expected;
 
-  const currentGrid = match.sudokuState.currentGrid.map((r) => [...r]);
-  currentGrid[row][col] = isCorrect ? val : currentGrid[row][col];
+  if (isCorrect) {
+    currentGrid[row][col] = val;
+  }
 
   // Count completions
   let completedCount = 0;
   for (let r = 0; r < 9; r++) {
     for (let c = 0; c < 9; c++) {
-      if (currentGrid[r][c] === match.sudokuState.solutionGrid[r][c] && match.sudokuState.initialGrid[r][c] === 0) {
+      if (currentGrid[r][c] === solutionGrid[r][c] && initialGrid[r][c] === 0) {
         completedCount++;
       }
     }
@@ -351,7 +356,7 @@ export async function submitSudokuCell(
   const isComplete = completedCount >= match.sudokuState.totalEmpty;
 
   const updates: any = {
-    "sudokuState.currentGrid": currentGrid,
+    "sudokuState.currentGridStr": JSON.stringify(currentGrid),
     "sudokuState.completedCount": completedCount,
     updatedAt: serverTimestamp(),
   };

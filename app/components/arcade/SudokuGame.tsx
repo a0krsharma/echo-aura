@@ -21,8 +21,8 @@ export default function SudokuGame({ match, currentUid }: SudokuGameProps) {
     return <div className="text-white font-mono p-4">Loading Sudoku grid...</div>;
   }
 
-  const grid = sudokuState.currentGrid;
-  const initialGrid = sudokuState.initialGrid;
+  const grid: number[][] = JSON.parse(sudokuState.currentGridStr || "[]");
+  const initialGrid: number[][] = JSON.parse(sudokuState.initialGridStr || "[]");
   const players = Object.values(match.players || {});
   const currentPlayer = match.players[currentUid];
 

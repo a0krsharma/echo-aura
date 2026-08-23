@@ -41,6 +41,7 @@ import {
   Headphones,
   Cpu,
   Sparkles,
+  Gamepad2,
 } from "lucide-react";
 
 // ─── Inner shell (needs AuthProvider above it) ───────────────────
@@ -142,6 +143,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
   const drawerNav = [
     { label: "[ FREQUENCY ]",  href: "/",               icon: Radio      },
     { label: "[ WAVES ]",      href: "/waves",          icon: Waves      },
+    { label: "[ ARCADE ]",     href: "/arcade",         icon: Gamepad2   },
     { label: "[ STUDIO ]",     href: "/studio",         icon: Mic2       },
     { label: "[ STAGE ]",      href: "/clash",          icon: Swords     },
     { label: "[ ROOMS ]",      href: "/rooms",          icon: Users      },
@@ -307,6 +309,22 @@ function ShellContent({ children }: { children: React.ReactNode }) {
 
       {/* RIGHT SIDEBAR — desktop lg+ (hidden on /room/ pages to give stage full focus) */}
       {!pathname.startsWith("/room/") && <RightSidebar />}
+
+      {/* FLOATING ARCADE GAME LAUNCHER */}
+      {!pathname.startsWith("/arcade") && !pathname.startsWith("/room") && !pathname.startsWith("/stage") && (
+        <Link
+          href="/arcade"
+          className="fixed bottom-36 md:bottom-20 right-4 md:right-6 z-40 bg-black text-white hover:bg-white hover:text-black border-2 border-white p-3.5 rounded-full shadow-2xl transition-all duration-200 hover:scale-110 flex items-center justify-center gap-2 group cursor-pointer"
+          title="Echo Arcade Gaming Lounge"
+        >
+          <Gamepad2 className="w-5 h-5 group-hover:scale-110 transition-transform" />
+          <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 ease-in-out whitespace-nowrap font-mono text-xs font-bold tracking-widest uppercase">
+            [ ARCADE ]
+          </span>
+          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping"></span>
+          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full"></span>
+        </Link>
+      )}
 
       {/* FLOATING WIRE CHAT LAUNCHER (Bottom Right Corner - hidden on wire, room, stage, waves) */}
       {!pathname.startsWith("/wire") && !pathname.startsWith("/room") && !pathname.startsWith("/stage") && !pathname.startsWith("/waves") && (
