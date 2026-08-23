@@ -197,11 +197,11 @@ function ArcadeContent() {
     if (
       activeMatch &&
       user &&
-      !activeMatch.players[user.uid] &&
+      !activeMatch.players?.[user.uid] &&
       activeMatch.status !== "FINISHED"
     ) {
       const currentCount = Object.keys(activeMatch.players || {}).length;
-      if (currentCount < activeMatch.maxPlayers) {
+      if (currentCount < (activeMatch.maxPlayers || 4)) {
         handleJoinMatch(activeMatch.id);
       }
     }
@@ -568,7 +568,7 @@ function ArcadeContent() {
               <MastermindGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
             )}
 
-            {user && !activeMatch.players[user.uid] && activeMatch.status !== "FINISHED" && (
+            {user && !activeMatch.players?.[user.uid] && activeMatch.status !== "FINISHED" && (
               <button
                 type="button"
                 onClick={() => handleJoinMatch(activeMatch.id)}
@@ -823,7 +823,7 @@ function ArcadeContent() {
                           <button
                             type="button"
                             onClick={() => {
-                              if (m.players[user?.uid || ""]) {
+                              if (m.players?.[user?.uid || ""]) {
                                 setActiveMatchId(m.id);
                               } else {
                                 handleJoinMatch(m.id);
@@ -831,7 +831,7 @@ function ArcadeContent() {
                             }}
                             className="px-4 py-2 border-2 border-white hover:bg-white hover:text-black font-extrabold text-xs uppercase transition-all cursor-pointer"
                           >
-                            {m.players[user?.uid || ""]
+                            {m.players?.[user?.uid || ""]
                               ? "[ RESUME ]"
                               : isFull
                               ? "[ SPECTATE ]"

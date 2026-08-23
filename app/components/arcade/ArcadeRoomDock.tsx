@@ -410,7 +410,7 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
           )}
 
           {/* Join button if spectator */}
-          {user && !match.players[user.uid] && match.status !== "FINISHED" && (
+          {user && !match?.players?.[user.uid] && match?.status !== "FINISHED" && (
             <button
               type="button"
               onClick={handleJoinGame}

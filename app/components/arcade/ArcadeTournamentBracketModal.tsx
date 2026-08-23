@@ -243,7 +243,7 @@ export default function ArcadeTournamentBracketModal({
                 <span>{copied ? "COPIED!" : "COPY LINK"}</span>
               </button>
 
-              {!activeTournament.registeredPlayers[currentUid] && activeTournament.status === "REGISTRATION" && (
+              {!activeTournament?.registeredPlayers?.[currentUid] && activeTournament?.status === "REGISTRATION" && (
                 <button
                   type="button"
                   onClick={() => handleJoinSlot()}
