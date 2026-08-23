@@ -10,9 +10,10 @@ import {
   type ArcadeMatch,
   type LudoToken,
 } from "@/lib/arcade";
-import { Dices, Trophy, Star, Shield, Sparkles, CircleDot, Share2, Users, Bot } from "lucide-react";
+import { Dices, Trophy, Star, Shield, Sparkles, CircleDot, Share2, Users, Bot, HelpCircle } from "lucide-react";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
+import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
 import { executeLudoBotTurn } from "@/lib/arcadeBots";
 
 interface LudoGameProps {
@@ -54,6 +55,7 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
   const [rolling, setRolling] = useState(false);
   const [movingTokenId, setMovingTokenId] = useState<number | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
 
   const ludoState = match.ludoState;
   if (!ludoState) {
@@ -676,7 +678,26 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
         </div>
       )}
 
+      {/* Floating Bottom-Right [ ❓ RULES ] Button for In-Game Help */}
+      <div className="fixed bottom-4 right-4 z-40">
+        <button
+          type="button"
+          onClick={() => setRulesOpen(true)}
+          className="px-3.5 py-2 bg-black border-2 border-emerald-400 text-emerald-300 hover:bg-emerald-400 hover:text-black font-black text-xs uppercase transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] flex items-center gap-1.5 rounded-full cursor-pointer hover:scale-105"
+        >
+          <HelpCircle className="w-4 h-4" />
+          <span>[ ❓ LUDO RULES ]</span>
+        </button>
+      </div>
+
+      <ArcadeGameRulesModal
+        isOpen={rulesOpen}
+        onClose={() => setRulesOpen(false)}
+        initialGameType="ludo"
+      />
+
       {/* ── Decoupled Social Audio & Reaction Bar ── */}
+      <ArcadeInviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} match={match} />
       <ArcadeSocialDeck match={match} currentUid={currentUid} />
     </div>
   );

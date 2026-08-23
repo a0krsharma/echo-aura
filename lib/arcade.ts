@@ -2608,7 +2608,8 @@ export async function playBlackjackAction(
 export async function playUnoCard(
   matchId: string,
   playerUid: string,
-  card: UnoCard
+  card: UnoCard,
+  chosenWildColor?: "RED" | "BLUE" | "GREEN" | "YELLOW"
 ): Promise<{ won: boolean }> {
   const db = getFirebaseDb();
   const matchRef = doc(db, ARCADE_COLLECTION, matchId);
@@ -2629,12 +2630,42 @@ export async function playUnoCard(
 
   const won = playerHand.length === 0;
   const players = Object.keys(match.players || {});
-  const nextTurnUid = players.find((u) => u !== playerUid) || playerUid;
+  const nextPlayerUid = players.find((u) => u !== playerUid) || playerUid;
+
+  // Final discard top card (if wild, use the chosen color)
+  const discardCard: UnoCard = {
+    color: card.color === "WILD" && chosenWildColor ? chosenWildColor : card.color,
+    value: card.value,
+  };
+
+  // Special card penalties
+  const colors: ("RED" | "BLUE" | "GREEN" | "YELLOW")[] = ["RED", "BLUE", "GREEN", "YELLOW"];
+  const values = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+2", "SKIP"];
+
+  if (card.value === "+2" && nextPlayerUid !== playerUid) {
+    const oppHand = hands[nextPlayerUid] || [];
+    for (let i = 0; i < 2; i++) {
+      oppHand.push({
+        color: colors[Math.floor(Math.random() * colors.length)],
+        value: values[Math.floor(Math.random() * values.length)],
+      });
+    }
+    hands[nextPlayerUid] = oppHand;
+  } else if (card.value === "+4" && nextPlayerUid !== playerUid) {
+    const oppHand = hands[nextPlayerUid] || [];
+    for (let i = 0; i < 4; i++) {
+      oppHand.push({
+        color: colors[Math.floor(Math.random() * colors.length)],
+        value: values[Math.floor(Math.random() * values.length)],
+      });
+    }
+    hands[nextPlayerUid] = oppHand;
+  }
 
   const updates: any = {
-    "unoState.discardTop": card,
+    "unoState.discardTop": discardCard,
     "unoState.handsStr": JSON.stringify(hands),
-    "unoState.currentTurnUid": nextTurnUid,
+    "unoState.currentTurnUid": nextPlayerUid,
     "unoState.lastActionLog": `${match.players[playerUid]?.handle || "Player"} played [${card.color} ${card.value}]!`,
     updatedAt: serverTimestamp(),
   };
@@ -2648,6 +2679,48 @@ export async function playUnoCard(
 
   await updateDoc(matchRef, updates);
   return { won };
+}
+
+export async function drawUnoCard(
+  matchId: string,
+  playerUid: string
+): Promise<{ drawnCard: UnoCard }> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+  if (!match.unoState) throw new Error("Not an uno match");
+
+  const us = match.unoState;
+  const hands: Record<string, UnoCard[]> = JSON.parse(us.handsStr || "{}");
+  const playerHand = hands[playerUid] || [];
+
+  const colors: ("RED" | "BLUE" | "GREEN" | "YELLOW")[] = ["RED", "BLUE", "GREEN", "YELLOW"];
+  const values = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+2", "SKIP", "REVERSE"];
+  const isWild = Math.random() < 0.1;
+
+  const drawn: UnoCard = isWild
+    ? { color: "WILD", value: Math.random() < 0.5 ? "WILD" : "+4" }
+    : {
+        color: colors[Math.floor(Math.random() * colors.length)],
+        value: values[Math.floor(Math.random() * values.length)],
+      };
+
+  playerHand.push(drawn);
+  hands[playerUid] = playerHand;
+
+  const players = Object.keys(match.players || {});
+  const nextPlayerUid = players.find((u) => u !== playerUid) || playerUid;
+
+  await updateDoc(matchRef, {
+    "unoState.handsStr": JSON.stringify(hands),
+    "unoState.currentTurnUid": nextPlayerUid,
+    "unoState.lastActionLog": `${match.players[playerUid]?.handle || "Player"} drew a card from the deck!`,
+    updatedAt: serverTimestamp(),
+  });
+
+  return { drawnCard: drawn };
 }
 
 // ── Liar's Dice Actions ───────────────────────────────────────────────────────

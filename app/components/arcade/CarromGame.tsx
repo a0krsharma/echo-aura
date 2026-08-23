@@ -5,7 +5,8 @@ import { soundSynth } from "@/lib/soundSynthesizer";
 import { fireCarromShot, type ArcadeMatch, type CarromPiece } from "@/lib/arcade";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
-import { Trophy, Share2, CircleDot } from "lucide-react";
+import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
+import { Trophy, Share2, CircleDot, HelpCircle } from "lucide-react";
 
 interface CarromGameProps {
   match: ArcadeMatch;
@@ -27,6 +28,7 @@ const POCKET_RADIUS = 24;
 
 export default function CarromGame({ match, currentUid }: CarromGameProps) {
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const cs = match.carromState;
@@ -369,6 +371,24 @@ export default function CarromGame({ match, currentUid }: CarromGameProps) {
           </p>
         </div>
       )}
+
+      {/* Floating Bottom-Right [ ❓ RULES ] Button for In-Game Help */}
+      <div className="fixed bottom-4 right-4 z-40">
+        <button
+          type="button"
+          onClick={() => setRulesOpen(true)}
+          className="px-3.5 py-2 bg-black border-2 border-emerald-400 text-emerald-300 hover:bg-emerald-400 hover:text-black font-black text-xs uppercase transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] flex items-center gap-1.5 rounded-full cursor-pointer hover:scale-105"
+        >
+          <HelpCircle className="w-4 h-4" />
+          <span>[ ❓ CARROM RULES ]</span>
+        </button>
+      </div>
+
+      <ArcadeGameRulesModal
+        isOpen={rulesOpen}
+        onClose={() => setRulesOpen(false)}
+        initialGameType="carrom"
+      />
 
       <ArcadeInviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} match={match} />
       <ArcadeSocialDeck match={match} currentUid={currentUid} />

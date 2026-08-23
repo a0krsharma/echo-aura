@@ -5,7 +5,8 @@ import { soundSynth } from "@/lib/soundSynthesizer";
 import { betPoker, type ArcadeMatch } from "@/lib/arcade";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
-import { Trophy, Share2, Sparkles, CircleDollarSign } from "lucide-react";
+import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
+import { Trophy, Share2, Sparkles, CircleDollarSign, HelpCircle } from "lucide-react";
 
 interface PokerGameProps {
   match: ArcadeMatch;
@@ -15,6 +16,7 @@ interface PokerGameProps {
 
 export default function PokerGame({ match, currentUid }: PokerGameProps) {
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const ps = match.pokerState;
   if (!ps) return <div className="text-white font-mono p-4">Loading Poker Table...</div>;
 
@@ -148,6 +150,24 @@ export default function PokerGame({ match, currentUid }: PokerGameProps) {
           </p>
         </div>
       )}
+
+      {/* Floating Bottom-Right [ ❓ RULES ] Button for In-Game Help */}
+      <div className="fixed bottom-4 right-4 z-40">
+        <button
+          type="button"
+          onClick={() => setRulesOpen(true)}
+          className="px-3.5 py-2 bg-black border-2 border-emerald-400 text-emerald-300 hover:bg-emerald-400 hover:text-black font-black text-xs uppercase transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] flex items-center gap-1.5 rounded-full cursor-pointer hover:scale-105"
+        >
+          <HelpCircle className="w-4 h-4" />
+          <span>[ ❓ POKER RULES ]</span>
+        </button>
+      </div>
+
+      <ArcadeGameRulesModal
+        isOpen={rulesOpen}
+        onClose={() => setRulesOpen(false)}
+        initialGameType="poker"
+      />
 
       <ArcadeInviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} match={match} />
       <ArcadeSocialDeck match={match} currentUid={currentUid} />
