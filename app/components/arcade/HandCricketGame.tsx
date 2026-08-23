@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { soundSynth } from "@/lib/soundSynthesizer";
 import { throwHandCricketNumber, type ArcadeMatch } from "@/lib/arcade";
+import { executeHandCricketBotTurn } from "@/lib/arcadeBots";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
 import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
@@ -20,6 +21,15 @@ export default function HandCricketGame({ match, currentUid }: HandCricketGamePr
   const [selectedNum, setSelectedNum] = useState<number | null>(null);
 
   const hcs = match.handCricketState;
+
+  // Trigger AI Bot Turn in VS_COMPUTER mode
+  useEffect(() => {
+    if (!hcs || match.status !== "PLAYING" || match.mode !== "VS_COMPUTER") return;
+    const botPlayer = Object.values(match.players || {}).find((p) => p.isBot);
+    if (botPlayer) {
+      executeHandCricketBotTurn(match);
+    }
+  }, [match, hcs?.currentBatsmanChoice, hcs?.currentBowlerChoice]);
   if (!hcs) return <div className="text-white font-mono p-4">Loading Hand Cricket...</div>;
 
   const isBatsman = currentUid === hcs.batsmanUid;

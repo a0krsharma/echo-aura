@@ -766,7 +766,7 @@ export async function createArcadeMatch(params: {
     [params.hostUid]: cleanData(hostPlayer),
   };
 
-  // If VS Computer, instantiate AI Bots
+  // If VS Computer, instantiate AI Bots for all game modes
   if (mode === "VS_COMPUTER") {
     if (params.gameType === "ludo") {
       const botTeams: ("GREEN" | "YELLOW" | "BLUE")[] = ["GREEN", "YELLOW", "BLUE"];
@@ -785,47 +785,29 @@ export async function createArcadeMatch(params: {
           joinedAt: Date.now(),
         };
       }
-    } else if (params.gameType === "chess") {
-      const botUid = `bot_${matchId}_chess`;
-      players[botUid] = {
-        uid: botUid,
-        handle: "@GRANDMASTER_AI",
-        score: 0,
-        mistakes: 0,
-        team: "BLACK",
-        ready: true,
-        isBot: true,
-        joinedAt: Date.now(),
-      };
-    } else if (params.gameType === "connect4") {
-      const botUid = `bot_${matchId}_c4`;
-      players[botUid] = {
-        uid: botUid,
-        handle: "@CYBER_C4_BOT",
-        score: 0,
-        mistakes: 0,
-        ready: true,
-        isBot: true,
-        joinedAt: Date.now(),
-      };
-    } else if (params.gameType === "battleship") {
-      const botUid = `bot_${matchId}_naval`;
-      players[botUid] = {
-        uid: botUid,
-        handle: "@RADAR_ADMIRAL_AI",
-        score: 0,
-        mistakes: 0,
-        ready: true,
-        isBot: true,
-        joinedAt: Date.now(),
-      };
-    } else if (params.gameType === "sudoku") {
+    } else if (params.gameType === "raja_mantri") {
+      const botNames = ["@CHIT_AI_01", "@CHIT_AI_02", "@CHIT_AI_03"];
+      for (let i = 0; i < 3; i++) {
+        const botUid = `bot_${matchId}_chit_${i + 1}`;
+        players[botUid] = {
+          uid: botUid,
+          handle: botNames[i],
+          score: 0,
+          mistakes: 0,
+          ready: true,
+          isBot: true,
+          joinedAt: Date.now(),
+        };
+      }
+    } else {
       const botUid = `bot_${matchId}_ai`;
+      const botName = `@CYBER_AI_${params.gameType.toUpperCase().slice(0, 4)}`;
       players[botUid] = {
         uid: botUid,
-        handle: "@NEURAL_SUDOKU_AI",
+        handle: botName,
         score: 0,
         mistakes: 0,
+        team: params.gameType === "chess" ? "BLACK" : undefined,
         ready: true,
         isBot: true,
         joinedAt: Date.now(),
@@ -1135,6 +1117,11 @@ export async function createArcadeMatch(params: {
     const p1Hand = [deck[0], deck[1]];
     const p2Hand = [deck[2], deck[3]];
     const community = [deck[4], deck[5], deck[6]];
+    const botUid = `bot_${matchId}_ai`;
+    const playerHands: Record<string, string[]> = { [params.hostUid]: p1Hand };
+    if (mode === "VS_COMPUTER") {
+      playerHands[botUid] = p2Hand;
+    }
 
     matchData.pokerState = {
       communityCards: community,
@@ -1143,7 +1130,7 @@ export async function createArcadeMatch(params: {
       round: "FLOP",
       currentTurnUid: params.hostUid,
       playerBets: { [params.hostUid]: 20 },
-      playerHands: { [params.hostUid]: p1Hand },
+      playerHands,
       foldedUids: [],
       lastActionLog: "Texas Hold'em table active. Flop revealed: " + community.join(" "),
     };
@@ -1158,6 +1145,7 @@ export async function createArcadeMatch(params: {
       lastActionLog: "Blackjack 21 dealer active. Hit, Stand, or Double!",
     };
   } else if (params.gameType === "uno") {
+    const botUid = `bot_${matchId}_ai`;
     const initialHands: Record<string, UnoCard[]> = {
       [params.hostUid]: [
         { color: "RED", value: "7" },
@@ -1167,6 +1155,15 @@ export async function createArcadeMatch(params: {
         { color: "WILD", value: "WILD" },
       ],
     };
+    if (mode === "VS_COMPUTER") {
+      initialHands[botUid] = [
+        { color: "RED", value: "5" },
+        { color: "BLUE", value: "8" },
+        { color: "GREEN", value: "4" },
+        { color: "YELLOW", value: "2" },
+        { color: "WILD", value: "+4" },
+      ];
+    }
     matchData.unoState = {
       discardTop: { color: "RED", value: "5" },
       handsStr: JSON.stringify(initialHands),
@@ -1176,7 +1173,8 @@ export async function createArcadeMatch(params: {
       lastActionLog: "Flow Override online. Match color [RED] or value [5].",
     };
   } else if (params.gameType === "liars_dice") {
-    const initialRolls = {
+    const botUid = `bot_${matchId}_ai`;
+    const initialRolls: Record<string, number[]> = {
       [params.hostUid]: [
         Math.floor(Math.random() * 6) + 1,
         Math.floor(Math.random() * 6) + 1,
@@ -1185,6 +1183,15 @@ export async function createArcadeMatch(params: {
         Math.floor(Math.random() * 6) + 1,
       ],
     };
+    if (mode === "VS_COMPUTER") {
+      initialRolls[botUid] = [
+        Math.floor(Math.random() * 6) + 1,
+        Math.floor(Math.random() * 6) + 1,
+        Math.floor(Math.random() * 6) + 1,
+        Math.floor(Math.random() * 6) + 1,
+        Math.floor(Math.random() * 6) + 1,
+      ];
+    }
     matchData.liarsDiceState = {
       diceRollsStr: JSON.stringify(initialRolls),
       currentBid: null,
@@ -1345,19 +1352,34 @@ export async function createArcadeMatch(params: {
   } else if (params.gameType === "raja_mantri") {
     const roles: ("RAJA" | "MANTRI" | "CHOR" | "SIPAHI")[] = (["RAJA", "MANTRI", "CHOR", "SIPAHI"] as const).slice().sort(() => Math.random() - 0.5);
     const chitsMap: Record<string, string> = { [params.hostUid]: roles[0] };
+    let rajaUid = params.hostUid;
+    let mantriUid = params.hostUid;
+    if (roles[0] === "RAJA") rajaUid = params.hostUid;
+    if (roles[0] === "MANTRI") mantriUid = params.hostUid;
+
+    if (mode === "VS_COMPUTER") {
+      for (let i = 0; i < 3; i++) {
+        const bUid = `bot_${matchId}_chit_${i + 1}`;
+        chitsMap[bUid] = roles[i + 1];
+        if (roles[i + 1] === "RAJA") rajaUid = bUid;
+        if (roles[i + 1] === "MANTRI") mantriUid = bUid;
+      }
+    }
+
     matchData.rajaMantriState = {
       chitsStr: JSON.stringify(chitsMap),
-      rajaUid: params.hostUid,
-      mantriUid: params.hostUid,
+      rajaUid,
+      mantriUid,
       guessedChorUid: null,
       scores: { [params.hostUid]: 0 },
       phase: "REVEAL",
       lastActionLog: "Paper Chits shuffled! Raja will reveal and command the Mantri.",
     };
   } else if (params.gameType === "hand_cricket") {
+    const bowlerUid = mode === "VS_COMPUTER" ? `bot_${matchId}_ai` : "";
     matchData.handCricketState = {
       batsmanUid: params.hostUid,
-      bowlerUid: "",
+      bowlerUid,
       currentInnings: 1,
       innings1Score: 0,
       innings2Score: 0,
@@ -1379,8 +1401,15 @@ export async function createArcadeMatch(params: {
     // Generate 5x5 grid with 1-25 shuffled
     const nums = Array.from({ length: 25 }, (_, i) => i + 1).sort(() => Math.random() - 0.5);
     const grid5x5 = Array.from({ length: 5 }, (_, r) => nums.slice(r * 5, r * 5 + 5));
+    const gridsMap: Record<string, number[][]> = { [params.hostUid]: grid5x5 };
+    if (mode === "VS_COMPUTER") {
+      const botUid = `bot_${matchId}_ai`;
+      const botNums = Array.from({ length: 25 }, (_, i) => i + 1).sort(() => Math.random() - 0.5);
+      gridsMap[botUid] = Array.from({ length: 5 }, (_, r) => botNums.slice(r * 5, r * 5 + 5));
+    }
+
     matchData.bingoState = {
-      gridsStr: JSON.stringify({ [params.hostUid]: grid5x5 }),
+      gridsStr: JSON.stringify(gridsMap),
       crossedNumbers: [],
       completedLines: { [params.hostUid]: 0 },
       currentTurnUid: params.hostUid,

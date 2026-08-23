@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { soundSynth } from "@/lib/soundSynthesizer";
 import { makeReversiMove, type ArcadeMatch } from "@/lib/arcade";
+import { executeReversiBotTurn } from "@/lib/arcadeBots";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
-import { Trophy, Share2, Sparkles, Circle } from "lucide-react";
+import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
+import { Trophy, Share2, Sparkles, Circle, HelpCircle } from "lucide-react";
 
 interface ReversiGameProps {
   match: ArcadeMatch;
@@ -15,7 +17,16 @@ interface ReversiGameProps {
 
 export default function ReversiGame({ match, currentUid, isHost }: ReversiGameProps) {
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const rs = match.reversiState;
+
+  // Trigger AI Bot Turn in VS_COMPUTER mode
+  useEffect(() => {
+    if (!rs || match.status !== "PLAYING" || match.mode !== "VS_COMPUTER") return;
+    if (rs.currentTurn === "LIGHT") {
+      executeReversiBotTurn(match);
+    }
+  }, [match, rs?.currentTurn]);
   if (!rs) return <div className="text-white font-mono p-4">Loading Reversi arena...</div>;
 
   const board: (string | null)[][] = JSON.parse(rs.boardStr || "[]");
@@ -114,6 +125,24 @@ export default function ReversiGame({ match, currentUid, isHost }: ReversiGamePr
           </p>
         </div>
       )}
+
+      {/* Floating Bottom-Right [ ❓ RULES ] Button for In-Game Help */}
+      <div className="fixed bottom-4 right-4 z-40">
+        <button
+          type="button"
+          onClick={() => setRulesOpen(true)}
+          className="px-3.5 py-2 bg-black border-2 border-emerald-400 text-emerald-300 hover:bg-emerald-400 hover:text-black font-black text-xs uppercase transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] flex items-center gap-1.5 rounded-full cursor-pointer hover:scale-105"
+        >
+          <HelpCircle className="w-4 h-4" />
+          <span>[ ❓ REVERSI RULES ]</span>
+        </button>
+      </div>
+
+      <ArcadeGameRulesModal
+        isOpen={rulesOpen}
+        onClose={() => setRulesOpen(false)}
+        initialGameType="reversi"
+      />
 
       <ArcadeInviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} match={match} />
       <ArcadeSocialDeck match={match} currentUid={currentUid} />

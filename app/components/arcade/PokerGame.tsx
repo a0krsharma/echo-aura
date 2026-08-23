@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { soundSynth } from "@/lib/soundSynthesizer";
 import { betPoker, type ArcadeMatch } from "@/lib/arcade";
+import { executePokerBotTurn } from "@/lib/arcadeBots";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
 import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
@@ -18,6 +19,18 @@ export default function PokerGame({ match, currentUid }: PokerGameProps) {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const ps = match.pokerState;
+
+  // Trigger AI Bot Turn in VS_COMPUTER mode
+  useEffect(() => {
+    if (!ps || match.status !== "PLAYING" || match.mode !== "VS_COMPUTER") return;
+    const botPlayer = Object.values(match.players || {}).find(
+      (p) => p.uid === ps.currentTurnUid && p.isBot
+    );
+    if (botPlayer) {
+      executePokerBotTurn(match);
+    }
+  }, [match, ps?.currentTurnUid]);
+
   if (!ps) return <div className="text-white font-mono p-4">Loading Poker Table...</div>;
 
   const isMyTurn = ps.currentTurnUid === currentUid && match.status === "PLAYING";

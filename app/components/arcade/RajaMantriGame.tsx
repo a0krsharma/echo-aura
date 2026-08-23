@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { soundSynth } from "@/lib/soundSynthesizer";
 import { guessRajaMantriChor, type ArcadeMatch } from "@/lib/arcade";
+import { executeRajaMantriBotTurn } from "@/lib/arcadeBots";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
 import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
@@ -18,6 +19,13 @@ export default function RajaMantriGame({ match, currentUid, isHost }: RajaMantri
   const [inviteOpen, setInviteOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const rms = match.rajaMantriState;
+
+  // Trigger AI Mantri Bot Turn in VS_COMPUTER mode
+  useEffect(() => {
+    if (!rms || match.status !== "PLAYING" || match.mode !== "VS_COMPUTER") return;
+    executeRajaMantriBotTurn(match);
+  }, [match, rms?.phase]);
+
   if (!rms) return <div className="text-white font-mono p-4">Loading Paper Chits...</div>;
 
   const chits: Record<string, string> = JSON.parse(rms.chitsStr || "{}");

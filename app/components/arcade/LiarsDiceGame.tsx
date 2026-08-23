@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { soundSynth } from "@/lib/soundSynthesizer";
 import { makeLiarsDiceBid, callLiarsDiceBluff, type ArcadeMatch } from "@/lib/arcade";
+import { executeLiarsDiceBotTurn } from "@/lib/arcadeBots";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
-import { Trophy, Share2, Sparkles, Dices, EyeOff, AlertTriangle } from "lucide-react";
+import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
+import { Trophy, Share2, Sparkles, Dices, EyeOff, AlertTriangle, HelpCircle } from "lucide-react";
 
 interface LiarsDiceGameProps {
   match: ArcadeMatch;
@@ -15,10 +17,23 @@ interface LiarsDiceGameProps {
 
 export default function LiarsDiceGame({ match, currentUid }: LiarsDiceGameProps) {
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const [bidCount, setBidCount] = useState(2);
   const [bidFace, setBidFace] = useState(3);
 
   const lds = match.liarsDiceState;
+
+  // Trigger AI Bot Turn in VS_COMPUTER mode
+  useEffect(() => {
+    if (!lds || match.status !== "PLAYING" || match.mode !== "VS_COMPUTER") return;
+    const botPlayer = Object.values(match.players || {}).find(
+      (p) => p.uid === lds.currentTurnUid && p.isBot
+    );
+    if (botPlayer) {
+      executeLiarsDiceBotTurn(match);
+    }
+  }, [match, lds?.currentTurnUid]);
+
   if (!lds) return <div className="text-white font-mono p-4">Loading Liar's Dice Arena...</div>;
 
   const diceRolls: Record<string, number[]> = JSON.parse(lds.diceRollsStr || "{}");
@@ -178,6 +193,24 @@ export default function LiarsDiceGame({ match, currentUid }: LiarsDiceGameProps)
           </p>
         </div>
       )}
+
+      {/* Floating Bottom-Right [ ❓ RULES ] Button for In-Game Help */}
+      <div className="fixed bottom-4 right-4 z-40">
+        <button
+          type="button"
+          onClick={() => setRulesOpen(true)}
+          className="px-3.5 py-2 bg-black border-2 border-emerald-400 text-emerald-300 hover:bg-emerald-400 hover:text-black font-black text-xs uppercase transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] flex items-center gap-1.5 rounded-full cursor-pointer hover:scale-105"
+        >
+          <HelpCircle className="w-4 h-4" />
+          <span>[ ❓ LIAR'S DICE RULES ]</span>
+        </button>
+      </div>
+
+      <ArcadeGameRulesModal
+        isOpen={rulesOpen}
+        onClose={() => setRulesOpen(false)}
+        initialGameType="liars_dice"
+      />
 
       <ArcadeInviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} match={match} />
       <ArcadeSocialDeck match={match} currentUid={currentUid} />

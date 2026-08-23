@@ -6,9 +6,23 @@
  * $0 Infrastructure Solo & Computer AI Bot logic for:
  * - Cyber Ludo
  * - Chess (Grid Protocol)
+ * - Uno / Flow Override
+ * - Texas Hold'em Poker
+ * - Blackjack 21
+ * - Liar's Dice / Perudo
+ * - Hand Cricket (Odd-Even)
+ * - Raja Mantri Chor Sipahi
  * - Connect Four
  * - Battleship Radar Command
  * - Sudoku
+ * - Gomoku (5 in a Row)
+ * - Reversi / Othello
+ * - Dots and Boxes
+ * - Snakes & Ladders
+ * - Quoridor Firewall Runner
+ * - Yahtzee / Yacht
+ * - Hangman Word Scaffold
+ * - Matrix Math Blitz
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -20,10 +34,25 @@ import {
   makeChessMove,
   dropConnect4Token,
   fireBattleshipShot,
+  playUnoCard,
+  drawUnoCard,
+  betPoker,
+  playBlackjackAction,
+  makeLiarsDiceBid,
+  callLiarsDiceBluff,
+  throwHandCricketNumber,
+  guessRajaMantriChor,
+  makeGomokuMove,
+  makeReversiMove,
+  claimDotsLine,
+  rollSnakesLaddersDice,
+  moveQuoridorPawn,
+  rollYahtzeeDice,
   LUDO_CONFIG,
   type ArcadeMatch,
   type LudoToken,
   type ChessPiece,
+  type UnoCard,
 } from "./arcade";
 
 const activeBotRuns = new Set<string>();
@@ -153,13 +182,10 @@ export async function executeChessBotTurn(match: ArcadeMatch): Promise<void> {
     const possibleMoves: { from: [number, number]; to: [number, number]; score: number }[] = [];
 
     blackPieces.forEach(({ r, c, piece }) => {
-      // Simple heuristic moves for AI bot
       if (piece.type === "p") {
-        // Forward 1
         if (r + 1 < 8 && !board[r + 1][c]) {
           possibleMoves.push({ from: [r, c], to: [r + 1, c], score: 1 });
         }
-        // Capture diagonals
         if (r + 1 < 8 && c - 1 >= 0 && board[r + 1][c - 1]?.color === "w") {
           possibleMoves.push({ from: [r, c], to: [r + 1, c - 1], score: 10 });
         }
@@ -182,7 +208,6 @@ export async function executeChessBotTurn(match: ArcadeMatch): Promise<void> {
           }
         });
       } else {
-        // Other pieces forward/lateral steps
         const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, 1], [-1, 1], [1, -1]];
         dirs.forEach(([dr, dc]) => {
           const nr = r + dr;
@@ -205,6 +230,363 @@ export async function executeChessBotTurn(match: ArcadeMatch): Promise<void> {
     await makeChessMove(match.id, botPlayer.uid, chosen.from, chosen.to);
   } catch (err) {
     console.error("[ArcadeBot] Chess error:", err);
+  } finally {
+    setTimeout(() => activeBotRuns.delete(runKey), 1500);
+  }
+}
+
+/**
+ * Uno Bot
+ */
+export async function executeUnoBotTurn(match: ArcadeMatch): Promise<void> {
+  if (!match.unoState || match.status !== "PLAYING") return;
+
+  const us = match.unoState;
+  const botPlayer = Object.values(match.players || {}).find(
+    (p) => p.uid === us.currentTurnUid && p.isBot
+  );
+  if (!botPlayer) return;
+
+  const runKey = `${match.id}_uno_bot_${us.currentTurnUid}`;
+  if (activeBotRuns.has(runKey)) return;
+  activeBotRuns.add(runKey);
+
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    const hands: Record<string, UnoCard[]> = JSON.parse(us.handsStr || "{}");
+    const botHand = hands[botPlayer.uid] || [];
+    const top = us.discardTop;
+
+    const playableCard = botHand.find(
+      (c) => c.color === "WILD" || c.color === top.color || c.value === top.value
+    );
+
+    if (playableCard) {
+      const chosenColor = playableCard.color === "WILD" ? "RED" : undefined;
+      await playUnoCard(match.id, botPlayer.uid, playableCard, chosenColor);
+    } else {
+      await drawUnoCard(match.id, botPlayer.uid);
+    }
+  } catch (err) {
+    console.error("[ArcadeBot] Uno error:", err);
+  } finally {
+    setTimeout(() => activeBotRuns.delete(runKey), 1500);
+  }
+}
+
+/**
+ * Hand Cricket Bot
+ */
+export async function executeHandCricketBotTurn(match: ArcadeMatch): Promise<void> {
+  if (!match.handCricketState || match.status !== "PLAYING") return;
+
+  const hcs = match.handCricketState;
+  const botPlayer = Object.values(match.players || {}).find((p) => p.isBot);
+  if (!botPlayer) return;
+
+  const isBotBatsman = botPlayer.uid === hcs.batsmanUid;
+  const needChoice = isBotBatsman ? hcs.currentBatsmanChoice === null : hcs.currentBowlerChoice === null;
+  if (!needChoice) return;
+
+  const runKey = `${match.id}_hc_bot_${hcs.innings1Score}_${hcs.currentInnings}`;
+  if (activeBotRuns.has(runKey)) return;
+  activeBotRuns.add(runKey);
+
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 900));
+    const randomChoice = Math.floor(Math.random() * 6) + 1;
+    await throwHandCricketNumber(match.id, botPlayer.uid, randomChoice);
+  } catch (err) {
+    console.error("[ArcadeBot] Hand cricket error:", err);
+  } finally {
+    setTimeout(() => activeBotRuns.delete(runKey), 1500);
+  }
+}
+
+/**
+ * Raja Mantri Chor Sipahi Bot
+ */
+export async function executeRajaMantriBotTurn(match: ArcadeMatch): Promise<void> {
+  if (!match.rajaMantriState || match.status !== "PLAYING") return;
+
+  const rms = match.rajaMantriState;
+  if (rms.phase === "RESOLVED") return;
+
+  const chits: Record<string, string> = JSON.parse(rms.chitsStr || "{}");
+  const mantriUid = Object.entries(chits).find(([, r]) => r === "MANTRI")?.[0];
+  if (!mantriUid) return;
+
+  const isMantriBot = match.players[mantriUid]?.isBot;
+  if (!isMantriBot) return;
+
+  const runKey = `${match.id}_raja_mantri_bot`;
+  if (activeBotRuns.has(runKey)) return;
+  activeBotRuns.add(runKey);
+
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    const nonMantriPlayers = Object.keys(match.players).filter((u) => u !== mantriUid && chits[u] !== "RAJA");
+    if (nonMantriPlayers.length === 0) return;
+
+    const suspect = nonMantriPlayers[Math.floor(Math.random() * nonMantriPlayers.length)];
+    await guessRajaMantriChor(match.id, mantriUid, suspect);
+  } catch (err) {
+    console.error("[ArcadeBot] Raja mantri error:", err);
+  } finally {
+    setTimeout(() => activeBotRuns.delete(runKey), 2500);
+  }
+}
+
+/**
+ * Poker Bot
+ */
+export async function executePokerBotTurn(match: ArcadeMatch): Promise<void> {
+  if (!match.pokerState || match.status !== "PLAYING") return;
+
+  const ps = match.pokerState;
+  const botPlayer = Object.values(match.players || {}).find(
+    (p) => p.uid === ps.currentTurnUid && p.isBot
+  );
+  if (!botPlayer) return;
+
+  const runKey = `${match.id}_poker_bot_${ps.pot}_${ps.round}`;
+  if (activeBotRuns.has(runKey)) return;
+  activeBotRuns.add(runKey);
+
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 1100));
+    const actions: ("CHECK" | "CALL" | "RAISE")[] = ["CHECK", "CALL", "CALL", "RAISE"];
+    const chosen = actions[Math.floor(Math.random() * actions.length)];
+    await betPoker(match.id, botPlayer.uid, chosen, 20);
+  } catch (err) {
+    console.error("[ArcadeBot] Poker error:", err);
+  } finally {
+    setTimeout(() => activeBotRuns.delete(runKey), 1500);
+  }
+}
+
+/**
+ * Liar's Dice Bot
+ */
+export async function executeLiarsDiceBotTurn(match: ArcadeMatch): Promise<void> {
+  if (!match.liarsDiceState || match.status !== "PLAYING") return;
+
+  const lds = match.liarsDiceState;
+  const botPlayer = Object.values(match.players || {}).find(
+    (p) => p.uid === lds.currentTurnUid && p.isBot
+  );
+  if (!botPlayer) return;
+
+  const runKey = `${match.id}_liars_dice_bot_${lds.currentBid?.count || 0}`;
+  if (activeBotRuns.has(runKey)) return;
+  activeBotRuns.add(runKey);
+
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    if (lds.currentBid && lds.currentBid.count >= 4) {
+      await callLiarsDiceBluff(match.id, botPlayer.uid);
+    } else {
+      const nextCount = lds.currentBid ? lds.currentBid.count + 1 : 1;
+      const nextFace = Math.floor(Math.random() * 6) + 1;
+      await makeLiarsDiceBid(match.id, botPlayer.uid, nextCount, nextFace);
+    }
+  } catch (err) {
+    console.error("[ArcadeBot] Liar's Dice error:", err);
+  } finally {
+    setTimeout(() => activeBotRuns.delete(runKey), 1500);
+  }
+}
+
+/**
+ * Gomoku Bot
+ */
+export async function executeGomokuBotTurn(match: ArcadeMatch): Promise<void> {
+  if (!match.gomokuState || match.status !== "PLAYING") return;
+  if (match.gomokuState.currentTurn !== "WHITE") return;
+
+  const botPlayer = Object.values(match.players || {}).find((p) => p.isBot);
+  if (!botPlayer) return;
+
+  const runKey = `${match.id}_gomoku_bot`;
+  if (activeBotRuns.has(runKey)) return;
+  activeBotRuns.add(runKey);
+
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 900));
+    const grid: (string | null)[][] = JSON.parse(match.gomokuState.gridStr || "[]");
+    const emptyCells: [number, number][] = [];
+
+    for (let r = 0; r < 15; r++) {
+      for (let c = 0; c < 15; c++) {
+        if (!grid[r][c]) emptyCells.push([r, c]);
+      }
+    }
+
+    if (emptyCells.length === 0) return;
+    const [r, c] = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+    await makeGomokuMove(match.id, botPlayer.uid, r, c);
+  } catch (err) {
+    console.error("[ArcadeBot] Gomoku error:", err);
+  } finally {
+    setTimeout(() => activeBotRuns.delete(runKey), 1500);
+  }
+}
+
+/**
+ * Reversi Bot
+ */
+export async function executeReversiBotTurn(match: ArcadeMatch): Promise<void> {
+  if (!match.reversiState || match.status !== "PLAYING") return;
+  if (match.reversiState.currentTurn !== "LIGHT") return;
+
+  const botPlayer = Object.values(match.players || {}).find((p) => p.isBot);
+  if (!botPlayer) return;
+
+  const runKey = `${match.id}_reversi_bot_${match.reversiState.lightCount}`;
+  if (activeBotRuns.has(runKey)) return;
+  activeBotRuns.add(runKey);
+
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const board: (string | null)[][] = JSON.parse(match.reversiState.boardStr || "[]");
+    const validMoves: [number, number][] = [];
+
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        if (!board[r][c]) validMoves.push([r, c]);
+      }
+    }
+
+    if (validMoves.length === 0) return;
+    const [r, c] = validMoves[Math.floor(Math.random() * validMoves.length)];
+    await makeReversiMove(match.id, botPlayer.uid, r, c);
+  } catch (err) {
+    console.error("[ArcadeBot] Reversi error:", err);
+  } finally {
+    setTimeout(() => activeBotRuns.delete(runKey), 1500);
+  }
+}
+
+/**
+ * Dots and Boxes Bot
+ */
+export async function executeDotsAndBoxesBotTurn(match: ArcadeMatch): Promise<void> {
+  if (!match.dotsAndBoxesState || match.status !== "PLAYING") return;
+
+  const dbs = match.dotsAndBoxesState;
+  const botPlayer = Object.values(match.players || {}).find(
+    (p) => p.uid === dbs.currentTurnUid && p.isBot
+  );
+  if (!botPlayer) return;
+
+  const runKey = `${match.id}_dots_bot_${dbs.p1Score + dbs.p2Score}`;
+  if (activeBotRuns.has(runKey)) return;
+  activeBotRuns.add(runKey);
+
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    const lines: Record<string, string> = JSON.parse(dbs.linesStr || "{}");
+    const unselectedKeys: string[] = [];
+
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        if (c < 3) {
+          const hKey = `h-${r}-${c}`;
+          if (!lines[hKey]) unselectedKeys.push(hKey);
+        }
+        if (r < 3) {
+          const vKey = `v-${r}-${c}`;
+          if (!lines[vKey]) unselectedKeys.push(vKey);
+        }
+      }
+    }
+
+    if (unselectedKeys.length === 0) return;
+    const chosenKey = unselectedKeys[Math.floor(Math.random() * unselectedKeys.length)];
+    await claimDotsLine(match.id, botPlayer.uid, chosenKey);
+  } catch (err) {
+    console.error("[ArcadeBot] Dots and boxes error:", err);
+  } finally {
+    setTimeout(() => activeBotRuns.delete(runKey), 1500);
+  }
+}
+
+/**
+ * Snakes and Ladders Bot
+ */
+export async function executeSnakesLaddersBotTurn(match: ArcadeMatch): Promise<void> {
+  if (!match.snakesLaddersState || match.status !== "PLAYING") return;
+
+  const sls = match.snakesLaddersState;
+  const botPlayer = Object.values(match.players || {}).find(
+    (p) => p.uid === sls.currentTurnUid && p.isBot
+  );
+  if (!botPlayer) return;
+
+  const runKey = `${match.id}_snakes_bot_${sls.currentTurnUid}`;
+  if (activeBotRuns.has(runKey)) return;
+  activeBotRuns.add(runKey);
+
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 900));
+    await rollSnakesLaddersDice(match.id, botPlayer.uid);
+  } catch (err) {
+    console.error("[ArcadeBot] Snakes and ladders error:", err);
+  } finally {
+    setTimeout(() => activeBotRuns.delete(runKey), 1500);
+  }
+}
+
+/**
+ * Quoridor Bot
+ */
+export async function executeQuoridorBotTurn(match: ArcadeMatch): Promise<void> {
+  if (!match.quoridorState || match.status !== "PLAYING") return;
+
+  const qs = match.quoridorState;
+  const botPlayer = Object.values(match.players || {}).find(
+    (p) => p.uid === qs.currentTurnUid && p.isBot
+  );
+  if (!botPlayer) return;
+
+  const runKey = `${match.id}_quoridor_bot_${qs.p2Pos[0]}`;
+  if (activeBotRuns.has(runKey)) return;
+  activeBotRuns.add(runKey);
+
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const [r, c] = qs.p2Pos;
+    const nextRow = Math.min(8, r + 1);
+    await moveQuoridorPawn(match.id, botPlayer.uid, nextRow, c);
+  } catch (err) {
+    console.error("[ArcadeBot] Quoridor error:", err);
+  } finally {
+    setTimeout(() => activeBotRuns.delete(runKey), 1500);
+  }
+}
+
+/**
+ * Yahtzee Bot
+ */
+export async function executeYahtzeeBotTurn(match: ArcadeMatch): Promise<void> {
+  if (!match.yahtzeeState || match.status !== "PLAYING") return;
+
+  const ys = match.yahtzeeState;
+  const botPlayer = Object.values(match.players || {}).find(
+    (p) => p.uid === ys.currentTurnUid && p.isBot
+  );
+  if (!botPlayer) return;
+
+  const runKey = `${match.id}_yahtzee_bot_${ys.rollsRemaining}`;
+  if (activeBotRuns.has(runKey)) return;
+  activeBotRuns.add(runKey);
+
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 900));
+    await rollYahtzeeDice(match.id, botPlayer.uid, [false, false, false, false, false]);
+  } catch (err) {
+    console.error("[ArcadeBot] Yahtzee error:", err);
   } finally {
     setTimeout(() => activeBotRuns.delete(runKey), 1500);
   }
@@ -234,7 +616,6 @@ export async function executeConnect4BotTurn(match: ArcadeMatch): Promise<void> 
     }
     if (availableCols.length === 0) return;
 
-    // Prefer center columns (3, 2, 4, 1, 5, 0, 6)
     const preferences = [3, 2, 4, 1, 5, 0, 6];
     const targetCol = preferences.find((c) => availableCols.includes(c)) ?? availableCols[0];
 

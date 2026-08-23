@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { soundSynth } from "@/lib/soundSynthesizer";
 import { playUnoCard, drawUnoCard, type ArcadeMatch, type UnoCard } from "@/lib/arcade";
+import { executeUnoBotTurn } from "@/lib/arcadeBots";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
 import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
@@ -29,6 +30,18 @@ export default function UnoGame({ match, currentUid }: UnoGameProps) {
   const [hasCalledUno, setHasCalledUno] = useState(false);
 
   const us = match.unoState;
+
+  // Trigger AI Bot Turn in VS_COMPUTER mode
+  useEffect(() => {
+    if (!us || match.status !== "PLAYING" || match.mode !== "VS_COMPUTER") return;
+    const botPlayer = Object.values(match.players || {}).find(
+      (p) => p.uid === us.currentTurnUid && p.isBot
+    );
+    if (botPlayer) {
+      executeUnoBotTurn(match);
+    }
+  }, [match, us?.currentTurnUid]);
+
   if (!us) return <div className="text-white font-mono p-4">Loading Uno Matrix...</div>;
 
   const hands: Record<string, UnoCard[]> = JSON.parse(us.handsStr || "{}");
