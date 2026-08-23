@@ -27,6 +27,19 @@ import DotsAndBoxesGame from "./DotsAndBoxesGame";
 import SnakesLaddersGame from "./SnakesLaddersGame";
 import Puzzle15Game from "./Puzzle15Game";
 import MastermindGame from "./MastermindGame";
+import PokerGame from "./PokerGame";
+import BlackjackGame from "./BlackjackGame";
+import UnoGame from "./UnoGame";
+import LiarsDiceGame from "./LiarsDiceGame";
+import CodenamesGame from "./CodenamesGame";
+import SkribblGame from "./SkribblGame";
+import TriviaGame from "./TriviaGame";
+import QuoridorGame from "./QuoridorGame";
+import YahtzeeGame from "./YahtzeeGame";
+import MelodyBuzzerGame from "./MelodyBuzzerGame";
+import TabooGame from "./TabooGame";
+import PitchArenaGame from "./PitchArenaGame";
+import TwentyQuestionsGame from "./TwentyQuestionsGame";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeCreateModal from "./ArcadeCreateModal";
 import { Gamepad2, X, Users, Trophy, Play, Sparkles, Share2, Mic2 } from "lucide-react";
@@ -42,7 +55,7 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
   const [isOpen, setIsOpen] = useState(false);
   const [activeMatchId, setActiveMatchId] = useState<string | null>(null);
   const [match, setMatch] = useState<ArcadeMatch | null>(null);
-  const [selectedGameType, setSelectedGameType] = useState<ArcadeGameType>("ludo");
+  const [selectedGameType, setSelectedGameType] = useState<ArcadeGameType>("poker");
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
 
@@ -86,7 +99,7 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
             // SOCIAL GAMING DOCK
           </span>
           <span className="text-[10px] text-neutral-400 hidden sm:inline">
-            • 2D PHYSICS TABLES & MULTIPLAYER RETRO ARCADE ON STAGE
+            • VOICE BLUFFING, CARD PROTOCOLS & 2D PHYSICS ON STAGE
           </span>
         </div>
         <button
@@ -138,21 +151,73 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
       {!match ? (
         <div className="space-y-4">
           <p className="text-[11px] text-neutral-300 uppercase tracking-wider">
-            Project any arcade board directly above the live stage. Everyone in the room can play and talk simultaneously!
+            Project any game table directly above the live stage. Everyone in the room can play and talk simultaneously!
           </p>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <button
               type="button"
-              onClick={() => setSelectedGameType("ludo")}
+              onClick={() => setSelectedGameType("poker")}
               className={`p-2.5 border-2 text-left transition-all cursor-pointer ${
-                selectedGameType === "ludo"
+                selectedGameType === "poker"
                   ? "border-white bg-neutral-900 text-white font-extrabold ring-1 ring-white"
                   : "border-neutral-800 bg-black text-neutral-400 hover:border-neutral-600"
               }`}
             >
-              <div className="text-xs uppercase font-extrabold text-white">🎲 LUDO</div>
-              <div className="text-[9px] text-neutral-400">15x15 Dice Race</div>
+              <div className="text-xs uppercase font-extrabold text-white">♠️ POKER</div>
+              <div className="text-[9px] text-neutral-400">Texas Hold'em Table</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSelectedGameType("uno")}
+              className={`p-2.5 border-2 text-left transition-all cursor-pointer ${
+                selectedGameType === "uno"
+                  ? "border-white bg-neutral-900 text-white font-extrabold ring-1 ring-white"
+                  : "border-neutral-800 bg-black text-neutral-400 hover:border-neutral-600"
+              }`}
+            >
+              <div className="text-xs uppercase font-extrabold text-white">🎴 UNO MATRIX</div>
+              <div className="text-[9px] text-neutral-400">Flow Override Cards</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSelectedGameType("liars_dice")}
+              className={`p-2.5 border-2 text-left transition-all cursor-pointer ${
+                selectedGameType === "liars_dice"
+                  ? "border-white bg-neutral-900 text-white font-extrabold ring-1 ring-white"
+                  : "border-neutral-800 bg-black text-neutral-400 hover:border-neutral-600"
+              }`}
+            >
+              <div className="text-xs uppercase font-extrabold text-white">🎲 LIAR'S DICE</div>
+              <div className="text-[9px] text-neutral-400">Voice Bluffing Tray</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSelectedGameType("skribbl")}
+              className={`p-2.5 border-2 text-left transition-all cursor-pointer ${
+                selectedGameType === "skribbl"
+                  ? "border-white bg-neutral-900 text-white font-extrabold ring-1 ring-white"
+                  : "border-neutral-800 bg-black text-neutral-400 hover:border-neutral-600"
+              }`}
+            >
+              <div className="text-xs uppercase font-extrabold text-white">🎨 SKRIBBL</div>
+              <div className="text-[9px] text-neutral-400">Live Vector Canvas</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSelectedGameType("codenames")}
+              className={`p-2.5 border-2 text-left transition-all cursor-pointer ${
+                selectedGameType === "codenames"
+                  ? "border-white bg-neutral-900 text-white font-extrabold ring-1 ring-white"
+                  : "border-neutral-800 bg-black text-neutral-400 hover:border-neutral-600"
+              }`}
+            >
+              <div className="text-xs uppercase font-extrabold text-white">🕵️ CODENAMES</div>
+              <div className="text-[9px] text-neutral-400">5x5 Decryption Grid</div>
             </button>
 
             <button
@@ -193,58 +258,6 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
               <div className="text-xs uppercase font-extrabold text-white">⚡ GLOW HOCKEY</div>
               <div className="text-[9px] text-neutral-400">Air Hockey Clash</div>
             </button>
-
-            <button
-              type="button"
-              onClick={() => setSelectedGameType("chess")}
-              className={`p-2.5 border-2 text-left transition-all cursor-pointer ${
-                selectedGameType === "chess"
-                  ? "border-white bg-neutral-900 text-white font-extrabold ring-1 ring-white"
-                  : "border-neutral-800 bg-black text-neutral-400 hover:border-neutral-600"
-              }`}
-            >
-              <div className="text-xs uppercase font-extrabold text-white">♟️ CHESS</div>
-              <div className="text-[9px] text-neutral-400">8x8 Grid Protocol</div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSelectedGameType("gomoku")}
-              className={`p-2.5 border-2 text-left transition-all cursor-pointer ${
-                selectedGameType === "gomoku"
-                  ? "border-white bg-neutral-900 text-white font-extrabold ring-1 ring-white"
-                  : "border-neutral-800 bg-black text-neutral-400 hover:border-neutral-600"
-              }`}
-            >
-              <div className="text-xs uppercase font-extrabold text-white">⬛ GOMOKU</div>
-              <div className="text-[9px] text-neutral-400">5 in a Row</div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSelectedGameType("reversi")}
-              className={`p-2.5 border-2 text-left transition-all cursor-pointer ${
-                selectedGameType === "reversi"
-                  ? "border-white bg-neutral-900 text-white font-extrabold ring-1 ring-white"
-                  : "border-neutral-800 bg-black text-neutral-400 hover:border-neutral-600"
-              }`}
-            >
-              <div className="text-xs uppercase font-extrabold text-white">🔄 REVERSI</div>
-              <div className="text-[9px] text-neutral-400">Disk Flipping</div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSelectedGameType("dots_and_boxes")}
-              className={`p-2.5 border-2 text-left transition-all cursor-pointer ${
-                selectedGameType === "dots_and_boxes"
-                  ? "border-white bg-neutral-900 text-white font-extrabold ring-1 ring-white"
-                  : "border-neutral-800 bg-black text-neutral-400 hover:border-neutral-600"
-              }`}
-            >
-              <div className="text-xs uppercase font-extrabold text-white">🕸️ DOTS & BOXES</div>
-              <div className="text-[9px] text-neutral-400">Box Capture</div>
-            </button>
           </div>
 
           <button
@@ -260,6 +273,45 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
       ) : (
         <div className="space-y-4">
           {/* Active Game Renderers */}
+          {match.gameType === "poker" && (
+            <PokerGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "blackjack" && (
+            <BlackjackGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "uno" && (
+            <UnoGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "liars_dice" && (
+            <LiarsDiceGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "codenames" && (
+            <CodenamesGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "skribbl" && (
+            <SkribblGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "trivia" && (
+            <TriviaGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "quoridor" && (
+            <QuoridorGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "yahtzee" && (
+            <YahtzeeGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "taboo" && (
+            <TabooGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "melody_buzzer" && (
+            <MelodyBuzzerGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "pitch_arena" && (
+            <PitchArenaGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "twenty_questions" && (
+            <TwentyQuestionsGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
           {match.gameType === "ludo" && (
             <LudoGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
           )}

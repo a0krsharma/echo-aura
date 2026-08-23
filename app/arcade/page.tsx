@@ -29,6 +29,19 @@ import DotsAndBoxesGame from "@/app/components/arcade/DotsAndBoxesGame";
 import SnakesLaddersGame from "@/app/components/arcade/SnakesLaddersGame";
 import Puzzle15Game from "@/app/components/arcade/Puzzle15Game";
 import MastermindGame from "@/app/components/arcade/MastermindGame";
+import PokerGame from "@/app/components/arcade/PokerGame";
+import BlackjackGame from "@/app/components/arcade/BlackjackGame";
+import UnoGame from "@/app/components/arcade/UnoGame";
+import LiarsDiceGame from "@/app/components/arcade/LiarsDiceGame";
+import CodenamesGame from "@/app/components/arcade/CodenamesGame";
+import SkribblGame from "@/app/components/arcade/SkribblGame";
+import TriviaGame from "@/app/components/arcade/TriviaGame";
+import QuoridorGame from "@/app/components/arcade/QuoridorGame";
+import YahtzeeGame from "@/app/components/arcade/YahtzeeGame";
+import MelodyBuzzerGame from "@/app/components/arcade/MelodyBuzzerGame";
+import TabooGame from "@/app/components/arcade/TabooGame";
+import PitchArenaGame from "@/app/components/arcade/PitchArenaGame";
+import TwentyQuestionsGame from "@/app/components/arcade/TwentyQuestionsGame";
 import ArcadeInviteModal from "@/app/components/arcade/ArcadeInviteModal";
 import ArcadeCreateModal from "@/app/components/arcade/ArcadeCreateModal";
 import {
@@ -47,9 +60,14 @@ import {
   Users,
   Trash2,
   Brain,
-  CircleDot,
+  CircleDollarSign,
   Dices,
-  Grid,
+  Shield,
+  Music,
+  Paintbrush,
+  HelpCircle,
+  Ban,
+  Layers,
 } from "lucide-react";
 import Link from "next/link";
 import { collection, query, limit, onSnapshot } from "firebase/firestore";
@@ -137,7 +155,7 @@ function ArcadeContent() {
     try {
       const matchId = await createArcadeMatch({
         gameType: type,
-        title: `${type.toUpperCase()} // SOLO PUZZLE GRID`,
+        title: `${type.toUpperCase()} // SOLO GRID`,
         hostUid: user.uid,
         hostHandle: user.handle || "@ANON",
         hostAvatar: user.photoUrl || user.photoURL,
@@ -258,6 +276,45 @@ function ArcadeContent() {
             </div>
 
             {/* Game Renderers */}
+            {activeMatch.gameType === "poker" && (
+              <PokerGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+            )}
+            {activeMatch.gameType === "blackjack" && (
+              <BlackjackGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+            )}
+            {activeMatch.gameType === "uno" && (
+              <UnoGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+            )}
+            {activeMatch.gameType === "liars_dice" && (
+              <LiarsDiceGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+            )}
+            {activeMatch.gameType === "codenames" && (
+              <CodenamesGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+            )}
+            {activeMatch.gameType === "skribbl" && (
+              <SkribblGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+            )}
+            {activeMatch.gameType === "trivia" && (
+              <TriviaGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+            )}
+            {activeMatch.gameType === "quoridor" && (
+              <QuoridorGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+            )}
+            {activeMatch.gameType === "yahtzee" && (
+              <YahtzeeGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+            )}
+            {activeMatch.gameType === "taboo" && (
+              <TabooGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+            )}
+            {activeMatch.gameType === "melody_buzzer" && (
+              <MelodyBuzzerGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+            )}
+            {activeMatch.gameType === "pitch_arena" && (
+              <PitchArenaGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+            )}
+            {activeMatch.gameType === "twenty_questions" && (
+              <TwentyQuestionsGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+            )}
             {activeMatch.gameType === "ludo" && (
               <LudoGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
             )}
@@ -333,50 +390,268 @@ function ArcadeContent() {
                 <span>// SOCIAL AUDIO GAMING ARENA // $0 SERVER INFRASTRUCTURE</span>
               </div>
               <h2 className="text-xl sm:text-2xl font-extrabold uppercase tracking-tight text-white leading-tight">
-                Play Retro Lounge Games, 2D Physics Tables & Solo Puzzles While Talking Live.
+                Play Voice Bluffing, Card Protocols, 2D Physics Tables & Party Games While Talking Live.
               </h2>
               <p className="text-xs text-neutral-300 max-w-2xl leading-relaxed">
-                Compete in real-time physics boards (8-Ball Pool, Carrom, Glow Hockey), multiplayer strategy (Ludo, Chess, Gomoku, Reversi, Dots & Boxes, Snakes & Ladders), or chill with solo puzzles (15-Puzzle, Mastermind, Minesweeper, 2048, Snake, Wordle).
+                Connect in real-time voice channels to play Texas Hold'em, Blackjack, Uno, Liar's Dice, Codenames, Vector Skribbl, Signal Race Trivia, 8-Ball Pool, Carrom, Glow Hockey, and interactive party improv games.
               </p>
             </div>
 
-            {/* Section 1: Physics & Lounge Classics */}
+            {/* Category 1: Voice Bluffing & Card Protocols */}
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-widest flex items-center gap-2">
-                  <Swords className="w-3.5 h-3.5 text-white" />
-                  // 2D PHYSICS TABLES & MULTIPLAYER LOUNGE
-                </h3>
-              </div>
+              <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-widest flex items-center gap-2">
+                <CircleDollarSign className="w-3.5 h-3.5 text-white" />
+                // VOICE BLUFFING & CARD PROTOCOLS
+              </h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                {/* 1. Ludo */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                {/* Poker */}
                 <div className="border-2 border-white bg-neutral-950 p-4 space-y-3 flex flex-col justify-between">
+                  <div className="space-y-1">
+                    <span className="text-xl">♠️</span>
+                    <h4 className="font-extrabold text-xs uppercase text-white">TEXAS HOLD'EM</h4>
+                    <p className="text-[10px] text-neutral-400">Heads-up betting, community cards & voice tells.</p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!user}
+                    onClick={() => handleOpenCreate("poker")}
+                    className="w-full py-2 bg-white text-black font-extrabold text-xs uppercase hover:bg-neutral-200 transition-all cursor-pointer shadow-md"
+                  >
+                    [ PLAY POKER ]
+                  </button>
+                </div>
+
+                {/* Blackjack */}
+                <div className="border-2 border-neutral-700 bg-neutral-950 p-4 space-y-3 flex flex-col justify-between hover:border-white transition-all">
+                  <div className="space-y-1">
+                    <span className="text-xl">🃏</span>
+                    <h4 className="font-extrabold text-xs uppercase text-white">BLACKJACK 21</h4>
+                    <p className="text-[10px] text-neutral-400">Hit, stand & double down vs AI data dealer.</p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!user}
+                    onClick={() => handleOpenCreate("blackjack")}
+                    className="w-full py-2 border border-white bg-black text-white hover:bg-white hover:text-black font-extrabold text-xs uppercase transition-all cursor-pointer"
+                  >
+                    [ PLAY BLACKJACK ]
+                  </button>
+                </div>
+
+                {/* Uno */}
+                <div className="border-2 border-neutral-700 bg-neutral-950 p-4 space-y-3 flex flex-col justify-between hover:border-white transition-all">
+                  <div className="space-y-1">
+                    <span className="text-xl">🎴</span>
+                    <h4 className="font-extrabold text-xs uppercase text-white">UNO MATRIX</h4>
+                    <p className="text-[10px] text-neutral-400">Match color, value & drop action cards.</p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!user}
+                    onClick={() => handleOpenCreate("uno")}
+                    className="w-full py-2 border border-white bg-black text-white hover:bg-white hover:text-black font-extrabold text-xs uppercase transition-all cursor-pointer"
+                  >
+                    [ PLAY UNO ]
+                  </button>
+                </div>
+
+                {/* Liar's Dice */}
+                <div className="border-2 border-neutral-700 bg-neutral-950 p-4 space-y-3 flex flex-col justify-between hover:border-white transition-all">
+                  <div className="space-y-1">
+                    <span className="text-xl">🎲</span>
+                    <h4 className="font-extrabold text-xs uppercase text-white">LIAR'S DICE</h4>
+                    <p className="text-[10px] text-neutral-400">Hidden dice trays & call bluff showdowns.</p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!user}
+                    onClick={() => handleOpenCreate("liars_dice")}
+                    className="w-full py-2 border border-white bg-black text-white hover:bg-white hover:text-black font-extrabold text-xs uppercase transition-all cursor-pointer"
+                  >
+                    [ PLAY LIAR'S DICE ]
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Category 2: Live Party & Acoustic Showdowns */}
+            <div className="space-y-3">
+              <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-widest flex items-center gap-2">
+                <Music className="w-3.5 h-3.5 text-white" />
+                // LIVE PARTY, CANVAS & ACOUSTIC SHOWDOWNS
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                {/* Skribbl */}
+                <div className="border-2 border-neutral-700 bg-neutral-950 p-4 space-y-3 flex flex-col justify-between hover:border-white transition-all">
+                  <div className="space-y-1">
+                    <span className="text-xl">🎨</span>
+                    <h4 className="font-extrabold text-xs uppercase text-white">VECTOR SKRIBBL</h4>
+                    <p className="text-[10px] text-neutral-400">Live vector drawing board & word guessing.</p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!user}
+                    onClick={() => handleOpenCreate("skribbl")}
+                    className="w-full py-2 border border-white bg-black text-white hover:bg-white hover:text-black font-extrabold text-xs uppercase transition-all cursor-pointer"
+                  >
+                    [ PLAY SKRIBBL ]
+                  </button>
+                </div>
+
+                {/* Codenames */}
+                <div className="border-2 border-neutral-700 bg-neutral-950 p-4 space-y-3 flex flex-col justify-between hover:border-white transition-all">
+                  <div className="space-y-1">
+                    <span className="text-xl">🕵️</span>
+                    <h4 className="font-extrabold text-xs uppercase text-white">CODENAMES</h4>
+                    <p className="text-[10px] text-neutral-400">5x5 decryption grid with spymaster word clues.</p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!user}
+                    onClick={() => handleOpenCreate("codenames")}
+                    className="w-full py-2 border border-white bg-black text-white hover:bg-white hover:text-black font-extrabold text-xs uppercase transition-all cursor-pointer"
+                  >
+                    [ PLAY CODENAMES ]
+                  </button>
+                </div>
+
+                {/* Signal Race Trivia */}
+                <div className="border-2 border-neutral-700 bg-neutral-950 p-4 space-y-3 flex flex-col justify-between hover:border-white transition-all">
+                  <div className="space-y-1">
+                    <span className="text-xl">⚡</span>
+                    <h4 className="font-extrabold text-xs uppercase text-white">SIGNAL TRIVIA</h4>
+                    <p className="text-[10px] text-neutral-400">Timed code and tech multiple choice rounds.</p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!user}
+                    onClick={() => handleOpenCreate("trivia")}
+                    className="w-full py-2 border border-white bg-black text-white hover:bg-white hover:text-black font-extrabold text-xs uppercase transition-all cursor-pointer"
+                  >
+                    [ PLAY TRIVIA ]
+                  </button>
+                </div>
+
+                {/* Melody Buzzer */}
+                <div className="border-2 border-neutral-700 bg-neutral-950 p-4 space-y-3 flex flex-col justify-between hover:border-white transition-all">
+                  <div className="space-y-1">
+                    <span className="text-xl">🎵</span>
+                    <h4 className="font-extrabold text-xs uppercase text-white">MELODY HUMMER</h4>
+                    <p className="text-[10px] text-neutral-400">Hum melodies into mic with speed buzzer guesses.</p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!user}
+                    onClick={() => handleOpenCreate("melody_buzzer")}
+                    className="w-full py-2 border border-white bg-black text-white hover:bg-white hover:text-black font-extrabold text-xs uppercase transition-all cursor-pointer"
+                  >
+                    [ PLAY HUMMER ]
+                  </button>
+                </div>
+
+                {/* Taboo */}
+                <div className="border-2 border-neutral-700 bg-neutral-950 p-4 space-y-3 flex flex-col justify-between hover:border-white transition-all">
+                  <div className="space-y-1">
+                    <span className="text-xl">🚫</span>
+                    <h4 className="font-extrabold text-xs uppercase text-white">FORBIDDEN LEXICON</h4>
+                    <p className="text-[10px] text-neutral-400">Describe secret keywords without taboo words.</p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!user}
+                    onClick={() => handleOpenCreate("taboo")}
+                    className="w-full py-2 border border-white bg-black text-white hover:bg-white hover:text-black font-extrabold text-xs uppercase transition-all cursor-pointer"
+                  >
+                    [ PLAY TABOO ]
+                  </button>
+                </div>
+
+                {/* Pitch Arena */}
+                <div className="border-2 border-neutral-700 bg-neutral-950 p-4 space-y-3 flex flex-col justify-between hover:border-white transition-all">
+                  <div className="space-y-1">
+                    <span className="text-xl">💡</span>
+                    <h4 className="font-extrabold text-xs uppercase text-white">PITCH ARENA</h4>
+                    <p className="text-[10px] text-neutral-400">Defend absurd startup ideas on live mic for Volts.</p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!user}
+                    onClick={() => handleOpenCreate("pitch_arena")}
+                    className="w-full py-2 border border-white bg-black text-white hover:bg-white hover:text-black font-extrabold text-xs uppercase transition-all cursor-pointer"
+                  >
+                    [ PLAY PITCH ARENA ]
+                  </button>
+                </div>
+
+                {/* 20 Questions */}
+                <div className="border-2 border-neutral-700 bg-neutral-950 p-4 space-y-3 flex flex-col justify-between hover:border-white transition-all">
+                  <div className="space-y-1">
+                    <span className="text-xl">❓</span>
+                    <h4 className="font-extrabold text-xs uppercase text-white">20 QUESTIONS</h4>
+                    <p className="text-[10px] text-neutral-400">Deduce secret topics with Yes/No voice queries.</p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!user}
+                    onClick={() => handleOpenCreate("twenty_questions")}
+                    className="w-full py-2 border border-white bg-black text-white hover:bg-white hover:text-black font-extrabold text-xs uppercase transition-all cursor-pointer"
+                  >
+                    [ PLAY 20 QUESTIONS ]
+                  </button>
+                </div>
+
+                {/* Quoridor */}
+                <div className="border-2 border-neutral-700 bg-neutral-950 p-4 space-y-3 flex flex-col justify-between hover:border-white transition-all">
+                  <div className="space-y-1">
+                    <span className="text-xl">🧱</span>
+                    <h4 className="font-extrabold text-xs uppercase text-white">QUORIDOR RUNNER</h4>
+                    <p className="text-[10px] text-neutral-400">Pawn race to opposite wall with barrier placement.</p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!user}
+                    onClick={() => handleOpenCreate("quoridor")}
+                    className="w-full py-2 border border-white bg-black text-white hover:bg-white hover:text-black font-extrabold text-xs uppercase transition-all cursor-pointer"
+                  >
+                    [ PLAY QUORIDOR ]
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Category 3: 2D Physics Tables & Board Classics */}
+            <div className="space-y-3">
+              <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-widest flex items-center gap-2">
+                <Swords className="w-3.5 h-3.5 text-white" />
+                // 2D PHYSICS TABLES & BOARD CLASSICS
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                {/* Ludo */}
+                <div className="border-2 border-neutral-700 bg-neutral-950 p-4 space-y-3 flex flex-col justify-between hover:border-white transition-all">
                   <div className="space-y-1">
                     <span className="text-xl">🎲</span>
                     <h4 className="font-extrabold text-xs uppercase text-white">15X15 CYBER LUDO</h4>
-                    <p className="text-[10px] text-neutral-400 leading-relaxed">
-                      Classic race with 3D die, captures, and safe stars.
-                    </p>
+                    <p className="text-[10px] text-neutral-400">Classic race with 3D die & captures.</p>
                   </div>
                   <button
                     type="button"
                     disabled={!user}
                     onClick={() => handleOpenCreate("ludo")}
-                    className="w-full py-2 bg-white text-black font-extrabold text-xs uppercase hover:bg-neutral-200 transition-all cursor-pointer shadow-md"
+                    className="w-full py-2 border border-white bg-black text-white hover:bg-white hover:text-black font-extrabold text-xs uppercase transition-all cursor-pointer"
                   >
                     [ PLAY LUDO ]
                   </button>
                 </div>
 
-                {/* 2. 8-Ball Pool */}
+                {/* Pool */}
                 <div className="border-2 border-neutral-700 bg-neutral-950 p-4 space-y-3 flex flex-col justify-between hover:border-white transition-all">
                   <div className="space-y-1">
                     <span className="text-xl">🎱</span>
                     <h4 className="font-extrabold text-xs uppercase text-white">8-BALL POOL</h4>
-                    <p className="text-[10px] text-neutral-400 leading-relaxed">
-                      2D physics table with cue aiming & pocket sinking.
-                    </p>
+                    <p className="text-[10px] text-neutral-400">2D physics table with cue aiming & pockets.</p>
                   </div>
                   <button
                     type="button"
@@ -388,14 +663,12 @@ function ArcadeContent() {
                   </button>
                 </div>
 
-                {/* 3. Carrom Board */}
+                {/* Carrom */}
                 <div className="border-2 border-neutral-700 bg-neutral-950 p-4 space-y-3 flex flex-col justify-between hover:border-white transition-all">
                   <div className="space-y-1">
                     <span className="text-xl">⚪</span>
                     <h4 className="font-extrabold text-xs uppercase text-white">CARROM BOARD</h4>
-                    <p className="text-[10px] text-neutral-400 leading-relaxed">
-                      Striker sliding & coin pocketing physics arena.
-                    </p>
+                    <p className="text-[10px] text-neutral-400">Striker sliding & coin pocketing physics.</p>
                   </div>
                   <button
                     type="button"
@@ -407,14 +680,12 @@ function ArcadeContent() {
                   </button>
                 </div>
 
-                {/* 4. Glow Hockey */}
+                {/* Glow Hockey */}
                 <div className="border-2 border-neutral-700 bg-neutral-950 p-4 space-y-3 flex flex-col justify-between hover:border-white transition-all">
                   <div className="space-y-1">
                     <span className="text-xl">⚡</span>
                     <h4 className="font-extrabold text-xs uppercase text-white">GLOW HOCKEY</h4>
-                    <p className="text-[10px] text-neutral-400 leading-relaxed">
-                      60FPS neon glow air hockey clash vs Bot or friend.
-                    </p>
+                    <p className="text-[10px] text-neutral-400">60FPS neon glow air hockey clash vs AI or 2P.</p>
                   </div>
                   <button
                     type="button"
@@ -425,169 +696,15 @@ function ArcadeContent() {
                     [ PLAY HOCKEY ]
                   </button>
                 </div>
-
-                {/* 5. Chess */}
-                <div className="border-2 border-neutral-700 bg-neutral-950 p-4 space-y-3 flex flex-col justify-between hover:border-white transition-all">
-                  <div className="space-y-1">
-                    <span className="text-xl">♟️</span>
-                    <h4 className="font-extrabold text-xs uppercase text-white">CHESS PROTOCOL</h4>
-                    <p className="text-[10px] text-neutral-400 leading-relaxed">
-                      8x8 tactical battle vs Grandmaster AI or friend.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    disabled={!user}
-                    onClick={() => handleOpenCreate("chess")}
-                    className="w-full py-2 border border-white bg-black text-white hover:bg-white hover:text-black font-extrabold text-xs uppercase transition-all cursor-pointer"
-                  >
-                    [ PLAY CHESS ]
-                  </button>
-                </div>
-
-                {/* 6. Gomoku */}
-                <div className="border-2 border-neutral-700 bg-neutral-950 p-4 space-y-3 flex flex-col justify-between hover:border-white transition-all">
-                  <div className="space-y-1">
-                    <span className="text-xl">⬛</span>
-                    <h4 className="font-extrabold text-xs uppercase text-white">GOMOKU (5 IN A ROW)</h4>
-                    <p className="text-[10px] text-neutral-400 leading-relaxed">
-                      15x15 tactical stone alignment race.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    disabled={!user}
-                    onClick={() => handleOpenCreate("gomoku")}
-                    className="w-full py-2 border border-white bg-black text-white hover:bg-white hover:text-black font-extrabold text-xs uppercase transition-all cursor-pointer"
-                  >
-                    [ PLAY GOMOKU ]
-                  </button>
-                </div>
-
-                {/* 7. Reversi */}
-                <div className="border-2 border-neutral-700 bg-neutral-950 p-4 space-y-3 flex flex-col justify-between hover:border-white transition-all">
-                  <div className="space-y-1">
-                    <span className="text-xl">🔄</span>
-                    <h4 className="font-extrabold text-xs uppercase text-white">REVERSI / OTHELLO</h4>
-                    <p className="text-[10px] text-neutral-400 leading-relaxed">
-                      8x8 disk flipping battle with live disk tally.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    disabled={!user}
-                    onClick={() => handleOpenCreate("reversi")}
-                    className="w-full py-2 border border-white bg-black text-white hover:bg-white hover:text-black font-extrabold text-xs uppercase transition-all cursor-pointer"
-                  >
-                    [ PLAY REVERSI ]
-                  </button>
-                </div>
-
-                {/* 8. Dots and Boxes */}
-                <div className="border-2 border-neutral-700 bg-neutral-950 p-4 space-y-3 flex flex-col justify-between hover:border-white transition-all">
-                  <div className="space-y-1">
-                    <span className="text-xl">🕸️</span>
-                    <h4 className="font-extrabold text-xs uppercase text-white">DOTS & BOXES</h4>
-                    <p className="text-[10px] text-neutral-400 leading-relaxed">
-                      Grid lock line drawing and box capture strategy.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    disabled={!user}
-                    onClick={() => handleOpenCreate("dots_and_boxes")}
-                    className="w-full py-2 border border-white bg-black text-white hover:bg-white hover:text-black font-extrabold text-xs uppercase transition-all cursor-pointer"
-                  >
-                    [ PLAY DOTS & BOXES ]
-                  </button>
-                </div>
-
-                {/* 9. Snakes & Ladders */}
-                <div className="border-2 border-neutral-700 bg-neutral-950 p-4 space-y-3 flex flex-col justify-between hover:border-white transition-all">
-                  <div className="space-y-1">
-                    <span className="text-xl">🪜</span>
-                    <h4 className="font-extrabold text-xs uppercase text-white">SNAKES & LADDERS</h4>
-                    <p className="text-[10px] text-neutral-400 leading-relaxed">
-                      10x10 circuit board race with shortcuts & glitches.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    disabled={!user}
-                    onClick={() => handleOpenCreate("snakes_and_ladders")}
-                    className="w-full py-2 border border-white bg-black text-white hover:bg-white hover:text-black font-extrabold text-xs uppercase transition-all cursor-pointer"
-                  >
-                    [ PLAY SNAKES & LADDERS ]
-                  </button>
-                </div>
-
-                {/* 10. Connect 4 */}
-                <div className="border-2 border-neutral-700 bg-neutral-950 p-4 space-y-3 flex flex-col justify-between hover:border-white transition-all">
-                  <div className="space-y-1">
-                    <span className="text-xl">🔴</span>
-                    <h4 className="font-extrabold text-xs uppercase text-white">CONNECT FOUR</h4>
-                    <p className="text-[10px] text-neutral-400 leading-relaxed">
-                      7x6 data-stream token drop 4-in-a-row race.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    disabled={!user}
-                    onClick={() => handleOpenCreate("connect4")}
-                    className="w-full py-2 border border-white bg-black text-white hover:bg-white hover:text-black font-extrabold text-xs uppercase transition-all cursor-pointer"
-                  >
-                    [ PLAY CONNECT 4 ]
-                  </button>
-                </div>
-
-                {/* 11. Battleship */}
-                <div className="border-2 border-neutral-700 bg-neutral-950 p-4 space-y-3 flex flex-col justify-between hover:border-white transition-all">
-                  <div className="space-y-1">
-                    <span className="text-xl">🚢</span>
-                    <h4 className="font-extrabold text-xs uppercase text-white">BATTLESHIP RADAR</h4>
-                    <p className="text-[10px] text-neutral-400 leading-relaxed">
-                      10x10 radar command naval artillery battle.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    disabled={!user}
-                    onClick={() => handleOpenCreate("battleship")}
-                    className="w-full py-2 border border-white bg-black text-white hover:bg-white hover:text-black font-extrabold text-xs uppercase transition-all cursor-pointer"
-                  >
-                    [ PLAY BATTLESHIP ]
-                  </button>
-                </div>
-
-                {/* 12. Sudoku */}
-                <div className="border-2 border-neutral-700 bg-neutral-950 p-4 space-y-3 flex flex-col justify-between hover:border-white transition-all">
-                  <div className="space-y-1">
-                    <span className="text-xl">🧩</span>
-                    <h4 className="font-extrabold text-xs uppercase text-white">1V1 SUDOKU RACE</h4>
-                    <p className="text-[10px] text-neutral-400 leading-relaxed">
-                      Head-to-head competitive data-grid puzzle race.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    disabled={!user}
-                    onClick={() => handleOpenCreate("sudoku")}
-                    className="w-full py-2 border border-white bg-black text-white hover:bg-white hover:text-black font-extrabold text-xs uppercase transition-all cursor-pointer"
-                  >
-                    [ PLAY SUDOKU ]
-                  </button>
-                </div>
               </div>
             </div>
 
-            {/* Section 2: Solo Arcade & Puzzle Grid */}
+            {/* Category 4: Solo Puzzles & Deduction Grid (1-Tap Instant Launch) */}
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-widest flex items-center gap-2">
-                  <Brain className="w-3.5 h-3.5 text-white" />
-                  // SOLO PUZZLE & RETRO ARCADE GRID (1-TAP INSTANT PLAY)
-                </h3>
-              </div>
+              <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-widest flex items-center gap-2">
+                <Brain className="w-3.5 h-3.5 text-white" />
+                // SOLO PUZZLES & DEDUCTION (1-TAP INSTANT PLAY)
+              </h3>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
                 {/* 15-Puzzle */}
@@ -696,12 +813,10 @@ function ArcadeContent() {
 
             {/* Live Open Match Lobbies */}
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-widest flex items-center gap-2">
-                  <Zap className="w-3.5 h-3.5 text-white animate-pulse" />
-                  // LIVE OPEN MATCH LOBBIES ({lobbyMatches.length})
-                </h3>
-              </div>
+              <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-widest flex items-center gap-2">
+                <Zap className="w-3.5 h-3.5 text-white animate-pulse" />
+                // LIVE OPEN MATCH LOBBIES ({lobbyMatches.length})
+              </h3>
 
               {lobbyMatches.length === 0 ? (
                 <div className="border border-neutral-800 bg-neutral-950 p-8 text-center space-y-2">

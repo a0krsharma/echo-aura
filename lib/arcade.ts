@@ -55,7 +55,22 @@ export type ArcadeGameType =
   | "dots_and_boxes"
   | "snakes_and_ladders"
   | "puzzle15"
-  | "mastermind";
+  | "mastermind"
+  | "poker"
+  | "blackjack"
+  | "uno"
+  | "liars_dice"
+  | "codenames"
+  | "spyfall"
+  | "skribbl"
+  | "trivia"
+  | "quoridor"
+  | "go"
+  | "yahtzee"
+  | "taboo"
+  | "melody_buzzer"
+  | "pitch_arena"
+  | "twenty_questions";
 
 export type ArcadeMatchMode = "MULTIPLAYER" | "VS_COMPUTER";
 
@@ -293,6 +308,145 @@ export interface MastermindState {
   lastActionLog?: string;
 }
 
+export interface PokerState {
+  communityCards: string[];
+  pot: number;
+  currentBet: number;
+  round: "PREFLOP" | "FLOP" | "TURN" | "RIVER" | "SHOWDOWN";
+  currentTurnUid: string;
+  playerBets: Record<string, number>;
+  playerHands: Record<string, string[]>;
+  foldedUids: string[];
+  lastActionLog?: string;
+}
+
+export interface BlackjackState {
+  playerHands: Record<string, string[]>;
+  dealerHand: string[];
+  playerBets: Record<string, number>;
+  playerStatuses: Record<string, "PLAYING" | "STAND" | "BUST" | "BLACKJACK">;
+  dealerRevealed: boolean;
+  currentTurnUid: string;
+  lastActionLog?: string;
+}
+
+export interface UnoCard {
+  color: "RED" | "BLUE" | "GREEN" | "YELLOW" | "WILD";
+  value: string;
+}
+
+export interface UnoState {
+  discardTop: UnoCard;
+  handsStr: string; // Record<string, UnoCard[]>
+  currentTurnUid: string;
+  direction: 1 | -1;
+  drawCountPenalty: number;
+  lastActionLog?: string;
+}
+
+export interface LiarsDiceState {
+  diceRollsStr: string; // Record<string, number[]>
+  currentBid: { count: number; face: number; bidderUid: string } | null;
+  currentTurnUid: string;
+  bluffCalled: boolean;
+  lastActionLog?: string;
+}
+
+export interface CodenamesState {
+  words: string[];
+  cardTypes: string[]; // RED, BLUE, NEUTRAL, ASSASSIN
+  revealed: boolean[];
+  currentTeamTurn: "RED" | "BLUE";
+  spymasterUids: string[];
+  lastClue?: { clue: string; count: number };
+  lastActionLog?: string;
+}
+
+export interface SpyfallState {
+  secretLocation: string;
+  impostorUid: string;
+  roles: Record<string, string>;
+  votes: Record<string, string>;
+  isRevealed: boolean;
+  lastActionLog?: string;
+}
+
+export interface SkribblState {
+  currentDrawerUid: string;
+  secretWord: string;
+  wordHint: string;
+  pathsStr: string;
+  correctGuessers: string[];
+  lastActionLog?: string;
+}
+
+export interface TriviaState {
+  questionIndex: number;
+  totalQuestions: number;
+  currentQuestion: { id: string; question: string; options: string[]; answerIndex: number };
+  scores: Record<string, number>;
+  answersSubmitted: Record<string, number>;
+  lastActionLog?: string;
+}
+
+export interface QuoridorState {
+  p1Pos: [number, number];
+  p2Pos: [number, number];
+  wallsStr: string; // { r: number; c: number; orientation: "H" | "V" }[]
+  p1WallsLeft: number;
+  p2WallsLeft: number;
+  currentTurnUid: string;
+  lastActionLog?: string;
+}
+
+export interface GoState {
+  boardStr: string; // 19x19 (string | null)[][]
+  currentTurn: "BLACK" | "WHITE";
+  capturedBlack: number;
+  capturedWhite: number;
+  lastActionLog?: string;
+}
+
+export interface YahtzeeState {
+  dice: number[];
+  rollsRemaining: number;
+  lockedDice: boolean[];
+  scorecardsStr: string; // Record<string, Record<string, number | null>>
+  currentTurnUid: string;
+  lastActionLog?: string;
+}
+
+export interface TabooState {
+  activeSpeakerUid: string;
+  targetWord: string;
+  forbiddenWords: string[];
+  scores: Record<string, number>;
+  lastActionLog?: string;
+}
+
+export interface MelodyBuzzerState {
+  currentTrackTitle: string;
+  hummerUid: string;
+  buzzedPlayerUid: string | null;
+  roundState: "HUMMING" | "BUZZED" | "SCORED";
+  scores: Record<string, number>;
+  lastActionLog?: string;
+}
+
+export interface PitchArenaState {
+  currentPitcherUid: string;
+  absurdPrompt: string;
+  voltTips: Record<string, number>;
+  lastActionLog?: string;
+}
+
+export interface TwentyQuestionsState {
+  targetSubject: string;
+  questionsRemaining: number;
+  questionLogStr: string; // { askerHandle: string; question: string; answer: "YES" | "NO" | "IRRELEVANT" }[]
+  lastActionLog?: string;
+}
+
 export interface ArcadeMatch {
   id: string;
   isArcade?: boolean;
@@ -327,6 +481,21 @@ export interface ArcadeMatch {
   snakesLaddersState?: SnakesLaddersState;
   puzzle15State?: Puzzle15State;
   mastermindState?: MastermindState;
+  pokerState?: PokerState;
+  blackjackState?: BlackjackState;
+  unoState?: UnoState;
+  liarsDiceState?: LiarsDiceState;
+  codenamesState?: CodenamesState;
+  spyfallState?: SpyfallState;
+  skribblState?: SkribblState;
+  triviaState?: TriviaState;
+  quoridorState?: QuoridorState;
+  goState?: GoState;
+  yahtzeeState?: YahtzeeState;
+  tabooState?: TabooState;
+  melodyBuzzerState?: MelodyBuzzerState;
+  pitchArenaState?: PitchArenaState;
+  twentyQuestionsState?: TwentyQuestionsState;
   chatMessages?: ArcadeChatMessage[];
   recentReaction?: ArcadeReaction;
   createdAt: any;
@@ -805,6 +974,218 @@ export async function createArcadeMatch(params: {
       isGameOver: false,
       maxAttempts: 10,
       lastActionLog: "Mastermind Cipher engaged. 10 attempts to crack 4-digit code.",
+    };
+  } else if (params.gameType === "poker") {
+    const deck = ["A♠", "K♠", "Q♠", "J♠", "10♠", "A♥", "K♥", "Q♥", "J♥", "10♥", "A♦", "K♦", "Q♦", "J♦", "10♦", "A♣", "K♣", "Q♣", "J♣", "10♣"];
+    const p1Hand = [deck[0], deck[1]];
+    const p2Hand = [deck[2], deck[3]];
+    const community = [deck[4], deck[5], deck[6]];
+
+    matchData.pokerState = {
+      communityCards: community,
+      pot: (params.stakes || 50) * 2,
+      currentBet: 20,
+      round: "FLOP",
+      currentTurnUid: params.hostUid,
+      playerBets: { [params.hostUid]: 20 },
+      playerHands: { [params.hostUid]: p1Hand },
+      foldedUids: [],
+      lastActionLog: "Texas Hold'em table active. Flop revealed: " + community.join(" "),
+    };
+  } else if (params.gameType === "blackjack") {
+    matchData.blackjackState = {
+      playerHands: { [params.hostUid]: ["10♠", "8♦"] },
+      dealerHand: ["A♥", "🂠"],
+      playerBets: { [params.hostUid]: params.stakes || 50 },
+      playerStatuses: { [params.hostUid]: "PLAYING" },
+      dealerRevealed: false,
+      currentTurnUid: params.hostUid,
+      lastActionLog: "Blackjack 21 dealer active. Hit, Stand, or Double!",
+    };
+  } else if (params.gameType === "uno") {
+    const initialHands: Record<string, UnoCard[]> = {
+      [params.hostUid]: [
+        { color: "RED", value: "7" },
+        { color: "BLUE", value: "3" },
+        { color: "GREEN", value: "SKIP" },
+        { color: "YELLOW", value: "+2" },
+        { color: "WILD", value: "WILD" },
+      ],
+    };
+    matchData.unoState = {
+      discardTop: { color: "RED", value: "5" },
+      handsStr: JSON.stringify(initialHands),
+      currentTurnUid: params.hostUid,
+      direction: 1,
+      drawCountPenalty: 0,
+      lastActionLog: "Flow Override online. Match color [RED] or value [5].",
+    };
+  } else if (params.gameType === "liars_dice") {
+    const initialRolls = {
+      [params.hostUid]: [
+        Math.floor(Math.random() * 6) + 1,
+        Math.floor(Math.random() * 6) + 1,
+        Math.floor(Math.random() * 6) + 1,
+        Math.floor(Math.random() * 6) + 1,
+        Math.floor(Math.random() * 6) + 1,
+      ],
+    };
+    matchData.liarsDiceState = {
+      diceRollsStr: JSON.stringify(initialRolls),
+      currentBid: null,
+      currentTurnUid: params.hostUid,
+      bluffCalled: false,
+      lastActionLog: "Dice trays locked under cups. Place the first bid!",
+    };
+  } else if (params.gameType === "codenames") {
+    const wordList = [
+      "CIPHER", "RADAR", "SERVER", "NEURAL", "ECHO", "SIGNAL", "LASER", "MATRIX", "STREAM", "VOLT",
+      "QUANTUM", "ORBIT", "KERNEL", "BINARY", "ROUTER", "PHANTOM", "PROTOCOL", "CHANNEL", "WAVE", "CIRCUIT",
+      "CHIP", "NODE", "BEACON", "PULSE", "GATEWAY"
+    ];
+    const types = [
+      "RED", "RED", "RED", "RED", "RED", "RED", "RED", "RED", "RED",
+      "BLUE", "BLUE", "BLUE", "BLUE", "BLUE", "BLUE", "BLUE", "BLUE",
+      "NEUTRAL", "NEUTRAL", "NEUTRAL", "NEUTRAL", "NEUTRAL", "NEUTRAL", "NEUTRAL",
+      "ASSASSIN"
+    ].sort(() => Math.random() - 0.5);
+
+    matchData.codenamesState = {
+      words: wordList,
+      cardTypes: types,
+      revealed: Array(25).fill(false),
+      currentTeamTurn: "RED",
+      spymasterUids: [params.hostUid],
+      lastActionLog: "5x5 Decryption Grid ready. Spymaster: give word clue & count.",
+    };
+  } else if (params.gameType === "spyfall") {
+    const locations = ["CYBER SPACE STATION", "UNDERGROUND DATA VAULT", "NEON METROPOLIS", "QUANTUM CORE LAB", "FREQUENCY NIGHTCLUB"];
+    const chosenLoc = locations[Math.floor(Math.random() * locations.length)];
+    matchData.spyfallState = {
+      secretLocation: chosenLoc,
+      impostorUid: params.hostUid, // Will be reassigned when players join
+      roles: { [params.hostUid]: "System Architect" },
+      votes: {},
+      isRevealed: false,
+      lastActionLog: "Cipher Impostor round active. Ask questions over mic & find the spy!",
+    };
+  } else if (params.gameType === "skribbl") {
+    const words = ["MICROPHONE", "SATELLITE", "GUITAR", "PYRAMID", "CYBER TRUCK", "HEADPHONES", "ROCKET", "LIGHTNING"];
+    const secretWord = words[Math.floor(Math.random() * words.length)];
+    matchData.skribblState = {
+      currentDrawerUid: params.hostUid,
+      secretWord,
+      wordHint: secretWord.replace(/[A-Z]/g, "_ "),
+      pathsStr: JSON.stringify([]),
+      correctGuessers: [],
+      lastActionLog: "Vector Canvas ready! Active drawer is sketching...",
+    };
+  } else if (params.gameType === "trivia") {
+    const quiz = [
+      {
+        id: "q1",
+        question: "Which audio frequency range is generally audible to human ears?",
+        options: ["20 Hz – 20,000 Hz", "1 Hz – 100 Hz", "50 kHz – 100 kHz", "500 Hz – 2,000 Hz"],
+        answerIndex: 0,
+      },
+      {
+        id: "q2",
+        question: "What protocol powers low-latency real-time voice streaming in modern browsers?",
+        options: ["WebRTC", "FTP", "Telnet", "SMTP"],
+        answerIndex: 0,
+      },
+      {
+        id: "q3",
+        question: "In Texas Hold'em, what is the best possible 5-card poker hand?",
+        options: ["Royal Flush", "Four of a Kind", "Full House", "Straight Flush"],
+        answerIndex: 0,
+      },
+      {
+        id: "q4",
+        question: "Which data structure operates on a First-In-First-Out (FIFO) principle?",
+        options: ["Queue", "Stack", "Binary Tree", "Hash Map"],
+        answerIndex: 0,
+      },
+    ];
+    matchData.triviaState = {
+      questionIndex: 0,
+      totalQuestions: quiz.length,
+      currentQuestion: quiz[0],
+      scores: { [params.hostUid]: 0 },
+      answersSubmitted: {},
+      lastActionLog: "Signal Race Trivia online! Select the correct option.",
+    };
+  } else if (params.gameType === "quoridor") {
+    matchData.quoridorState = {
+      p1Pos: [8, 4],
+      p2Pos: [0, 4],
+      wallsStr: JSON.stringify([]),
+      p1WallsLeft: 10,
+      p2WallsLeft: 10,
+      currentTurnUid: params.hostUid,
+      lastActionLog: "Quoridor Firewall Runner active. Advance pawn or drop blocking wall!",
+    };
+  } else if (params.gameType === "go") {
+    const board = Array.from({ length: 19 }, () => Array(19).fill(null));
+    matchData.goState = {
+      boardStr: JSON.stringify(board),
+      currentTurn: "BLACK",
+      capturedBlack: 0,
+      capturedWhite: 0,
+      lastActionLog: "19x19 Go Territory Grid online. BLACK places first stone.",
+    };
+  } else if (params.gameType === "yahtzee") {
+    matchData.yahtzeeState = {
+      dice: [1, 2, 3, 4, 5],
+      rollsRemaining: 3,
+      lockedDice: [false, false, false, false, false],
+      scorecardsStr: JSON.stringify({ [params.hostUid]: {} }),
+      currentTurnUid: params.hostUid,
+      lastActionLog: "Dice Protocol active. Roll dice & choose your score category!",
+    };
+  } else if (params.gameType === "taboo") {
+    const tabooCards = [
+      { word: "PODCAST", forbidden: ["AUDIO", "EPISODE", "HOST", "MIC", "RECORD"] },
+      { word: "ALGORITHM", forbidden: ["CODE", "COMPUTER", "MATH", "STEPS", "PROGRAM"] },
+      { word: "FIREWALL", forbidden: ["SECURITY", "BLOCK", "HACK", "NETWORK", "PROTECT"] },
+    ];
+    const card = tabooCards[Math.floor(Math.random() * tabooCards.length)];
+    matchData.tabooState = {
+      activeSpeakerUid: params.hostUid,
+      targetWord: card.word,
+      forbiddenWords: card.forbidden,
+      scores: { [params.hostUid]: 0 },
+      lastActionLog: "Forbidden Lexicon active! Describe keyword without using forbidden words.",
+    };
+  } else if (params.gameType === "melody_buzzer") {
+    const tracks = ["Shape of You", "Bad Guy", "Despacito", "Believer", "Blinding Lights", "Bohemian Rhapsody"];
+    matchData.melodyBuzzerState = {
+      currentTrackTitle: tracks[Math.floor(Math.random() * tracks.length)],
+      hummerUid: params.hostUid,
+      buzzedPlayerUid: null,
+      roundState: "HUMMING",
+      scores: { [params.hostUid]: 0 },
+      lastActionLog: "Hum or whistle the tune into your mic! Listeners hit buzzer to guess.",
+    };
+  } else if (params.gameType === "pitch_arena") {
+    const prompts = [
+      "An umbrella specifically designed for pet goldfish.",
+      "An alarm clock that donates your money to enemies if you snooze.",
+      "A social network exclusively for houseplants.",
+      "Shoes that generate Wi-Fi only while actively running.",
+    ];
+    matchData.pitchArenaState = {
+      currentPitcherUid: params.hostUid,
+      absurdPrompt: prompts[Math.floor(Math.random() * prompts.length)],
+      voltTips: { [params.hostUid]: 0 },
+      lastActionLog: "Defend the Absurd! Pitch your startup idea on mic for 45s.",
+    };
+  } else if (params.gameType === "twenty_questions") {
+    matchData.twentyQuestionsState = {
+      targetSubject: "NEURAL NETWORK PROCESSOR",
+      questionsRemaining: 20,
+      questionLogStr: JSON.stringify([]),
+      lastActionLog: "20 Questions Decryption engaged. Ask Yes/No questions on mic!",
     };
   }
 
@@ -1832,6 +2213,441 @@ export async function submitMastermindGuess(
 
   await updateDoc(matchRef, updates);
   return { strikes, balls, won: isWon, isGameOver };
+}
+
+// ── Poker Actions ─────────────────────────────────────────────────────────────
+export async function betPoker(
+  matchId: string,
+  playerUid: string,
+  action: "CHECK" | "CALL" | "RAISE" | "FOLD",
+  raiseAmount: number = 20
+): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) return;
+  const match = snap.data() as ArcadeMatch;
+  if (!match.pokerState) return;
+
+  const ps = match.pokerState;
+  const players = Object.keys(match.players || {});
+  const nextTurnUid = players.find((u) => u !== playerUid) || playerUid;
+  let pot = ps.pot;
+  let currentBet = ps.currentBet;
+  let folded = [...ps.foldedUids];
+
+  if (action === "FOLD") {
+    folded.push(playerUid);
+  } else if (action === "CALL") {
+    pot += currentBet;
+  } else if (action === "RAISE") {
+    currentBet += raiseAmount;
+    pot += currentBet;
+  }
+
+  const updates: any = {
+    "pokerState.pot": pot,
+    "pokerState.currentBet": currentBet,
+    "pokerState.currentTurnUid": nextTurnUid,
+    "pokerState.foldedUids": folded,
+    "pokerState.lastActionLog": `${match.players[playerUid]?.handle || "Player"} chose to ${action}! Pot is now $${pot}.`,
+    updatedAt: serverTimestamp(),
+  };
+
+  if (folded.length > 0) {
+    updates.status = "FINISHED";
+    updates.winnerUid = nextTurnUid;
+    updates.winnerHandle = match.players[nextTurnUid]?.handle || "@ANON";
+    await awardAura(nextTurnUid, pot);
+  }
+
+  await updateDoc(matchRef, updates);
+}
+
+// ── Blackjack Actions ─────────────────────────────────────────────────────────
+export async function playBlackjackAction(
+  matchId: string,
+  playerUid: string,
+  action: "HIT" | "STAND" | "DOUBLE"
+): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) return;
+  const match = snap.data() as ArcadeMatch;
+  if (!match.blackjackState) return;
+
+  const bs = match.blackjackState;
+  const playerHand = bs.playerHands[playerUid] || ["10♠", "8♦"];
+  const deck = ["A♣", "2♦", "5♥", "7♠", "9♦", "K♣", "Q♥", "J♠"];
+  const drawn = deck[Math.floor(Math.random() * deck.length)];
+
+  if (action === "HIT" || action === "DOUBLE") {
+    playerHand.push(drawn);
+  }
+
+  const updates: any = {
+    [`blackjackState.playerHands.${playerUid}`]: playerHand,
+    "blackjackState.lastActionLog": `${match.players[playerUid]?.handle || "Player"} chose to ${action}!`,
+    updatedAt: serverTimestamp(),
+  };
+
+  if (action === "STAND" || action === "DOUBLE") {
+    updates["blackjackState.dealerRevealed"] = true;
+    updates["blackjackState.dealerHand"] = ["A♥", "9♣"];
+    updates.status = "FINISHED";
+    updates.winnerUid = playerUid;
+    updates.winnerHandle = match.players[playerUid]?.handle || "@ANON";
+    await awardAura(playerUid, (bs.playerBets[playerUid] || 50) * 2);
+  }
+
+  await updateDoc(matchRef, updates);
+}
+
+// ── Uno Actions ───────────────────────────────────────────────────────────────
+export async function playUnoCard(
+  matchId: string,
+  playerUid: string,
+  card: UnoCard
+): Promise<{ won: boolean }> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+  if (!match.unoState) throw new Error("Not an uno match");
+
+  const us = match.unoState;
+  const hands: Record<string, UnoCard[]> = JSON.parse(us.handsStr || "{}");
+  const playerHand = hands[playerUid] || [];
+  const cardIdx = playerHand.findIndex((c) => c.color === card.color && c.value === card.value);
+
+  if (cardIdx >= 0) {
+    playerHand.splice(cardIdx, 1);
+  }
+  hands[playerUid] = playerHand;
+
+  const won = playerHand.length === 0;
+  const players = Object.keys(match.players || {});
+  const nextTurnUid = players.find((u) => u !== playerUid) || playerUid;
+
+  const updates: any = {
+    "unoState.discardTop": card,
+    "unoState.handsStr": JSON.stringify(hands),
+    "unoState.currentTurnUid": nextTurnUid,
+    "unoState.lastActionLog": `${match.players[playerUid]?.handle || "Player"} played [${card.color} ${card.value}]!`,
+    updatedAt: serverTimestamp(),
+  };
+
+  if (won) {
+    updates.status = "FINISHED";
+    updates.winnerUid = playerUid;
+    updates.winnerHandle = match.players[playerUid]?.handle || "@ANON";
+    await awardAura(playerUid, match.stakes * 2 || 100);
+  }
+
+  await updateDoc(matchRef, updates);
+  return { won };
+}
+
+// ── Liar's Dice Actions ───────────────────────────────────────────────────────
+export async function makeLiarsDiceBid(
+  matchId: string,
+  playerUid: string,
+  count: number,
+  face: number
+): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) return;
+  const match = snap.data() as ArcadeMatch;
+
+  const players = Object.keys(match.players || {});
+  const nextTurnUid = players.find((u) => u !== playerUid) || playerUid;
+
+  await updateDoc(matchRef, {
+    "liarsDiceState.currentBid": { count, face, bidderUid: playerUid },
+    "liarsDiceState.currentTurnUid": nextTurnUid,
+    "liarsDiceState.lastActionLog": `${match.players[playerUid]?.handle || "Player"} bid ${count}x [${face}]s!`,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function callLiarsDiceBluff(matchId: string, callerUid: string): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) return;
+  const match = snap.data() as ArcadeMatch;
+
+  await updateDoc(matchRef, {
+    "liarsDiceState.bluffCalled": true,
+    "liarsDiceState.lastActionLog": `${match.players[callerUid]?.handle || "Player"} CALLED BLUFF! Revealing dice trays...`,
+    status: "FINISHED",
+    winnerUid: callerUid,
+    winnerHandle: match.players[callerUid]?.handle || "@ANON",
+    updatedAt: serverTimestamp(),
+  });
+  await awardAura(callerUid, match.stakes * 2 || 100);
+}
+
+// ── Codenames Actions ────────────────────────────────────────────────────────
+export async function selectCodenamesCard(matchId: string, playerUid: string, cardIndex: number): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) return;
+  const match = snap.data() as ArcadeMatch;
+  if (!match.codenamesState) return;
+
+  const cs = match.codenamesState;
+  const revealed = [...cs.revealed];
+  revealed[cardIndex] = true;
+  const cardType = cs.cardTypes[cardIndex];
+
+  const updates: any = {
+    "codenamesState.revealed": revealed,
+    "codenamesState.lastActionLog": `${match.players[playerUid]?.handle || "Operative"} tapped [${cs.words[cardIndex]}] ➔ Revealed ${cardType}!`,
+    updatedAt: serverTimestamp(),
+  };
+
+  if (cardType === "ASSASSIN") {
+    updates.status = "FINISHED";
+    const winningTeam = cs.currentTeamTurn === "RED" ? "BLUE" : "RED";
+    updates.lastActionLog = `ASSASSIN CONTACTED! ${winningTeam} TEAM WINS!`;
+  }
+
+  await updateDoc(matchRef, updates);
+}
+
+// ── Skribbl Actions ──────────────────────────────────────────────────────────
+export async function submitSkribblStroke(matchId: string, pathSegment: any): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) return;
+  const match = snap.data() as ArcadeMatch;
+  if (!match.skribblState) return;
+
+  const paths = JSON.parse(match.skribblState.pathsStr || "[]");
+  paths.push(pathSegment);
+
+  await updateDoc(matchRef, {
+    "skribblState.pathsStr": JSON.stringify(paths),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function submitSkribblGuess(
+  matchId: string,
+  guesserUid: string,
+  guess: string
+): Promise<{ correct: boolean }> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+  if (!match.skribblState) throw new Error("Not a skribbl match");
+
+  const correct = guess.trim().toUpperCase() === match.skribblState.secretWord.toUpperCase();
+  if (correct) {
+    const correctGuessers = [...(match.skribblState.correctGuessers || []), guesserUid];
+    await updateDoc(matchRef, {
+      "skribblState.correctGuessers": correctGuessers,
+      "skribblState.lastActionLog": `🎯 ${match.players[guesserUid]?.handle || "Player"} GUESSED THE WORD! (+100 PTS)`,
+      updatedAt: serverTimestamp(),
+    });
+    await awardAura(guesserUid, 100);
+  }
+  return { correct };
+}
+
+// ── Trivia Actions ───────────────────────────────────────────────────────────
+export async function submitTriviaAnswer(
+  matchId: string,
+  playerUid: string,
+  optionIndex: number
+): Promise<{ correct: boolean }> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+  if (!match.triviaState) throw new Error("Not a trivia match");
+
+  const ts = match.triviaState;
+  const correct = optionIndex === ts.currentQuestion.answerIndex;
+
+  const updates: any = {
+    [`triviaState.answersSubmitted.${playerUid}`]: optionIndex,
+    updatedAt: serverTimestamp(),
+  };
+
+  if (correct) {
+    updates[`triviaState.scores.${playerUid}`] = increment(100);
+    updates["triviaState.lastActionLog"] = `⚡ ${match.players[playerUid]?.handle || "Player"} answered correctly (+100 PTS)!`;
+    await awardAura(playerUid, 100);
+  } else {
+    updates["triviaState.lastActionLog"] = `❌ Incorrect answer by ${match.players[playerUid]?.handle || "Player"}.`;
+  }
+
+  await updateDoc(matchRef, updates);
+  return { correct };
+}
+
+// ── Quoridor Actions ──────────────────────────────────────────────────────────
+export async function moveQuoridorPawn(
+  matchId: string,
+  playerUid: string,
+  newR: number,
+  newC: number
+): Promise<{ won: boolean }> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+  if (!match.quoridorState) throw new Error("Not a quoridor match");
+
+  const isP1 = playerUid === match.hostUid;
+  const won = isP1 ? newR === 0 : newR === 8;
+  const players = Object.keys(match.players || {});
+  const nextTurnUid = players.find((u) => u !== playerUid) || playerUid;
+
+  const updates: any = {
+    [`quoridorState.${isP1 ? "p1Pos" : "p2Pos"}`]: [newR, newC],
+    "quoridorState.currentTurnUid": nextTurnUid,
+    "quoridorState.lastActionLog": `${match.players[playerUid]?.handle || "Pawn"} moved to [${newR + 1}, ${newC + 1}].`,
+    updatedAt: serverTimestamp(),
+  };
+
+  if (won) {
+    updates.status = "FINISHED";
+    updates.winnerUid = playerUid;
+    updates.winnerHandle = match.players[playerUid]?.handle || "@ANON";
+    await awardAura(playerUid, match.stakes * 2 || 100);
+  }
+
+  await updateDoc(matchRef, updates);
+  return { won };
+}
+
+// ── Yahtzee Actions ───────────────────────────────────────────────────────────
+export async function rollYahtzeeDice(
+  matchId: string,
+  playerUid: string,
+  locked: boolean[]
+): Promise<number[]> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+  if (!match.yahtzeeState) throw new Error("Not a yahtzee match");
+
+  const currentDice = match.yahtzeeState.dice || [1, 2, 3, 4, 5];
+  const newDice = currentDice.map((d, i) => (locked[i] ? d : Math.floor(Math.random() * 6) + 1));
+  const rollsLeft = Math.max(0, match.yahtzeeState.rollsRemaining - 1);
+
+  await updateDoc(matchRef, {
+    "yahtzeeState.dice": newDice,
+    "yahtzeeState.rollsRemaining": rollsLeft,
+    "yahtzeeState.lockedDice": locked,
+    "yahtzeeState.lastActionLog": `${match.players[playerUid]?.handle || "Player"} rolled: [${newDice.join(", ")}] (${rollsLeft} rolls left).`,
+    updatedAt: serverTimestamp(),
+  });
+
+  return newDice;
+}
+
+// ── Taboo Actions ─────────────────────────────────────────────────────────────
+export async function submitTabooGuess(
+  matchId: string,
+  guesserUid: string,
+  isCorrect: boolean
+): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) return;
+  const match = snap.data() as ArcadeMatch;
+  if (!match.tabooState) return;
+
+  const updates: any = {
+    updatedAt: serverTimestamp(),
+  };
+
+  if (isCorrect) {
+    updates[`tabooState.scores.${guesserUid}`] = increment(100);
+    updates["tabooState.lastActionLog"] = `🎯 CORRECT! +100 Points awarded to ${match.players[guesserUid]?.handle || "Team"}!`;
+    await awardAura(guesserUid, 100);
+  } else {
+    updates["tabooState.lastActionLog"] = `🚫 FORBIDDEN WORD UTTERED! Round penalized.`;
+  }
+
+  await updateDoc(matchRef, updates);
+}
+
+// ── Melody Buzzer & Speed Buzzer ──────────────────────────────────────────────
+export async function buzzMelodyTrack(matchId: string, playerUid: string): Promise<boolean> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) return false;
+  const match = snap.data() as ArcadeMatch;
+  if (!match.melodyBuzzerState) return false;
+
+  if (match.melodyBuzzerState.buzzedPlayerUid) return false; // Already buzzed
+
+  await updateDoc(matchRef, {
+    "melodyBuzzerState.buzzedPlayerUid": playerUid,
+    "melodyBuzzerState.roundState": "BUZZED",
+    "melodyBuzzerState.lastActionLog": `🚨 BUZZ IN! ${match.players[playerUid]?.handle || "Player"} has the mic to guess!`,
+    updatedAt: serverTimestamp(),
+  });
+
+  return true;
+}
+
+// ── Pitch Arena & Defend the Absurd ──────────────────────────────────────────
+export async function tipPitcherVolts(matchId: string, tipperUid: string, volts: number): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) return;
+  const match = snap.data() as ArcadeMatch;
+  if (!match.pitchArenaState) return;
+
+  const pitcherUid = match.pitchArenaState.currentPitcherUid;
+
+  await updateDoc(matchRef, {
+    [`pitchArenaState.voltTips.${pitcherUid}`]: increment(volts),
+    "pitchArenaState.lastActionLog": `⚡ ${match.players[tipperUid]?.handle || "Audience"} tipped +${volts} Volts for the pitch!`,
+    updatedAt: serverTimestamp(),
+  });
+  await awardAura(pitcherUid, volts);
+}
+
+// ── 20 Questions Decryption ──────────────────────────────────────────────────
+export async function askTwentyQuestion(matchId: string, askerHandle: string, question: string): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) return;
+  const match = snap.data() as ArcadeMatch;
+  if (!match.twentyQuestionsState) return;
+
+  const log = JSON.parse(match.twentyQuestionsState.questionLogStr || "[]");
+  log.push({ askerHandle, question, answer: "PENDING" });
+
+  await updateDoc(matchRef, {
+    "twentyQuestionsState.questionLogStr": JSON.stringify(log),
+    "twentyQuestionsState.questionsRemaining": increment(-1),
+    "twentyQuestionsState.lastActionLog": `❓ ${askerHandle} asked: "${question}"`,
+    updatedAt: serverTimestamp(),
+  });
 }
 
 // ── Ludo Actions ─────────────────────────────────────────────────────────────

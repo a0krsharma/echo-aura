@@ -20,10 +20,15 @@ interface ChallengeModalProps {
 
 const ARCADE_GAMES: { type: ArcadeGameType; name: string; icon: string; desc: string }[] = [
   { type: "ludo", name: "15X15 CYBER LUDO", icon: "🎲", desc: "1v1 high-stakes board race & captures" },
+  { type: "poker", name: "TEXAS HOLD'EM", icon: "♠️", desc: "1v1 heads-up poker duel & voice tells" },
+  { type: "blackjack", name: "BLACKJACK 21", icon: "🃏", desc: "Target 21 vs data dealer clash" },
+  { type: "uno", name: "FLOW OVERRIDE (UNO)", icon: "🎴", desc: "Action card match showdown" },
+  { type: "liars_dice", name: "LIAR'S DICE", icon: "🎲", desc: "Hidden tray bluffing & challenge protocol" },
   { type: "pool", name: "8-BALL POOL", icon: "🎱", desc: "2D real-time physics pool table duel" },
   { type: "carrom", name: "CARROM BOARD", icon: "⚪", desc: "Striker & coin pocketing physics" },
   { type: "glow_hockey", name: "GLOW HOCKEY", icon: "⚡", desc: "Neon air hockey 60fps clash" },
   { type: "chess", name: "CHESS GRID PROTOCOL", icon: "♟️", desc: "8x8 tactical battle on stage" },
+  { type: "quoridor", name: "QUORIDOR RUNNER", icon: "🧱", desc: "Pawn race with blocking firewall walls" },
   { type: "gomoku", name: "GOMOKU (5 IN A ROW)", icon: "⬛", desc: "15x15 tactical stone alignment" },
   { type: "reversi", name: "REVERSI / OTHELLO", icon: "🔄", desc: "8x8 disk flipping battle" },
   { type: "dots_and_boxes", name: "DOTS & BOXES", icon: "🕸️", desc: "Grid lock box capture strategy" },
