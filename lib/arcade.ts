@@ -70,7 +70,22 @@ export type ArcadeGameType =
   | "taboo"
   | "melody_buzzer"
   | "pitch_arena"
-  | "twenty_questions";
+  | "twenty_questions"
+  | "raja_mantri"
+  | "hand_cricket"
+  | "book_cricket"
+  | "bingo"
+  | "npat"
+  | "bagh_chal"
+  | "nine_mens_morris"
+  | "chain_reaction"
+  | "pen_fight"
+  | "neon_pong"
+  | "two_truths"
+  | "hot_potato"
+  | "dilemma_debate"
+  | "hangman"
+  | "math_blitz";
 
 export type ArcadeMatchMode = "MULTIPLAYER" | "VS_COMPUTER";
 
@@ -447,6 +462,131 @@ export interface TwentyQuestionsState {
   lastActionLog?: string;
 }
 
+export interface RajaMantriState {
+  chitsStr: string; // Record<string, "RAJA" | "MANTRI" | "CHOR" | "SIPAHI">
+  rajaUid: string;
+  mantriUid: string;
+  guessedChorUid: string | null;
+  scores: Record<string, number>;
+  phase: "REVEAL" | "INTERROGATION" | "RESOLVED";
+  lastActionLog?: string;
+}
+
+export interface HandCricketState {
+  batsmanUid: string;
+  bowlerUid: string;
+  currentInnings: 1 | 2;
+  innings1Score: number;
+  innings2Score: number;
+  currentBatsmanChoice: number | null;
+  currentBowlerChoice: number | null;
+  lastActionLog?: string;
+}
+
+export interface BookCricketState {
+  currentBatsmanUid: string;
+  runs: number;
+  wickets: number;
+  balls: number;
+  lastFlippedPage: number | null;
+  target: number | null;
+  lastActionLog?: string;
+}
+
+export interface BingoState {
+  gridsStr: string; // Record<string, number[][]>
+  crossedNumbers: number[];
+  completedLines: Record<string, number>;
+  currentTurnUid: string;
+  lastActionLog?: string;
+}
+
+export interface NPATState {
+  currentLetter: string;
+  submissionsStr: string; // Record<string, { name: string; place: string; animal: string; thing: string }>
+  roundScores: Record<string, number>;
+  lastActionLog?: string;
+}
+
+export interface BaghChalState {
+  tigersStr: string; // [number, number][]
+  goatsStr: string; // [number, number][]
+  goatsPlaced: number;
+  goatsCaptured: number;
+  currentTurn: "TIGER" | "GOAT";
+  lastActionLog?: string;
+}
+
+export interface NineMensMorrisState {
+  boardNodesStr: string; // Record<string, string | null>
+  phase: "PLACEMENT" | "MOVEMENT";
+  p1PiecesPlaced: number;
+  p2PiecesPlaced: number;
+  currentTurn: "P1" | "P2";
+  lastActionLog?: string;
+}
+
+export interface ChainReactionState {
+  gridStr: string; // { count: number; color: "RED" | "GREEN" | null }[][]
+  currentTurn: "RED" | "GREEN";
+  lastActionLog?: string;
+}
+
+export interface PenFightState {
+  pensStr: string; // [{ id: string, x: number, y: number, vx: number, vy: number, isOffDesk: boolean }]
+  currentTurnUid: string;
+  lastActionLog?: string;
+}
+
+export interface NeonPongState {
+  p1Score: number;
+  p2Score: number;
+  ballStr: string; // { x: number, y: number, vx: number, vy: number }
+  p1PaddleY: number;
+  p2PaddleY: number;
+  lastActionLog?: string;
+}
+
+export interface TwoTruthsState {
+  speakerUid: string;
+  statements: string[];
+  lieIndex: number;
+  votes: Record<string, number>;
+  isRevealed: boolean;
+  lastActionLog?: string;
+}
+
+export interface HotPotatoState {
+  currentHolderUid: string;
+  question: string;
+  lastActionLog?: string;
+}
+
+export interface DilemmaDebateState {
+  dilemmaOptionA: string;
+  dilemmaOptionB: string;
+  votesA: string[];
+  votesB: string[];
+  lastActionLog?: string;
+}
+
+export interface HangmanState {
+  secretWord: string;
+  guessedLetters: string[];
+  wrongGuesses: number;
+  maxWrong: number;
+  isWon: boolean;
+  isGameOver: boolean;
+  lastActionLog?: string;
+}
+
+export interface MathBlitzState {
+  p1Score: number;
+  p2Score: number;
+  currentProblem: { num1: number; op: string; num2: number; answer: number };
+  lastActionLog?: string;
+}
+
 export interface ArcadeMatch {
   id: string;
   isArcade?: boolean;
@@ -496,6 +636,21 @@ export interface ArcadeMatch {
   melodyBuzzerState?: MelodyBuzzerState;
   pitchArenaState?: PitchArenaState;
   twentyQuestionsState?: TwentyQuestionsState;
+  rajaMantriState?: RajaMantriState;
+  handCricketState?: HandCricketState;
+  bookCricketState?: BookCricketState;
+  bingoState?: BingoState;
+  npatState?: NPATState;
+  baghChalState?: BaghChalState;
+  nineMensMorrisState?: NineMensMorrisState;
+  chainReactionState?: ChainReactionState;
+  penFightState?: PenFightState;
+  neonPongState?: NeonPongState;
+  twoTruthsState?: TwoTruthsState;
+  hotPotatoState?: HotPotatoState;
+  dilemmaDebateState?: DilemmaDebateState;
+  hangmanState?: HangmanState;
+  mathBlitzState?: MathBlitzState;
   chatMessages?: ArcadeChatMessage[];
   recentReaction?: ArcadeReaction;
   createdAt: any;
@@ -1186,6 +1341,151 @@ export async function createArcadeMatch(params: {
       questionsRemaining: 20,
       questionLogStr: JSON.stringify([]),
       lastActionLog: "20 Questions Decryption engaged. Ask Yes/No questions on mic!",
+    };
+  } else if (params.gameType === "raja_mantri") {
+    const roles: ("RAJA" | "MANTRI" | "CHOR" | "SIPAHI")[] = (["RAJA", "MANTRI", "CHOR", "SIPAHI"] as const).slice().sort(() => Math.random() - 0.5);
+    const chitsMap: Record<string, string> = { [params.hostUid]: roles[0] };
+    matchData.rajaMantriState = {
+      chitsStr: JSON.stringify(chitsMap),
+      rajaUid: params.hostUid,
+      mantriUid: params.hostUid,
+      guessedChorUid: null,
+      scores: { [params.hostUid]: 0 },
+      phase: "REVEAL",
+      lastActionLog: "Paper Chits shuffled! Raja will reveal and command the Mantri.",
+    };
+  } else if (params.gameType === "hand_cricket") {
+    matchData.handCricketState = {
+      batsmanUid: params.hostUid,
+      bowlerUid: "",
+      currentInnings: 1,
+      innings1Score: 0,
+      innings2Score: 0,
+      currentBatsmanChoice: null,
+      currentBowlerChoice: null,
+      lastActionLog: "Odd-Even Hand Cricket match underway! Choose your number (1-6).",
+    };
+  } else if (params.gameType === "book_cricket") {
+    matchData.bookCricketState = {
+      currentBatsmanUid: params.hostUid,
+      runs: 0,
+      wickets: 0,
+      balls: 0,
+      lastFlippedPage: null,
+      target: null,
+      lastActionLog: "Textbook ready on desk. Tap to flip page!",
+    };
+  } else if (params.gameType === "bingo") {
+    // Generate 5x5 grid with 1-25 shuffled
+    const nums = Array.from({ length: 25 }, (_, i) => i + 1).sort(() => Math.random() - 0.5);
+    const grid5x5 = Array.from({ length: 5 }, (_, r) => nums.slice(r * 5, r * 5 + 5));
+    matchData.bingoState = {
+      gridsStr: JSON.stringify({ [params.hostUid]: grid5x5 }),
+      crossedNumbers: [],
+      completedLines: { [params.hostUid]: 0 },
+      currentTurnUid: params.hostUid,
+      lastActionLog: "25-Cross Bingo grid filled. Call numbers on voice!",
+    };
+  } else if (params.gameType === "npat") {
+    const alphabet = "ABCDEFGHIJKLMNOPRSTW";
+    const letter = alphabet[Math.floor(Math.random() * alphabet.length)];
+    matchData.npatState = {
+      currentLetter: letter,
+      submissionsStr: JSON.stringify({}),
+      roundScores: { [params.hostUid]: 0 },
+      lastActionLog: `Letter announced: [ ${letter} ]! Fill Name, Place, Animal, Thing.`,
+    };
+  } else if (params.gameType === "bagh_chal") {
+    matchData.baghChalState = {
+      tigersStr: JSON.stringify([[0, 0], [0, 4], [4, 0], [4, 4]]),
+      goatsStr: JSON.stringify([]),
+      goatsPlaced: 0,
+      goatsCaptured: 0,
+      currentTurn: "GOAT",
+      lastActionLog: "Bagh-Chal board active. Goats place first node.",
+    };
+  } else if (params.gameType === "nine_mens_morris") {
+    matchData.nineMensMorrisState = {
+      boardNodesStr: JSON.stringify({}),
+      phase: "PLACEMENT",
+      p1PiecesPlaced: 0,
+      p2PiecesPlaced: 0,
+      currentTurn: "P1",
+      lastActionLog: "Nine Stones matrix ready. Place your tokens on junctions.",
+    };
+  } else if (params.gameType === "chain_reaction") {
+    const grid = Array.from({ length: 6 }, () => Array.from({ length: 9 }, () => ({ count: 0, color: null })));
+    matchData.chainReactionState = {
+      gridStr: JSON.stringify(grid),
+      currentTurn: "RED",
+      lastActionLog: "Orbital Fusion Grid online. Place radioactive orbs!",
+    };
+  } else if (params.gameType === "pen_fight") {
+    const pens = [
+      { id: params.hostUid, x: 100, y: 300, vx: 0, vy: 0, isOffDesk: false },
+      { id: "opp", x: 280, y: 100, vx: 0, vy: 0, isOffDesk: false },
+    ];
+    matchData.penFightState = {
+      pensStr: JSON.stringify(pens),
+      currentTurnUid: params.hostUid,
+      lastActionLog: "Desk arena set. Drag back to flick your pen striker!",
+    };
+  } else if (params.gameType === "neon_pong") {
+    matchData.neonPongState = {
+      p1Score: 0,
+      p2Score: 0,
+      ballStr: JSON.stringify({ x: 180, y: 180, vx: 3, vy: 3 }),
+      p1PaddleY: 150,
+      p2PaddleY: 150,
+      lastActionLog: "Neon Pong paddle arena online. Slide to deflect!",
+    };
+  } else if (params.gameType === "two_truths") {
+    matchData.twoTruthsState = {
+      speakerUid: params.hostUid,
+      statements: [
+        "I once met a famous astronaut in an elevator.",
+        "I have never broken a single bone in my body.",
+        "I can speak four languages fluently.",
+      ],
+      lieIndex: 0,
+      votes: {},
+      isRevealed: false,
+      lastActionLog: "Two Truths and a Lie active. Debate on mic and vote for the lie!",
+    };
+  } else if (params.gameType === "hot_potato") {
+    matchData.hotPotatoState = {
+      currentHolderUid: params.hostUid,
+      question: "Name 3 programming languages in 5 seconds!",
+      lastActionLog: "Terminal Fuse ignited! Speak fast on mic & pass the fuse!",
+    };
+  } else if (params.gameType === "dilemma_debate") {
+    matchData.dilemmaDebateState = {
+      dilemmaOptionA: "Infinite computing speed with zero internet",
+      dilemmaOptionB: "1Gbps fiber internet with a 2002 vintage PC",
+      votesA: [],
+      votesB: [],
+      lastActionLog: "Dilemma generated! 30-second mic debates begin.",
+    };
+  } else if (params.gameType === "hangman") {
+    const words = ["JAVASCRIPT", "FIREBASE", "TERMINAL", "SATELLITE", "CYBERSPACE", "FREQUENCY"];
+    const secret = words[Math.floor(Math.random() * words.length)];
+    matchData.hangmanState = {
+      secretWord: secret,
+      guessedLetters: [],
+      wrongGuesses: 0,
+      maxWrong: 6,
+      isWon: false,
+      isGameOver: false,
+      lastActionLog: "Hangman Word Scaffold active. Guess letters without hanging!",
+    };
+  } else if (params.gameType === "math_blitz") {
+    const num1 = Math.floor(Math.random() * 20) + 5;
+    const num2 = Math.floor(Math.random() * 15) + 3;
+    matchData.mathBlitzState = {
+      p1Score: 0,
+      p2Score: 0,
+      currentProblem: { num1, op: "+", num2, answer: num1 + num2 },
+      lastActionLog: "Matrix Math Duel active! Solve the arithmetic problem fast.",
     };
   }
 
@@ -2917,4 +3217,321 @@ export function subscribeArcadeReactions(
       console.warn("[Arcade] reaction listener note:", err.message);
     }
   );
+}
+
+// ── Raja Mantri Chor Sipahi Actions ──────────────────────────────────────────
+export async function guessRajaMantriChor(
+  matchId: string,
+  mantriUid: string,
+  suspectUid: string
+): Promise<{ correct: boolean }> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+  if (!match.rajaMantriState) throw new Error("Not a raja mantri match");
+
+  const chits: Record<string, string> = JSON.parse(match.rajaMantriState.chitsStr || "{}");
+  const isChor = chits[suspectUid] === "CHOR";
+
+  const updates: any = {
+    "rajaMantriState.guessedChorUid": suspectUid,
+    "rajaMantriState.phase": "RESOLVED",
+    "rajaMantriState.lastActionLog": isChor
+      ? `👑 MANTRI CAUGHT THE CHOR (${match.players[suspectUid]?.handle || "Chor"})! Mantri gets 800 pts!`
+      : `❌ WRONG ACCUSATION! Chor escapes with 800 pts!`,
+    status: "FINISHED",
+    winnerUid: isChor ? mantriUid : suspectUid,
+    winnerHandle: match.players[isChor ? mantriUid : suspectUid]?.handle || "@ANON",
+    updatedAt: serverTimestamp(),
+  };
+
+  await updateDoc(matchRef, updates);
+  await awardAura(isChor ? mantriUid : suspectUid, 200);
+  return { correct: isChor };
+}
+
+// ── Hand Cricket / Odd-Even Actions ───────────────────────────────────────────
+export async function throwHandCricketNumber(
+  matchId: string,
+  playerUid: string,
+  choice: number
+): Promise<{ isOut: boolean; runsScored: number }> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+  if (!match.handCricketState) throw new Error("Not a hand cricket match");
+
+  const hcs = match.handCricketState;
+  const isBatsman = playerUid === hcs.batsmanUid;
+
+  // Bot response if vs bot
+  const botChoice = Math.floor(Math.random() * 6) + 1;
+  const batNum = isBatsman ? choice : botChoice;
+  const bowlNum = isBatsman ? botChoice : choice;
+
+  const isOut = batNum === bowlNum;
+  const runs = isOut ? 0 : batNum;
+
+  const updates: any = {
+    "handCricketState.currentBatsmanChoice": batNum,
+    "handCricketState.currentBowlerChoice": bowlNum,
+    updatedAt: serverTimestamp(),
+  };
+
+  if (isOut) {
+    updates["handCricketState.lastActionLog"] = `🚨 WICKET! Both threw [${batNum}]! Batsman is OUT!`;
+    updates.status = "FINISHED";
+    updates.winnerUid = hcs.bowlerUid || playerUid;
+    updates.winnerHandle = match.players[updates.winnerUid]?.handle || "@ANON";
+    await awardAura(updates.winnerUid, 150);
+  } else {
+    updates["handCricketState.innings1Score"] = increment(runs);
+    updates["handCricketState.lastActionLog"] = `🏏 ${runs} RUNS! Bat: [${batNum}] vs Bowl: [${bowlNum}].`;
+  }
+
+  await updateDoc(matchRef, updates);
+  return { isOut, runsScored: runs };
+}
+
+// ── Book Cricket Actions ──────────────────────────────────────────────────────
+export async function flipBookCricketPage(
+  matchId: string,
+  playerUid: string
+): Promise<{ pageNum: number; runs: number; isOut: boolean }> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+  if (!match.bookCricketState) throw new Error("Not a book cricket match");
+
+  const pageNum = Math.floor(Math.random() * 300) + 1;
+  const lastDigit = pageNum % 10;
+  let runs = 0;
+  let isOut = false;
+
+  if (lastDigit === 0 || lastDigit === 8) {
+    isOut = true;
+  } else if ([2, 4, 6].includes(lastDigit)) {
+    runs = lastDigit;
+  } else {
+    runs = 1;
+  }
+
+  const updates: any = {
+    "bookCricketState.lastFlippedPage": pageNum,
+    "bookCricketState.balls": increment(1),
+    updatedAt: serverTimestamp(),
+  };
+
+  if (isOut) {
+    updates["bookCricketState.wickets"] = increment(1);
+    updates["bookCricketState.lastActionLog"] = `🚨 OUT on Page ${pageNum}! (Digit ${lastDigit})`;
+    updates.status = "FINISHED";
+    updates.winnerUid = playerUid;
+    updates.winnerHandle = match.players[playerUid]?.handle || "@ANON";
+    await awardAura(playerUid, 100);
+  } else {
+    updates["bookCricketState.runs"] = increment(runs);
+    updates["bookCricketState.lastActionLog"] = `📖 Page ${pageNum} ➔ +${runs} RUNS!`;
+  }
+
+  await updateDoc(matchRef, updates);
+  return { pageNum, runs, isOut };
+}
+
+// ── Bingo 25-Cross Actions ────────────────────────────────────────────────────
+export async function crossBingoNumber(
+  matchId: string,
+  playerUid: string,
+  num: number
+): Promise<{ won: boolean }> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+  if (!match.bingoState) throw new Error("Not a bingo match");
+
+  const bs = match.bingoState;
+  const crossed = [...(bs.crossedNumbers || []), num];
+  const players = Object.keys(match.players || {});
+  const nextTurnUid = players.find((u) => u !== playerUid) || playerUid;
+
+  const updates: any = {
+    "bingoState.crossedNumbers": crossed,
+    "bingoState.currentTurnUid": nextTurnUid,
+    "bingoState.lastActionLog": `🔢 ${match.players[playerUid]?.handle || "Player"} called [ ${num} ]!`,
+    updatedAt: serverTimestamp(),
+  };
+
+  if (crossed.length >= 15) {
+    updates.status = "FINISHED";
+    updates.winnerUid = playerUid;
+    updates.winnerHandle = match.players[playerUid]?.handle || "@ANON";
+    await awardAura(playerUid, 150);
+  }
+
+  await updateDoc(matchRef, updates);
+  return { won: crossed.length >= 15 };
+}
+
+// ── Name, Place, Animal, Thing Actions ────────────────────────────────────────
+export async function submitNPATEntry(
+  matchId: string,
+  playerUid: string,
+  name: string,
+  place: string,
+  animal: string,
+  thing: string
+): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) return;
+  const match = snap.data() as ArcadeMatch;
+  if (!match.npatState) return;
+
+  const subs = JSON.parse(match.npatState.submissionsStr || "{}");
+  subs[playerUid] = { name, place, animal, thing };
+
+  await updateDoc(matchRef, {
+    "npatState.submissionsStr": JSON.stringify(subs),
+    "npatState.lastActionLog": `📝 ${match.players[playerUid]?.handle || "Player"} submitted NPAT card! (+40 PTS)`,
+    [`npatState.roundScores.${playerUid}`]: increment(40),
+    updatedAt: serverTimestamp(),
+  });
+  await awardAura(playerUid, 40);
+}
+
+// ── Two Truths and a Lie Actions ──────────────────────────────────────────────
+export async function voteTwoTruthsLie(
+  matchId: string,
+  playerUid: string,
+  chosenIndex: number
+): Promise<{ correct: boolean }> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+  if (!match.twoTruthsState) throw new Error("Not a two truths match");
+
+  const isLie = chosenIndex === match.twoTruthsState.lieIndex;
+
+  await updateDoc(matchRef, {
+    [`twoTruthsState.votes.${playerUid}`]: chosenIndex,
+    "twoTruthsState.isRevealed": true,
+    "twoTruthsState.lastActionLog": isLie
+      ? `🎯 ${match.players[playerUid]?.handle || "Audience"} SPOTTED THE LIE!`
+      : `❌ Fooled by the speaker! That was the truth.`,
+    updatedAt: serverTimestamp(),
+  });
+
+  if (isLie) await awardAura(playerUid, 50);
+  return { correct: isLie };
+}
+
+// ── Hangman Actions ───────────────────────────────────────────────────────────
+export async function guessHangmanLetter(
+  matchId: string,
+  playerUid: string,
+  letter: string
+): Promise<{ correct: boolean; won: boolean; gameOver: boolean }> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+  if (!match.hangmanState) throw new Error("Not a hangman match");
+
+  const hs = match.hangmanState;
+  const uppercaseLetter = letter.toUpperCase();
+  if (hs.guessedLetters.includes(uppercaseLetter)) {
+    return { correct: false, won: hs.isWon, gameOver: hs.isGameOver };
+  }
+
+  const guessed = [...hs.guessedLetters, uppercaseLetter];
+  const secret = hs.secretWord.toUpperCase();
+  const isMatch = secret.includes(uppercaseLetter);
+  const wrongCount = hs.wrongGuesses + (isMatch ? 0 : 1);
+
+  // Check if all letters guessed
+  let won = true;
+  for (const char of secret) {
+    if (!guessed.includes(char)) {
+      won = false;
+      break;
+    }
+  }
+
+  const gameOver = won || wrongCount >= hs.maxWrong;
+
+  const updates: any = {
+    "hangmanState.guessedLetters": guessed,
+    "hangmanState.wrongGuesses": wrongCount,
+    "hangmanState.isWon": won,
+    "hangmanState.isGameOver": gameOver,
+    "hangmanState.lastActionLog": isMatch
+      ? `✓ Letter [${uppercaseLetter}] found in cipher!`
+      : `✗ Letter [${uppercaseLetter}] not in cipher (${wrongCount}/${hs.maxWrong} strikes).`,
+    updatedAt: serverTimestamp(),
+  };
+
+  if (gameOver) {
+    updates.status = "FINISHED";
+    if (won) {
+      updates.winnerUid = playerUid;
+      updates.winnerHandle = match.players[playerUid]?.handle || "@ANON";
+      await awardAura(playerUid, 150);
+    }
+  }
+
+  await updateDoc(matchRef, updates);
+  return { correct: isMatch, won, gameOver };
+}
+
+// ── Matrix Math Blitz Actions ─────────────────────────────────────────────────
+export async function submitMathBlitzAnswer(
+  matchId: string,
+  playerUid: string,
+  answer: number
+): Promise<{ correct: boolean }> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+  if (!match.mathBlitzState) throw new Error("Not a math blitz match");
+
+  const mbs = match.mathBlitzState;
+  const correct = answer === mbs.currentProblem.answer;
+
+  const nextNum1 = Math.floor(Math.random() * 25) + 5;
+  const nextNum2 = Math.floor(Math.random() * 15) + 3;
+
+  const updates: any = {
+    "mathBlitzState.currentProblem": {
+      num1: nextNum1,
+      op: "+",
+      num2: nextNum2,
+      answer: nextNum1 + nextNum2,
+    },
+    updatedAt: serverTimestamp(),
+  };
+
+  if (correct) {
+    updates[`mathBlitzState.p1Score`] = increment(20);
+    updates["mathBlitzState.lastActionLog"] = `⚡ ${match.players[playerUid]?.handle || "Player"} solved correctly (+20 PTS)!`;
+    await awardAura(playerUid, 20);
+  } else {
+    updates["mathBlitzState.lastActionLog"] = `❌ Incorrect math answer!`;
+  }
+
+  await updateDoc(matchRef, updates);
+  return { correct };
 }

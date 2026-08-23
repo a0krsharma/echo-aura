@@ -37,6 +37,11 @@ const ARCADE_GAMES: { type: ArcadeGameType; name: string; icon: string; desc: st
   { type: "battleship", name: "BATTLESHIP RADAR", icon: "🚢", desc: "10x10 radar naval command artillery" },
   { type: "sudoku", name: "1V1 SUDOKU RACE", icon: "🧩", desc: "Speed data-grid hacking race" },
   { type: "snake", name: "SNAKE SCORE DUEL", icon: "🐍", desc: "Phosphor terminal high-score showdown" },
+  { type: "hand_cricket", name: "HAND CRICKET (ODD-EVEN)", icon: "🏏", desc: "1-6 finger throw mind game duel" },
+  { type: "book_cricket", name: "BOOK CRICKET", icon: "📖", desc: "Mechanical page-flipper runs race" },
+  { type: "raja_mantri", name: "RAJA MANTRI CHOR SIPAHI", icon: "👑", desc: "Folded paper chit bluffing & interrogation" },
+  { type: "hangman", name: "HANGMAN WORD SCAFFOLD", icon: "🔤", desc: "Secret cipher letter battle" },
+  { type: "math_blitz", name: "MATRIX MATH BLITZ", icon: "⚡", desc: "1v1 mental math speed clash" },
   { type: "wordle", name: "CIPHER WORDLE DUEL", icon: "🔤", desc: "5-letter code-breaker clash" },
 ];
 

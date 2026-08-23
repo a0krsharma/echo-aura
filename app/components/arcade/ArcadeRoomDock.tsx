@@ -40,6 +40,14 @@ import MelodyBuzzerGame from "./MelodyBuzzerGame";
 import TabooGame from "./TabooGame";
 import PitchArenaGame from "./PitchArenaGame";
 import TwentyQuestionsGame from "./TwentyQuestionsGame";
+import RajaMantriGame from "./RajaMantriGame";
+import HandCricketGame from "./HandCricketGame";
+import BookCricketGame from "./BookCricketGame";
+import BingoGame from "./BingoGame";
+import NPATGame from "./NPATGame";
+import TwoTruthsGame from "./TwoTruthsGame";
+import HangmanGame from "./HangmanGame";
+import MathBlitzGame from "./MathBlitzGame";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeCreateModal from "./ArcadeCreateModal";
 import { Gamepad2, X, Users, Trophy, Play, Sparkles, Share2, Mic2 } from "lucide-react";
@@ -311,6 +319,30 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
           )}
           {match.gameType === "twenty_questions" && (
             <TwentyQuestionsGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "raja_mantri" && (
+            <RajaMantriGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "hand_cricket" && (
+            <HandCricketGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "book_cricket" && (
+            <BookCricketGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "bingo" && (
+            <BingoGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "npat" && (
+            <NPATGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "two_truths" && (
+            <TwoTruthsGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "hangman" && (
+            <HangmanGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "math_blitz" && (
+            <MathBlitzGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
           )}
           {match.gameType === "ludo" && (
             <LudoGame match={match} currentUid={user?.uid || ""} isHost={isHost} />

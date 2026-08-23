@@ -52,6 +52,14 @@ const GAME_META: Record<string, { name: string; icon: string; desc: string; maxA
   melody_buzzer: { name: "MELODY HUMMER", icon: "🎵", desc: "Hum tunes into mic with speed buzzer guesses", maxAllowed: 8 },
   pitch_arena: { name: "PITCH ARENA", icon: "💡", desc: "Defend absurd startup ideas on live mic", maxAllowed: 8 },
   twenty_questions: { name: "20 QUESTIONS", icon: "❓", desc: "Deduce secret concept with Yes/No questions", maxAllowed: 8 },
+  raja_mantri: { name: "RAJA MANTRI CHOR SIPAHI", icon: "👑", desc: "Folded paper chit bluffing & voice interrogation", maxAllowed: 4 },
+  hand_cricket: { name: "HAND CRICKET (ODD-EVEN)", icon: "🏏", desc: "1-6 simultaneous finger throw mind game", maxAllowed: 2 },
+  book_cricket: { name: "BOOK CRICKET", icon: "📖", desc: "Page flipper runs & wicket scoreboard", maxAllowed: 2 },
+  bingo: { name: "BINGO 25-CROSS", icon: "🔢", desc: "5x5 number grid with voice calls & B-I-N-G-O lines", maxAllowed: 6 },
+  npat: { name: "NAME PLACE ANIMAL THING", icon: "📝", desc: "Fast letter race across 4 categories", maxAllowed: 8 },
+  two_truths: { name: "TWO TRUTHS & A LIE", icon: "🎭", desc: "Voice verification & spot the lie debate", maxAllowed: 8 },
+  hangman: { name: "HANGMAN WORD SCAFFOLD", icon: "🔤", desc: "Guess secret cipher letters before gallows completes", maxAllowed: 4 },
+  math_blitz: { name: "MATRIX MATH BLITZ", icon: "⚡", desc: "Rapid 1v1 mental arithmetic speed duel", maxAllowed: 2 },
 };
 
 export default function ArcadeCreateModal({
