@@ -41,6 +41,22 @@ export interface ClashItem {
   status:       "live" | "upcoming" | "ended";
   scheduledFor?: Timestamp | null;
   createdAt:    Timestamp | null;
+  // Big Boss Arena Round State
+  currentRound?: number; // 1 = Opening Statements, 2 = 1v1 Crossfire, 3 = Audience Hot-Seat, 4 = Final Pitch & Verdict
+  roundName?: string;
+  roundStartedAt?: Timestamp | null;
+  roundDurationSec?: number;
+  winner?: "A" | "B" | null;
+  // Hot Seat (30s Audience Grill Queue)
+  hotSeatUser?: { uid: string; handle: string; startedAt: number; durationSec: number } | null;
+  hotSeatQueue?: Array<{ uid: string; handle: string; requestedAt: number }>;
+  // Drama Alert Banner (Screen takeover broadcast)
+  dramaAlert?: {
+    id: string;
+    text: string;
+    type: "convinced" | "hotseat" | "round" | "buzzer" | "victory";
+    timestamp: number;
+  } | null;
   // Timer fields
   timerEnabled: boolean;
   timerDuration: number; // Total duration in seconds per side
@@ -848,6 +864,17 @@ export async function castOrSwitchClashVote(
       clashUpdates["sideB.votes"] = increment(1);
     }
 
+    // If user switched sides mid-debate, trigger dramatic screen takeover alert!
+    if (switched) {
+      const switchedToText = newSide === "A" ? "SIDE A" : "SIDE B";
+      clashUpdates["dramaAlert"] = {
+        id: `drama_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        text: `🚨 DRAMA: ${handle} was CONVINCED & SWITCHED to ${switchedToText}! 🔥`,
+        type: "convinced",
+        timestamp: Date.now(),
+      };
+    }
+
     if (Object.keys(clashUpdates).length > 0) {
       try {
         await updateDoc(clashRef, clashUpdates);
@@ -882,5 +909,176 @@ export async function castOrSwitchClashVote(
     console.warn("[castOrSwitchClashVote] Handled gracefully:", err);
     return { previousSide, newSide, switched, unchanged: false };
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BIG BOSS ARENA: ROUNDS, HOT SEAT & DRAMA ENGINE
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const ARENA_ROUNDS: Record<number, { name: string; durationSec: number; desc: string }> = {
+  1: { name: "ROUND 1: OPENING SALVO", durationSec: 60, desc: "60s uninterrupted opening statement per debater." },
+  2: { name: "ROUND 2: 1V1 CROSSFIRE", durationSec: 180, desc: "3 minutes live rapid debate & rebuttal crossfire." },
+  3: { name: "ROUND 3: AUDIENCE HOT SEAT", durationSec: 120, desc: "Audience grilling! Rapid 30s questions from the crowd." },
+  4: { name: "ROUND 4: FINAL PITCH & VERDICT", durationSec: 60, desc: "30s closing statements & championship crowning." },
+};
+
+/**
+ * advanceClashRound
+ * Advances the debate to the specified round (1, 2, 3, or 4) and sets the timer & broadcast banner.
+ */
+export async function advanceClashRound(
+  clashId: string,
+  round: number,
+  customDurationSec?: number
+): Promise<void> {
+  const db = getFirebaseDb();
+  const clashRef = doc(db, "clashes", clashId);
+  const roundInfo = ARENA_ROUNDS[round] || ARENA_ROUNDS[1];
+  const duration = customDurationSec || roundInfo.durationSec;
+
+  await updateDoc(clashRef, {
+    currentRound: round,
+    roundName: roundInfo.name,
+    roundStartedAt: serverTimestamp(),
+    roundDurationSec: duration,
+    dramaAlert: {
+      id: `round_${round}_${Date.now()}`,
+      text: `🥊 ARENA STATUS: ${roundInfo.name} IS NOW ACTIVE!`,
+      type: "round",
+      timestamp: Date.now(),
+    },
+  });
+}
+
+/**
+ * broadcastDramaAlert
+ * Sends a custom drama alert or soundboard trigger across the whole arena screen.
+ */
+export async function broadcastDramaAlert(
+  clashId: string,
+  alert: { text: string; type: "convinced" | "hotseat" | "round" | "buzzer" | "victory" }
+): Promise<void> {
+  const db = getFirebaseDb();
+  const clashRef = doc(db, "clashes", clashId);
+
+  await updateDoc(clashRef, {
+    dramaAlert: {
+      id: `alert_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      text: alert.text,
+      type: alert.type,
+      timestamp: Date.now(),
+    },
+  });
+}
+
+/**
+ * joinHotSeatQueue
+ * An audience member registers their interest to ask a live 30s question on stage.
+ */
+export async function joinHotSeatQueue(
+  clashId: string,
+  user: { uid: string; handle: string }
+): Promise<void> {
+  const db = getFirebaseDb();
+  const clashRef = doc(db, "clashes", clashId);
+
+  await updateDoc(clashRef, {
+    hotSeatQueue: arrayUnion({
+      uid: user.uid,
+      handle: user.handle,
+      requestedAt: Date.now(),
+    }),
+  });
+}
+
+/**
+ * leaveHotSeatQueue
+ * Removes a user from the hot seat queue.
+ */
+export async function leaveHotSeatQueue(
+  clashId: string,
+  uid: string
+): Promise<void> {
+  const db = getFirebaseDb();
+  const clashRef = doc(db, "clashes", clashId);
+  const snap = await getDoc(clashRef);
+  if (!snap.exists()) return;
+
+  const currentQueue = (snap.data()?.hotSeatQueue as any[]) || [];
+  const updatedQueue = currentQueue.filter((q) => q.uid !== uid);
+
+  await updateDoc(clashRef, {
+    hotSeatQueue: updatedQueue,
+  });
+}
+
+/**
+ * admitHotSeatUser
+ * Moderator / Host admits an audience member to the 30-second live mic hot seat.
+ */
+export async function admitHotSeatUser(
+  clashId: string,
+  user: { uid: string; handle: string },
+  durationSec = 30
+): Promise<void> {
+  const db = getFirebaseDb();
+  const clashRef = doc(db, "clashes", clashId);
+  const snap = await getDoc(clashRef);
+  const currentQueue = (snap.data()?.hotSeatQueue as any[]) || [];
+  const updatedQueue = currentQueue.filter((q) => q.uid !== user.uid);
+
+  await updateDoc(clashRef, {
+    hotSeatUser: {
+      uid: user.uid,
+      handle: user.handle,
+      startedAt: Date.now(),
+      durationSec,
+    },
+    hotSeatQueue: updatedQueue,
+    dramaAlert: {
+      id: `hotseat_${Date.now()}`,
+      text: `🎤 HOT SEAT: ${user.handle} HAS ENTERED THE STAGE FOR 30 SECONDS!`,
+      type: "hotseat",
+      timestamp: Date.now(),
+    },
+  });
+}
+
+/**
+ * endHotSeat
+ * Clears the active hot seat user and sends them back to audience.
+ */
+export async function endHotSeat(clashId: string): Promise<void> {
+  const db = getFirebaseDb();
+  const clashRef = doc(db, "clashes", clashId);
+
+  await updateDoc(clashRef, {
+    hotSeatUser: null,
+  });
+}
+
+/**
+ * declareClashWinner
+ * Crowns Side A or Side B as the winner, broadcasts the championship banner, and awards victory aura.
+ */
+export async function declareClashWinner(
+  clashId: string,
+  winner: "A" | "B",
+  winnerHandle: string
+): Promise<void> {
+  const db = getFirebaseDb();
+  const clashRef = doc(db, "clashes", clashId);
+
+  await updateDoc(clashRef, {
+    status: "ended",
+    winner,
+    currentRound: 4,
+    dramaAlert: {
+      id: `winner_${Date.now()}`,
+      text: `👑 CHAMPION CROWNED! ${winnerHandle} WINS THE ARENA GLADIATOR DEBATE! 🏆`,
+      type: "victory",
+      timestamp: Date.now(),
+    },
+  });
 }
 

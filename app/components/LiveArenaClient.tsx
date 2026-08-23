@@ -16,7 +16,7 @@ import {
   Laugh, ThumbsUp, Zap, Radio, Sparkles, Play, Pause, 
   Share2, Check, Loader2, ArrowUp, Hand, Users, Shield,
   Trash2, UserX, UserCheck, Clock, Moon, AlertTriangle, ExternalLink,
-  Shuffle, CheckCircle2, Scale
+  Shuffle, CheckCircle2, Scale, Trophy, Bell, VolumeX, RadioTower, Award, Crown
 } from "lucide-react";
 import AgoraRTC, {
   AgoraRTCProvider,
@@ -31,6 +31,7 @@ import AgoraRTC, {
 import { useAuth } from "@/app/components/AuthProvider";
 import { ShareButton } from "@/app/components/ShareButton";
 import { FormattedText } from "@/app/components/FormattedText";
+import { soundSynth } from "@/lib/soundSynthesizer";
 import { AGORA_APP_ID } from "@/lib/agora";
 import { 
   voteOnClash, 
@@ -59,6 +60,14 @@ import {
   type StageAudienceMember,
   getUserClashVote,
   castOrSwitchClashVote,
+  advanceClashRound,
+  broadcastDramaAlert,
+  joinHotSeatQueue,
+  leaveHotSeatQueue,
+  admitHotSeatUser,
+  endHotSeat,
+  declareClashWinner,
+  ARENA_ROUNDS,
 } from "@/lib/clashes";
 import { subscribeToVibeChat, sendVibeMessage, type VibeChatMessage } from "@/lib/stageChat";
 import { doc, getDoc } from "firebase/firestore";
@@ -129,6 +138,15 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
   const [publishingClip, setPublishingClip] = useState<number | null>(null);
   const [publishedClipSuccess, setPublishedClipSuccess] = useState<number | null>(null);
 
+  // Big Boss Arena Round & Drama states
+  const [activeDramaAlert, setActiveDramaAlert] = useState<{ id: string; text: string; type: string } | null>(null);
+  const [soundboardCooldown, setSoundboardCooldown] = useState(false);
+  const [showHotSeatModal, setShowHotSeatModal] = useState(false);
+  const [showVictoryModal, setShowVictoryModal] = useState(false);
+  const [hotSeatSecondsRemaining, setHotSeatSecondsRemaining] = useState(30);
+  const dramaTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastDramaAlertIdRef = useRef<string | null>(null);
+
   const REACTIONS = [
     { emoji: '🔥', icon: Flame, label: 'FIRE' },
     { emoji: '❤️', icon: Heart, label: 'LOVE' },
@@ -136,6 +154,134 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
     { emoji: '👍', icon: ThumbsUp, label: 'AGREE' },
     { emoji: '⚡', icon: Zap, label: 'ENERGY' },
   ];
+
+  // ── Big Boss Arena Sound & Drama Alert Synchronizer ───────────────────
+  useEffect(() => {
+    if (clash?.dramaAlert && clash.dramaAlert.id !== lastDramaAlertIdRef.current) {
+      lastDramaAlertIdRef.current = clash.dramaAlert.id;
+      setActiveDramaAlert(clash.dramaAlert);
+
+      // Play zero-latency local Web Audio SFX
+      if (clash.dramaAlert.type === "convinced") {
+        soundSynth.playSubBoom();
+      } else if (clash.dramaAlert.type === "buzzer") {
+        soundSynth.playBuzzer();
+      } else if (clash.dramaAlert.type === "round") {
+        soundSynth.playGong();
+      } else if (clash.dramaAlert.type === "hotseat") {
+        soundSynth.playAirhorn();
+      } else if (clash.dramaAlert.type === "victory") {
+        soundSynth.playFanfare();
+        setShowVictoryModal(true);
+      }
+
+      if (dramaTimerRef.current) clearTimeout(dramaTimerRef.current);
+      dramaTimerRef.current = setTimeout(() => {
+        setActiveDramaAlert(null);
+      }, 4500);
+    }
+  }, [clash?.dramaAlert]);
+
+  // ── Hot Seat 30-Second Countdown Timer ───────────────────────────────
+  useEffect(() => {
+    if (!clash?.hotSeatUser) {
+      setHotSeatSecondsRemaining(30);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const elapsedSec = Math.floor((Date.now() - clash.hotSeatUser!.startedAt) / 1000);
+      const remaining = Math.max(0, (clash.hotSeatUser!.durationSec || 30) - elapsedSec);
+      setHotSeatSecondsRemaining(remaining);
+      if (remaining === 0) {
+        soundSynth.playBuzzer();
+        endHotSeat(clashId).catch(() => {});
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [clash?.hotSeatUser, clashId]);
+
+  // ── Soundboard Trigger Handler ───────────────────────────────────────
+  const handleTriggerSoundboard = async (soundId: string, label: string) => {
+    if (soundboardCooldown) return;
+    setSoundboardCooldown(true);
+
+    // 1. Play instant local sound
+    soundSynth.playById(soundId);
+
+    // 2. Broadcast event to arena
+    try {
+      await broadcastDramaAlert(clashId, {
+        text: `🔔 ${user?.handle || "@AUDIENCE"} TRIGGERED ${label}!`,
+        type: soundId.includes("buzzer") ? "buzzer" : "hotseat",
+      });
+    } catch (e) {
+      console.warn("Soundboard broadcast error:", e);
+    }
+
+    // 3. 3-second cooldown
+    setTimeout(() => {
+      setSoundboardCooldown(false);
+    }, 3000);
+  };
+
+  // ── Hot Seat Queue Actions ───────────────────────────────────────────
+  const handleJoinHotSeat = async () => {
+    if (!user) return;
+    try {
+      await joinHotSeatQueue(clashId, { uid: user.uid, handle: user.handle || "@ANON" });
+    } catch (e) {
+      console.error("Join hot seat error:", e);
+    }
+  };
+
+  const handleLeaveHotSeat = async () => {
+    if (!user) return;
+    try {
+      await leaveHotSeatQueue(clashId, user.uid);
+    } catch (e) {
+      console.error("Leave hot seat error:", e);
+    }
+  };
+
+  const handleAdmitHotSeatSpeaker = async (qUser: { uid: string; handle: string }) => {
+    try {
+      await admitHotSeatUser(clashId, qUser, 30);
+      setShowHotSeatModal(false);
+    } catch (e) {
+      console.error("Admit hot seat error:", e);
+    }
+  };
+
+  const handleEndHotSeatSpeaker = async () => {
+    try {
+      await endHotSeat(clashId);
+    } catch (e) {
+      console.error("End hot seat error:", e);
+    }
+  };
+
+  // ── Round Progression & Winner Handlers ──────────────────────────────
+  const handleAdvanceRound = async (nextRound: number) => {
+    try {
+      await advanceClashRound(clashId, nextRound);
+    } catch (e) {
+      console.error("Advance round error:", e);
+    }
+  };
+
+  const handleDeclareWinner = async (winnerSide: "A" | "B") => {
+    const winnerHandle = winnerSide === "A" 
+      ? (clash?.sideA?.handle || "SIDE A") 
+      : (clash?.sideB?.handle || "SIDE B");
+    try {
+      await declareClashWinner(clashId, winnerSide, winnerHandle);
+      setShowVictoryModal(true);
+    } catch (e) {
+      console.error("Declare winner error:", e);
+    }
+  };
 
   // ── Fetch Initial User Vote & Allegiance ─────────────────────────────
   useEffect(() => {
@@ -714,6 +860,105 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
         </p>
       </div>
 
+      {/* ── Screen Takeover Drama Alert Banner ── */}
+      {activeDramaAlert && (
+        <div className="w-full max-w-4xl mx-auto my-2 border-2 border-white bg-black p-3.5 text-center font-mono text-xs sm:text-sm font-bold text-white uppercase tracking-widest animate-bounce shadow-2xl flex items-center justify-center gap-2 z-20">
+          <Zap className="w-4 h-4 text-white animate-pulse" />
+          <span>{activeDramaAlert.text}</span>
+        </div>
+      )}
+
+      {/* ── Big Boss Arena Round Protocol Bar ── */}
+      <div className="w-full max-w-4xl mx-auto border border-neutral-800 bg-neutral-950 p-3 font-mono space-y-2 relative z-10">
+        <div className="flex items-center justify-between text-[10px] text-neutral-400 flex-wrap gap-2">
+          <div className="flex items-center gap-1.5 font-bold text-white">
+            <Swords className="w-3.5 h-3.5 text-white animate-pulse" />
+            <span>// BIG BOSS ARENA PROTOCOL</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-white font-bold border border-white px-2 py-0.5 bg-neutral-900">
+              {ARENA_ROUNDS[clash?.currentRound || 1]?.name || "ROUND 1: OPENING"}
+            </span>
+            {isHost && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleAdvanceRound(((clash?.currentRound || 1) % 4) + 1)}
+                  className="border border-neutral-700 hover:border-white px-2 py-0.5 text-neutral-300 hover:text-white uppercase font-bold text-[9px] cursor-pointer"
+                >
+                  NEXT ROUND ➔
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowVictoryModal(true)}
+                  className="border border-amber-400 bg-amber-400 text-black px-2 py-0.5 uppercase font-bold text-[9px] cursor-pointer hover:bg-amber-300"
+                >
+                  👑 VERDICT
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 4-Stage Progress Tabs */}
+        <div className="grid grid-cols-4 gap-1.5 pt-1">
+          {[1, 2, 3, 4].map((r) => {
+            const isActive = (clash?.currentRound || 1) === r;
+            const isPassed = (clash?.currentRound || 1) > r;
+            return (
+              <div
+                key={r}
+                onClick={() => isHost && handleAdvanceRound(r)}
+                className={`p-1.5 text-center border text-[9px] font-bold uppercase transition-all ${
+                  isHost ? "cursor-pointer" : ""
+                } ${
+                  isActive
+                    ? "border-white bg-white text-black shadow-md"
+                    : isPassed
+                    ? "border-neutral-700 bg-neutral-900 text-neutral-400"
+                    : "border-neutral-900 bg-black text-neutral-600"
+                }`}
+              >
+                <span className="block truncate">{r}. {r === 1 ? "OPENING" : r === 2 ? "CROSSFIRE" : r === 3 ? "HOT SEAT" : "VERDICT"}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Active 30s Audience Hot Seat Stage Card ── */}
+      {clash?.hotSeatUser && (
+        <div className="w-full max-w-md mx-auto my-2 border-2 border-white bg-neutral-900 p-3.5 font-mono space-y-2 text-center shadow-2xl animate-fade-in relative z-10">
+          <div className="flex items-center justify-between text-[10px]">
+            <span className="text-white font-bold uppercase tracking-widest flex items-center gap-1.5">
+              <RadioTower className="w-3.5 h-3.5 text-white animate-pulse" />
+              // 30s AUDIENCE HOT SEAT
+            </span>
+            <span className="border border-white bg-white text-black font-bold px-2 py-0.5">
+              ⏳ {hotSeatSecondsRemaining}S LEFT
+            </span>
+          </div>
+          <div className="flex items-center justify-center gap-3 pt-1">
+            <div className="w-9 h-9 rounded-full border-2 border-white bg-black flex items-center justify-center font-bold text-xs">
+              {clash.hotSeatUser.handle.replace("@", "").charAt(0).toUpperCase()}
+            </div>
+            <div className="text-left">
+              <p className="text-xs font-bold text-white uppercase">{clash.hotSeatUser.handle}</p>
+              <p className="text-[9px] text-neutral-400">GRILLING THE DEBATERS LIVE</p>
+            </div>
+          </div>
+          {isHost && (
+            <button
+              type="button"
+              onClick={handleEndHotSeatSpeaker}
+              className="mt-1 text-[9px] border border-neutral-700 text-neutral-400 hover:text-white px-2 py-0.5 uppercase cursor-pointer"
+            >
+              [ DISMISS FROM HOT SEAT ]
+            </button>
+          )}
+        </div>
+      )}
+
       {/* ── Main Arena: Dual Speaker Battle Cards (Pure Monochrome) ── */}
       <main className="flex-1 flex flex-col justify-center items-center space-y-4 sm:space-y-6 relative z-10 pb-28 md:pb-8 w-full max-w-4xl mx-auto">
         
@@ -1102,6 +1347,65 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
                 <span className="font-mono text-[8px] tracking-widest text-neutral-500 group-hover:text-white transition-colors">{reaction.label}</span>
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* ── Big Boss Audience Live Soundboard ── */}
+        <div className="w-full border border-neutral-800 bg-neutral-950 p-3 font-mono space-y-2">
+          <div className="flex items-center justify-between text-[10px]">
+            <span className="font-bold text-white uppercase tracking-widest flex items-center gap-1.5">
+              <Bell className="w-3.5 h-3.5 text-white animate-pulse" />
+              // BIG BOSS AUDIENCE SOUNDBOARD
+            </span>
+            <span className="text-[9px] text-neutral-500">
+              {soundboardCooldown ? "⏳ 3S COOLDOWN..." : "● 0-LATENCY BUZZERS"}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+            {[
+              { id: "gong", label: "🔔 GONG", text: "BIG BOSS GONG" },
+              { id: "buzzer", label: "🚨 FLOP", text: "FLOP BUZZER" },
+              { id: "airhorn", label: "🎺 HYPE", text: "AIRHORN" },
+              { id: "boom", label: "💥 BOOM", text: "SUB BOOM" },
+              { id: "applause", label: "👏 CHEER", text: "ARENA CHEER" },
+              { id: "drumroll", label: "🥁 ROLL", text: "DRUMROLL" },
+            ].map((btn) => (
+              <button
+                key={btn.id}
+                type="button"
+                disabled={soundboardCooldown}
+                onClick={() => handleTriggerSoundboard(btn.id, btn.text)}
+                className="p-2 border border-neutral-800 hover:border-white bg-black hover:bg-neutral-900 text-white font-mono text-[10px] uppercase font-bold transition-all active:scale-95 disabled:opacity-40 cursor-pointer text-center"
+              >
+                {btn.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Hot seat request actions */}
+          <div className="pt-1 flex items-center justify-between gap-2 flex-wrap">
+            {!isHost && !isDebater && (
+              <button
+                type="button"
+                onClick={handleJoinHotSeat}
+                className="flex-1 py-2 border border-white bg-neutral-900 hover:bg-white hover:text-black text-white font-mono text-[10px] uppercase font-bold transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <Swords size={12} />
+                <span>[ ⚔️ JOIN 30s HOT SEAT QUEUE TO GRILL DEBATERS ]</span>
+              </button>
+            )}
+
+            {isHost && (
+              <button
+                type="button"
+                onClick={() => setShowHotSeatModal(true)}
+                className="w-full py-1.5 border border-neutral-700 hover:border-white bg-neutral-900 text-white font-mono text-[10px] uppercase font-bold transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <RadioTower size={12} />
+                <span>[ 🎙 MANAGE HOT SEAT QUEUE ({(clash?.hotSeatQueue || []).length} WAITING) ]</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -1505,6 +1809,114 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
                 [ CLOSE CLIPS STUDIO ]
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Championship Victory Celebration Modal ── */}
+      {showVictoryModal && (
+        <div className="fixed inset-0 z-60 bg-black/95 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in font-mono">
+          <div className="w-full max-w-md border-2 border-white bg-neutral-950 p-6 sm:p-8 text-center space-y-5 shadow-2xl">
+            <div className="w-16 h-16 rounded-full border-2 border-white bg-black mx-auto flex items-center justify-center text-3xl shadow-lg">
+              🏆
+            </div>
+            <div className="space-y-1">
+              <p className="text-[10px] text-neutral-400 uppercase tracking-widest">// ARENA VERDICT & CROWN</p>
+              <h2 className="text-base sm:text-lg font-bold text-white uppercase">
+                {clash?.winner ? `${clash.winner === "A" ? clash.sideA?.handle : clash.sideB?.handle} IS THE CHAMPION!` : "CHAMPIONSHIP VERDICT"}
+              </h2>
+              <p className="text-xs text-neutral-300 pt-1">
+                Awarded <span className="text-white font-bold">+500 AURA</span> and the permanent <span className="text-white font-bold">[ 🏆 DEBATE GLADIATOR ]</span> badge!
+              </p>
+            </div>
+
+            {/* Tug of war summary */}
+            <div className="p-3 border border-neutral-800 bg-black space-y-1.5 text-xs">
+              <div className="flex justify-between font-bold">
+                <span className="text-white">{clash?.sideA?.handle}: {pctA}%</span>
+                <span className="text-white">{clash?.sideB?.handle}: {pctB}%</span>
+              </div>
+              <div className="w-full h-2 bg-neutral-900 relative border border-neutral-800">
+                <div className="h-full bg-white transition-all duration-500" style={{ width: `${pctA}%` }} />
+              </div>
+            </div>
+
+            {isHost && (
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => handleDeclareWinner("A")}
+                  className="py-2.5 px-3 border border-white bg-white text-black font-bold text-xs uppercase hover:bg-neutral-200 cursor-pointer"
+                >
+                  CROWN SIDE A 👑
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeclareWinner("B")}
+                  className="py-2.5 px-3 border border-white bg-white text-black font-bold text-xs uppercase hover:bg-neutral-200 cursor-pointer"
+                >
+                  CROWN SIDE B 👑
+                </button>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setShowVictoryModal(false)}
+              className="w-full py-2 border border-neutral-800 text-neutral-400 hover:text-white uppercase text-xs cursor-pointer mt-2"
+            >
+              [ CLOSE VERDICT ]
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Host Hot Seat Queue Management Modal ── */}
+      {showHotSeatModal && isHost && (
+        <div className="fixed inset-0 z-60 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 font-mono text-xs">
+          <div className="w-full max-w-md border border-white bg-neutral-950 p-5 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
+              <div className="font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <RadioTower size={14} />
+                <span>HOT SEAT QUESTIONER QUEUE</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowHotSeatModal(false)}
+                className="text-neutral-500 hover:text-white cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {(clash?.hotSeatQueue || []).length === 0 ? (
+                <div className="p-6 text-center text-neutral-500 uppercase">
+                  NO AUDIENCE MEMBERS IN QUEUE.
+                </div>
+              ) : (
+                (clash?.hotSeatQueue || []).map((qUser) => (
+                  <div key={qUser.uid} className="flex items-center justify-between p-2 border border-neutral-800 bg-black">
+                    <span className="text-white font-bold">{qUser.handle}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleAdmitHotSeatSpeaker(qUser)}
+                      className="px-3 py-1 bg-white text-black font-bold uppercase hover:bg-neutral-200 text-[10px] cursor-pointer"
+                    >
+                      [ ADMIT 30S ]
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowHotSeatModal(false)}
+              className="w-full py-2 border border-neutral-800 text-neutral-400 hover:text-white uppercase text-xs cursor-pointer"
+            >
+              CLOSE
+            </button>
           </div>
         </div>
       )}
