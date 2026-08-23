@@ -6,7 +6,6 @@
  * $0 Infrastructure real-time multiplayer state synchronization for
  * turn-based and grid games (Sudoku Battle, Cyber Ludo) with integrated
  * voice channels and Aura rewards.
- * Uses production-whitelisted collection with clean serialization.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -28,6 +27,17 @@ export type ArcadeGameType = "sudoku" | "ludo";
 
 // Whitelisted collection in production Firebase
 const ARCADE_COLLECTION = "rooms";
+
+export const LUDO_CONFIG = {
+  START_POS: {
+    RED: 0,
+    GREEN: 13,
+    YELLOW: 26,
+    BLUE: 39,
+  },
+  SAFE_STARS: [0, 8, 13, 21, 26, 34, 39, 47],
+  TOTAL_STEPS_TO_HOME: 57,
+};
 
 export interface ArcadePlayer {
   uid: string;
@@ -52,7 +62,8 @@ export interface SudokuState {
 export interface LudoToken {
   id: number;
   color: "RED" | "GREEN" | "BLUE" | "YELLOW";
-  position: number; // -1: Base, 0-51: Main track, 52-57: Home stretch, 99: Finished
+  stepCount: number; // 0: in base, 1..51: on track, 52..56: in home column, 57: home finished
+  boardPosition: number; // -1 if Base, 0..51 if on main track, 101..105 home path, 999 finished
   isHome: boolean;
 }
 
@@ -60,8 +71,12 @@ export interface LudoState {
   currentTurn: "RED" | "GREEN" | "BLUE" | "YELLOW";
   lastDiceRoll: number | null;
   hasRolled: boolean;
+  lastActionLog?: string;
   tokens: {
-    [key: string]: LudoToken[]; // "RED": [t1, t2, t3, t4]
+    RED: LudoToken[];
+    GREEN: LudoToken[];
+    BLUE: LudoToken[];
+    YELLOW: LudoToken[];
   };
   winnerOrder: string[];
 }
@@ -158,6 +173,15 @@ function cleanData<T extends Record<string, any>>(obj: T): T {
   return result;
 }
 
+function makeInitialTokens(color: "RED" | "GREEN" | "BLUE" | "YELLOW"): LudoToken[] {
+  return [
+    { id: 0, color, stepCount: 0, boardPosition: -1, isHome: false },
+    { id: 1, color, stepCount: 0, boardPosition: -1, isHome: false },
+    { id: 2, color, stepCount: 0, boardPosition: -1, isHome: false },
+    { id: 3, color, stepCount: 0, boardPosition: -1, isHome: false },
+  ];
+}
+
 // ── Create Arcade Match ───────────────────────────────────────────────────────
 export async function createArcadeMatch(params: {
   gameType: ArcadeGameType;
@@ -203,31 +227,12 @@ export async function createArcadeMatch(params: {
       currentTurn: "RED",
       lastDiceRoll: null,
       hasRolled: false,
+      lastActionLog: "Match initiated. RED to roll first.",
       tokens: {
-        RED: [
-          { id: 0, color: "RED", position: -1, isHome: false },
-          { id: 1, color: "RED", position: -1, isHome: false },
-          { id: 2, color: "RED", position: -1, isHome: false },
-          { id: 3, color: "RED", position: -1, isHome: false },
-        ],
-        GREEN: [
-          { id: 0, color: "GREEN", position: -1, isHome: false },
-          { id: 1, color: "GREEN", position: -1, isHome: false },
-          { id: 2, color: "GREEN", position: -1, isHome: false },
-          { id: 3, color: "GREEN", position: -1, isHome: false },
-        ],
-        BLUE: [
-          { id: 0, color: "BLUE", position: -1, isHome: false },
-          { id: 1, color: "BLUE", position: -1, isHome: false },
-          { id: 2, color: "BLUE", position: -1, isHome: false },
-          { id: 3, color: "BLUE", position: -1, isHome: false },
-        ],
-        YELLOW: [
-          { id: 0, color: "YELLOW", position: -1, isHome: false },
-          { id: 1, color: "YELLOW", position: -1, isHome: false },
-          { id: 2, color: "YELLOW", position: -1, isHome: false },
-          { id: 3, color: "YELLOW", position: -1, isHome: false },
-        ],
+        RED: makeInitialTokens("RED"),
+        GREEN: makeInitialTokens("GREEN"),
+        BLUE: makeInitialTokens("BLUE"),
+        YELLOW: makeInitialTokens("YELLOW"),
       },
       winnerOrder: [],
     };
@@ -405,10 +410,31 @@ export async function rollLudoDice(matchId: string, playerUid: string): Promise<
   await updateDoc(matchRef, {
     "ludoState.lastDiceRoll": roll,
     "ludoState.hasRolled": true,
+    "ludoState.lastActionLog": `${player.team} rolled a ${roll}!`,
     updatedAt: serverTimestamp(),
   });
 
   return roll;
+}
+
+// Helper to find next player with active team
+function getNextTurn(
+  current: "RED" | "GREEN" | "BLUE" | "YELLOW",
+  players: { [uid: string]: ArcadePlayer }
+): "RED" | "GREEN" | "BLUE" | "YELLOW" {
+  const order: ("RED" | "GREEN" | "BLUE" | "YELLOW")[] = ["RED", "GREEN", "BLUE", "YELLOW"];
+  const activeTeams = Object.values(players).map((p) => p.team).filter(Boolean) as ("RED" | "GREEN" | "BLUE" | "YELLOW")[];
+
+  if (activeTeams.length <= 1) return current;
+
+  let idx = order.indexOf(current);
+  for (let i = 1; i <= 4; i++) {
+    const candidate = order[(idx + i) % 4];
+    if (activeTeams.includes(candidate)) {
+      return candidate;
+    }
+  }
+  return current;
 }
 
 // ── Move Ludo Token ──────────────────────────────────────────────────────────
@@ -416,7 +442,7 @@ export async function moveLudoToken(
   matchId: string,
   playerUid: string,
   tokenId: number
-): Promise<void> {
+): Promise<{ captured: boolean; extraTurn: boolean; won: boolean }> {
   const db = getFirebaseDb();
   const matchRef = doc(db, ARCADE_COLLECTION, matchId);
   const snap = await getDoc(matchRef);
@@ -432,38 +458,85 @@ export async function moveLudoToken(
   if (!roll || !match.ludoState.hasRolled) throw new Error("Must roll dice first");
 
   const tokens = { ...match.ludoState.tokens };
-  const teamTokens = [...tokens[team]];
-  const token = teamTokens.find((t) => t.id === tokenId);
-  if (!token) throw new Error("Token not found");
+  const teamTokens = tokens[team] ? [...tokens[team]] : makeInitialTokens(team);
+  const tokenIndex = teamTokens.findIndex((t) => t.id === tokenId);
+  if (tokenIndex === -1) throw new Error("Token not found");
+
+  const token = { ...teamTokens[tokenIndex] };
+  let captured = false;
+  let reachedHome = false;
+  let actionLog = "";
 
   // Base to start
-  if (token.position === -1) {
+  if (token.stepCount === 0) {
     if (roll === 6) {
-      token.position = 0; // Starts on track
+      token.stepCount = 1;
+      token.boardPosition = LUDO_CONFIG.START_POS[team];
+      actionLog = `${team} deployed Token ${tokenId + 1} onto the track!`;
     } else {
       throw new Error("Need a 6 to deploy token");
     }
-  } else if (token.position >= 0 && token.position < 57) {
-    token.position += roll;
-    if (token.position >= 57) {
-      token.position = 99; // Finished
+  } else {
+    const newStep = token.stepCount + roll;
+    if (newStep > LUDO_CONFIG.TOTAL_STEPS_TO_HOME) {
+      throw new Error("Roll exceeds steps needed to reach Home");
+    }
+
+    token.stepCount = newStep;
+
+    if (newStep === LUDO_CONFIG.TOTAL_STEPS_TO_HOME) {
       token.isHome = true;
+      token.boardPosition = 999;
+      reachedHome = true;
+      actionLog = `🏆 ${team} Token ${tokenId + 1} REACHED THE HOME TRIANGLE!`;
+    } else if (newStep <= 51) {
+      const newPos = (LUDO_CONFIG.START_POS[team] + newStep - 1) % 52;
+      token.boardPosition = newPos;
+
+      // Check capture on non-safe square
+      if (!LUDO_CONFIG.SAFE_STARS.includes(newPos)) {
+        const otherTeams: ("RED" | "GREEN" | "BLUE" | "YELLOW")[] = (["RED", "GREEN", "BLUE", "YELLOW"] as const).filter(
+          (t) => t !== team
+        );
+
+        for (const oTeam of otherTeams) {
+          if (tokens[oTeam]) {
+            const oppTokens = tokens[oTeam].map((opp) => {
+              if (opp.boardPosition === newPos && !opp.isHome) {
+                captured = true;
+                actionLog = `⚔️ ${team} CAPTURED ${oTeam}'s Token on square ${newPos}!`;
+                return { ...opp, stepCount: 0, boardPosition: -1 };
+              }
+              return opp;
+            });
+            tokens[oTeam] = oppTokens;
+          }
+        }
+      }
+      if (!captured) {
+        actionLog = `${team} moved Token ${tokenId + 1} to track square ${newPos}.`;
+      }
+    } else {
+      // Home stretch (52..56)
+      token.boardPosition = 100 + (newStep - 51);
+      actionLog = `${team} moved Token ${tokenId + 1} into Home Corridor (${newStep - 51}/5).`;
     }
   }
 
+  teamTokens[tokenIndex] = token;
   tokens[team] = teamTokens;
 
   // Check if player won
   const allHome = teamTokens.every((t) => t.isHome);
-  const nextTeams: ("RED" | "GREEN" | "BLUE" | "YELLOW")[] = ["RED", "GREEN", "BLUE", "YELLOW"];
-  const currentIdx = nextTeams.indexOf(team);
-  const nextTurn = roll === 6 ? team : nextTeams[(currentIdx + 1) % nextTeams.length];
+  const givesExtraTurn = roll === 6 || captured || reachedHome;
+  const nextTurn = givesExtraTurn ? team : getNextTurn(team, match.players);
 
   const updates: any = {
     "ludoState.tokens": tokens,
     "ludoState.currentTurn": nextTurn,
     "ludoState.hasRolled": false,
     "ludoState.lastDiceRoll": null,
+    "ludoState.lastActionLog": givesExtraTurn ? `${actionLog} (BONUS TURN GRANTED!)` : actionLog,
     updatedAt: serverTimestamp(),
   };
 
@@ -475,4 +548,29 @@ export async function moveLudoToken(
   }
 
   await updateDoc(matchRef, updates);
+  return { captured, extraTurn: givesExtraTurn, won: allHome };
+}
+
+// ── Pass Ludo Turn (when no valid moves exist) ────────────────────────────────
+export async function passLudoTurn(matchId: string, playerUid: string): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+  if (!match.ludoState) throw new Error("Not a ludo match");
+
+  const player = match.players[playerUid];
+  const team = player?.team;
+  if (!team || match.ludoState.currentTurn !== team) return;
+
+  const nextTurn = getNextTurn(team, match.players);
+  await updateDoc(matchRef, {
+    "ludoState.currentTurn": nextTurn,
+    "ludoState.hasRolled": false,
+    "ludoState.lastDiceRoll": null,
+    "ludoState.lastActionLog": `${team} had no valid moves. Passed turn to ${nextTurn}.`,
+    updatedAt: serverTimestamp(),
+  });
 }
