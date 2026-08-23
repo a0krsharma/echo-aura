@@ -7,6 +7,7 @@ import {
   createArcadeMatch,
   joinArcadeMatch,
   subscribeArcadeMatch,
+  subscribeLobbyArcadeMatches,
   deleteArcadeMatch,
   type ArcadeMatch,
   type ArcadeGameType,
@@ -198,29 +199,9 @@ function ArcadeContent() {
 
   // Subscribe to open arcade matches in the lobby
   useEffect(() => {
-    const db = getFirebaseDb();
-    let unsub: (() => void) | null = null;
-    try {
-      const q = query(collection(db, "rooms"), limit(30));
-      unsub = onSnapshot(
-        q,
-        (snap) => {
-          const matches: ArcadeMatch[] = [];
-          snap.forEach((doc) => {
-            const data = doc.data();
-            if (data.isArcade || data.gameType) {
-              matches.push({ id: doc.id, ...data } as ArcadeMatch);
-            }
-          });
-          setLobbyMatches(matches);
-        },
-        (err) => {
-          console.warn("Arcade lobby listener warning:", err.message);
-        }
-      );
-    } catch (e) {
-      console.warn("Arcade lobby init note:", e);
-    }
+    const unsub = subscribeLobbyArcadeMatches((matches) => {
+      setLobbyMatches(matches);
+    });
     return () => {
       if (unsub) unsub();
     };
@@ -239,14 +220,43 @@ function ArcadeContent() {
   const handleLaunchSolo = async (type: ArcadeGameType) => {
     if (!user) return;
     try {
+      let maxPlayers = 2;
+      if (
+        type === "ludo" ||
+        type === "call_break" ||
+        type === "bhabhi_thulla" ||
+        type === "mendicot" ||
+        type === "raja_mantri"
+      ) {
+        maxPlayers = 4;
+      } else if (
+        type === "rummy" ||
+        type === "teen_patti" ||
+        type === "satte_pe_satta" ||
+        type === "cheat_bluff" ||
+        type === "poker"
+      ) {
+        maxPlayers = 6;
+      } else if (
+        type === "minesweeper" ||
+        type === "2048" ||
+        type === "snake" ||
+        type === "wordle" ||
+        type === "puzzle15" ||
+        type === "mastermind" ||
+        type === "solitaire"
+      ) {
+        maxPlayers = 1;
+      }
+
       const matchId = await createArcadeMatch({
         gameType: type,
-        title: `${type.toUpperCase()} // SOLO GRID`,
+        title: `${type.toUpperCase()} // SOLO VS NEURAL BOT`,
         hostUid: user.uid,
         hostHandle: user.handle || "@ANON",
         hostAvatar: user.photoUrl || user.photoURL,
-        mode: "VS_COMPUTER",
-        maxPlayers: 1,
+        mode: maxPlayers === 1 ? "MULTIPLAYER" : "VS_COMPUTER",
+        maxPlayers,
         enableVoice: false,
         stakes: 0,
       });

@@ -2008,6 +2008,39 @@ export function subscribeArcadeMatch(
   );
 }
 
+export function subscribeLobbyArcadeMatches(
+  callback: (matches: ArcadeMatch[]) => void
+): Unsubscribe {
+  const db = getFirebaseDb();
+  const q = query(
+    collection(db, ARCADE_COLLECTION),
+    orderBy("createdAt", "desc"),
+    limit(30)
+  );
+
+  return onSnapshot(
+    q,
+    (snap) => {
+      const list: ArcadeMatch[] = [];
+      snap.forEach((d) => {
+        list.push({ id: d.id, ...d.data() } as ArcadeMatch);
+      });
+      callback(list);
+    },
+    (err) => {
+      console.warn("[Arcade] lobby listener fallback:", err.message);
+      const fallbackQ = query(collection(db, ARCADE_COLLECTION), limit(30));
+      return onSnapshot(fallbackQ, (s) => {
+        const list: ArcadeMatch[] = [];
+        s.forEach((d) => {
+          list.push({ id: d.id, ...d.data() } as ArcadeMatch);
+        });
+        callback(list);
+      });
+    }
+  );
+}
+
 // ── Chess Moves ──────────────────────────────────────────────────────────────
 export async function makeChessMove(
   matchId: string,
