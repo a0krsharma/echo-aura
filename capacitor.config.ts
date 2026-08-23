@@ -13,7 +13,10 @@ const config: CapacitorConfig = {
       '*.firebase.google.com',
       '*.googleapis.com',
       '*.google.com',
+      '*.googleusercontent.com',
+      '*.gstatic.com',
       'accounts.google.com',
+      'accounts.youtube.com',
       '*.cloudinary.com',
       'res.cloudinary.com',
       '*.agora.io',
@@ -30,6 +33,7 @@ const config: CapacitorConfig = {
     allowMixedContent: true,
     webContentsDebuggingEnabled: false,
     backgroundColor: '#000000',
+    overrideUserAgent: 'Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36',
   },
 
   plugins: {
