@@ -506,3 +506,11 @@ export function getThoughtRemainingHours(user: any): number {
   if (diffMs <= 0) return 0;
   return Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60)));
 }
+
+export async function awardAura(uid: string, amount: number): Promise<void> {
+  const db = getFirebaseDb();
+  const userRef = doc(db, "users", uid);
+  await updateDoc(userRef, {
+    auraScore: increment(amount),
+  });
+}

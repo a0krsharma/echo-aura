@@ -38,6 +38,7 @@ import { ShareButton } from "@/app/components/ShareButton";
 import { FormattedText } from "@/app/components/FormattedText";
 import SpotifySyncDock from "@/app/components/SpotifySyncDock";
 import NeuralRadioDock from "@/app/components/NeuralRadioDock";
+import ArcadeRoomDock from "@/app/components/arcade/ArcadeRoomDock";
 import {
   getRoom,
   subscribeToRoom,
@@ -457,6 +458,9 @@ export default function RoomClient({ roomId }: RoomClientProps) {
             currentUserHandle={user?.handle || "@ANON"}
           />
         )}
+
+        {/* Live Social Gaming Lounge: Sudoku & Ludo */}
+        <ArcadeRoomDock roomId={room.id} isHost={isHost} />
 
         {/* Host/Speaker Mic Action Banner */}
         {isSpeaker && isMuted && (

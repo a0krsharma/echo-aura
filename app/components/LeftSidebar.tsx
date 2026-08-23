@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Radio, Compass, Mic2, Swords, Search, MessageSquare, Bell, User, Terminal, LogOut, Waves, Users, Flame, Headphones, Cpu, Sparkles } from "lucide-react";
+import { Radio, Compass, Mic2, Swords, Search, MessageSquare, Bell, User, Terminal, LogOut, Waves, Users, Flame, Headphones, Cpu, Sparkles, Gamepad2 } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
 import { getStreak } from "@/lib/userDoc";
 import { useEffect, useState } from "react";
@@ -24,6 +24,7 @@ export default function LeftSidebar() {
   const navItems = [
     { href: "/",                 icon: Radio,         label: "[ FREQUENCY ]",  hasNotifDot: false },
     { href: "/waves",            icon: Waves,         label: "[ WAVES ]",      hasNotifDot: false },
+    { href: "/arcade",           icon: Gamepad2,      label: "[ ARCADE ]",     hasNotifDot: false },
     { href: "/studio",           icon: Mic2,          label: "[ STUDIO ]",     hasNotifDot: false },
     { href: "/clash",            icon: Swords,        label: "[ STAGE ]",      hasNotifDot: false },
     { href: "/rooms",            icon: Users,         label: "[ ROOMS ]",      hasNotifDot: false },

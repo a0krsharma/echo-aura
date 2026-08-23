@@ -302,6 +302,33 @@ class SoundSynthesizer {
     }
   }
 
+  playSubtlePop() {
+    try {
+      const ctx = this.getContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(440, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.04);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.04);
+    } catch (e) {
+      console.warn("Synth play error:", e);
+    }
+  }
+
+  playSnare() {
+    try {
+      this.playDrumroll(0.3);
+    } catch (e) {
+      console.warn("Synth play error:", e);
+    }
+  }
+
   // Universal Player by Sound ID
   playById(id: string) {
     const cleanId = id.toLowerCase();
