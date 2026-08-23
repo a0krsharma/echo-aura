@@ -10,7 +10,7 @@ import {
   type ArcadeMatch,
   type LudoToken,
 } from "@/lib/arcade";
-import { Dices, Trophy, Star, Shield, Zap, Sparkles, Volume2 } from "lucide-react";
+import { Dices, Trophy, Star, Shield, Sparkles, CircleDot } from "lucide-react";
 
 interface LudoGameProps {
   match: ArcadeMatch;
@@ -39,13 +39,21 @@ const HOME_PATHS: Record<"RED" | "GREEN" | "YELLOW" | "BLUE", [number, number][]
   BLUE:   [[13, 7], [12, 7], [11, 7], [10, 7], [9, 7]],
 };
 
+// Directional arrows on home paths
+const HOME_ARROWS: Record<"RED" | "GREEN" | "YELLOW" | "BLUE", string> = {
+  RED: "▶",
+  GREEN: "▼",
+  YELLOW: "◀",
+  BLUE: "▲",
+};
+
 export default function LudoGame({ match, currentUid }: LudoGameProps) {
   const [rolling, setRolling] = useState(false);
   const [movingTokenId, setMovingTokenId] = useState<number | null>(null);
 
   const ludoState = match.ludoState;
   if (!ludoState) {
-    return <div className="text-white font-mono p-4">Loading Cyber Ludo arena...</div>;
+    return <div className="text-white font-mono p-4">Loading Black & White Ludo arena...</div>;
   }
 
   const currentPlayer = match.players[currentUid];
@@ -122,35 +130,39 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
     await passLudoTurn(match.id, currentUid);
   };
 
-  // Style mappings
-  const colorMeta = {
+  // Pure Monochrome High-Contrast Faction Meta
+  const monochromeMeta = {
     RED: {
-      bg: "bg-red-950/60",
-      border: "border-red-600",
-      badgeBg: "bg-red-600",
-      text: "text-red-400",
-      glow: "shadow-[0_0_12px_rgba(239,68,68,0.5)]",
+      name: "FACTION I (SOLID WHITE)",
+      symbol: "◆",
+      tokenBg: "bg-white text-black font-black shadow-[0_4px_10px_rgba(255,255,255,0.4)] border-2 border-black",
+      baseBorder: "border-2 border-white",
+      baseBg: "bg-black",
+      label: "RED",
     },
     GREEN: {
-      bg: "bg-emerald-950/60",
-      border: "border-emerald-600",
-      badgeBg: "bg-emerald-600",
-      text: "text-emerald-400",
-      glow: "shadow-[0_0_12px_rgba(16,185,129,0.5)]",
+      name: "FACTION II (INVERTED RING)",
+      symbol: "▲",
+      tokenBg: "bg-black text-white font-black shadow-[0_4px_10px_rgba(255,255,255,0.3)] border-2 border-white ring-1 ring-white",
+      baseBorder: "border-2 border-neutral-400",
+      baseBg: "bg-neutral-950",
+      label: "GRN",
     },
     YELLOW: {
-      bg: "bg-yellow-950/60",
-      border: "border-yellow-600",
-      badgeBg: "bg-yellow-500",
-      text: "text-yellow-400",
-      glow: "shadow-[0_0_12px_rgba(234,179,8,0.5)]",
+      name: "FACTION III (DOTTED CORE)",
+      symbol: "●",
+      tokenBg: "bg-zinc-200 text-black font-black shadow-[0_4px_10px_rgba(255,255,255,0.3)] border-2 border-neutral-900",
+      baseBorder: "border-2 border-dashed border-white",
+      baseBg: "bg-black",
+      label: "YEL",
     },
     BLUE: {
-      bg: "bg-blue-950/60",
-      border: "border-blue-600",
-      badgeBg: "bg-blue-600",
-      text: "text-blue-400",
-      glow: "shadow-[0_0_12px_rgba(59,130,246,0.5)]",
+      name: "FACTION IV (CROSSHAIR)",
+      symbol: "✚",
+      tokenBg: "bg-neutral-900 text-white font-black shadow-[0_4px_10px_rgba(255,255,255,0.3)] border-2 border-dashed border-white",
+      baseBorder: "border-2 border-dotted border-white",
+      baseBg: "bg-neutral-950",
+      label: "BLU",
     },
   };
 
@@ -174,69 +186,107 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
     return list;
   };
 
+  // Realistic Physical Dice Pips Render
+  const renderDiceFace = (val: number | null) => {
+    if (!val) return <Dices className="w-8 h-8 text-neutral-500 animate-pulse" />;
+    const pips: Record<number, number[][]> = {
+      1: [[1, 1]],
+      2: [[0, 0], [2, 2]],
+      3: [[0, 0], [1, 1], [2, 2]],
+      4: [[0, 0], [0, 2], [2, 0], [2, 2]],
+      5: [[0, 0], [0, 2], [1, 1], [2, 0], [2, 2]],
+      6: [[0, 0], [0, 2], [1, 0], [1, 2], [2, 0], [2, 2]],
+    };
+    const activePips = pips[val] || [];
+    return (
+      <div className="w-10 h-10 grid grid-cols-3 grid-rows-3 p-1 gap-1">
+        {Array.from({ length: 3 }).map((_, r) =>
+          Array.from({ length: 3 }).map((_, c) => {
+            const hasDot = activePips.some(([pr, pc]) => pr === r && pc === c);
+            return (
+              <div key={`${r}-${c}`} className="flex items-center justify-center">
+                {hasDot && (
+                  <div className="w-2.5 h-2.5 rounded-full bg-black shadow-[inset_0_1px_2px_rgba(0,0,0,0.8)]" />
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+    );
+  };
+
   return (
-    <div className="w-full max-w-2xl mx-auto bg-black border-2 border-neutral-800 p-3 sm:p-5 font-mono text-white space-y-4 select-none shadow-2xl rounded-sm">
-      {/* ── Top Header ── */}
-      <div className="flex items-center justify-between border-b border-neutral-800 pb-2 text-[10px] sm:text-xs">
-        <span className="text-white font-bold uppercase tracking-widest flex items-center gap-1.5">
-          <Dices className="w-4 h-4 text-emerald-400 animate-pulse" />
-          // CYBER LUDO ARENA
-        </span>
+    <div className="w-full max-w-2xl mx-auto bg-black border-2 border-white p-3 sm:p-5 font-mono text-white space-y-4 select-none shadow-[0_0_50px_rgba(255,255,255,0.1)] rounded-none">
+      {/* ── Realistic Retro Header ── */}
+      <div className="flex items-center justify-between border-b-2 border-white pb-2 text-[10px] sm:text-xs">
         <div className="flex items-center gap-2">
-          <span
-            className={`px-2 py-0.5 border font-bold uppercase text-[10px] ${
-              colorMeta[ludoState.currentTurn].border
-            } ${colorMeta[ludoState.currentTurn].text} bg-neutral-950`}
-          >
-            TURN: {ludoState.currentTurn} {isMyTurn ? "● (YOUR MOVE)" : ""}
+          <div className="w-2.5 h-2.5 bg-white rounded-full animate-ping" />
+          <span className="text-white font-bold uppercase tracking-widest">
+            // PHYSICAL LUDO ARENA [ MONOCHROME EDITION ]
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="px-2 py-0.5 border-2 border-white bg-white text-black font-extrabold uppercase text-[10px]">
+            ACTIVE: {ludoState.currentTurn} {isMyTurn ? "● (YOUR MOVE)" : ""}
           </span>
         </div>
       </div>
 
-      {/* ── 4 Player HUD Cards ── */}
+      {/* ── 4 Monochrome Player HUD Cards ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {(["RED", "GREEN", "YELLOW", "BLUE"] as const).map((team) => {
           const p = Object.values(match.players || {}).find((pl) => pl.team === team);
           const isTurn = ludoState.currentTurn === team;
           const tokens = ludoState.tokens[team] || [];
           const homeCount = tokens.filter((t) => t.isHome).length;
-          const meta = colorMeta[team];
+          const meta = monochromeMeta[team];
 
           return (
             <div
               key={team}
-              className={`p-2 border transition-all ${
+              className={`p-2.5 border-2 transition-all ${
                 isTurn
-                  ? `${meta.border} ${meta.bg} ${meta.glow} ring-1 ring-white scale-[1.02]`
-                  : "border-neutral-800 bg-neutral-950"
+                  ? "border-white bg-neutral-900 shadow-[0_0_15px_rgba(255,255,255,0.3)] ring-1 ring-white scale-[1.02]"
+                  : "border-neutral-800 bg-black"
               }`}
             >
               <div className="flex items-center justify-between text-[10px] font-bold">
-                <span className={meta.text}>
-                  {team} {myTeam === team ? "(YOU)" : ""}
+                <span className="text-white flex items-center gap-1">
+                  <span>{meta.symbol}</span>
+                  <span>{meta.label}</span>
+                  {myTeam === team && <span className="text-neutral-400 font-normal">(YOU)</span>}
                 </span>
-                <span className="text-neutral-400">{homeCount}/4 🏆</span>
+                <span className="text-white font-extrabold bg-neutral-800 px-1 rounded">
+                  {homeCount}/4
+                </span>
               </div>
-              <p className="text-white font-bold truncate text-[11px] mt-0.5">
-                {p ? p.handle : "[ OPEN SEAT ]"}
+              <p className="text-white font-bold truncate text-[11px] mt-1">
+                {p ? p.handle : "[ EMPTY ]"}
               </p>
             </div>
           );
         })}
       </div>
 
-      {/* ── Real-Time Action Log Ticker ── */}
+      {/* ── Combat Telemetry Log Ticker ── */}
       {ludoState.lastActionLog && (
-        <div className="border border-neutral-800 bg-neutral-950/80 px-3 py-1.5 text-[11px] text-neutral-300 flex items-center gap-2">
-          <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-          <span className="truncate">{ludoState.lastActionLog}</span>
+        <div className="border border-white/40 bg-neutral-950 px-3 py-1.5 text-[11px] text-white flex items-center gap-2">
+          <Sparkles className="w-3.5 h-3.5 text-white shrink-0" />
+          <span className="truncate uppercase font-bold tracking-wide">{ludoState.lastActionLog}</span>
         </div>
       )}
 
-      {/* ── 15x15 Cyber Ludo Board Grid ── */}
-      <div className="relative aspect-square max-w-[420px] sm:max-w-[460px] mx-auto border-2 border-neutral-700 bg-black p-1 shadow-[0_0_20px_rgba(0,0,0,0.8)]">
+      {/* ── 15x15 Realistic Physical Ludo Board (Pure Black & White) ── */}
+      <div className="relative aspect-square max-w-[420px] sm:max-w-[460px] mx-auto border-4 border-white bg-black p-1.5 shadow-[0_0_40px_rgba(255,255,255,0.15)]">
+        {/* Corner Bolts */}
+        <span className="absolute top-1 left-1 text-[8px] text-white select-none">✚</span>
+        <span className="absolute top-1 right-1 text-[8px] text-white select-none">✚</span>
+        <span className="absolute bottom-1 left-1 text-[8px] text-white select-none">✚</span>
+        <span className="absolute bottom-1 right-1 text-[8px] text-white select-none">✚</span>
+
         <div
-          className="w-full h-full grid gap-[1px] bg-neutral-900"
+          className="w-full h-full grid gap-[1px] bg-neutral-800 border border-neutral-700"
           style={{
             gridTemplateColumns: "repeat(15, minmax(0, 1fr))",
             gridTemplateRows: "repeat(15, minmax(0, 1fr))",
@@ -252,34 +302,37 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
                     <div
                       key={`${r}-${c}`}
                       style={{ gridColumn: "span 6", gridRow: "span 6" }}
-                      className="border-2 border-red-600 bg-red-950/40 p-2 flex flex-col justify-between"
+                      className="border-2 border-white bg-black p-2 flex flex-col justify-between"
                     >
-                      <div className="flex justify-between items-center text-[10px] text-red-400 font-bold">
-                        <span>RED BASE</span>
+                      <div className="flex justify-between items-center text-[10px] text-white font-extrabold border-b border-neutral-800 pb-1">
+                        <span>◆ RED BASE</span>
                         <span>{ludoState.tokens.RED?.filter((t) => t.isHome).length}/4 HOME</span>
                       </div>
-                      <div className="grid grid-cols-2 gap-2 place-items-center">
-                        {(ludoState.tokens.RED || []).map((t) => (
-                          <button
-                            key={t.id}
-                            type="button"
-                            disabled={!validTokenIdsToMove.includes(t.id) || myTeam !== "RED"}
-                            onClick={() => handleMove(t.id)}
-                            className={`w-7 h-7 rounded-full border-2 border-red-500 font-bold text-[10px] flex items-center justify-center transition-all ${
-                              t.isHome
-                                ? "bg-white text-black border-white"
-                                : t.stepCount > 0
-                                ? "bg-red-600 text-white shadow-lg"
-                                : "bg-neutral-900 text-red-400"
-                            } ${
-                              validTokenIdsToMove.includes(t.id) && myTeam === "RED"
-                                ? "ring-2 ring-white animate-bounce cursor-pointer scale-110"
-                                : ""
-                            }`}
-                          >
-                            {t.isHome ? "✓" : t.stepCount > 0 ? `T${t.id + 1}` : "●"}
-                          </button>
-                        ))}
+                      <div className="grid grid-cols-2 gap-2 place-items-center p-1">
+                        {(ludoState.tokens.RED || []).map((t) => {
+                          const isMovable = validTokenIdsToMove.includes(t.id) && myTeam === "RED";
+                          return (
+                            <button
+                              key={t.id}
+                              type="button"
+                              disabled={!isMovable}
+                              onClick={() => handleMove(t.id)}
+                              className={`w-8 h-8 rounded-full flex items-center justify-center font-extrabold text-[10px] transition-all border-2 ${
+                                t.isHome
+                                  ? "bg-white text-black border-white"
+                                  : t.stepCount > 0
+                                  ? monochromeMeta.RED.tokenBg
+                                  : "bg-neutral-950 text-neutral-500 border-neutral-700"
+                              } ${
+                                isMovable
+                                  ? "ring-4 ring-white animate-bounce scale-110 shadow-[0_0_15px_#fff] cursor-pointer"
+                                  : ""
+                              }`}
+                            >
+                              {t.isHome ? "✓" : t.stepCount > 0 ? `P${t.id + 1}` : "●"}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   );
@@ -294,34 +347,37 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
                     <div
                       key={`${r}-${c}`}
                       style={{ gridColumn: "span 6", gridRow: "span 6" }}
-                      className="border-2 border-emerald-600 bg-emerald-950/40 p-2 flex flex-col justify-between"
+                      className="border-2 border-neutral-400 bg-neutral-950 p-2 flex flex-col justify-between"
                     >
-                      <div className="flex justify-between items-center text-[10px] text-emerald-400 font-bold">
-                        <span>GREEN BASE</span>
+                      <div className="flex justify-between items-center text-[10px] text-white font-extrabold border-b border-neutral-800 pb-1">
+                        <span>▲ GRN BASE</span>
                         <span>{ludoState.tokens.GREEN?.filter((t) => t.isHome).length}/4 HOME</span>
                       </div>
-                      <div className="grid grid-cols-2 gap-2 place-items-center">
-                        {(ludoState.tokens.GREEN || []).map((t) => (
-                          <button
-                            key={t.id}
-                            type="button"
-                            disabled={!validTokenIdsToMove.includes(t.id) || myTeam !== "GREEN"}
-                            onClick={() => handleMove(t.id)}
-                            className={`w-7 h-7 rounded-full border-2 border-emerald-500 font-bold text-[10px] flex items-center justify-center transition-all ${
-                              t.isHome
-                                ? "bg-white text-black border-white"
-                                : t.stepCount > 0
-                                ? "bg-emerald-600 text-white shadow-lg"
-                                : "bg-neutral-900 text-emerald-400"
-                            } ${
-                              validTokenIdsToMove.includes(t.id) && myTeam === "GREEN"
-                                ? "ring-2 ring-white animate-bounce cursor-pointer scale-110"
-                                : ""
-                            }`}
-                          >
-                            {t.isHome ? "✓" : t.stepCount > 0 ? `T${t.id + 1}` : "●"}
-                          </button>
-                        ))}
+                      <div className="grid grid-cols-2 gap-2 place-items-center p-1">
+                        {(ludoState.tokens.GREEN || []).map((t) => {
+                          const isMovable = validTokenIdsToMove.includes(t.id) && myTeam === "GREEN";
+                          return (
+                            <button
+                              key={t.id}
+                              type="button"
+                              disabled={!isMovable}
+                              onClick={() => handleMove(t.id)}
+                              className={`w-8 h-8 rounded-full flex items-center justify-center font-extrabold text-[10px] transition-all border-2 ${
+                                t.isHome
+                                  ? "bg-white text-black border-white"
+                                  : t.stepCount > 0
+                                  ? monochromeMeta.GREEN.tokenBg
+                                  : "bg-neutral-950 text-neutral-500 border-neutral-700"
+                              } ${
+                                isMovable
+                                  ? "ring-4 ring-white animate-bounce scale-110 shadow-[0_0_15px_#fff] cursor-pointer"
+                                  : ""
+                              }`}
+                            >
+                              {t.isHome ? "✓" : t.stepCount > 0 ? `P${t.id + 1}` : "●"}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   );
@@ -336,34 +392,37 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
                     <div
                       key={`${r}-${c}`}
                       style={{ gridColumn: "span 6", gridRow: "span 6" }}
-                      className="border-2 border-blue-600 bg-blue-950/40 p-2 flex flex-col justify-between"
+                      className="border-2 border-dotted border-white bg-neutral-950 p-2 flex flex-col justify-between"
                     >
-                      <div className="flex justify-between items-center text-[10px] text-blue-400 font-bold">
-                        <span>BLUE BASE</span>
+                      <div className="flex justify-between items-center text-[10px] text-white font-extrabold border-b border-neutral-800 pb-1">
+                        <span>✚ BLU BASE</span>
                         <span>{ludoState.tokens.BLUE?.filter((t) => t.isHome).length}/4 HOME</span>
                       </div>
-                      <div className="grid grid-cols-2 gap-2 place-items-center">
-                        {(ludoState.tokens.BLUE || []).map((t) => (
-                          <button
-                            key={t.id}
-                            type="button"
-                            disabled={!validTokenIdsToMove.includes(t.id) || myTeam !== "BLUE"}
-                            onClick={() => handleMove(t.id)}
-                            className={`w-7 h-7 rounded-full border-2 border-blue-500 font-bold text-[10px] flex items-center justify-center transition-all ${
-                              t.isHome
-                                ? "bg-white text-black border-white"
-                                : t.stepCount > 0
-                                ? "bg-blue-600 text-white shadow-lg"
-                                : "bg-neutral-900 text-blue-400"
-                            } ${
-                              validTokenIdsToMove.includes(t.id) && myTeam === "BLUE"
-                                ? "ring-2 ring-white animate-bounce cursor-pointer scale-110"
-                                : ""
-                            }`}
-                          >
-                            {t.isHome ? "✓" : t.stepCount > 0 ? `T${t.id + 1}` : "●"}
-                          </button>
-                        ))}
+                      <div className="grid grid-cols-2 gap-2 place-items-center p-1">
+                        {(ludoState.tokens.BLUE || []).map((t) => {
+                          const isMovable = validTokenIdsToMove.includes(t.id) && myTeam === "BLUE";
+                          return (
+                            <button
+                              key={t.id}
+                              type="button"
+                              disabled={!isMovable}
+                              onClick={() => handleMove(t.id)}
+                              className={`w-8 h-8 rounded-full flex items-center justify-center font-extrabold text-[10px] transition-all border-2 ${
+                                t.isHome
+                                  ? "bg-white text-black border-white"
+                                  : t.stepCount > 0
+                                  ? monochromeMeta.BLUE.tokenBg
+                                  : "bg-neutral-950 text-neutral-500 border-neutral-700"
+                              } ${
+                                isMovable
+                                  ? "ring-4 ring-white animate-bounce scale-110 shadow-[0_0_15px_#fff] cursor-pointer"
+                                  : ""
+                              }`}
+                            >
+                              {t.isHome ? "✓" : t.stepCount > 0 ? `P${t.id + 1}` : "●"}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   );
@@ -378,34 +437,37 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
                     <div
                       key={`${r}-${c}`}
                       style={{ gridColumn: "span 6", gridRow: "span 6" }}
-                      className="border-2 border-yellow-600 bg-yellow-950/40 p-2 flex flex-col justify-between"
+                      className="border-2 border-dashed border-white bg-black p-2 flex flex-col justify-between"
                     >
-                      <div className="flex justify-between items-center text-[10px] text-yellow-400 font-bold">
-                        <span>YELLOW BASE</span>
+                      <div className="flex justify-between items-center text-[10px] text-white font-extrabold border-b border-neutral-800 pb-1">
+                        <span>● YEL BASE</span>
                         <span>{ludoState.tokens.YELLOW?.filter((t) => t.isHome).length}/4 HOME</span>
                       </div>
-                      <div className="grid grid-cols-2 gap-2 place-items-center">
-                        {(ludoState.tokens.YELLOW || []).map((t) => (
-                          <button
-                            key={t.id}
-                            type="button"
-                            disabled={!validTokenIdsToMove.includes(t.id) || myTeam !== "YELLOW"}
-                            onClick={() => handleMove(t.id)}
-                            className={`w-7 h-7 rounded-full border-2 border-yellow-500 font-bold text-[10px] flex items-center justify-center transition-all ${
-                              t.isHome
-                                ? "bg-white text-black border-white"
-                                : t.stepCount > 0
-                                ? "bg-yellow-500 text-black shadow-lg"
-                                : "bg-neutral-900 text-yellow-400"
-                            } ${
-                              validTokenIdsToMove.includes(t.id) && myTeam === "YELLOW"
-                                ? "ring-2 ring-white animate-bounce cursor-pointer scale-110"
-                                : ""
-                            }`}
-                          >
-                            {t.isHome ? "✓" : t.stepCount > 0 ? `T${t.id + 1}` : "●"}
-                          </button>
-                        ))}
+                      <div className="grid grid-cols-2 gap-2 place-items-center p-1">
+                        {(ludoState.tokens.YELLOW || []).map((t) => {
+                          const isMovable = validTokenIdsToMove.includes(t.id) && myTeam === "YELLOW";
+                          return (
+                            <button
+                              key={t.id}
+                              type="button"
+                              disabled={!isMovable}
+                              onClick={() => handleMove(t.id)}
+                              className={`w-8 h-8 rounded-full flex items-center justify-center font-extrabold text-[10px] transition-all border-2 ${
+                                t.isHome
+                                  ? "bg-white text-black border-white"
+                                  : t.stepCount > 0
+                                  ? monochromeMeta.YELLOW.tokenBg
+                                  : "bg-neutral-950 text-neutral-500 border-neutral-700"
+                              } ${
+                                isMovable
+                                  ? "ring-4 ring-white animate-bounce scale-110 shadow-[0_0_15px_#fff] cursor-pointer"
+                                  : ""
+                              }`}
+                            >
+                              {t.isHome ? "✓" : t.stepCount > 0 ? `P${t.id + 1}` : "●"}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   );
@@ -422,11 +484,11 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
                       style={{ gridColumn: "span 3", gridRow: "span 3" }}
                       className="border-2 border-white bg-black flex flex-col items-center justify-center p-1 text-center shadow-inner relative overflow-hidden"
                     >
-                      <Trophy className="w-5 h-5 text-yellow-400 animate-bounce mb-1" />
+                      <Trophy className="w-5 h-5 text-white animate-bounce mb-1" />
                       <span className="text-[8px] sm:text-[9px] font-extrabold uppercase tracking-widest text-white leading-tight">
-                        CYBER
+                        HOME
                         <br />
-                        VORTEX
+                        TRIUMPH
                       </span>
                     </div>
                   );
@@ -454,36 +516,51 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
               const isYellowPath = r === 7 && c >= 9 && c <= 13;
               const isBluePath = c === 7 && r >= 9 && r <= 13;
 
-              let cellBg = "bg-neutral-950";
-              if (isRedPath) cellBg = "bg-red-900/60";
-              if (isGreenPath) cellBg = "bg-emerald-900/60";
-              if (isYellowPath) cellBg = "bg-yellow-900/60";
-              if (isBluePath) cellBg = "bg-blue-900/60";
+              let cellBg = "bg-black";
+              let arrowIcon = "";
+              if (isRedPath) {
+                cellBg = "bg-neutral-900";
+                arrowIcon = HOME_ARROWS.RED;
+              } else if (isGreenPath) {
+                cellBg = "bg-neutral-900";
+                arrowIcon = HOME_ARROWS.GREEN;
+              } else if (isYellowPath) {
+                cellBg = "bg-neutral-900";
+                arrowIcon = HOME_ARROWS.YELLOW;
+              } else if (isBluePath) {
+                cellBg = "bg-neutral-900";
+                arrowIcon = HOME_ARROWS.BLUE;
+              }
 
               return (
                 <div
                   key={`${r}-${c}`}
-                  className={`relative flex items-center justify-center ${cellBg} border border-neutral-800/80 transition-colors`}
+                  className={`relative flex items-center justify-center ${cellBg} border border-neutral-800 transition-colors`}
                 >
                   {isStarCell && (
-                    <Star className="w-2.5 h-2.5 text-neutral-600 fill-neutral-600/30" />
+                    <span className="text-[10px] text-white font-extrabold select-none">★</span>
+                  )}
+                  {arrowIcon && tokensOnCell.length === 0 && (
+                    <span className="text-[8px] text-neutral-600 font-bold select-none">
+                      {arrowIcon}
+                    </span>
                   )}
 
-                  {/* Render Occupying Tokens on this cell */}
+                  {/* Render Occupying Pawns on this cell */}
                   {tokensOnCell.map((tok) => {
                     const isMovable = validTokenIdsToMove.includes(tok.id) && myTeam === tok.color;
-                    const meta = colorMeta[tok.color];
+                    const meta = monochromeMeta[tok.color];
                     return (
                       <button
                         key={`${tok.color}-${tok.id}`}
                         type="button"
                         disabled={!isMovable}
                         onClick={() => handleMove(tok.id)}
-                        className={`absolute w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 border-white font-bold text-[9px] flex items-center justify-center text-white shadow-md z-10 transition-all ${
-                          meta.badgeBg
+                        className={`absolute w-5 h-5 sm:w-6 sm:h-6 rounded-full font-black text-[9px] flex items-center justify-center z-10 transition-all ${
+                          meta.tokenBg
                         } ${
                           isMovable
-                            ? "ring-2 ring-emerald-300 animate-bounce scale-110 cursor-pointer"
+                            ? "ring-4 ring-white animate-bounce scale-110 shadow-[0_0_15px_#fff] cursor-pointer"
                             : ""
                         }`}
                       >
@@ -498,18 +575,16 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
         </div>
       </div>
 
-      {/* ── Interactive 3D Dice Roller & Turn Hub ── */}
-      <div className="border-2 border-neutral-800 bg-neutral-950 p-4 text-center space-y-3">
-        <div className="flex items-center justify-center gap-4">
-          {/* Animated 3D Die Face */}
+      {/* ── Realistic 3D Physical Die & Roll Controls ── */}
+      <div className="border-2 border-white bg-neutral-950 p-4 text-center space-y-3 shadow-2xl">
+        <div className="flex items-center justify-center gap-5">
+          {/* Realistic Physical White Cube Die with Recessed Black Pips */}
           <div
-            className={`w-14 h-14 sm:w-16 sm:h-16 border-2 ${
-              colorMeta[ludoState.currentTurn].border
-            } bg-black flex items-center justify-center font-mono text-3xl font-extrabold shadow-2xl transition-all ${
+            className={`w-14 h-14 sm:w-16 sm:h-16 border-2 border-black rounded-md bg-white flex items-center justify-center shadow-[0_8px_20px_rgba(255,255,255,0.25)] transition-all ${
               rolling ? "animate-spin" : ""
             }`}
           >
-            {roll ? `⚄ ${roll}` : "🎲"}
+            {renderDiceFace(roll)}
           </div>
 
           <div className="flex flex-col gap-1.5 text-left">
@@ -519,34 +594,35 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
                   type="button"
                   disabled={rolling}
                   onClick={handleRoll}
-                  className="px-6 py-2.5 border-2 border-white bg-white text-black hover:bg-black hover:text-white font-bold font-mono text-xs uppercase transition-all active:scale-95 cursor-pointer shadow-lg"
+                  className="px-6 py-2.5 border-2 border-white bg-white text-black hover:bg-black hover:text-white font-extrabold font-mono text-xs uppercase transition-all active:scale-95 cursor-pointer shadow-xl"
                 >
-                  {rolling ? "ROLLING..." : "[ ROLL 3D DICE 🎲 ]"}
+                  {rolling ? "ROLLING..." : "[ ROLL 3D DIE 🎲 ]"}
                 </button>
               ) : hasValidMoves ? (
-                <span className="text-emerald-400 font-bold text-xs animate-pulse">
-                  ⚡ SELECT A GLOWING TOKEN ON BOARD TO MOVE!
+                <span className="text-white font-extrabold text-xs animate-pulse flex items-center gap-1.5">
+                  <span>⚡</span>
+                  <span>TAP A GLOWING PAWN TO MOVE!</span>
                 </span>
               ) : (
                 <button
                   type="button"
                   onClick={handlePassTurn}
-                  className="px-5 py-2 border border-neutral-600 bg-neutral-900 text-neutral-300 hover:text-white hover:border-white font-bold font-mono text-xs uppercase cursor-pointer"
+                  className="px-5 py-2 border-2 border-neutral-600 bg-neutral-900 text-white hover:border-white font-bold font-mono text-xs uppercase cursor-pointer"
                 >
                   [ NO VALID MOVES // PASS TURN ]
                 </button>
               )
             ) : (
-              <span className="text-neutral-500 font-bold text-xs uppercase tracking-wider">
+              <span className="text-neutral-400 font-bold text-xs uppercase tracking-wider">
                 WAITING FOR {ludoState.currentTurn} TO ROLL...
               </span>
             )}
-            <span className="text-[10px] text-neutral-500">
+            <span className="text-[10px] text-neutral-400">
               {roll === 6
-                ? "✨ ROLLED A 6: Deploy token or move + BONUS TURN!"
+                ? "✨ ROLLED A 6: Deploy pawn onto track + BONUS TURN!"
                 : isMyTurn && ludoState.hasRolled
-                ? `Rolled a ${roll}. Tap any movable token.`
-                : "Safe squares (★) prevent token captures."}
+                ? `Rolled a ${roll}. Select piece.`
+                : "Safe star squares (★) protect pawns from capture."}
             </span>
           </div>
         </div>
@@ -554,12 +630,12 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
 
       {/* ── Victory Declaration ── */}
       {match.status === "FINISHED" && (
-        <div className="border-2 border-emerald-400 bg-emerald-950/40 p-4 text-center space-y-2 animate-bounce">
-          <Trophy className="w-8 h-8 text-yellow-400 mx-auto animate-pulse" />
-          <h2 className="font-bold text-sm sm:text-base uppercase tracking-widest text-white">
-            🏆 {match.winnerHandle} CONQUERED THE CYBER LUDO ARENA!
+        <div className="border-4 border-white bg-black p-5 text-center space-y-2 animate-bounce shadow-[0_0_30px_rgba(255,255,255,0.4)]">
+          <Trophy className="w-8 h-8 text-white mx-auto animate-pulse" />
+          <h2 className="font-extrabold text-base uppercase tracking-widest text-white">
+            🏆 {match.winnerHandle} CONQUERED THE PHYSICAL LUDO ARENA!
           </h2>
-          <p className="text-[10px] text-emerald-400 uppercase font-bold">
+          <p className="text-[11px] text-neutral-300 uppercase font-bold">
             AWARDED +{match.stakes * 2} AURA POINTS
           </p>
         </div>
