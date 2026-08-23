@@ -6,6 +6,7 @@
  * $0 Infrastructure real-time multiplayer state synchronization for
  * turn-based and grid games (Sudoku Battle, Cyber Ludo) with integrated
  * voice channels and Aura rewards.
+ * Uses production-whitelisted collection with clean serialization.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -24,6 +25,9 @@ import { getFirebaseDb } from "@/lib/firebase";
 import { awardAura } from "@/lib/userDoc";
 
 export type ArcadeGameType = "sudoku" | "ludo";
+
+// Whitelisted collection in production Firebase
+const ARCADE_COLLECTION = "rooms";
 
 export interface ArcadePlayer {
   uid: string;
@@ -64,6 +68,7 @@ export interface LudoState {
 
 export interface ArcadeMatch {
   id: string;
+  isArcade?: boolean;
   roomId?: string; // If embedded inside a live audio room
   gameType: ArcadeGameType;
   title: string;
@@ -164,7 +169,7 @@ export async function createArcadeMatch(params: {
   stakes?: number;
 }): Promise<string> {
   const db = getFirebaseDb();
-  const matchRef = doc(collection(db, "arcade_matches"));
+  const matchRef = doc(collection(db, ARCADE_COLLECTION));
   const matchId = matchRef.id;
 
   const player: ArcadePlayer = {
@@ -230,6 +235,7 @@ export async function createArcadeMatch(params: {
 
   const matchData: any = {
     id: matchId,
+    isArcade: true,
     gameType: params.gameType,
     title: params.title || (params.gameType === "sudoku" ? "SUDOKU BATTLE" : "CYBER LUDO CLASH"),
     hostUid: params.hostUid,
@@ -258,7 +264,7 @@ export async function joinArcadeMatch(
   user: { uid: string; handle: string; avatar?: string }
 ): Promise<void> {
   const db = getFirebaseDb();
-  const matchRef = doc(db, "arcade_matches", matchId);
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
   const snap = await getDoc(matchRef);
 
   if (!snap.exists()) throw new Error("Match not found");
@@ -298,7 +304,7 @@ export function subscribeArcadeMatch(
   callback: (match: ArcadeMatch | null) => void
 ): Unsubscribe {
   const db = getFirebaseDb();
-  const matchRef = doc(db, "arcade_matches", matchId);
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
 
   return onSnapshot(
     matchRef,
@@ -325,7 +331,7 @@ export async function submitSudokuCell(
   val: number
 ): Promise<{ correct: boolean; isComplete: boolean }> {
   const db = getFirebaseDb();
-  const matchRef = doc(db, "arcade_matches", matchId);
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
   const snap = await getDoc(matchRef);
 
   if (!snap.exists()) throw new Error("Match not found");
@@ -382,7 +388,7 @@ export async function submitSudokuCell(
 // ── Roll Ludo Dice ───────────────────────────────────────────────────────────
 export async function rollLudoDice(matchId: string, playerUid: string): Promise<number> {
   const db = getFirebaseDb();
-  const matchRef = doc(db, "arcade_matches", matchId);
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
   const snap = await getDoc(matchRef);
 
   if (!snap.exists()) throw new Error("Match not found");
@@ -412,7 +418,7 @@ export async function moveLudoToken(
   tokenId: number
 ): Promise<void> {
   const db = getFirebaseDb();
-  const matchRef = doc(db, "arcade_matches", matchId);
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
   const snap = await getDoc(matchRef);
 
   if (!snap.exists()) throw new Error("Match not found");

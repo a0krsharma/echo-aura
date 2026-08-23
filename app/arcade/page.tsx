@@ -38,13 +38,16 @@ export default function ArcadePage() {
     const db = getFirebaseDb();
     let unsub: (() => void) | null = null;
     try {
-      const q = query(collection(db, "arcade_matches"), limit(15));
+      const q = query(collection(db, "rooms"), limit(30));
       unsub = onSnapshot(
         q,
         (snap) => {
           const matches: ArcadeMatch[] = [];
           snap.forEach((doc) => {
-            matches.push({ id: doc.id, ...doc.data() } as ArcadeMatch);
+            const data = doc.data();
+            if (data.isArcade || data.gameType) {
+              matches.push({ id: doc.id, ...data } as ArcadeMatch);
+            }
           });
           setLobbyMatches(matches);
         },
