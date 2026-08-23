@@ -64,7 +64,7 @@ export default function ArcadeInviteModal({
   if (!isOpen) return null;
 
   const origin = typeof window !== "undefined" ? window.location.origin : "https://echo-aura.vercel.app";
-  const gameDisplayName = GAME_NAMES[match.gameType] || match.gameType.toUpperCase();
+  const gameDisplayName = (match?.gameType && GAME_NAMES[match.gameType]) || (match?.gameType ? match.gameType.toUpperCase() : "ARENA");
   
   // Direct frictionless join link
   const inviteUrl = match.roomId

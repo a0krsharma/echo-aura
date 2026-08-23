@@ -779,9 +779,9 @@ function ArcadeContent() {
                       >
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-xs uppercase text-white">{m.title}</span>
+                            <span className="font-bold text-xs uppercase text-white">{m.title || "ARCADE ARENA"}</span>
                             <span className="text-[10px] text-neutral-500 border border-neutral-800 px-1.5 py-0.5">
-                              {m.mode === "VS_COMPUTER" ? "AI BOT" : m.gameType.toUpperCase()}
+                              {m.mode === "VS_COMPUTER" ? "AI BOT" : (m.gameType || "ARENA").toUpperCase()}
                             </span>
                           </div>
                           <p className="text-[10px] text-neutral-400 flex items-center gap-2">

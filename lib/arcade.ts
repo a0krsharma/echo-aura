@@ -2023,7 +2023,10 @@ export function subscribeLobbyArcadeMatches(
     (snap) => {
       const list: ArcadeMatch[] = [];
       snap.forEach((d) => {
-        list.push({ id: d.id, ...d.data() } as ArcadeMatch);
+        const data = d.data();
+        if ((data.isArcade || data.gameType) && data.gameType) {
+          list.push({ id: d.id, ...data } as ArcadeMatch);
+        }
       });
       callback(list);
     },
@@ -2033,7 +2036,10 @@ export function subscribeLobbyArcadeMatches(
       return onSnapshot(fallbackQ, (s) => {
         const list: ArcadeMatch[] = [];
         s.forEach((d) => {
-          list.push({ id: d.id, ...d.data() } as ArcadeMatch);
+          const data = d.data();
+          if ((data.isArcade || data.gameType) && data.gameType) {
+            list.push({ id: d.id, ...data } as ArcadeMatch);
+          }
         });
         callback(list);
       });

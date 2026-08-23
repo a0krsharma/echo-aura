@@ -64,7 +64,7 @@ export default function ArcadeRevengeCardModal({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const origin = typeof window !== "undefined" ? window.location.origin : "https://echo-aura.vercel.app";
-  const gameName = GAME_NAMES[match.gameType] || match.gameType.toUpperCase();
+  const gameName = (match?.gameType && GAME_NAMES[match.gameType]) || (match?.gameType ? match.gameType.toUpperCase() : "ARENA");
   const winnerHandle = match.winnerHandle || "@CHAMPION";
   
   // Find primary opponent / loser
