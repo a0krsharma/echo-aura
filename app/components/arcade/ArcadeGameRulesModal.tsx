@@ -17,10 +17,157 @@ export interface GameRuleDetail {
 }
 
 export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
+  rummy: {
+    id: "rummy",
+    name: "Indian 13-Card Rummy",
+    rank: 1,
+    category: "Card & Bluffing",
+    icon: "🃏",
+    overview: "The quintessential skill-based 13-card game. Arrange all 13 cards into valid sequences (runs) and sets. A valid declaration requires at least one Pure Sequence without Jokers and a second Sequence.",
+    howToPlay: [
+      "Each player is dealt 13 cards with a randomly selected Wild Joker rank and an open discard pile.",
+      "On your turn, draw one card from either the closed draw deck or open discard pile.",
+      "Pure Sequence (Mandatory): 3 or more consecutive cards of the same suit without a Joker (e.g., 4♠-5♠-6♠).",
+      "Second Sequence: 3 or more consecutive cards of the same suit, with or without a Joker.",
+      "Remaining cards can form valid Sets (same rank in different suits) or additional Sequences.",
+      "Discard your 14th card into the finish slot to declare a valid Show with 0 deadwood points."
+    ],
+    voiceGuide: "Discuss meld combinations and bluff your discard selections over open voice.",
+    scoring: "Winner earns +250 Aura; losing players get penalty deadwood points based on unmatched cards.",
+    proTip: "Prioritize building your Pure Sequence immediately before utilizing Wild Jokers in secondary sets!"
+  },
+  call_break: {
+    id: "call_break",
+    name: "Call Break (Lakdi)",
+    rank: 2,
+    category: "Card & Bluffing",
+    icon: "♠️",
+    overview: "4-player strategic trick-taking classic. Spades (♠) are permanent trumps. Players announce trick bids (1-13) before each round and must win at least their bid.",
+    howToPlay: [
+      "13 cards are dealt to each of 4 players.",
+      "Each player announces a bid (1 to 13) representing the number of tricks they intend to take.",
+      "The leader plays any card. Subsequent players must follow suit and MUST play a higher card if held.",
+      "If void in the led suit, you must play a Spade (trump) if possible; otherwise, any card can be discarded.",
+      "The trick is won by the highest card of the led suit, or the highest Spade trump played.",
+      "Making bid N awards N + 0.1 per overtrick; failing to reach bid N deducts -N penalty points."
+    ],
+    voiceGuide: "Coordinate bids, call out trump breaks, and analyze overtrick strategies over live mic.",
+    scoring: "+200 Aura for highest cumulative score across 5 rounds.",
+    proTip: "Count trumps played early and avoid wasting high Spades on non-critical tricks!"
+  },
+  teen_patti: {
+    id: "teen_patti",
+    name: "Teen Patti (3-Card Flush)",
+    rank: 3,
+    category: "Card & Bluffing",
+    icon: "🔥",
+    overview: "High-octane 3-card social wagering game. Play Blind (betting 1x stake without seeing cards) or Seen (betting 2x stake after checking cards). Hold the highest 3-card combination or bluff opponents into folding.",
+    howToPlay: [
+      "An ante (boot) is collected and 3 cards are dealt face-down to each player.",
+      "Play Blind (1x stake) or tap 'SEE CARDS' to play Seen (2x stake).",
+      "Actions: Chaal (match/raise bet), Pack/Fold (forfeit hand), or Showdown (compare hands when 2 players remain).",
+      "Hand Rankings: Trail/Trio (AAA) > Pure Sequence (Straight Flush) > Sequence (Straight) > Color (Flush) > Pair > High Card.",
+      "Showdown reveals hands; highest 3-card combination sweeps the accumulated pot."
+    ],
+    voiceGuide: "Microphone bluffing, audio tells, and confidence baiting are the heart of Teen Patti.",
+    scoring: "Winner takes entire accumulated coin pot + Aura bonus.",
+    proTip: "Playing Blind exerts psychological pressure and cuts betting costs in half!"
+  },
+  satte_pe_satta: {
+    id: "satte_pe_satta",
+    name: "Satte Pe Satta (7 of Hearts)",
+    rank: 7,
+    category: "Card & Bluffing",
+    icon: "❤️",
+    overview: "Fast-paced card shedding race. The player holding the 7 of Hearts opens the table. Players then expand suits upward (8->K) and downward (6->A) or open other 7s.",
+    howToPlay: [
+      "The entire deck is dealt out evenly among players.",
+      "The player holding the 7 of Hearts (7♥) must place it face-up in the center to start.",
+      "On your turn, play any other 7 to open a new suit, or extend an existing suit up (8->9->10->J->Q->K) or down (6->5->4->3->2->A).",
+      "If you have no legal connecting card, you must pass your turn.",
+      "The first player to shed all cards from their hand wins."
+    ],
+    voiceGuide: "Laugh and tease opponents when blocking high cards or forcing them to pass on mic.",
+    scoring: "First to empty hand wins +180 Aura; remaining players receive penalty points per leftover card.",
+    proTip: "Hold onto connecting 6s and 8s to block opponents from shedding their Kings and Aces!"
+  },
+  bhabhi_thulla: {
+    id: "bhabhi_thulla",
+    name: "Bhabhi / Thulla (Get Away)",
+    rank: 8,
+    category: "Card & Bluffing",
+    icon: "🛡️",
+    overview: "Desi trick shedding survival game. The player with the Ace of Spades leads. Follow suit or throw a penalty card ('Thulla') to force the highest bidder to pick up the entire trick. Escape cards to get away!",
+    howToPlay: [
+      "All cards are dealt out. The player holding the Ace of Spades (A♠) leads the first trick.",
+      "Players must follow the led suit. Highest card of the led suit wins the trick and leads next.",
+      "If you are void in the led suit, throw a penalty card of another suit ('Thulla').",
+      "When a Thulla is thrown, the player who threw the highest card of the led suit must pick up all cards into their hand!",
+      "Players who shed all cards successfully 'Get Away'. The last player holding cards is named the Bhabhi."
+    ],
+    voiceGuide: "Audio trash-talk and celebrating when you escape and avoid becoming the room's Bhabhi.",
+    scoring: "Winner gets +200 Aura; the Bhabhi suffers public title penalty.",
+    proTip: "Dump high Aces and Kings early when you have suit coverage to avoid picking up Thulla penalties!"
+  },
+  mendicot: {
+    id: "mendicot",
+    name: "Mendicot / Dehla Pakad",
+    rank: 9,
+    category: "Card & Bluffing",
+    icon: "👥",
+    overview: "2v2 partnership trick-taking classic. Work with your partner across the table to capture all four 10s (Dehlas/Mendis) to trigger a whitewash victory (Kot).",
+    howToPlay: [
+      "13 cards dealt per player in fixed opposite partnerships (Team 1 vs Team 2).",
+      "Trump is established when a player fails to follow suit (the card discarded sets trump).",
+      "Standard trick-taking applies: follow suit if able, otherwise trump or discard.",
+      "Capturing 3 or 4 tens (10♠, 10♥, 10♦, 10♣) wins the round for your team.",
+      "Capturing all 4 tens achieves a Mendicot / Whitewash!"
+    ],
+    voiceGuide: "Strategize non-verbal partner signals and analyze opponent voids on voice.",
+    scoring: "Winning partnership shares +250 Aura; achieving all 4 10s earns double bonus.",
+    proTip: "Save high trumps specifically to capture opponent 10s when they are forced to discard them!"
+  },
+  cheat_bluff: {
+    id: "cheat_bluff",
+    name: "Cheat / Bluff (I Doubt It)",
+    rank: 10,
+    category: "Card & Bluffing",
+    icon: "🚨",
+    overview: "High-stakes face-down card shedding. Players discard 1 to 4 cards sequentially (Aces, Twos, Threes...) declaring their rank, but are allowed to lie! Challenge bluffs with 'CHEAT!'.",
+    howToPlay: [
+      "Cards are dealt out. Player 1 discards 1 to 4 cards face-down declaring 'Aces'.",
+      "Next players discard sequentially ('Twos', 'Threes', ..., 'Kings', wrapping to 'Aces').",
+      "You can place the honest cards or bluff with completely different cards.",
+      "Any player can shout 'CHEAT!' before the next play.",
+      "If the discarder lied, they pick up the entire discard pile! If they were honest, the challenger picks up the pile.",
+      "First player to empty their hand without an unrefuted cheat challenge wins."
+    ],
+    voiceGuide: "Pure voice deception: control voice pitch, micro-hesitations, and fake alibis over the mic.",
+    scoring: "+200 Aura for successfully shedding your hand.",
+    proTip: "Discard small 1-card bluffs early so if caught, you pick up a tiny pile!"
+  },
+  solitaire: {
+    id: "solitaire",
+    name: "Klondike Solitaire",
+    rank: 13,
+    category: "Solo Logic & Puzzles",
+    icon: "🂠",
+    overview: "The world's favorite card puzzle. Arrange 7 tableau columns in alternating red/black descending sequences and transfer all 52 cards onto the 4 foundation piles from Ace to King.",
+    howToPlay: [
+      "7 tableau columns are dealt (1 to 7 cards, top card face-up).",
+      "Build downward on tableau in alternating colors (e.g. Red 6 onto Black 7).",
+      "Only Kings (K) can fill empty tableau columns.",
+      "Transfer Aces onto the 4 foundation piles, building upward to King in matching suit.",
+      "Cycle through the stockpile to uncover unplayed cards."
+    ],
+    voiceGuide: "Stream your solo gameplay while chatting in background audio rooms.",
+    scoring: "+150 Aura upon clearing all 52 cards onto foundations.",
+    proTip: "Always prioritize revealing face-down tableau cards before drawing from the stockpile!"
+  },
   ludo: {
     id: "ludo",
     name: "15x15 Cyber Ludo",
-    rank: 1,
+    rank: 4,
     category: "Tactical Boards & Grids",
     icon: "🎲",
     overview: "Classic 4-player race to the center home terminal. Roll 6 to deploy nodes, capture opponent tokens on open track cells, and navigate safely on star-shielded checkpoints.",
@@ -34,76 +181,6 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
     voiceGuide: "Use open voice for banter, negotiating non-aggression pacts, and celebrating lucky rolls.",
     scoring: "Winner gets +200 Aura Points; capturing opponent tokens awards +25 Aura bonus.",
     proTip: "Keep tokens paired on safe stars until you can strike vulnerable opponent leads!"
-  },
-  chess: {
-    id: "chess",
-    name: "Chess Grid Protocol",
-    rank: 2,
-    category: "Tactical Boards & Grids",
-    icon: "♟️",
-    overview: "The legendary 8x8 battlefield. Control the center, protect your King, execute tactical pins and forks, and deliver checkmate in pure high-contrast monochrome.",
-    howToPlay: [
-      "Tap any of your pieces to see highlighted valid move coordinates.",
-      "Pawns move 1 square forward (or 2 on their first move) and capture diagonally.",
-      "Knights jump in an 'L' shape (2 squares in one direction, 1 square perpendicular).",
-      "Bishops move diagonally; Rooks move horizontally/vertically; Queens move in any straight direction.",
-      "Kings move 1 square in any direction. Deliver checkmate to the opponent King to win."
-    ],
-    voiceGuide: "Analyze positions out loud with spectators or challenge your opponent with tactical psychological pressure.",
-    scoring: "Checkmate victory grants +250 Aura; Stalemate splits stakes.",
-    proTip: "Control the 4 center squares (d4, d5, e4, e5) and develop minor pieces early!"
-  },
-  pool: {
-    id: "pool",
-    name: "8-Ball Pool",
-    rank: 3,
-    category: "2D Physics & Tabletop",
-    icon: "🎱",
-    overview: "Real-time 2D canvas physics billiard table. Aim your cue stick, pull back for impulse power, pocket your assigned group (Solids or Stripes), and finish on the 8-Ball.",
-    howToPlay: [
-      "Drag and rotate your finger/mouse to aim the laser cue line.",
-      "Pull back the impulse power meter and release to strike the cue ball.",
-      "The first ball potted on the open table assigns your group (Solids 1-7 or Stripes 9-15).",
-      "Pocket all balls in your group, then call pocket and sink the black 8-ball to win."
-    ],
-    voiceGuide: "Call out trick shots, bank shots, and combos in live audio to hypetrain the room.",
-    scoring: "+200 Aura for sinking the 8-ball legitimately; scratching on the 8-ball forfeits the match.",
-    proTip: "Use gentle impulse power on near-pocket shots to avoid cue ball bounce-outs."
-  },
-  uno: {
-    id: "uno",
-    name: "Uno / Flow Override",
-    rank: 4,
-    category: "Card & Bluffing",
-    icon: "🎴",
-    overview: "High-octane card battle. Match the top discard pile by color, number, or symbol. Drop Skips, Reverses, +2s, and Wild +4s to empty your hand first!",
-    howToPlay: [
-      "Match the active discard card by color or number.",
-      "Action cards trigger instantly: Skip cancels next turn, Reverse swaps turn order.",
-      "+2 and +4 Wild force the next player to draw cards and forfeit their turn.",
-      "If you cannot play a matching card, tap the Draw Deck to draw.",
-      "Tap the UNO button when holding only 1 card remaining to avoid penalty."
-    ],
-    voiceGuide: "Shout 'UNO!' over the live microphone and trash-talk players about to draw +4 cards.",
-    scoring: "+150 Aura to the first player with 0 cards.",
-    proTip: "Save your Wild +4 cards for late-game defensive reversals!"
-  },
-  carrom: {
-    id: "carrom",
-    name: "Carrom Board",
-    rank: 5,
-    category: "2D Physics & Tabletop",
-    icon: "⚪",
-    overview: "Traditional tabletop physics. Position your striker on the baseline, aim along target vectors, and flick to pocket White coins, Black coins, and the high-value Red Queen.",
-    howToPlay: [
-      "Slide the striker along your baseline.",
-      "Drag back to set flick trajectory and velocity.",
-      "Pocket White coins (+10 pts) or Black coins (+5 pts).",
-      "Pocketing the Red Queen (+25 pts) requires a cover coin on the same or next turn."
-    ],
-    voiceGuide: "Discuss striker rebound angles with spectators on the audio stage.",
-    scoring: "Player with the highest total coin points at board clearance wins +180 Aura.",
-    proTip: "Target bank shots off the outer wooden frame when direct pocket lines are blocked."
   },
   connect4: {
     id: "connect4",

@@ -54,6 +54,15 @@ import {
   rollSnakesLaddersDice,
   moveQuoridorPawn,
   rollYahtzeeDice,
+  drawRummyCard,
+  discardRummyCard,
+  bidCallBreak,
+  playCallBreakCard,
+  betTeenPatti,
+  playSattePeSattaCard,
+  playBhabhiCard,
+  playMendicotCard,
+  discardCheatBluff,
   LUDO_CONFIG,
   type ArcadeMatch,
   type LudoToken,
@@ -898,3 +907,215 @@ export async function executeSudokuBotMove(match: ArcadeMatch): Promise<void> {
     setTimeout(() => activeBotRuns.delete(runKey), 6000 + Math.random() * 4000);
   }
 }
+
+/**
+ * Indian 13-Card Rummy Bot
+ */
+export async function executeRummyBotTurn(match: ArcadeMatch): Promise<void> {
+  if (!match.rummyState || match.status !== "PLAYING") return;
+  const rs = match.rummyState;
+  const botPlayer = Object.values(match.players || {}).find(
+    (p) => p.uid === rs.currentTurnUid && p.isBot
+  );
+  if (!botPlayer) return;
+
+  const runKey = `${match.id}_rummy_bot_${rs.hasDrawn}`;
+  if (activeBotRuns.has(runKey)) return;
+  activeBotRuns.add(runKey);
+
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 1400));
+    if (!rs.hasDrawn) {
+      await drawRummyCard(match.id, botPlayer.uid, false);
+    } else {
+      const hands: Record<string, string[]> = JSON.parse(rs.handsStr || "{}");
+      const botHand = hands[botPlayer.uid] || [];
+      if (botHand.length > 0) {
+        const discardCard = botHand[Math.floor(Math.random() * botHand.length)];
+        await discardRummyCard(match.id, botPlayer.uid, discardCard);
+      }
+    }
+  } catch (err) {
+    console.error("[ArcadeBot] Rummy error:", err);
+  } finally {
+    setTimeout(() => activeBotRuns.delete(runKey), 2000);
+  }
+}
+
+/**
+ * Call Break Bot
+ */
+export async function executeCallBreakBotTurn(match: ArcadeMatch): Promise<void> {
+  if (!match.callBreakState || match.status !== "PLAYING") return;
+  const cbs = match.callBreakState;
+  const botPlayer = Object.values(match.players || {}).find(
+    (p) => p.uid === cbs.currentTurnUid && p.isBot
+  );
+  if (!botPlayer) return;
+
+  const runKey = `${match.id}_call_break_bot_${cbs.phase}_${cbs.currentTrick.length}`;
+  if (activeBotRuns.has(runKey)) return;
+  activeBotRuns.add(runKey);
+
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    if (cbs.phase === "BIDDING") {
+      await bidCallBreak(match.id, botPlayer.uid, 3);
+    } else {
+      const hands: Record<string, string[]> = JSON.parse(cbs.handsStr || "{}");
+      const botHand = hands[botPlayer.uid] || [];
+      if (botHand.length > 0) {
+        const cardToPlay = botHand[0];
+        await playCallBreakCard(match.id, botPlayer.uid, cardToPlay);
+      }
+    }
+  } catch (err) {
+    console.error("[ArcadeBot] Call Break error:", err);
+  } finally {
+    setTimeout(() => activeBotRuns.delete(runKey), 1800);
+  }
+}
+
+/**
+ * Teen Patti Bot
+ */
+export async function executeTeenPattiBotTurn(match: ArcadeMatch): Promise<void> {
+  if (!match.teenPattiState || match.status !== "PLAYING") return;
+  const tps = match.teenPattiState;
+  const botPlayer = Object.values(match.players || {}).find(
+    (p) => p.uid === tps.currentTurnUid && p.isBot
+  );
+  if (!botPlayer) return;
+
+  const runKey = `${match.id}_teen_patti_bot_${tps.pot}`;
+  if (activeBotRuns.has(runKey)) return;
+  activeBotRuns.add(runKey);
+
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    const action = Math.random() < 0.15 ? "PACK" : "CHAAL";
+    await betTeenPatti(match.id, botPlayer.uid, action);
+  } catch (err) {
+    console.error("[ArcadeBot] Teen Patti error:", err);
+  } finally {
+    setTimeout(() => activeBotRuns.delete(runKey), 2000);
+  }
+}
+
+/**
+ * Satte Pe Satta Bot
+ */
+export async function executeSattePeSattaBotTurn(match: ArcadeMatch): Promise<void> {
+  if (!match.sattePeSattaState || match.status !== "PLAYING") return;
+  const sps = match.sattePeSattaState;
+  const botPlayer = Object.values(match.players || {}).find(
+    (p) => p.uid === sps.currentTurnUid && p.isBot
+  );
+  if (!botPlayer) return;
+
+  const runKey = `${match.id}_satte_pe_satta_bot`;
+  if (activeBotRuns.has(runKey)) return;
+  activeBotRuns.add(runKey);
+
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    const hands: Record<string, string[]> = JSON.parse(sps.handsStr || "{}");
+    const botHand = hands[botPlayer.uid] || [];
+    if (botHand.length > 0) {
+      await playSattePeSattaCard(match.id, botPlayer.uid, botHand[0]);
+    }
+  } catch (err) {
+    console.error("[ArcadeBot] Satte Pe Satta error:", err);
+  } finally {
+    setTimeout(() => activeBotRuns.delete(runKey), 1800);
+  }
+}
+
+/**
+ * Bhabhi / Thulla Bot
+ */
+export async function executeBhabhiBotTurn(match: ArcadeMatch): Promise<void> {
+  if (!match.bhabhiThullaState || match.status !== "PLAYING") return;
+  const bts = match.bhabhiThullaState;
+  const botPlayer = Object.values(match.players || {}).find(
+    (p) => p.uid === bts.currentTurnUid && p.isBot
+  );
+  if (!botPlayer) return;
+
+  const runKey = `${match.id}_bhabhi_bot`;
+  if (activeBotRuns.has(runKey)) return;
+  activeBotRuns.add(runKey);
+
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    const hands: Record<string, string[]> = JSON.parse(bts.handsStr || "{}");
+    const botHand = hands[botPlayer.uid] || [];
+    if (botHand.length > 0) {
+      await playBhabhiCard(match.id, botPlayer.uid, botHand[0]);
+    }
+  } catch (err) {
+    console.error("[ArcadeBot] Bhabhi error:", err);
+  } finally {
+    setTimeout(() => activeBotRuns.delete(runKey), 1800);
+  }
+}
+
+/**
+ * Mendicot Bot
+ */
+export async function executeMendicotBotTurn(match: ArcadeMatch): Promise<void> {
+  if (!match.mendicotState || match.status !== "PLAYING") return;
+  const ms = match.mendicotState;
+  const botPlayer = Object.values(match.players || {}).find(
+    (p) => p.uid === ms.currentTurnUid && p.isBot
+  );
+  if (!botPlayer) return;
+
+  const runKey = `${match.id}_mendicot_bot`;
+  if (activeBotRuns.has(runKey)) return;
+  activeBotRuns.add(runKey);
+
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    const hands: Record<string, string[]> = JSON.parse(ms.handsStr || "{}");
+    const botHand = hands[botPlayer.uid] || [];
+    if (botHand.length > 0) {
+      await playMendicotCard(match.id, botPlayer.uid, botHand[0]);
+    }
+  } catch (err) {
+    console.error("[ArcadeBot] Mendicot error:", err);
+  } finally {
+    setTimeout(() => activeBotRuns.delete(runKey), 1800);
+  }
+}
+
+/**
+ * Cheat / Bluff Bot
+ */
+export async function executeCheatBluffBotTurn(match: ArcadeMatch): Promise<void> {
+  if (!match.cheatBluffState || match.status !== "PLAYING") return;
+  const cbs = match.cheatBluffState;
+  const botPlayer = Object.values(match.players || {}).find(
+    (p) => p.uid === cbs.currentTurnUid && p.isBot
+  );
+  if (!botPlayer) return;
+
+  const runKey = `${match.id}_cheat_bluff_bot_${cbs.currentRank}`;
+  if (activeBotRuns.has(runKey)) return;
+  activeBotRuns.add(runKey);
+
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 1400));
+    const hands: Record<string, string[]> = JSON.parse(cbs.handsStr || "{}");
+    const botHand = hands[botPlayer.uid] || [];
+    if (botHand.length > 0) {
+      const discard = [botHand[0]];
+      await discardCheatBluff(match.id, botPlayer.uid, cbs.currentRank, discard);
+    }
+  } catch (err) {
+    console.error("[ArcadeBot] Cheat Bluff error:", err);
+  } finally {
+    setTimeout(() => activeBotRuns.delete(runKey), 2000);
+  }
+}
+

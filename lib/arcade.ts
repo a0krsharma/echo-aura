@@ -41,14 +41,11 @@ export type ArcadeGameType =
   | "ludo"
   | "chess"
   | "connect4"
-  | "battleship"
   | "sudoku"
   | "minesweeper"
   | "2048"
   | "snake"
   | "wordle"
-  | "pool"
-  | "carrom"
   | "glow_hockey"
   | "gomoku"
   | "reversi"
@@ -59,14 +56,22 @@ export type ArcadeGameType =
   | "poker"
   | "blackjack"
   | "uno"
-  | "liars_dice"
+  | "rummy"
+  | "call_break"
+  | "teen_patti"
+  | "satte_pe_satta"
+  | "bhabhi_thulla"
+  | "mendicot"
+  | "cheat_bluff"
+  | "hearts"
+  | "speed"
+  | "solitaire"
   | "codenames"
   | "spyfall"
   | "skribbl"
   | "trivia"
   | "quoridor"
   | "go"
-  | "yahtzee"
   | "taboo"
   | "melody_buzzer"
   | "pitch_arena"
@@ -79,13 +84,18 @@ export type ArcadeGameType =
   | "bagh_chal"
   | "nine_mens_morris"
   | "chain_reaction"
-  | "pen_fight"
   | "neon_pong"
   | "two_truths"
   | "hot_potato"
   | "dilemma_debate"
   | "hangman"
-  | "math_blitz";
+  | "math_blitz"
+  | "pool"
+  | "carrom"
+  | "liars_dice"
+  | "battleship"
+  | "yahtzee"
+  | "pen_fight";
 
 export type ArcadeMatchMode = "MULTIPLAYER" | "VS_COMPUTER";
 
@@ -587,6 +597,114 @@ export interface MathBlitzState {
   lastActionLog?: string;
 }
 
+export interface RummyState {
+  currentTurnUid: string;
+  wildJoker: string; // e.g. "8♠"
+  discardTop: string; // e.g. "4♥"
+  drawDeckCount: number;
+  handsStr: string; // Record<string, string[]> (13 cards per player)
+  hasDrawn: boolean;
+  meldsStr: string; // Record<string, string[][]> (groups of cards)
+  scores: Record<string, number>;
+  lastActionLog?: string;
+}
+
+export interface CallBreakState {
+  currentTurnUid: string;
+  round: number; // 1 to 5
+  phase: "BIDDING" | "PLAYING" | "ROUND_END";
+  bids: Record<string, number>; // e.g. { uid: 3 }
+  tricksWon: Record<string, number>; // e.g. { uid: 4 }
+  currentTrick: { playerUid: string; card: string }[];
+  ledSuit: string | null;
+  handsStr: string; // Record<string, string[]>
+  totalScores: Record<string, number>;
+  lastActionLog?: string;
+}
+
+export interface TeenPattiState {
+  currentTurnUid: string;
+  bootAmount: number;
+  currentStake: number;
+  pot: number;
+  handsStr: string; // Record<string, string[]> (3 cards per player)
+  seenPlayers: Record<string, boolean>; // uid -> boolean
+  foldedPlayers: Record<string, boolean>; // uid -> boolean
+  playerBets: Record<string, number>;
+  round: number;
+  lastActionLog?: string;
+}
+
+export interface SattePeSattaState {
+  currentTurnUid: string;
+  tableSuitsStr: string; // Record<string, { min: number; max: number; hasSeven: boolean }>
+  handsStr: string; // Record<string, string[]>
+  passedPlayers: string[];
+  lastActionLog?: string;
+}
+
+export interface BhabhiThullaState {
+  currentTurnUid: string;
+  currentTrick: { playerUid: string; card: string }[];
+  ledSuit: string | null;
+  handsStr: string; // Record<string, string[]>
+  escapedPlayers: string[];
+  bhabhiUid: string | null;
+  lastActionLog?: string;
+}
+
+export interface MendicotState {
+  currentTurnUid: string;
+  trumpSuit: string | null;
+  team1TensCount: number; // Team 1 (Host + P3)
+  team2TensCount: number; // Team 2 (P2 + P4)
+  currentTrick: { playerUid: string; card: string }[];
+  ledSuit: string | null;
+  handsStr: string; // Record<string, string[]>
+  lastActionLog?: string;
+}
+
+export interface CheatBluffState {
+  currentTurnUid: string;
+  currentRank: string; // "A", "2", "3", ... "K"
+  lastDiscardCount: number;
+  lastDiscardCards: string[]; // actual secret cards
+  lastDiscarderUid: string | null;
+  pileCount: number;
+  handsStr: string; // Record<string, string[]>
+  lastActionLog?: string;
+}
+
+export interface SolitaireState {
+  tableauStr: string; // string[][] (7 columns of cards)
+  tableauFlippedStr: string; // boolean[][]
+  foundationsStr: string; // Record<string, string[]> (4 suits)
+  stockpileStr: string; // string[]
+  wasteStr: string; // string[]
+  moves: number;
+  score: number;
+  lastActionLog?: string;
+}
+
+export interface HeartsState {
+  currentTurnUid: string;
+  currentTrick: { playerUid: string; card: string }[];
+  ledSuit: string | null;
+  heartsBroken: boolean;
+  handsStr: string; // Record<string, string[]>
+  penaltyScores: Record<string, number>;
+  lastActionLog?: string;
+}
+
+export interface SpeedState {
+  p1Hand: string[];
+  p2Hand: string[];
+  centerPiles: [string, string]; // [leftCard, rightCard]
+  p1ReserveCount: number;
+  p2ReserveCount: number;
+  lastActionLog?: string;
+}
+
 export interface ArcadeMatch {
   id: string;
   isArcade?: boolean;
@@ -603,6 +721,16 @@ export interface ArcadeMatch {
   stakes: number; // Aura stakes
   winnerUid?: string;
   winnerHandle?: string;
+  rummyState?: RummyState;
+  callBreakState?: CallBreakState;
+  teenPattiState?: TeenPattiState;
+  sattePeSattaState?: SattePeSattaState;
+  bhabhiThullaState?: BhabhiThullaState;
+  mendicotState?: MendicotState;
+  cheatBluffState?: CheatBluffState;
+  solitaireState?: SolitaireState;
+  heartsState?: HeartsState;
+  speedState?: SpeedState;
   sudokuState?: SudokuState;
   ludoState?: LudoState;
   chessState?: ChessState;
@@ -1143,6 +1271,249 @@ export async function createArcadeMatch(params: {
       dealerRevealed: false,
       currentTurnUid: params.hostUid,
       lastActionLog: "Blackjack 21 dealer active. Hit, Stand, or Double!",
+    };
+  } else if (params.gameType === "rummy") {
+    const botUid = `bot_${matchId}_ai`;
+    const fullDeck = [
+      "A♠", "2♠", "3♠", "4♠", "5♠", "6♠", "7♠", "8♠", "9♠", "10♠", "J♠", "Q♠", "K♠",
+      "A♥", "2♥", "3♥", "4♥", "5♥", "6♥", "7♥", "8♥", "9♥", "10♥", "J♥", "Q♥", "K♥",
+      "A♦", "2♦", "3♦", "4♦", "5♦", "6♦", "7♦", "8♦", "9♦", "10♦", "J♦", "Q♦", "K♦",
+      "A♣", "2♣", "3♣", "4♣", "5♣", "6♣", "7♣", "8♣", "9♣", "10♣", "J♣", "Q♣", "K♣",
+    ];
+    const shuffled = [...fullDeck].sort(() => Math.random() - 0.5);
+    const p1Hand = shuffled.slice(0, 13);
+    const p2Hand = shuffled.slice(13, 26);
+    const discardTop = shuffled[26];
+    const wildJoker = shuffled[27];
+
+    const initialHands: Record<string, string[]> = {
+      [params.hostUid]: p1Hand,
+    };
+    if (mode === "VS_COMPUTER") {
+      initialHands[botUid] = p2Hand;
+    }
+
+    matchData.rummyState = {
+      currentTurnUid: params.hostUid,
+      wildJoker,
+      discardTop,
+      drawDeckCount: 52 - 28,
+      handsStr: JSON.stringify(initialHands),
+      hasDrawn: false,
+      meldsStr: JSON.stringify({}),
+      scores: { [params.hostUid]: 0 },
+      lastActionLog: `Indian 13-Card Rummy dealt! Wild Joker is [${wildJoker}]. Draw a card to begin.`,
+    };
+  } else if (params.gameType === "call_break") {
+    const bot1 = `bot_${matchId}_1`;
+    const bot2 = `bot_${matchId}_2`;
+    const bot3 = `bot_${matchId}_3`;
+    const fullDeck = [
+      "A♠", "2♠", "3♠", "4♠", "5♠", "6♠", "7♠", "8♠", "9♠", "10♠", "J♠", "Q♠", "K♠",
+      "A♥", "2♥", "3♥", "4♥", "5♥", "6♥", "7♥", "8♥", "9♥", "10♥", "J♥", "Q♥", "K♥",
+      "A♦", "2♦", "3♦", "4♦", "5♦", "6♦", "7♦", "8♦", "9♦", "10♦", "J♦", "Q♦", "K♦",
+      "A♣", "2♣", "3♣", "4♣", "5♣", "6♣", "7♣", "8♣", "9♣", "10♣", "J♣", "Q♣", "K♣",
+    ].sort(() => Math.random() - 0.5);
+
+    const hands: Record<string, string[]> = {
+      [params.hostUid]: fullDeck.slice(0, 13),
+      [bot1]: fullDeck.slice(13, 26),
+      [bot2]: fullDeck.slice(26, 39),
+      [bot3]: fullDeck.slice(39, 52),
+    };
+
+    matchData.callBreakState = {
+      currentTurnUid: params.hostUid,
+      round: 1,
+      phase: "BIDDING",
+      bids: { [bot1]: 3, [bot2]: 2, [bot3]: 3 },
+      tricksWon: { [params.hostUid]: 0, [bot1]: 0, [bot2]: 0, [bot3]: 0 },
+      currentTrick: [],
+      ledSuit: null,
+      handsStr: JSON.stringify(hands),
+      totalScores: { [params.hostUid]: 0, [bot1]: 0, [bot2]: 0, [bot3]: 0 },
+      lastActionLog: "Call Break round 1. Announce your bid (1-13)!",
+    };
+  } else if (params.gameType === "teen_patti") {
+    const botUid = `bot_${matchId}_ai`;
+    const fullDeck = [
+      "A♠", "K♠", "Q♠", "J♠", "10♠", "9♠", "8♠", "7♠", "6♠", "5♠", "4♠", "3♠", "2♠",
+      "A♥", "K♥", "Q♥", "J♥", "10♥", "9♥", "8♥", "7♥", "6♥", "5♥", "4♥", "3♥", "2♥",
+      "A♦", "K♦", "Q♦", "J♦", "10♦", "9♦", "8♦", "7♦", "6♦", "5♦", "4♦", "3♦", "2♦",
+      "A♣", "K♣", "Q♣", "J♣", "10♣", "9♣", "8♣", "7♣", "6♣", "5♣", "4♣", "3♣", "2♣",
+    ].sort(() => Math.random() - 0.5);
+
+    const hands: Record<string, string[]> = {
+      [params.hostUid]: fullDeck.slice(0, 3),
+    };
+    if (mode === "VS_COMPUTER") {
+      hands[botUid] = fullDeck.slice(3, 6);
+    }
+
+    matchData.teenPattiState = {
+      currentTurnUid: params.hostUid,
+      bootAmount: 10,
+      currentStake: 10,
+      pot: 20,
+      handsStr: JSON.stringify(hands),
+      seenPlayers: { [params.hostUid]: false, [botUid]: false },
+      foldedPlayers: {},
+      playerBets: { [params.hostUid]: 10, [botUid]: 10 },
+      round: 1,
+      lastActionLog: "Teen Patti table active. Play Blind or See Cards!",
+    };
+  } else if (params.gameType === "satte_pe_satta") {
+    const botUid = `bot_${matchId}_ai`;
+    const fullDeck = [
+      "A♠", "2♠", "3♠", "4♠", "5♠", "6♠", "7♠", "8♠", "9♠", "10♠", "J♠", "Q♠", "K♠",
+      "A♥", "2♥", "3♥", "4♥", "5♥", "6♥", "7♥", "8♥", "9♥", "10♥", "J♥", "Q♥", "K♥",
+      "A♦", "2♦", "3♦", "4♦", "5♦", "6♦", "7♦", "8♦", "9♦", "10♦", "J♦", "Q♦", "K♦",
+      "A♣", "2♣", "3♣", "4♣", "5♣", "6♣", "7♣", "8♣", "9♣", "10♣", "J♣", "Q♣", "K♣",
+    ].sort(() => Math.random() - 0.5);
+
+    const hands: Record<string, string[]> = {
+      [params.hostUid]: fullDeck.slice(0, 26),
+    };
+    if (mode === "VS_COMPUTER") {
+      hands[botUid] = fullDeck.slice(26, 52);
+    }
+
+    // Determine who has 7 of Hearts
+    const hostHas7H = hands[params.hostUid].includes("7♥");
+    const startingUid = hostHas7H ? params.hostUid : botUid;
+
+    matchData.sattePeSattaState = {
+      currentTurnUid: startingUid,
+      tableSuitsStr: JSON.stringify({
+        "♠": { min: 7, max: 7, hasSeven: false },
+        "♥": { min: 7, max: 7, hasSeven: false },
+        "♦": { min: 7, max: 7, hasSeven: false },
+        "♣": { min: 7, max: 7, hasSeven: false },
+      }),
+      handsStr: JSON.stringify(hands),
+      passedPlayers: [],
+      lastActionLog: `Satte Pe Satta started. Holder of [7♥] must open table!`,
+    };
+  } else if (params.gameType === "bhabhi_thulla") {
+    const bot1 = `bot_${matchId}_1`;
+    const bot2 = `bot_${matchId}_2`;
+    const bot3 = `bot_${matchId}_3`;
+    const fullDeck = [
+      "A♠", "2♠", "3♠", "4♠", "5♠", "6♠", "7♠", "8♠", "9♠", "10♠", "J♠", "Q♠", "K♠",
+      "A♥", "2♥", "3♥", "4♥", "5♥", "6♥", "7♥", "8♥", "9♥", "10♥", "J♥", "Q♥", "K♥",
+      "A♦", "2♦", "3♦", "4♦", "5♦", "6♦", "7♦", "8♦", "9♦", "10♦", "J♦", "Q♦", "K♦",
+      "A♣", "2♣", "3♣", "4♣", "5♣", "6♣", "7♣", "8♣", "9♣", "10♣", "J♣", "Q♣", "K♣",
+    ].sort(() => Math.random() - 0.5);
+
+    const hands: Record<string, string[]> = {
+      [params.hostUid]: fullDeck.slice(0, 13),
+      [bot1]: fullDeck.slice(13, 26),
+      [bot2]: fullDeck.slice(26, 39),
+      [bot3]: fullDeck.slice(39, 52),
+    };
+
+    // Find Ace of Spades
+    let starter = params.hostUid;
+    for (const [u, h] of Object.entries(hands)) {
+      if (h.includes("A♠")) {
+        starter = u;
+        break;
+      }
+    }
+
+    matchData.bhabhiThullaState = {
+      currentTurnUid: starter,
+      currentTrick: [],
+      ledSuit: null,
+      handsStr: JSON.stringify(hands),
+      escapedPlayers: [],
+      bhabhiUid: null,
+      lastActionLog: `Bhabhi Thulla active. Ace of Spades [A♠] holder leads first trick!`,
+    };
+  } else if (params.gameType === "mendicot") {
+    const bot1 = `bot_${matchId}_1`;
+    const bot2 = `bot_${matchId}_2`;
+    const bot3 = `bot_${matchId}_3`;
+    const fullDeck = [
+      "A♠", "2♠", "3♠", "4♠", "5♠", "6♠", "7♠", "8♠", "9♠", "10♠", "J♠", "Q♠", "K♠",
+      "A♥", "2♥", "3♥", "4♥", "5♥", "6♥", "7♥", "8♥", "9♥", "10♥", "J♥", "Q♥", "K♥",
+      "A♦", "2♦", "3♦", "4♦", "5♦", "6♦", "7♦", "8♦", "9♦", "10♦", "J♦", "Q♦", "K♦",
+      "A♣", "2♣", "3♣", "4♣", "5♣", "6♣", "7♣", "8♣", "9♣", "10♣", "J♣", "Q♣", "K♣",
+    ].sort(() => Math.random() - 0.5);
+
+    const hands: Record<string, string[]> = {
+      [params.hostUid]: fullDeck.slice(0, 13),
+      [bot1]: fullDeck.slice(13, 26),
+      [bot2]: fullDeck.slice(26, 39),
+      [bot3]: fullDeck.slice(39, 52),
+    };
+
+    matchData.mendicotState = {
+      currentTurnUid: params.hostUid,
+      trumpSuit: null,
+      team1TensCount: 0,
+      team2TensCount: 0,
+      currentTrick: [],
+      ledSuit: null,
+      handsStr: JSON.stringify(hands),
+      lastActionLog: "Mendicot / Dehla Pakad active. Capture the four 10s to win!",
+    };
+  } else if (params.gameType === "cheat_bluff") {
+    const botUid = `bot_${matchId}_ai`;
+    const fullDeck = [
+      "A♠", "2♠", "3♠", "4♠", "5♠", "6♠", "7♠", "8♠", "9♠", "10♠", "J♠", "Q♠", "K♠",
+      "A♥", "2♥", "3♥", "4♥", "5♥", "6♥", "7♥", "8♥", "9♥", "10♥", "J♥", "Q♥", "K♥",
+      "A♦", "2♦", "3♦", "4♦", "5♦", "6♦", "7♦", "8♦", "9♦", "10♦", "J♦", "Q♦", "K♦",
+      "A♣", "2♣", "3♣", "4♣", "5♣", "6♣", "7♣", "8♣", "9♣", "10♣", "J♣", "Q♣", "K♣",
+    ].sort(() => Math.random() - 0.5);
+
+    const hands: Record<string, string[]> = {
+      [params.hostUid]: fullDeck.slice(0, 26),
+    };
+    if (mode === "VS_COMPUTER") {
+      hands[botUid] = fullDeck.slice(26, 52);
+    }
+
+    matchData.cheatBluffState = {
+      currentTurnUid: params.hostUid,
+      currentRank: "A",
+      lastDiscardCount: 0,
+      lastDiscardCards: [],
+      lastDiscarderUid: null,
+      pileCount: 0,
+      handsStr: JSON.stringify(hands),
+      lastActionLog: "Cheat / Bluff active. Discard face-down cards declaring 'Aces'!",
+    };
+  } else if (params.gameType === "solitaire") {
+    const fullDeck = [
+      "A♠", "2♠", "3♠", "4♠", "5♠", "6♠", "7♠", "8♠", "9♠", "10♠", "J♠", "Q♠", "K♠",
+      "A♥", "2♥", "3♥", "4♥", "5♥", "6♥", "7♥", "8♥", "9♥", "10♥", "J♥", "Q♥", "K♥",
+      "A♦", "2♦", "3♦", "4♦", "5♦", "6♦", "7♦", "8♦", "9♦", "10♦", "J♦", "Q♦", "K♦",
+      "A♣", "2♣", "3♣", "4♣", "5♣", "6♣", "7♣", "8♣", "9♣", "10♣", "J♣", "Q♣", "K♣",
+    ].sort(() => Math.random() - 0.5);
+
+    const tableau: string[][] = [[], [], [], [], [], [], []];
+    const tableauFlipped: boolean[][] = [[], [], [], [], [], [], []];
+    let cardIdx = 0;
+
+    for (let col = 0; col < 7; col++) {
+      for (let row = 0; row <= col; row++) {
+        tableau[col].push(fullDeck[cardIdx++]);
+        tableauFlipped[col].push(row === col); // only top card is face-up
+      }
+    }
+
+    const stockpile = fullDeck.slice(cardIdx);
+
+    matchData.solitaireState = {
+      tableauStr: JSON.stringify(tableau),
+      tableauFlippedStr: JSON.stringify(tableauFlipped),
+      foundationsStr: JSON.stringify({ "♠": [], "♥": [], "♦": [], "♣": [] }),
+      stockpileStr: JSON.stringify(stockpile),
+      wasteStr: JSON.stringify([]),
+      moves: 0,
+      score: 0,
+      lastActionLog: "Klondike Solitaire ready. Build Ace to King on foundation piles!",
     };
   } else if (params.gameType === "uno") {
     const botUid = `bot_${matchId}_ai`;
@@ -3637,3 +4008,541 @@ export async function submitMathBlitzAnswer(
   await updateDoc(matchRef, updates);
   return { correct };
 }
+
+// ── Indian 13-Card Rummy Actions ──────────────────────────────────────────────
+export async function drawRummyCard(
+  matchId: string,
+  playerUid: string,
+  fromDiscard: boolean
+): Promise<{ cardDrawn: string }> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+  if (!match.rummyState) throw new Error("Not a rummy match");
+
+  const rs = match.rummyState;
+  const hands: Record<string, string[]> = JSON.parse(rs.handsStr || "{}");
+  const myHand = hands[playerUid] || [];
+
+  let drawnCard: string;
+  let newDiscardTop = rs.discardTop;
+  let newDeckCount = rs.drawDeckCount;
+
+  if (fromDiscard) {
+    drawnCard = rs.discardTop;
+    newDiscardTop = "🂠";
+  } else {
+    const ranks = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+    const suits = ["♠", "♥", "♦", "♣"];
+    drawnCard = `${ranks[Math.floor(Math.random() * ranks.length)]}${suits[Math.floor(Math.random() * suits.length)]}`;
+    newDeckCount = Math.max(0, newDeckCount - 1);
+  }
+
+  myHand.push(drawnCard);
+  hands[playerUid] = myHand;
+
+  await updateDoc(matchRef, {
+    "rummyState.handsStr": JSON.stringify(hands),
+    "rummyState.hasDrawn": true,
+    "rummyState.discardTop": newDiscardTop,
+    "rummyState.drawDeckCount": newDeckCount,
+    "rummyState.lastActionLog": `${match.players[playerUid]?.handle || "Player"} drew a card from ${fromDiscard ? "discard pile" : "closed deck"}.`,
+    updatedAt: serverTimestamp(),
+  });
+
+  return { cardDrawn: drawnCard };
+}
+
+export async function discardRummyCard(
+  matchId: string,
+  playerUid: string,
+  cardToDiscard: string
+): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+  if (!match.rummyState) throw new Error("Not a rummy match");
+
+  const rs = match.rummyState;
+  const hands: Record<string, string[]> = JSON.parse(rs.handsStr || "{}");
+  const myHand = hands[playerUid] || [];
+
+  const cardIdx = myHand.indexOf(cardToDiscard);
+  if (cardIdx !== -1) {
+    myHand.splice(cardIdx, 1);
+  }
+  hands[playerUid] = myHand;
+
+  const playerUids = Object.keys(match.players || {});
+  const nextTurnUid = playerUids.find((u) => u !== playerUid) || playerUid;
+
+  await updateDoc(matchRef, {
+    "rummyState.handsStr": JSON.stringify(hands),
+    "rummyState.discardTop": cardToDiscard,
+    "rummyState.hasDrawn": false,
+    "rummyState.currentTurnUid": nextTurnUid,
+    "rummyState.lastActionLog": `${match.players[playerUid]?.handle || "Player"} discarded [${cardToDiscard}].`,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function declareRummyHand(
+  matchId: string,
+  playerUid: string,
+  finishCard: string
+): Promise<{ won: boolean }> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+  if (!match.rummyState) throw new Error("Not a rummy match");
+
+  const updates: any = {
+    status: "FINISHED",
+    winnerUid: playerUid,
+    winnerHandle: match.players[playerUid]?.handle || "@ANON",
+    "rummyState.lastActionLog": `🏆 SHOW DECLARED! ${match.players[playerUid]?.handle || "Player"} submitted 13 cards with 0 deadwood points!`,
+    updatedAt: serverTimestamp(),
+  };
+
+  await awardAura(playerUid, match.stakes * 2 || 200);
+  await updateDoc(matchRef, updates);
+  return { won: true };
+}
+
+// ── Call Break (Lakdi) Actions ────────────────────────────────────────────────
+export async function bidCallBreak(
+  matchId: string,
+  playerUid: string,
+  bid: number
+): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+  if (!match.callBreakState) throw new Error("Not a call break match");
+
+  const cbs = match.callBreakState;
+  const bids = { ...cbs.bids, [playerUid]: bid };
+  const allPlayers = Object.keys(match.players || {});
+  const allBid = allPlayers.every((u) => bids[u] !== undefined);
+
+  const updates: any = {
+    "callBreakState.bids": bids,
+    "callBreakState.lastActionLog": `${match.players[playerUid]?.handle || "Player"} bid ${bid} tricks.`,
+    updatedAt: serverTimestamp(),
+  };
+
+  if (allBid) {
+    updates["callBreakState.phase"] = "PLAYING";
+  }
+
+  await updateDoc(matchRef, updates);
+}
+
+export async function playCallBreakCard(
+  matchId: string,
+  playerUid: string,
+  card: string
+): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+  if (!match.callBreakState) throw new Error("Not a call break match");
+
+  const cbs = match.callBreakState;
+  const hands: Record<string, string[]> = JSON.parse(cbs.handsStr || "{}");
+  const myHand = hands[playerUid] || [];
+
+  const cardIdx = myHand.indexOf(card);
+  if (cardIdx !== -1) myHand.splice(cardIdx, 1);
+  hands[playerUid] = myHand;
+
+  const currentTrick = [...cbs.currentTrick, { playerUid, card }];
+  const suit = card.slice(-1);
+  const ledSuit = cbs.ledSuit || suit;
+
+  const playerUids = Object.keys(match.players || {});
+  let nextTurnUid = playerUids[(playerUids.indexOf(playerUid) + 1) % playerUids.length];
+  let tricksWon = { ...cbs.tricksWon };
+  let log = `${match.players[playerUid]?.handle || "Player"} played [${card}].`;
+
+  // Check if trick completed (4 cards)
+  if (currentTrick.length >= 4) {
+    // Determine winner of trick (Spades trump, then highest of led suit)
+    let winningPlay = currentTrick[0];
+    for (let i = 1; i < currentTrick.length; i++) {
+      const play = currentTrick[i];
+      const winCard = winningPlay.card;
+      const curCard = play.card;
+      const isCurSpade = curCard.includes("♠");
+      const isWinSpade = winCard.includes("♠");
+
+      if (isCurSpade && !isWinSpade) {
+        winningPlay = play;
+      } else if (isCurSpade && isWinSpade) {
+        // Higher rank
+        winningPlay = play;
+      } else if (!isWinSpade && curCard.slice(-1) === ledSuit) {
+        winningPlay = play;
+      }
+    }
+
+    const trickWinner = winningPlay.playerUid;
+    tricksWon[trickWinner] = (tricksWon[trickWinner] || 0) + 1;
+    log = `⭐ ${match.players[trickWinner]?.handle || "Player"} won the trick with [${winningPlay.card}]!`;
+    nextTurnUid = trickWinner;
+  }
+
+  const updates: any = {
+    "callBreakState.handsStr": JSON.stringify(hands),
+    "callBreakState.currentTrick": currentTrick.length >= 4 ? [] : currentTrick,
+    "callBreakState.ledSuit": currentTrick.length >= 4 ? null : ledSuit,
+    "callBreakState.currentTurnUid": nextTurnUid,
+    "callBreakState.tricksWon": tricksWon,
+    "callBreakState.lastActionLog": log,
+    updatedAt: serverTimestamp(),
+  };
+
+  // Check game completion (13 tricks)
+  const totalTricks = Object.values(tricksWon).reduce((a, b) => a + b, 0);
+  if (totalTricks >= 13) {
+    updates.status = "FINISHED";
+    const winnerUid = Object.entries(tricksWon).sort((a, b) => b[1] - a[1])[0][0];
+    updates.winnerUid = winnerUid;
+    updates.winnerHandle = match.players[winnerUid]?.handle || "@ANON";
+    await awardAura(winnerUid, match.stakes * 2 || 200);
+  }
+
+  await updateDoc(matchRef, updates);
+}
+
+// ── Teen Patti Actions ────────────────────────────────────────────────────────
+export async function seeTeenPattiCards(
+  matchId: string,
+  playerUid: string
+): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) return;
+  const match = snap.data() as ArcadeMatch;
+  if (!match.teenPattiState) return;
+
+  await updateDoc(matchRef, {
+    [`teenPattiState.seenPlayers.${playerUid}`]: true,
+    "teenPattiState.lastActionLog": `👀 ${match.players[playerUid]?.handle || "Player"} saw their cards (Playing SEEN).`,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function betTeenPatti(
+  matchId: string,
+  playerUid: string,
+  action: "CHAAL" | "PACK" | "SHOW"
+): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+  if (!match.teenPattiState) throw new Error("Not a teen patti match");
+
+  const tps = match.teenPattiState;
+  const isSeen = tps.seenPlayers[playerUid] || false;
+  const betAmount = isSeen ? tps.currentStake * 2 : tps.currentStake;
+
+  const playerUids = Object.keys(match.players || {});
+  const activeUids = playerUids.filter((u) => !tps.foldedPlayers[u]);
+  const nextTurnUid = activeUids[(activeUids.indexOf(playerUid) + 1) % activeUids.length] || playerUid;
+
+  const updates: any = {
+    updatedAt: serverTimestamp(),
+  };
+
+  if (action === "PACK") {
+    updates[`teenPattiState.foldedPlayers.${playerUid}`] = true;
+    updates["teenPattiState.lastActionLog"] = `🏳️ ${match.players[playerUid]?.handle || "Player"} packed / folded.`;
+    updates["teenPattiState.currentTurnUid"] = nextTurnUid;
+
+    const remaining = activeUids.filter((u) => u !== playerUid);
+    if (remaining.length === 1) {
+      updates.status = "FINISHED";
+      updates.winnerUid = remaining[0];
+      updates.winnerHandle = match.players[remaining[0]]?.handle || "@ANON";
+      await awardAura(remaining[0], tps.pot);
+    }
+  } else if (action === "CHAAL") {
+    updates["teenPattiState.pot"] = increment(betAmount);
+    updates[`teenPattiState.playerBets.${playerUid}`] = increment(betAmount);
+    updates["teenPattiState.currentTurnUid"] = nextTurnUid;
+    updates["teenPattiState.lastActionLog"] = `🪙 ${match.players[playerUid]?.handle || "Player"} placed Chaal of ${betAmount} coins.`;
+  } else if (action === "SHOW") {
+    updates.status = "FINISHED";
+    updates.winnerUid = playerUid;
+    updates.winnerHandle = match.players[playerUid]?.handle || "@ANON";
+    updates["teenPattiState.lastActionLog"] = `🏆 SHOWDOWN! ${match.players[playerUid]?.handle || "Player"} won the pot with highest 3-card combination!`;
+    await awardAura(playerUid, tps.pot + betAmount);
+  }
+
+  await updateDoc(matchRef, updates);
+}
+
+// ── Satte Pe Satta (7 of Hearts) Actions ───────────────────────────────────────
+export async function playSattePeSattaCard(
+  matchId: string,
+  playerUid: string,
+  card: string
+): Promise<{ won: boolean }> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+  if (!match.sattePeSattaState) throw new Error("Not a satte pe satta match");
+
+  const sps = match.sattePeSattaState;
+  const hands: Record<string, string[]> = JSON.parse(sps.handsStr || "{}");
+  const myHand = hands[playerUid] || [];
+
+  const cardIdx = myHand.indexOf(card);
+  if (cardIdx !== -1) myHand.splice(cardIdx, 1);
+  hands[playerUid] = myHand;
+
+  const playerUids = Object.keys(match.players || {});
+  const nextTurnUid = playerUids[(playerUids.indexOf(playerUid) + 1) % playerUids.length];
+  const won = myHand.length === 0;
+
+  const updates: any = {
+    "sattePeSattaState.handsStr": JSON.stringify(hands),
+    "sattePeSattaState.currentTurnUid": nextTurnUid,
+    "sattePeSattaState.lastActionLog": `${match.players[playerUid]?.handle || "Player"} played [${card}].`,
+    updatedAt: serverTimestamp(),
+  };
+
+  if (won) {
+    updates.status = "FINISHED";
+    updates.winnerUid = playerUid;
+    updates.winnerHandle = match.players[playerUid]?.handle || "@ANON";
+    await awardAura(playerUid, match.stakes * 2 || 150);
+  }
+
+  await updateDoc(matchRef, updates);
+  return { won };
+}
+
+// ── Bhabhi / Thulla Actions ───────────────────────────────────────────────────
+export async function playBhabhiCard(
+  matchId: string,
+  playerUid: string,
+  card: string
+): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+  if (!match.bhabhiThullaState) throw new Error("Not a bhabhi match");
+
+  const bts = match.bhabhiThullaState;
+  const hands: Record<string, string[]> = JSON.parse(bts.handsStr || "{}");
+  const myHand = hands[playerUid] || [];
+
+  const cardIdx = myHand.indexOf(card);
+  if (cardIdx !== -1) myHand.splice(cardIdx, 1);
+  hands[playerUid] = myHand;
+
+  const escaped = [...bts.escapedPlayers];
+  if (myHand.length === 0 && !escaped.includes(playerUid)) {
+    escaped.push(playerUid);
+  }
+
+  const playerUids = Object.keys(match.players || {});
+  const remaining = playerUids.filter((u) => !escaped.includes(u));
+  const nextTurnUid = remaining[(remaining.indexOf(playerUid) + 1) % remaining.length] || playerUid;
+
+  const updates: any = {
+    "bhabhiThullaState.handsStr": JSON.stringify(hands),
+    "bhabhiThullaState.escapedPlayers": escaped,
+    "bhabhiThullaState.currentTurnUid": nextTurnUid,
+    "bhabhiThullaState.lastActionLog": `${match.players[playerUid]?.handle || "Player"} threw [${card}]${myHand.length === 0 ? " and ESCAPED!" : "."}`,
+    updatedAt: serverTimestamp(),
+  };
+
+  if (remaining.length <= 1) {
+    updates.status = "FINISHED";
+    const bhabhi = remaining[0] || playerUid;
+    updates.winnerUid = playerUid;
+    updates.winnerHandle = match.players[playerUid]?.handle || "@ANON";
+    updates["bhabhiThullaState.bhabhiUid"] = bhabhi;
+    updates["bhabhiThullaState.lastActionLog"] = `🚨 GAME OVER! ${match.players[bhabhi]?.handle || "Player"} is declared the BHABHI!`;
+  }
+
+  await updateDoc(matchRef, updates);
+}
+
+// ── Mendicot Actions ──────────────────────────────────────────────────────────
+export async function playMendicotCard(
+  matchId: string,
+  playerUid: string,
+  card: string
+): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+  if (!match.mendicotState) throw new Error("Not a mendicot match");
+
+  const ms = match.mendicotState;
+  const hands: Record<string, string[]> = JSON.parse(ms.handsStr || "{}");
+  const myHand = hands[playerUid] || [];
+
+  const cardIdx = myHand.indexOf(card);
+  if (cardIdx !== -1) myHand.splice(cardIdx, 1);
+  hands[playerUid] = myHand;
+
+  const isTen = card.startsWith("10");
+  const isTeam1 = playerUid === match.hostUid;
+
+  const playerUids = Object.keys(match.players || {});
+  const nextTurnUid = playerUids[(playerUids.indexOf(playerUid) + 1) % playerUids.length];
+
+  const updates: any = {
+    "mendicotState.handsStr": JSON.stringify(hands),
+    "mendicotState.currentTurnUid": nextTurnUid,
+    "mendicotState.lastActionLog": `${match.players[playerUid]?.handle || "Player"} played [${card}]${isTen ? " (TEN CAPTURE OPPORTUNITY!)" : "."}`,
+    updatedAt: serverTimestamp(),
+  };
+
+  if (isTen) {
+    if (isTeam1) updates["mendicotState.team1TensCount"] = increment(1);
+    else updates["mendicotState.team2TensCount"] = increment(1);
+  }
+
+  await updateDoc(matchRef, updates);
+}
+
+// ── Cheat / Bluff Actions ─────────────────────────────────────────────────────
+export async function discardCheatBluff(
+  matchId: string,
+  playerUid: string,
+  declaredRank: string,
+  actualCards: string[]
+): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+  if (!match.cheatBluffState) throw new Error("Not a cheat bluff match");
+
+  const cbs = match.cheatBluffState;
+  const hands: Record<string, string[]> = JSON.parse(cbs.handsStr || "{}");
+  const myHand = hands[playerUid] || [];
+
+  actualCards.forEach((c) => {
+    const idx = myHand.indexOf(c);
+    if (idx !== -1) myHand.splice(idx, 1);
+  });
+  hands[playerUid] = myHand;
+
+  const playerUids = Object.keys(match.players || {});
+  const nextTurnUid = playerUids[(playerUids.indexOf(playerUid) + 1) % playerUids.length];
+
+  const ranks = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+  const nextRank = ranks[(ranks.indexOf(declaredRank) + 1) % ranks.length];
+
+  const updates: any = {
+    "cheatBluffState.handsStr": JSON.stringify(hands),
+    "cheatBluffState.currentRank": nextRank,
+    "cheatBluffState.lastDiscardCount": actualCards.length,
+    "cheatBluffState.lastDiscardCards": actualCards,
+    "cheatBluffState.lastDiscarderUid": playerUid,
+    "cheatBluffState.pileCount": increment(actualCards.length),
+    "cheatBluffState.currentTurnUid": nextTurnUid,
+    "cheatBluffState.lastActionLog": `${match.players[playerUid]?.handle || "Player"} placed ${actualCards.length} card(s) claiming "${declaredRank}s".`,
+    updatedAt: serverTimestamp(),
+  };
+
+  if (myHand.length === 0) {
+    updates.status = "FINISHED";
+    updates.winnerUid = playerUid;
+    updates.winnerHandle = match.players[playerUid]?.handle || "@ANON";
+    await awardAura(playerUid, match.stakes * 2 || 150);
+  }
+
+  await updateDoc(matchRef, updates);
+}
+
+export async function challengeCheatBluff(
+  matchId: string,
+  challengerUid: string
+): Promise<{ wasLying: boolean }> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+  if (!match.cheatBluffState) throw new Error("Not a cheat bluff match");
+
+  const cbs = match.cheatBluffState;
+  const lastCards = cbs.lastDiscardCards || [];
+  const expectedRank = cbs.currentRank;
+  const wasLying = lastCards.some((c) => !c.startsWith(expectedRank));
+
+  const victimUid = wasLying ? cbs.lastDiscarderUid : challengerUid;
+  const log = wasLying
+    ? `🚨 CAUGHT BLUFFING! ${match.players[cbs.lastDiscarderUid || ""]?.handle || "Player"} lied with [${lastCards.join(", ")}] and picks up the pile!`
+    : `🛡️ HONEST DISCARD! ${match.players[challengerUid]?.handle || "Challenger"} falsely accused and picks up the pile!`;
+
+  await updateDoc(matchRef, {
+    "cheatBluffState.pileCount": 0,
+    "cheatBluffState.lastActionLog": log,
+    updatedAt: serverTimestamp(),
+  });
+
+  return { wasLying };
+}
+
+// ── Klondike Solitaire Actions ────────────────────────────────────────────────
+export async function drawSolitaireCard(
+  matchId: string,
+  playerUid: string
+): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) return;
+  const match = snap.data() as ArcadeMatch;
+  if (!match.solitaireState) return;
+
+  const ss = match.solitaireState;
+  let stock: string[] = JSON.parse(ss.stockpileStr || "[]");
+  let waste: string[] = JSON.parse(ss.wasteStr || "[]");
+
+  if (stock.length === 0) {
+    stock = waste.reverse();
+    waste = [];
+  } else {
+    const drawn = stock.pop();
+    if (drawn) waste.push(drawn);
+  }
+
+  await updateDoc(matchRef, {
+    "solitaireState.stockpileStr": JSON.stringify(stock),
+    "solitaireState.wasteStr": JSON.stringify(waste),
+    "solitaireState.moves": increment(1),
+    "solitaireState.lastActionLog": `Drew card from stockpile (${stock.length} remaining).`,
+    updatedAt: serverTimestamp(),
+  });
+}
+
