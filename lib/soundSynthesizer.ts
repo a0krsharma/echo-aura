@@ -2,8 +2,8 @@
  * lib/soundSynthesizer.ts
  * ─────────────────────────────────────────────────────────────
  * Zero-Latency, Zero-Network Web Audio Sound Effect Synthesizer.
- * Big Boss Arena Soundboard + Meme Audio Synthesis.
- * Locally generated in the browser ($0 / 0 Network Errors / 100% Device Support).
+ * Arena Live Soundboard + High-Impact Audio FX.
+ * Locally synthesized in the browser ($0 / 0 Network Errors / 100% Device Support).
  */
 
 class SoundSynthesizer {
@@ -20,18 +20,18 @@ class SoundSynthesizer {
     return this.ctx;
   }
 
-  // 1. Cinematic Sub Boom (Vine Boom / Heavy Impact)
-  playSubBoom(durationSec = 1.8) {
+  // 1. Heavy 808 Sub Boom (Punchy Kick + Sub Drop)
+  playSubBoom(durationSec = 1.6) {
     try {
       const ctx = this.getContext();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
 
       osc.type = "sine";
-      osc.frequency.setValueAtTime(140, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(28, ctx.currentTime + durationSec);
+      osc.frequency.setValueAtTime(150, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(32, ctx.currentTime + durationSec);
 
-      gain.gain.setValueAtTime(0.8, ctx.currentTime);
+      gain.gain.setValueAtTime(0.9, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + durationSec);
 
       osc.connect(gain);
@@ -44,7 +44,7 @@ class SoundSynthesizer {
     }
   }
 
-  // 2. Comic Boing (Bruh / Pop)
+  // 2. Comic Boing / Bruh Pop
   playBoing() {
     try {
       const ctx = this.getContext();
@@ -101,31 +101,36 @@ class SoundSynthesizer {
     }
   }
 
-  // 4. Big Boss Heavy Resonant Gong
+  // 4. Resonant Deep Metallic Temple Gong (Rich Harmonics)
   playGong() {
     try {
       const ctx = this.getContext();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+      const freqs = [110, 220, 330, 445]; // Fundamental + harmonics for metallic ring
+      
+      freqs.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
 
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(185, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(92, ctx.currentTime + 2.5);
+        osc.type = idx === 0 ? "sine" : "triangle";
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(freq * 0.85, ctx.currentTime + 2.8);
 
-      gain.gain.setValueAtTime(0.6, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 2.5);
+        const vol = idx === 0 ? 0.6 : 0.2 / idx;
+        gain.gain.setValueAtTime(vol, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 2.8);
 
-      osc.connect(gain);
-      gain.connect(ctx.destination);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
 
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 2.5);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 2.8);
+      });
     } catch (e) {
       console.warn("Synth play error:", e);
     }
   }
 
-  // 5. Big Boss Red Flop Buzzer
+  // 5. Loud Dissonant Red Flop Game-Show Buzzer
   playBuzzer() {
     try {
       const ctx = this.getContext();
@@ -135,11 +140,12 @@ class SoundSynthesizer {
 
       osc1.type = "sawtooth";
       osc2.type = "square";
-      osc1.frequency.setValueAtTime(120, ctx.currentTime);
-      osc2.frequency.setValueAtTime(125, ctx.currentTime); // dissonant beat frequency
+      // Harsh dissonant frequencies
+      osc1.frequency.setValueAtTime(115, ctx.currentTime);
+      osc2.frequency.setValueAtTime(127, ctx.currentTime);
 
-      gain.gain.setValueAtTime(0.4, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.7);
+      gain.gain.setValueAtTime(0.45, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.65);
 
       osc1.connect(gain);
       osc2.connect(gain);
@@ -147,23 +153,23 @@ class SoundSynthesizer {
 
       osc1.start(ctx.currentTime);
       osc2.start(ctx.currentTime);
-      osc1.stop(ctx.currentTime + 0.7);
-      osc2.stop(ctx.currentTime + 0.7);
+      osc1.stop(ctx.currentTime + 0.65);
+      osc2.stop(ctx.currentTime + 0.65);
     } catch (e) {
       console.warn("Synth play error:", e);
     }
   }
 
-  // 6. Arena Hype Airhorn (Multi-Osc Tri-Tone)
+  // 6. Arena Hype Tri-Tone Airhorn
   playAirhorn() {
     try {
       const ctx = this.getContext();
-      const bursts = [0, 0.15, 0.35];
-      const freqs = [466.16, 587.33, 698.46]; // Bb4, D5, F5 tri-tone
+      const bursts = [0, 0.12, 0.28];
+      const freqs = [466.16, 587.33, 698.46]; // Bb4, D5, F5 tri-tone chord
 
       bursts.forEach((offset, bIndex) => {
         const start = ctx.currentTime + offset;
-        const dur = bIndex === 2 ? 0.45 : 0.1;
+        const dur = bIndex === 2 ? 0.45 : 0.09;
 
         freqs.forEach((f) => {
           const osc = ctx.createOscillator();
@@ -172,7 +178,7 @@ class SoundSynthesizer {
           osc.type = "sawtooth";
           osc.frequency.setValueAtTime(f, start);
 
-          gain.gain.setValueAtTime(0.18, start);
+          gain.gain.setValueAtTime(0.2, start);
           gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
 
           osc.connect(gain);
@@ -188,20 +194,19 @@ class SoundSynthesizer {
   }
 
   // 7. Arena Crowd Applause & Cheers
-  playApplause(durationSec = 2.5) {
+  playApplause(durationSec = 2.2) {
     try {
       const ctx = this.getContext();
       const bufferSize = ctx.sampleRate * durationSec;
       const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
       const data = buffer.getChannelData(0);
 
-      // Pink-ish noise generation for applause texture
       let lastOut = 0.0;
       for (let i = 0; i < bufferSize; i++) {
         const white = Math.random() * 2 - 1;
         data[i] = (lastOut + 0.02 * white) / 1.02;
         lastOut = data[i];
-        data[i] *= 2.5; // boost
+        data[i] *= 2.8;
       }
 
       const noise = ctx.createBufferSource();
@@ -209,12 +214,12 @@ class SoundSynthesizer {
 
       const filter = ctx.createBiquadFilter();
       filter.type = "bandpass";
-      filter.frequency.value = 1000;
-      filter.Q.value = 0.8;
+      filter.frequency.value = 1100;
+      filter.Q.value = 0.9;
 
       const gain = ctx.createGain();
       gain.gain.setValueAtTime(0.01, ctx.currentTime);
-      gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + 0.3);
+      gain.gain.linearRampToValueAtTime(0.45, ctx.currentTime + 0.2);
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + durationSec);
 
       noise.connect(filter);
@@ -227,11 +232,11 @@ class SoundSynthesizer {
     }
   }
 
-  // 8. Tension Drumroll
-  playDrumroll(durationSec = 2.0) {
+  // 8. Tension Snare Drumroll into Impact
+  playDrumroll(durationSec = 1.8) {
     try {
       const ctx = this.getContext();
-      const hits = 24;
+      const hits = 22;
       const interval = durationSec / hits;
 
       for (let i = 0; i < hits; i++) {
@@ -240,22 +245,22 @@ class SoundSynthesizer {
         const gain = ctx.createGain();
 
         osc.type = "triangle";
-        osc.frequency.setValueAtTime(120 + Math.random() * 20, start);
+        osc.frequency.setValueAtTime(130 + Math.random() * 25, start);
 
-        const vol = (i / hits) * 0.4 + 0.05;
+        const vol = (i / hits) * 0.45 + 0.06;
         gain.gain.setValueAtTime(vol, start);
-        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.06);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.05);
 
         osc.connect(gain);
         gain.connect(ctx.destination);
 
         osc.start(start);
-        osc.stop(start + 0.06);
+        osc.stop(start + 0.05);
       }
 
       // Final crash
       setTimeout(() => {
-        this.playSubBoom(1.5);
+        this.playSubBoom(1.2);
       }, durationSec * 1000);
     } catch (e) {
       console.warn("Synth play error:", e);
@@ -270,8 +275,8 @@ class SoundSynthesizer {
         { f: 523.25, d: 0.15 }, // C5
         { f: 523.25, d: 0.15 }, // C5
         { f: 523.25, d: 0.15 }, // C5
-        { f: 659.25, d: 0.6 },  // E5
-        { f: 783.99, d: 0.9 },  // G5
+        { f: 659.25, d: 0.5 },  // E5
+        { f: 783.99, d: 0.8 },  // G5
       ];
       let start = ctx.currentTime;
 
@@ -299,23 +304,24 @@ class SoundSynthesizer {
 
   // Universal Player by Sound ID
   playById(id: string) {
-    if (id.includes("buzzer") || id.includes("flop") || id.includes("wrong")) {
+    const cleanId = id.toLowerCase();
+    if (cleanId === "buzzer" || cleanId.includes("flop") || cleanId.includes("wrong")) {
       this.playBuzzer();
-    } else if (id.includes("airhorn") || id.includes("horn") || id.includes("hype")) {
+    } else if (cleanId === "airhorn" || cleanId.includes("horn") || cleanId.includes("hype")) {
       this.playAirhorn();
-    } else if (id.includes("applause") || id.includes("cheer") || id.includes("clap")) {
+    } else if (cleanId === "applause" || cleanId.includes("cheer") || cleanId.includes("clap")) {
       this.playApplause();
-    } else if (id.includes("drumroll") || id.includes("roll")) {
+    } else if (cleanId === "drumroll" || cleanId.includes("roll")) {
       this.playDrumroll();
-    } else if (id.includes("victory") || id.includes("win") || id.includes("fanfare")) {
-      this.playFanfare();
-    } else if (id.includes("gong") || id.includes("bell") || id.includes("bigboss")) {
+    } else if (cleanId === "gong" || cleanId.includes("bell")) {
       this.playGong();
-    } else if (id.includes("boom") || id.includes("damage") || id.includes("vine")) {
+    } else if (cleanId === "boom" || cleanId.includes("damage") || cleanId.includes("sub") || cleanId.includes("vine")) {
       this.playSubBoom();
-    } else if (id.includes("bruh") || id.includes("pop")) {
+    } else if (cleanId.includes("victory") || cleanId.includes("win") || cleanId.includes("fanfare")) {
+      this.playFanfare();
+    } else if (cleanId.includes("bruh") || cleanId.includes("pop")) {
       this.playBoing();
-    } else if (id.includes("wah_wah") || id.includes("slide")) {
+    } else if (cleanId.includes("wah_wah") || cleanId.includes("slide")) {
       this.playSadSlide();
     } else {
       this.playAirhorn();

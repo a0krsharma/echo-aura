@@ -54,7 +54,10 @@ export interface ClashItem {
   dramaAlert?: {
     id: string;
     text: string;
-    type: "convinced" | "hotseat" | "round" | "buzzer" | "victory";
+    type: "convinced" | "hotseat" | "round" | "buzzer" | "victory" | "soundboard";
+    soundId?: string;
+    emoji?: string;
+    handle?: string;
     timestamp: number;
   } | null;
   // Timer fields
@@ -956,7 +959,13 @@ export async function advanceClashRound(
  */
 export async function broadcastDramaAlert(
   clashId: string,
-  alert: { text: string; type: "convinced" | "hotseat" | "round" | "buzzer" | "victory" }
+  alert: {
+    text: string;
+    type: "convinced" | "hotseat" | "round" | "buzzer" | "victory" | "soundboard";
+    soundId?: string;
+    emoji?: string;
+    handle?: string;
+  }
 ): Promise<void> {
   const db = getFirebaseDb();
   const clashRef = doc(db, "clashes", clashId);
@@ -966,6 +975,9 @@ export async function broadcastDramaAlert(
       id: `alert_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       text: alert.text,
       type: alert.type,
+      soundId: alert.soundId || "airhorn",
+      emoji: alert.emoji || "🔔",
+      handle: alert.handle || "@AUDIENCE",
       timestamp: Date.now(),
     },
   });

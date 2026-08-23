@@ -155,14 +155,16 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
     { emoji: '⚡', icon: Zap, label: 'ENERGY' },
   ];
 
-  // ── Big Boss Arena Sound & Drama Alert Synchronizer ───────────────────
+  // ── Arena Sound & Drama Alert Synchronizer ───────────────────
   useEffect(() => {
     if (clash?.dramaAlert && clash.dramaAlert.id !== lastDramaAlertIdRef.current) {
       lastDramaAlertIdRef.current = clash.dramaAlert.id;
       setActiveDramaAlert(clash.dramaAlert);
 
-      // Play zero-latency local Web Audio SFX
-      if (clash.dramaAlert.type === "convinced") {
+      // Play exact zero-latency local Web Audio SFX
+      if (clash.dramaAlert.soundId) {
+        soundSynth.playById(clash.dramaAlert.soundId);
+      } else if (clash.dramaAlert.type === "convinced") {
         soundSynth.playSubBoom();
       } else if (clash.dramaAlert.type === "buzzer") {
         soundSynth.playBuzzer();
@@ -175,10 +177,28 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
         setShowVictoryModal(true);
       }
 
+      // Pop floating reaction on stage so everyone sees the visual animation
+      const alertEmoji = clash.dramaAlert.emoji;
+      if (alertEmoji) {
+        const id = reactionIdRef.current++;
+        setReactions((prev) => [
+          ...prev,
+          {
+            emoji: alertEmoji,
+            x: 20 + Math.random() * 60,
+            y: 40 + Math.random() * 30,
+            id,
+          },
+        ]);
+        setTimeout(() => {
+          setReactions((prev) => prev.filter((r) => r.id !== id));
+        }, 3000);
+      }
+
       if (dramaTimerRef.current) clearTimeout(dramaTimerRef.current);
       dramaTimerRef.current = setTimeout(() => {
         setActiveDramaAlert(null);
-      }, 4500);
+      }, 4000);
     }
   }, [clash?.dramaAlert]);
 
@@ -203,27 +223,42 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
   }, [clash?.hotSeatUser, clashId]);
 
   // ── Soundboard Trigger Handler ───────────────────────────────────────
-  const handleTriggerSoundboard = async (soundId: string, label: string) => {
+  const SOUNDBOARD_BUTTONS = [
+    { id: "gong", emoji: "🔔", label: "🔔 GONG", text: "METALLIC GONG" },
+    { id: "buzzer", emoji: "🚨", label: "🚨 FLOP", text: "RED FLOP BUZZER" },
+    { id: "airhorn", emoji: "🎺", label: "🎺 HYPE", text: "HYPE AIRHORN" },
+    { id: "boom", emoji: "💥", label: "💥 BOOM", text: "SUB BASS DROP" },
+    { id: "applause", emoji: "👏", label: "👏 CHEER", text: "CROWD CHEER" },
+    { id: "drumroll", emoji: "🥁", label: "🥁 ROLL", text: "TENSION DRUMROLL" },
+  ];
+
+  const handleTriggerSoundboard = async (soundId: string, emoji: string, label: string) => {
     if (soundboardCooldown) return;
     setSoundboardCooldown(true);
 
-    // 1. Play instant local sound
+    // 1. Play instant distinct local sound
     soundSynth.playById(soundId);
 
-    // 2. Broadcast event to arena
+    // 2. Trigger floating reaction surge on client
+    sendReaction(emoji);
+
+    // 3. Broadcast to all audience nodes with exact soundId and emoji
     try {
       await broadcastDramaAlert(clashId, {
-        text: `🔔 ${user?.handle || "@AUDIENCE"} TRIGGERED ${label}!`,
-        type: soundId.includes("buzzer") ? "buzzer" : "hotseat",
+        text: `${emoji} ${user?.handle || "@AUDIENCE"} TRIGGERED ${label}!`,
+        type: "soundboard",
+        soundId,
+        emoji,
+        handle: user?.handle || "@AUDIENCE",
       });
     } catch (e) {
       console.warn("Soundboard broadcast error:", e);
     }
 
-    // 3. 3-second cooldown
+    // 4. 2.5-second cooldown
     setTimeout(() => {
       setSoundboardCooldown(false);
-    }, 3000);
+    }, 2500);
   };
 
   // ── Hot Seat Queue Actions ───────────────────────────────────────────
@@ -868,12 +903,12 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
         </div>
       )}
 
-      {/* ── Big Boss Arena Round Protocol Bar ── */}
+      {/* ── Live Arena Round Protocol Bar ── */}
       <div className="w-full max-w-4xl mx-auto border border-neutral-800 bg-neutral-950 p-3 font-mono space-y-2 relative z-10">
         <div className="flex items-center justify-between text-[10px] text-neutral-400 flex-wrap gap-2">
           <div className="flex items-center gap-1.5 font-bold text-white">
             <Swords className="w-3.5 h-3.5 text-white animate-pulse" />
-            <span>// BIG BOSS ARENA PROTOCOL</span>
+            <span>// LIVE ARENA PROTOCOL</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-white font-bold border border-white px-2 py-0.5 bg-neutral-900">
@@ -1350,32 +1385,25 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
           </div>
         </div>
 
-        {/* ── Big Boss Audience Live Soundboard ── */}
+        {/* ── Live Arena Audience Soundboard ── */}
         <div className="w-full border border-neutral-800 bg-neutral-950 p-3 font-mono space-y-2">
           <div className="flex items-center justify-between text-[10px]">
             <span className="font-bold text-white uppercase tracking-widest flex items-center gap-1.5">
               <Bell className="w-3.5 h-3.5 text-white animate-pulse" />
-              // BIG BOSS AUDIENCE SOUNDBOARD
+              // LIVE ARENA SOUNDBOARD
             </span>
             <span className="text-[9px] text-neutral-500">
-              {soundboardCooldown ? "⏳ 3S COOLDOWN..." : "● 0-LATENCY BUZZERS"}
+              {soundboardCooldown ? "⏳ 2.5S COOLDOWN..." : "● 0-LATENCY BUZZERS"}
             </span>
           </div>
 
           <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
-            {[
-              { id: "gong", label: "🔔 GONG", text: "BIG BOSS GONG" },
-              { id: "buzzer", label: "🚨 FLOP", text: "FLOP BUZZER" },
-              { id: "airhorn", label: "🎺 HYPE", text: "AIRHORN" },
-              { id: "boom", label: "💥 BOOM", text: "SUB BOOM" },
-              { id: "applause", label: "👏 CHEER", text: "ARENA CHEER" },
-              { id: "drumroll", label: "🥁 ROLL", text: "DRUMROLL" },
-            ].map((btn) => (
+            {SOUNDBOARD_BUTTONS.map((btn) => (
               <button
                 key={btn.id}
                 type="button"
                 disabled={soundboardCooldown}
-                onClick={() => handleTriggerSoundboard(btn.id, btn.text)}
+                onClick={() => handleTriggerSoundboard(btn.id, btn.emoji, btn.text)}
                 className="p-2 border border-neutral-800 hover:border-white bg-black hover:bg-neutral-900 text-white font-mono text-[10px] uppercase font-bold transition-all active:scale-95 disabled:opacity-40 cursor-pointer text-center"
               >
                 {btn.label}
