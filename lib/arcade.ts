@@ -133,6 +133,26 @@ const SUDOKU_TEMPLATES = [
   },
 ];
 
+function cleanData<T extends Record<string, any>>(obj: T): T {
+  const result: any = {};
+  Object.keys(obj).forEach((key) => {
+    const val = obj[key];
+    if (val !== undefined) {
+      if (
+        val !== null &&
+        typeof val === "object" &&
+        !Array.isArray(val) &&
+        typeof val.toMillis !== "function"
+      ) {
+        result[key] = cleanData(val);
+      } else {
+        result[key] = val;
+      }
+    }
+  });
+  return result;
+}
+
 // ── Create Arcade Match ───────────────────────────────────────────────────────
 export async function createArcadeMatch(params: {
   gameType: ArcadeGameType;
@@ -150,7 +170,7 @@ export async function createArcadeMatch(params: {
   const player: ArcadePlayer = {
     uid: params.hostUid,
     handle: params.hostHandle,
-    avatar: params.hostAvatar,
+    avatar: params.hostAvatar || "",
     score: 0,
     mistakes: 0,
     team: params.gameType === "ludo" ? "RED" : undefined,
@@ -208,26 +228,27 @@ export async function createArcadeMatch(params: {
     };
   }
 
-  const matchData: ArcadeMatch = {
+  const matchData: any = {
     id: matchId,
-    roomId: params.roomId,
     gameType: params.gameType,
     title: params.title || (params.gameType === "sudoku" ? "SUDOKU BATTLE" : "CYBER LUDO CLASH"),
     hostUid: params.hostUid,
     hostHandle: params.hostHandle,
     status: "WAITING",
     players: {
-      [params.hostUid]: player,
+      [params.hostUid]: cleanData(player),
     },
     maxPlayers: params.gameType === "sudoku" ? 2 : 4,
     stakes: params.stakes || 50,
-    sudokuState,
-    ludoState,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
 
-  await setDoc(matchRef, matchData);
+  if (params.roomId) matchData.roomId = params.roomId;
+  if (sudokuState) matchData.sudokuState = sudokuState;
+  if (ludoState) matchData.ludoState = ludoState;
+
+  await setDoc(matchRef, cleanData(matchData));
   return matchId;
 }
 
@@ -256,7 +277,7 @@ export async function joinArcadeMatch(
   const newPlayer: ArcadePlayer = {
     uid: user.uid,
     handle: user.handle,
-    avatar: user.avatar,
+    avatar: user.avatar || "",
     score: 0,
     mistakes: 0,
     team: match.gameType === "ludo" ? freeTeam : undefined,
@@ -265,7 +286,7 @@ export async function joinArcadeMatch(
   };
 
   await updateDoc(matchRef, {
-    [`players.${user.uid}`]: newPlayer,
+    [`players.${user.uid}`]: cleanData(newPlayer),
     status: currentCount + 1 >= 2 ? "PLAYING" : match.status,
     updatedAt: serverTimestamp(),
   });

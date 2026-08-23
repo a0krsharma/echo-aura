@@ -36,25 +36,28 @@ export default function ArcadePage() {
   // Subscribe to open arcade matches in the lobby
   useEffect(() => {
     const db = getFirebaseDb();
-    const q = query(
-      collection(db, "arcade_matches"),
-      orderBy("createdAt", "desc"),
-      limit(10)
-    );
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        const matches: ArcadeMatch[] = [];
-        snap.forEach((doc) => {
-          matches.push({ id: doc.id, ...doc.data() } as ArcadeMatch);
-        });
-        setLobbyMatches(matches);
-      },
-      (err) => {
-        console.error("Arcade lobby error:", err);
-      }
-    );
-    return () => unsub();
+    let unsub: (() => void) | null = null;
+    try {
+      const q = query(collection(db, "arcade_matches"), limit(15));
+      unsub = onSnapshot(
+        q,
+        (snap) => {
+          const matches: ArcadeMatch[] = [];
+          snap.forEach((doc) => {
+            matches.push({ id: doc.id, ...doc.data() } as ArcadeMatch);
+          });
+          setLobbyMatches(matches);
+        },
+        (err) => {
+          console.warn("Arcade lobby listener warning:", err.message);
+        }
+      );
+    } catch (e) {
+      console.warn("Arcade lobby init note:", e);
+    }
+    return () => {
+      if (unsub) unsub();
+    };
   }, []);
 
   const handleCreateMatch = async (type: ArcadeGameType) => {

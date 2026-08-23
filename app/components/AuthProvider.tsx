@@ -68,12 +68,21 @@ function getCachedSettings(): UserSettings | null {
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // ⚡ Synchronously initialize from cache for 0ms Instant Cold-Start
-  const [user, setUser] = useState<EchoUser | null>(() => getCachedUser());
+  const [user, setUser] = useState<EchoUser | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
-  const [settings, setSettings] = useState<UserSettings | null>(() => getCachedSettings());
-  const [isLoading, setIsLoading] = useState<boolean>(() => !getCachedUser());
+  const [settings, setSettings] = useState<UserSettings | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  // ⚡ Hydrate cached user on client mount instantly without SSR mismatch
+  useEffect(() => {
+    const cached = getCachedUser();
+    if (cached) {
+      setUser(cached);
+      setSettings(getCachedSettings());
+      setIsLoading(false);
+    }
+  }, []);
 
   // ── Bootstrap ─────────────────────────────────────────────────────────────
   useEffect(() => {
