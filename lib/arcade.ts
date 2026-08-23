@@ -46,7 +46,16 @@ export type ArcadeGameType =
   | "minesweeper"
   | "2048"
   | "snake"
-  | "wordle";
+  | "wordle"
+  | "pool"
+  | "carrom"
+  | "glow_hockey"
+  | "gomoku"
+  | "reversi"
+  | "dots_and_boxes"
+  | "snakes_and_ladders"
+  | "puzzle15"
+  | "mastermind";
 
 export type ArcadeMatchMode = "MULTIPLAYER" | "VS_COMPUTER";
 
@@ -182,6 +191,108 @@ export interface WordleState {
   isGameOver: boolean;
 }
 
+export interface PoolBall {
+  id: string;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  radius: number;
+  color: string;
+  number?: number;
+  type: "cue" | "solid" | "stripe" | "8ball";
+  isPocketed: boolean;
+}
+
+export interface PoolState {
+  ballsStr: string;
+  currentTurnUid: string;
+  p1Type: "SOLIDS" | "STRIPES" | null;
+  p2Type: "SOLIDS" | "STRIPES" | null;
+  p1Score: number;
+  p2Score: number;
+  lastShotStr?: string;
+  lastActionLog?: string;
+}
+
+export interface CarromPiece {
+  id: string;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  radius: number;
+  color: string;
+  type: "white" | "black" | "queen" | "striker";
+  isPocketed: boolean;
+}
+
+export interface CarromState {
+  piecesStr: string;
+  currentTurnUid: string;
+  p1Score: number;
+  p2Score: number;
+  hasQueen: string | null;
+  lastShotStr?: string;
+  lastActionLog?: string;
+}
+
+export interface GlowHockeyState {
+  p1Score: number;
+  p2Score: number;
+  puckStr: string;
+  p1PaddleStr: string;
+  p2PaddleStr: string;
+  lastActionLog?: string;
+}
+
+export interface GomokuState {
+  gridStr: string; // 15x15 (string | null)[][]
+  currentTurn: "BLACK" | "WHITE";
+  lastMove?: [number, number];
+  lastActionLog?: string;
+}
+
+export interface ReversiState {
+  boardStr: string; // 8x8 (string | null)[][]
+  currentTurn: "DARK" | "LIGHT";
+  darkCount: number;
+  lightCount: number;
+  lastActionLog?: string;
+}
+
+export interface DotsAndBoxesState {
+  linesStr: string; // Record<string, string>
+  boxesStr: string; // Record<string, string>
+  p1Score: number;
+  p2Score: number;
+  currentTurnUid: string;
+  lastActionLog?: string;
+}
+
+export interface SnakesLaddersState {
+  positionsStr: string; // Record<string, number>
+  currentTurnUid: string;
+  lastDiceRoll: number | null;
+  lastActionLog?: string;
+}
+
+export interface Puzzle15State {
+  tilesStr: string; // number[]
+  moves: number;
+  isWon: boolean;
+  lastActionLog?: string;
+}
+
+export interface MastermindState {
+  secretCode: number[];
+  guessesStr: string; // { guess: number[]; strikes: number; balls: number }[]
+  isWon: boolean;
+  isGameOver: boolean;
+  maxAttempts: number;
+  lastActionLog?: string;
+}
+
 export interface ArcadeMatch {
   id: string;
   isArcade?: boolean;
@@ -207,6 +318,15 @@ export interface ArcadeMatch {
   game2048State?: Game2048State;
   snakeState?: SnakeState;
   wordleState?: WordleState;
+  poolState?: PoolState;
+  carromState?: CarromState;
+  glowHockeyState?: GlowHockeyState;
+  gomokuState?: GomokuState;
+  reversiState?: ReversiState;
+  dotsAndBoxesState?: DotsAndBoxesState;
+  snakesLaddersState?: SnakesLaddersState;
+  puzzle15State?: Puzzle15State;
+  mastermindState?: MastermindState;
   chatMessages?: ArcadeChatMessage[];
   recentReaction?: ArcadeReaction;
   createdAt: any;
@@ -574,6 +694,117 @@ export async function createArcadeMatch(params: {
       maxAttempts: 6,
       isWon: false,
       isGameOver: false,
+    };
+  } else if (params.gameType === "pool") {
+    const poolBalls: PoolBall[] = [
+      { id: "cue", x: 200, y: 320, vx: 0, vy: 0, radius: 10, color: "#ffffff", type: "cue", isPocketed: false },
+      { id: "b1", x: 200, y: 150, vx: 0, vy: 0, radius: 10, color: "#eab308", number: 1, type: "solid", isPocketed: false },
+      { id: "b2", x: 190, y: 133, vx: 0, vy: 0, radius: 10, color: "#3b82f6", number: 2, type: "solid", isPocketed: false },
+      { id: "b3", x: 210, y: 133, vx: 0, vy: 0, radius: 10, color: "#ef4444", number: 3, type: "solid", isPocketed: false },
+      { id: "b8", x: 200, y: 116, vx: 0, vy: 0, radius: 10, color: "#000000", number: 8, type: "8ball", isPocketed: false },
+      { id: "b9", x: 180, y: 116, vx: 0, vy: 0, radius: 10, color: "#eab308", number: 9, type: "stripe", isPocketed: false },
+      { id: "b10", x: 220, y: 116, vx: 0, vy: 0, radius: 10, color: "#3b82f6", number: 10, type: "stripe", isPocketed: false },
+      { id: "b11", x: 170, y: 99, vx: 0, vy: 0, radius: 10, color: "#ef4444", number: 11, type: "stripe", isPocketed: false },
+      { id: "b4", x: 190, y: 99, vx: 0, vy: 0, radius: 10, color: "#8b5cf6", number: 4, type: "solid", isPocketed: false },
+      { id: "b5", x: 210, y: 99, vx: 0, vy: 0, radius: 10, color: "#f97316", number: 5, type: "solid", isPocketed: false },
+      { id: "b12", x: 230, y: 99, vx: 0, vy: 0, radius: 10, color: "#8b5cf6", number: 12, type: "stripe", isPocketed: false },
+    ];
+    matchData.poolState = {
+      ballsStr: JSON.stringify(poolBalls),
+      currentTurnUid: params.hostUid,
+      p1Type: null,
+      p2Type: null,
+      p1Score: 0,
+      p2Score: 0,
+      lastActionLog: "8-Ball Table active. Break the rack!",
+    };
+  } else if (params.gameType === "carrom") {
+    const carromPieces: CarromPiece[] = [
+      { id: "queen", x: 200, y: 200, vx: 0, vy: 0, radius: 11, color: "#ef4444", type: "queen", isPocketed: false },
+      { id: "w1", x: 200, y: 178, vx: 0, vy: 0, radius: 11, color: "#ffffff", type: "white", isPocketed: false },
+      { id: "b1", x: 200, y: 222, vx: 0, vy: 0, radius: 11, color: "#262626", type: "black", isPocketed: false },
+      { id: "w2", x: 181, y: 189, vx: 0, vy: 0, radius: 11, color: "#ffffff", type: "white", isPocketed: false },
+      { id: "b2", x: 219, y: 189, vx: 0, vy: 0, radius: 11, color: "#262626", type: "black", isPocketed: false },
+      { id: "w3", x: 181, y: 211, vx: 0, vy: 0, radius: 11, color: "#ffffff", type: "white", isPocketed: false },
+      { id: "b3", x: 219, y: 211, vx: 0, vy: 0, radius: 11, color: "#262626", type: "black", isPocketed: false },
+      { id: "striker", x: 200, y: 325, vx: 0, vy: 0, radius: 16, color: "#10b981", type: "striker", isPocketed: false },
+    ];
+    matchData.carromState = {
+      piecesStr: JSON.stringify(carromPieces),
+      currentTurnUid: params.hostUid,
+      p1Score: 0,
+      p2Score: 0,
+      hasQueen: null,
+      lastActionLog: "Carrom Board set. Line up your striker & shoot!",
+    };
+  } else if (params.gameType === "glow_hockey") {
+    matchData.glowHockeyState = {
+      p1Score: 0,
+      p2Score: 0,
+      puckStr: JSON.stringify({ x: 200, y: 250, vx: 0, vy: 0 }),
+      p1PaddleStr: JSON.stringify({ x: 200, y: 420 }),
+      p2PaddleStr: JSON.stringify({ x: 200, y: 80 }),
+      lastActionLog: "Glow Hockey arena ready. Drag paddle to defend & score!",
+    };
+  } else if (params.gameType === "gomoku") {
+    const grid = Array.from({ length: 15 }, () => Array(15).fill(null));
+    matchData.gomokuState = {
+      gridStr: JSON.stringify(grid),
+      currentTurn: "BLACK",
+      lastActionLog: "Gomoku matrix initialized. BLACK places first stone.",
+    };
+  } else if (params.gameType === "reversi") {
+    const board: (string | null)[][] = Array.from({ length: 8 }, () => Array(8).fill(null));
+    board[3][3] = "LIGHT";
+    board[3][4] = "DARK";
+    board[4][3] = "DARK";
+    board[4][4] = "LIGHT";
+    matchData.reversiState = {
+      boardStr: JSON.stringify(board),
+      currentTurn: "DARK",
+      darkCount: 2,
+      lightCount: 2,
+      lastActionLog: "Reversi board set. DARK moves first.",
+    };
+  } else if (params.gameType === "dots_and_boxes") {
+    matchData.dotsAndBoxesState = {
+      linesStr: JSON.stringify({}),
+      boxesStr: JSON.stringify({}),
+      p1Score: 0,
+      p2Score: 0,
+      currentTurnUid: params.hostUid,
+      lastActionLog: "Dots and Boxes active. Connect dots to claim boxes!",
+    };
+  } else if (params.gameType === "snakes_and_ladders") {
+    const posMap: Record<string, number> = { [params.hostUid]: 1 };
+    matchData.snakesLaddersState = {
+      positionsStr: JSON.stringify(posMap),
+      currentTurnUid: params.hostUid,
+      lastDiceRoll: null,
+      lastActionLog: "Circuit Jumpers ready. Roll dice to climb!",
+    };
+  } else if (params.gameType === "puzzle15") {
+    const tiles = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 15]; // Shuffled solvable layout
+    matchData.puzzle15State = {
+      tilesStr: JSON.stringify(tiles),
+      moves: 0,
+      isWon: false,
+      lastActionLog: "15-Puzzle initialized. Slide tiles into 1-15 order.",
+    };
+  } else if (params.gameType === "mastermind") {
+    const code = [
+      Math.floor(Math.random() * 6) + 1,
+      Math.floor(Math.random() * 6) + 1,
+      Math.floor(Math.random() * 6) + 1,
+      Math.floor(Math.random() * 6) + 1,
+    ];
+    matchData.mastermindState = {
+      secretCode: code,
+      guessesStr: JSON.stringify([]),
+      isWon: false,
+      isGameOver: false,
+      maxAttempts: 10,
+      lastActionLog: "Mastermind Cipher engaged. 10 attempts to crack 4-digit code.",
     };
   }
 
@@ -1109,6 +1340,498 @@ export async function submitSudokuCell(
 
   await updateDoc(matchRef, updates);
   return { correct: isCorrect, isComplete };
+}
+
+// ── 8-Ball Pool Actions ───────────────────────────────────────────────────────
+export async function firePoolShot(
+  matchId: string,
+  playerUid: string,
+  impulseX: number,
+  impulseY: number,
+  updatedBalls: PoolBall[]
+): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) return;
+  const match = snap.data() as ArcadeMatch;
+  if (!match.poolState) return;
+
+  const playerUids = Object.keys(match.players || {});
+  const nextTurnUid = playerUids.find((id) => id !== playerUid) || playerUid;
+  const eightBall = updatedBalls.find((b) => b.type === "8ball");
+  const isEightBallSunk = eightBall?.isPocketed;
+
+  const updates: any = {
+    "poolState.ballsStr": JSON.stringify(updatedBalls),
+    "poolState.lastShotStr": JSON.stringify({ impulseX, impulseY, timestamp: Date.now() }),
+    "poolState.currentTurnUid": nextTurnUid,
+    "poolState.lastActionLog": `${match.players[playerUid]?.handle || "Player"} struck the cue ball!`,
+    updatedAt: serverTimestamp(),
+  };
+
+  if (isEightBallSunk) {
+    updates.status = "FINISHED";
+    updates.winnerUid = playerUid;
+    updates.winnerHandle = match.players[playerUid]?.handle || "@ANON";
+    await awardAura(playerUid, match.stakes * 2 || 100);
+  }
+
+  await updateDoc(matchRef, updates);
+}
+
+// ── Carrom Board Actions ──────────────────────────────────────────────────────
+export async function fireCarromShot(
+  matchId: string,
+  playerUid: string,
+  impulseX: number,
+  impulseY: number,
+  strikerX: number,
+  strikerY: number,
+  updatedPieces: CarromPiece[]
+): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) return;
+  const match = snap.data() as ArcadeMatch;
+  if (!match.carromState) return;
+
+  const playerUids = Object.keys(match.players || {});
+  const nextTurnUid = playerUids.find((id) => id !== playerUid) || playerUid;
+  const remainingTargets = updatedPieces.filter((p) => p.type !== "striker" && !p.isPocketed);
+
+  const updates: any = {
+    "carromState.piecesStr": JSON.stringify(updatedPieces),
+    "carromState.lastShotStr": JSON.stringify({ impulseX, impulseY, strikerX, strikerY, timestamp: Date.now() }),
+    "carromState.currentTurnUid": nextTurnUid,
+    "carromState.lastActionLog": `${match.players[playerUid]?.handle || "Player"} released the striker!`,
+    updatedAt: serverTimestamp(),
+  };
+
+  if (remainingTargets.length === 0) {
+    updates.status = "FINISHED";
+    updates.winnerUid = playerUid;
+    updates.winnerHandle = match.players[playerUid]?.handle || "@ANON";
+    await awardAura(playerUid, match.stakes * 2 || 100);
+  }
+
+  await updateDoc(matchRef, updates);
+}
+
+// ── Glow Hockey Actions ───────────────────────────────────────────────────────
+export async function updateGlowHockeyScore(
+  matchId: string,
+  scorerUid: string,
+  p1Score: number,
+  p2Score: number
+): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) return;
+  const match = snap.data() as ArcadeMatch;
+
+  const isWon = p1Score >= 7 || p2Score >= 7;
+  const updates: any = {
+    "glowHockeyState.p1Score": p1Score,
+    "glowHockeyState.p2Score": p2Score,
+    "glowHockeyState.lastActionLog": `GOAL! ${match.players[scorerUid]?.handle || "Player"} scored!`,
+    updatedAt: serverTimestamp(),
+  };
+
+  if (isWon) {
+    updates.status = "FINISHED";
+    updates.winnerUid = scorerUid;
+    updates.winnerHandle = match.players[scorerUid]?.handle || "@ANON";
+    await awardAura(scorerUid, match.stakes * 2 || 100);
+  }
+
+  await updateDoc(matchRef, updates);
+}
+
+// ── Gomoku Actions (Five in a Row) ───────────────────────────────────────────
+export async function makeGomokuMove(
+  matchId: string,
+  playerUid: string,
+  r: number,
+  c: number
+): Promise<{ won: boolean }> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+  if (!match.gomokuState) throw new Error("Not a gomoku match");
+
+  const grid: (string | null)[][] = JSON.parse(match.gomokuState.gridStr || "[]");
+  if (grid[r][c] !== null) throw new Error("Cell occupied");
+
+  const color = match.gomokuState.currentTurn;
+  grid[r][c] = color;
+
+  // Check 5 in a row in 4 directions
+  const checkWin = (row: number, col: number, clr: string): boolean => {
+    const directions = [[0, 1], [1, 0], [1, 1], [1, -1]];
+    for (const [dr, dc] of directions) {
+      let count = 1;
+      // Forward
+      for (let i = 1; i < 5; i++) {
+        const nr = row + dr * i;
+        const nc = col + dc * i;
+        if (nr >= 0 && nr < 15 && nc >= 0 && nc < 15 && grid[nr][nc] === clr) count++;
+        else break;
+      }
+      // Backward
+      for (let i = 1; i < 5; i++) {
+        const nr = row - dr * i;
+        const nc = col - dc * i;
+        if (nr >= 0 && nr < 15 && nc >= 0 && nc < 15 && grid[nr][nc] === clr) count++;
+        else break;
+      }
+      if (count >= 5) return true;
+    }
+    return false;
+  };
+
+  const won = checkWin(r, c, color);
+  const nextTurn = color === "BLACK" ? "WHITE" : "BLACK";
+
+  const updates: any = {
+    "gomokuState.gridStr": JSON.stringify(grid),
+    "gomokuState.currentTurn": nextTurn,
+    "gomokuState.lastMove": [r, c],
+    "gomokuState.lastActionLog": `${match.players[playerUid]?.handle || color} placed at [${r + 1}, ${c + 1}].`,
+    updatedAt: serverTimestamp(),
+  };
+
+  if (won) {
+    updates.status = "FINISHED";
+    updates.winnerUid = playerUid;
+    updates.winnerHandle = match.players[playerUid]?.handle || "@ANON";
+    await awardAura(playerUid, match.stakes * 2 || 100);
+  }
+
+  await updateDoc(matchRef, updates);
+  return { won };
+}
+
+// ── Reversi / Othello Actions ─────────────────────────────────────────────────
+export async function makeReversiMove(
+  matchId: string,
+  playerUid: string,
+  r: number,
+  c: number
+): Promise<{ won: boolean }> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+  if (!match.reversiState) throw new Error("Not a reversi match");
+
+  const board: (string | null)[][] = JSON.parse(match.reversiState.boardStr || "[]");
+  const currentTurn = match.reversiState.currentTurn;
+  const oppColor = currentTurn === "DARK" ? "LIGHT" : "DARK";
+
+  if (board[r][c] !== null) throw new Error("Cell occupied");
+
+  // Flip in 8 directions
+  const directions = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]];
+  let totalFlipped = 0;
+
+  directions.forEach(([dr, dc]) => {
+    let nr = r + dr;
+    let nc = c + dc;
+    const toFlip: [number, number][] = [];
+
+    while (nr >= 0 && nr < 8 && nc >= 0 && nc < 8 && board[nr][nc] === oppColor) {
+      toFlip.push([nr, nc]);
+      nr += dr;
+      nc += dc;
+    }
+
+    if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8 && board[nr][nc] === currentTurn && toFlip.length > 0) {
+      toFlip.forEach(([fr, fc]) => {
+        board[fr][fc] = currentTurn;
+      });
+      totalFlipped += toFlip.length;
+    }
+  });
+
+  if (totalFlipped === 0) throw new Error("Illegal move");
+  board[r][c] = currentTurn;
+
+  let darkCount = 0;
+  let lightCount = 0;
+  let emptyCount = 0;
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      if (board[row][col] === "DARK") darkCount++;
+      else if (board[row][col] === "LIGHT") lightCount++;
+      else emptyCount++;
+    }
+  }
+
+  const isFinished = emptyCount === 0 || darkCount === 0 || lightCount === 0;
+  const nextTurn = currentTurn === "DARK" ? "LIGHT" : "DARK";
+
+  const updates: any = {
+    "reversiState.boardStr": JSON.stringify(board),
+    "reversiState.currentTurn": nextTurn,
+    "reversiState.darkCount": darkCount,
+    "reversiState.lightCount": lightCount,
+    "reversiState.lastActionLog": `${match.players[playerUid]?.handle || currentTurn} placed disk at [${r + 1}, ${c + 1}] and flipped ${totalFlipped}!`,
+    updatedAt: serverTimestamp(),
+  };
+
+  if (isFinished) {
+    updates.status = "FINISHED";
+    const winnerUid = darkCount > lightCount ? match.hostUid : Object.keys(match.players).find(u => u !== match.hostUid) || match.hostUid;
+    updates.winnerUid = winnerUid;
+    updates.winnerHandle = match.players[winnerUid]?.handle || "@ANON";
+    await awardAura(winnerUid, match.stakes * 2 || 100);
+  }
+
+  await updateDoc(matchRef, updates);
+  return { won: isFinished };
+}
+
+// ── Dots and Boxes Actions ────────────────────────────────────────────────────
+export async function claimDotsLine(
+  matchId: string,
+  playerUid: string,
+  lineKey: string
+): Promise<{ extraTurn: boolean; won: boolean }> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+  if (!match.dotsAndBoxesState) throw new Error("Not a dots and boxes match");
+
+  const lines: Record<string, string> = JSON.parse(match.dotsAndBoxesState.linesStr || "{}");
+  const boxes: Record<string, string> = JSON.parse(match.dotsAndBoxesState.boxesStr || "{}");
+
+  if (lines[lineKey]) throw new Error("Line already claimed");
+  lines[lineKey] = playerUid;
+
+  // Check 3x3 completed boxes
+  let newBoxesClaimed = 0;
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      const boxKey = `b_${r}_${c}`;
+      if (!boxes[boxKey]) {
+        const top = `h_${r}_${c}`;
+        const bottom = `h_${r + 1}_${c}`;
+        const left = `v_${r}_${c}`;
+        const right = `v_${r}_${c + 1}`;
+
+        if (lines[top] && lines[bottom] && lines[left] && lines[right]) {
+          boxes[boxKey] = playerUid;
+          newBoxesClaimed++;
+        }
+      }
+    }
+  }
+
+  const isP1 = playerUid === match.hostUid;
+  let p1Score = match.dotsAndBoxesState.p1Score + (isP1 ? newBoxesClaimed : 0);
+  let p2Score = match.dotsAndBoxesState.p2Score + (!isP1 ? newBoxesClaimed : 0);
+
+  const totalBoxes = Object.keys(boxes).length;
+  const isFinished = totalBoxes >= 9;
+  const playerUids = Object.keys(match.players || {});
+  const nextTurnUid = newBoxesClaimed > 0 ? playerUid : playerUids.find((id) => id !== playerUid) || playerUid;
+
+  const updates: any = {
+    "dotsAndBoxesState.linesStr": JSON.stringify(lines),
+    "dotsAndBoxesState.boxesStr": JSON.stringify(boxes),
+    "dotsAndBoxesState.p1Score": p1Score,
+    "dotsAndBoxesState.p2Score": p2Score,
+    "dotsAndBoxesState.currentTurnUid": nextTurnUid,
+    "dotsAndBoxesState.lastActionLog": `${match.players[playerUid]?.handle || "Player"} drew line ${lineKey}${newBoxesClaimed > 0 ? ` and captured ${newBoxesClaimed} box(es)!` : "!"}`,
+    updatedAt: serverTimestamp(),
+  };
+
+  if (isFinished) {
+    updates.status = "FINISHED";
+    const winnerUid = p1Score >= p2Score ? match.hostUid : playerUids.find((id) => id !== match.hostUid) || match.hostUid;
+    updates.winnerUid = winnerUid;
+    updates.winnerHandle = match.players[winnerUid]?.handle || "@ANON";
+    await awardAura(winnerUid, match.stakes * 2 || 100);
+  }
+
+  await updateDoc(matchRef, updates);
+  return { extraTurn: newBoxesClaimed > 0, won: isFinished };
+}
+
+// ── Snakes & Ladders Actions ──────────────────────────────────────────────────
+const CIRCUIT_SHORTCUTS: Record<number, number> = {
+  4: 14, 9: 31, 20: 38, 28: 84, 40: 59, 51: 67, 63: 81, 71: 91, // Ladders / Bypass
+  17: 7, 54: 34, 62: 19, 64: 60, 87: 24, 93: 73, 95: 75, 99: 78, // Snakes / Glitches
+};
+
+export async function rollSnakesLaddersDice(
+  matchId: string,
+  playerUid: string
+): Promise<{ roll: number; newPos: number; won: boolean }> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+  if (!match.snakesLaddersState) throw new Error("Not a snakes & ladders match");
+
+  const roll = Math.floor(Math.random() * 6) + 1;
+  const positions: Record<string, number> = JSON.parse(match.snakesLaddersState.positionsStr || "{}");
+  let currentPos = positions[playerUid] || 1;
+  let nextPos = currentPos + roll;
+
+  if (nextPos > 100) nextPos = currentPos; // Exact roll needed to land on 100
+  if (CIRCUIT_SHORTCUTS[nextPos]) nextPos = CIRCUIT_SHORTCUTS[nextPos];
+
+  positions[playerUid] = nextPos;
+  const won = nextPos >= 100;
+  const playerUids = Object.keys(match.players || {});
+  const nextTurnUid = roll === 6 ? playerUid : playerUids.find((id) => id !== playerUid) || playerUid;
+
+  const updates: any = {
+    "snakesLaddersState.positionsStr": JSON.stringify(positions),
+    "snakesLaddersState.currentTurnUid": nextTurnUid,
+    "snakesLaddersState.lastDiceRoll": roll,
+    "snakesLaddersState.lastActionLog": `${match.players[playerUid]?.handle || "Player"} rolled a ${roll}! Position: ${nextPos}/100.`,
+    updatedAt: serverTimestamp(),
+  };
+
+  if (won) {
+    updates.status = "FINISHED";
+    updates.winnerUid = playerUid;
+    updates.winnerHandle = match.players[playerUid]?.handle || "@ANON";
+    await awardAura(playerUid, match.stakes * 2 || 100);
+  }
+
+  await updateDoc(matchRef, updates);
+  return { roll, newPos: nextPos, won };
+}
+
+// ── 15-Puzzle Actions ────────────────────────────────────────────────────────
+export async function slide15PuzzleTile(
+  matchId: string,
+  playerUid: string,
+  index: number
+): Promise<{ won: boolean }> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+  if (!match.puzzle15State) throw new Error("Not a 15-puzzle match");
+
+  const tiles: number[] = JSON.parse(match.puzzle15State.tilesStr || "[]");
+  const emptyIndex = tiles.indexOf(0);
+
+  const row = Math.floor(index / 4);
+  const col = index % 4;
+  const emptyRow = Math.floor(emptyIndex / 4);
+  const emptyCol = emptyIndex % 4;
+
+  const isAdjacent = (Math.abs(row - emptyRow) === 1 && col === emptyCol) ||
+                     (Math.abs(col - emptyCol) === 1 && row === emptyRow);
+
+  if (!isAdjacent) return { won: false };
+
+  // Swap
+  tiles[emptyIndex] = tiles[index];
+  tiles[index] = 0;
+
+  // Check 1-15 order
+  let won = true;
+  for (let i = 0; i < 15; i++) {
+    if (tiles[i] !== i + 1) {
+      won = false;
+      break;
+    }
+  }
+
+  const updates: any = {
+    "puzzle15State.tilesStr": JSON.stringify(tiles),
+    "puzzle15State.moves": increment(1),
+    "puzzle15State.isWon": won,
+    updatedAt: serverTimestamp(),
+  };
+
+  if (won) {
+    updates.status = "FINISHED";
+    updates.winnerUid = playerUid;
+    updates.winnerHandle = match.players[playerUid]?.handle || "@ANON";
+    await awardAura(playerUid, 150);
+  }
+
+  await updateDoc(matchRef, updates);
+  return { won };
+}
+
+// ── Mastermind Actions ───────────────────────────────────────────────────────
+export async function submitMastermindGuess(
+  matchId: string,
+  playerUid: string,
+  guess: number[]
+): Promise<{ strikes: number; balls: number; won: boolean; isGameOver: boolean }> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+  if (!match.mastermindState) throw new Error("Not a mastermind match");
+
+  const secret = match.mastermindState.secretCode;
+  let strikes = 0;
+  let balls = 0;
+
+  const secretCounts: Record<number, number> = {};
+  const guessCounts: Record<number, number> = {};
+
+  for (let i = 0; i < 4; i++) {
+    if (guess[i] === secret[i]) {
+      strikes++;
+    } else {
+      secretCounts[secret[i]] = (secretCounts[secret[i]] || 0) + 1;
+      guessCounts[guess[i]] = (guessCounts[guess[i]] || 0) + 1;
+    }
+  }
+
+  for (const digit in guessCounts) {
+    const d = Number(digit);
+    if (secretCounts[d]) {
+      balls += Math.min(guessCounts[d], secretCounts[d]);
+    }
+  }
+
+  const guesses: { guess: number[]; strikes: number; balls: number }[] = JSON.parse(match.mastermindState.guessesStr || "[]");
+  guesses.push({ guess, strikes, balls });
+
+  const isWon = strikes === 4;
+  const isGameOver = isWon || guesses.length >= match.mastermindState.maxAttempts;
+
+  const updates: any = {
+    "mastermindState.guessesStr": JSON.stringify(guesses),
+    "mastermindState.isWon": isWon,
+    "mastermindState.isGameOver": isGameOver,
+    updatedAt: serverTimestamp(),
+  };
+
+  if (isGameOver) {
+    updates.status = "FINISHED";
+    if (isWon) {
+      updates.winnerUid = playerUid;
+      updates.winnerHandle = match.players[playerUid]?.handle || "@ANON";
+      await awardAura(playerUid, 150);
+    }
+  }
+
+  await updateDoc(matchRef, updates);
+  return { strikes, balls, won: isWon, isGameOver };
 }
 
 // ── Ludo Actions ─────────────────────────────────────────────────────────────

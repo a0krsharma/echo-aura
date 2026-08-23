@@ -18,6 +18,15 @@ import MinesweeperGame from "./MinesweeperGame";
 import Game2048 from "./Game2048";
 import SnakeGame from "./SnakeGame";
 import WordleGame from "./WordleGame";
+import PoolGame from "./PoolGame";
+import CarromGame from "./CarromGame";
+import GlowHockeyGame from "./GlowHockeyGame";
+import GomokuGame from "./GomokuGame";
+import ReversiGame from "./ReversiGame";
+import DotsAndBoxesGame from "./DotsAndBoxesGame";
+import SnakesLaddersGame from "./SnakesLaddersGame";
+import Puzzle15Game from "./Puzzle15Game";
+import MastermindGame from "./MastermindGame";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeCreateModal from "./ArcadeCreateModal";
 import { Gamepad2, X, Users, Trophy, Play, Sparkles, Share2, Mic2 } from "lucide-react";
@@ -77,7 +86,7 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
             // SOCIAL GAMING DOCK
           </span>
           <span className="text-[10px] text-neutral-400 hidden sm:inline">
-            • MULTIPLAYER & SOLO RETRO ARCADE ON STAGE
+            • 2D PHYSICS TABLES & MULTIPLAYER RETRO ARCADE ON STAGE
           </span>
         </div>
         <button
@@ -148,6 +157,45 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
 
             <button
               type="button"
+              onClick={() => setSelectedGameType("pool")}
+              className={`p-2.5 border-2 text-left transition-all cursor-pointer ${
+                selectedGameType === "pool"
+                  ? "border-white bg-neutral-900 text-white font-extrabold ring-1 ring-white"
+                  : "border-neutral-800 bg-black text-neutral-400 hover:border-neutral-600"
+              }`}
+            >
+              <div className="text-xs uppercase font-extrabold text-white">🎱 8-BALL POOL</div>
+              <div className="text-[9px] text-neutral-400">2D Physics Table</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSelectedGameType("carrom")}
+              className={`p-2.5 border-2 text-left transition-all cursor-pointer ${
+                selectedGameType === "carrom"
+                  ? "border-white bg-neutral-900 text-white font-extrabold ring-1 ring-white"
+                  : "border-neutral-800 bg-black text-neutral-400 hover:border-neutral-600"
+              }`}
+            >
+              <div className="text-xs uppercase font-extrabold text-white">⚪ CARROM</div>
+              <div className="text-[9px] text-neutral-400">Striker Physics</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSelectedGameType("glow_hockey")}
+              className={`p-2.5 border-2 text-left transition-all cursor-pointer ${
+                selectedGameType === "glow_hockey"
+                  ? "border-white bg-neutral-900 text-white font-extrabold ring-1 ring-white"
+                  : "border-neutral-800 bg-black text-neutral-400 hover:border-neutral-600"
+              }`}
+            >
+              <div className="text-xs uppercase font-extrabold text-white">⚡ GLOW HOCKEY</div>
+              <div className="text-[9px] text-neutral-400">Air Hockey Clash</div>
+            </button>
+
+            <button
+              type="button"
               onClick={() => setSelectedGameType("chess")}
               className={`p-2.5 border-2 text-left transition-all cursor-pointer ${
                 selectedGameType === "chess"
@@ -161,28 +209,41 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
 
             <button
               type="button"
-              onClick={() => setSelectedGameType("connect4")}
+              onClick={() => setSelectedGameType("gomoku")}
               className={`p-2.5 border-2 text-left transition-all cursor-pointer ${
-                selectedGameType === "connect4"
+                selectedGameType === "gomoku"
                   ? "border-white bg-neutral-900 text-white font-extrabold ring-1 ring-white"
                   : "border-neutral-800 bg-black text-neutral-400 hover:border-neutral-600"
               }`}
             >
-              <div className="text-xs uppercase font-extrabold text-white">🔴 CONNECT 4</div>
-              <div className="text-[9px] text-neutral-400">7x6 Drop Grid</div>
+              <div className="text-xs uppercase font-extrabold text-white">⬛ GOMOKU</div>
+              <div className="text-[9px] text-neutral-400">5 in a Row</div>
             </button>
 
             <button
               type="button"
-              onClick={() => setSelectedGameType("battleship")}
+              onClick={() => setSelectedGameType("reversi")}
               className={`p-2.5 border-2 text-left transition-all cursor-pointer ${
-                selectedGameType === "battleship"
+                selectedGameType === "reversi"
                   ? "border-white bg-neutral-900 text-white font-extrabold ring-1 ring-white"
                   : "border-neutral-800 bg-black text-neutral-400 hover:border-neutral-600"
               }`}
             >
-              <div className="text-xs uppercase font-extrabold text-white">🚢 BATTLESHIP</div>
-              <div className="text-[9px] text-neutral-400">10x10 Radar Arena</div>
+              <div className="text-xs uppercase font-extrabold text-white">🔄 REVERSI</div>
+              <div className="text-[9px] text-neutral-400">Disk Flipping</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSelectedGameType("dots_and_boxes")}
+              className={`p-2.5 border-2 text-left transition-all cursor-pointer ${
+                selectedGameType === "dots_and_boxes"
+                  ? "border-white bg-neutral-900 text-white font-extrabold ring-1 ring-white"
+                  : "border-neutral-800 bg-black text-neutral-400 hover:border-neutral-600"
+              }`}
+            >
+              <div className="text-xs uppercase font-extrabold text-white">🕸️ DOTS & BOXES</div>
+              <div className="text-[9px] text-neutral-400">Box Capture</div>
             </button>
           </div>
 
@@ -202,8 +263,29 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
           {match.gameType === "ludo" && (
             <LudoGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
           )}
+          {match.gameType === "pool" && (
+            <PoolGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "carrom" && (
+            <CarromGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "glow_hockey" && (
+            <GlowHockeyGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
           {match.gameType === "chess" && (
             <ChessGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "gomoku" && (
+            <GomokuGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "reversi" && (
+            <ReversiGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "dots_and_boxes" && (
+            <DotsAndBoxesGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "snakes_and_ladders" && (
+            <SnakesLaddersGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
           )}
           {match.gameType === "connect4" && (
             <Connect4Game match={match} currentUid={user?.uid || ""} isHost={isHost} />
@@ -225,6 +307,12 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
           )}
           {match.gameType === "wordle" && (
             <WordleGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "puzzle15" && (
+            <Puzzle15Game match={match} currentUid={user?.uid || ""} isHost={isHost} />
+          )}
+          {match.gameType === "mastermind" && (
+            <MastermindGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
           )}
 
           {/* Join button if spectator */}

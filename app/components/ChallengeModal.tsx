@@ -20,7 +20,14 @@ interface ChallengeModalProps {
 
 const ARCADE_GAMES: { type: ArcadeGameType; name: string; icon: string; desc: string }[] = [
   { type: "ludo", name: "15X15 CYBER LUDO", icon: "🎲", desc: "1v1 high-stakes board race & captures" },
+  { type: "pool", name: "8-BALL POOL", icon: "🎱", desc: "2D real-time physics pool table duel" },
+  { type: "carrom", name: "CARROM BOARD", icon: "⚪", desc: "Striker & coin pocketing physics" },
+  { type: "glow_hockey", name: "GLOW HOCKEY", icon: "⚡", desc: "Neon air hockey 60fps clash" },
   { type: "chess", name: "CHESS GRID PROTOCOL", icon: "♟️", desc: "8x8 tactical battle on stage" },
+  { type: "gomoku", name: "GOMOKU (5 IN A ROW)", icon: "⬛", desc: "15x15 tactical stone alignment" },
+  { type: "reversi", name: "REVERSI / OTHELLO", icon: "🔄", desc: "8x8 disk flipping battle" },
+  { type: "dots_and_boxes", name: "DOTS & BOXES", icon: "🕸️", desc: "Grid lock box capture strategy" },
+  { type: "snakes_and_ladders", name: "SNAKES & LADDERS", icon: "🪜", desc: "10x10 circuit jumpers race" },
   { type: "connect4", name: "CONNECT FOUR MATRIX", icon: "🔴", desc: "7x6 data-stream token drop battle" },
   { type: "battleship", name: "BATTLESHIP RADAR", icon: "🚢", desc: "10x10 radar naval command artillery" },
   { type: "sudoku", name: "1V1 SUDOKU RACE", icon: "🧩", desc: "Speed data-grid hacking race" },
