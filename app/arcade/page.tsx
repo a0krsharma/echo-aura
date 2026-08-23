@@ -166,14 +166,20 @@ function ArcadeContent() {
   const [rulesModalGameType, setRulesModalGameType] = useState<string>("ludo");
   const [revengeModalMatch, setRevengeModalMatch] = useState<ArcadeMatch | null>(null);
   const [tournamentModalOpen, setTournamentModalOpen] = useState(false);
+  const [initialTournamentId, setInitialTournamentId] = useState<string | undefined>(undefined);
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Auto-load match from URL param ?matchId=XYZ or ?join=XYZ
+  // Auto-load match or tournament from URL params
   useEffect(() => {
     const paramMatchId = searchParams.get("matchId") || searchParams.get("join");
     if (paramMatchId) {
       setActiveMatchId(paramMatchId);
+    }
+    const paramTourId = searchParams.get("tournamentId");
+    if (paramTourId) {
+      setInitialTournamentId(paramTourId);
+      setTournamentModalOpen(true);
     }
   }, [searchParams]);
 
@@ -901,10 +907,14 @@ function ArcadeContent() {
       {tournamentModalOpen && (
         <ArcadeTournamentBracketModal
           isOpen={tournamentModalOpen}
-          onClose={() => setTournamentModalOpen(false)}
+          onClose={() => {
+            setTournamentModalOpen(false);
+            setInitialTournamentId(undefined);
+          }}
           gameType={activeMatch?.gameType || "hand_cricket"}
           hostUid={activeMatch?.hostUid || user?.uid || ""}
           currentUid={user?.uid || ""}
+          initialTournamentId={initialTournamentId}
         />
       )}
     </div>

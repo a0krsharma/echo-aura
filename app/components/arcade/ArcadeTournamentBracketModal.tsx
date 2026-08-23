@@ -1,7 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { soundSynth } from "@/lib/soundSynthesizer";
+import {
+  subscribeActiveTournaments,
+  subscribeArcadeTournament,
+  joinTournamentSlot,
+  advanceTournamentWinner,
+  type ArcadeTournament,
+  type TournamentMatchNode,
+} from "@/lib/arcadeTournaments";
+import ArcadeTournamentCreateModal from "@/app/components/arcade/ArcadeTournamentCreateModal";
 import {
   X,
   Trophy,
@@ -17,23 +26,19 @@ import {
   Flame,
   Radio,
   Share2,
+  Plus,
+  Copy,
+  Check,
+  Smartphone,
 } from "lucide-react";
-
-export interface TournamentMatchNode {
-  id: string;
-  round: number; // 1: Round of 16, 2: Quarterfinals, 3: Semifinals, 4: Finals
-  player1: { uid: string; handle: string; score?: number } | null;
-  player2: { uid: string; handle: string; score?: number } | null;
-  winnerUid?: string;
-  status: "PENDING" | "LIVE" | "COMPLETED";
-}
 
 interface ArcadeTournamentBracketModalProps {
   isOpen: boolean;
   onClose: () => void;
-  gameType: string;
+  gameType?: string;
   hostUid: string;
   currentUid: string;
+  initialTournamentId?: string;
 }
 
 const MEME_SOUNDS = [
@@ -47,48 +52,94 @@ const MEME_SOUNDS = [
 export default function ArcadeTournamentBracketModal({
   isOpen,
   onClose,
-  gameType,
+  gameType = "hand_cricket",
   hostUid,
   currentUid,
+  initialTournamentId,
 }: ArcadeTournamentBracketModalProps) {
-  const [bracketSize, setBracketSize] = useState<8 | 16>(8);
-  const isHost = currentUid === hostUid;
+  const [tournaments, setTournaments] = useState<ArcadeTournament[]>([]);
+  const [selectedTournamentId, setSelectedTournamentId] = useState<string | null>(initialTournamentId || null);
+  const [activeTournament, setActiveTournament] = useState<ArcadeTournament | null>(null);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  // Initialize tournament bracket state
-  const [nodes, setNodes] = useState<TournamentMatchNode[]>([
-    // Quarterfinals
-    { id: "qf1", round: 2, player1: { uid: "p1", handle: "@ROHIT_IIT" }, player2: { uid: "p2", handle: "@ABHISHEK_07" }, status: "COMPLETED", winnerUid: "p2" },
-    { id: "qf2", round: 2, player1: { uid: "p3", handle: "@NEURAL_BOT" }, player2: { uid: "p4", handle: "@PRIYA_HOSTEL" }, status: "COMPLETED", winnerUid: "p4" },
-    { id: "qf3", round: 2, player1: { uid: "p5", handle: "@VIKRAM_NIT" }, player2: { uid: "p6", handle: "@KABIR_99" }, status: "LIVE" },
-    { id: "qf4", round: 2, player1: { uid: "p7", handle: "@ANANYA_BITS" }, player2: { uid: "p8", handle: "@RISHI_ROOM4" }, status: "PENDING" },
-    // Semifinals
-    { id: "sf1", round: 3, player1: { uid: "p2", handle: "@ABHISHEK_07" }, player2: { uid: "p4", handle: "@PRIYA_HOSTEL" }, status: "PENDING" },
-    { id: "sf2", round: 3, player1: null, player2: null, status: "PENDING" },
-    // Grand Final
-    { id: "fn1", round: 4, player1: null, player2: null, status: "PENDING" },
-  ]);
+  // Subscribe to all live campus tournaments
+  useEffect(() => {
+    if (!isOpen) return;
+    const unsub = subscribeActiveTournaments((list) => {
+      setTournaments(list);
+      if (!selectedTournamentId && list.length > 0) {
+        setSelectedTournamentId(list[0].id);
+      }
+    });
+    return () => {
+      if (unsub) unsub();
+    };
+  }, [isOpen, selectedTournamentId]);
+
+  // Subscribe to selected active tournament details
+  useEffect(() => {
+    if (!selectedTournamentId) {
+      setActiveTournament(null);
+      return;
+    }
+    const unsub = subscribeArcadeTournament(selectedTournamentId, (tour) => {
+      setActiveTournament(tour);
+    });
+    return () => {
+      if (unsub) unsub();
+    };
+  }, [selectedTournamentId]);
 
   if (!isOpen) return null;
 
-  const handleAdvanceWinner = (nodeId: string, winnerUid: string) => {
-    soundSynth.playFanfare();
-    setNodes((prev) =>
-      prev.map((n) => {
-        if (n.id === nodeId) {
-          return { ...n, winnerUid, status: "COMPLETED" };
-        }
-        return n;
-      })
-    );
+  const isHost = activeTournament ? activeTournament.hostUid === currentUid : currentUid === hostUid;
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://echo-aura.vercel.app";
+  const tournamentUrl = activeTournament ? `${origin}/arcade?tournamentId=${activeTournament.id}` : origin;
+  
+  const whatsappTournamentInvite = activeTournament
+    ? `🏆 Register for my ${activeTournament.title} (${activeTournament.size}-Player Bracket Tournament) on Echo! Entry Pot: +${activeTournament.totalPot} Aura. Mic is on: ${tournamentUrl}`
+    : `🏆 Join Campus Night Battles Tournament on Echo! Mic is on: ${tournamentUrl}`;
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(tournamentUrl);
+      setCopied(true);
+      soundSynth.playSubtlePop();
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      // Fallback
+    }
   };
 
-  const handlePlaySoundMeme = (item: { name: string; action: () => void }) => {
-    item.action();
+  const handleJoinSlot = async (slotIndex?: number) => {
+    if (!activeTournament || !currentUid) return;
+    soundSynth.playSubtlePop();
+    try {
+      await joinTournamentSlot(activeTournament.id, {
+        uid: currentUid,
+        handle: `@PLAYER_${currentUid.slice(0, 5)}`,
+      }, slotIndex);
+      soundSynth.playGong();
+    } catch (err: any) {
+      alert(err.message || "Failed to join tournament slot");
+    }
   };
+
+  const handleAdvance = async (nodeId: string, winnerUid: string) => {
+    if (!activeTournament) return;
+    try {
+      await advanceTournamentWinner(activeTournament.id, nodeId, winnerUid);
+    } catch (err: any) {
+      console.error(err);
+    }
+  };
+
+  const nodes = activeTournament?.nodes || [];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-4xl bg-black border-2 border-white p-4 sm:p-6 font-mono text-white shadow-[0_0_60px_rgba(255,255,255,0.25)] select-none max-h-[94vh] overflow-y-auto">
+      <div className="relative w-full max-w-5xl bg-black border-2 border-white p-4 sm:p-6 font-mono text-white shadow-[0_0_60px_rgba(255,255,255,0.25)] select-none max-h-[94vh] overflow-y-auto">
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -107,27 +158,113 @@ export default function ArcadeTournamentBracketModal({
                 <span>CAMPUS NIGHT BATTLES // TOURNAMENT BRACKET</span>
               </h2>
               <p className="text-[10px] text-neutral-400 uppercase font-bold">
-                11 PM – 2 AM HOSTEL TOURNAMENT EDITION • OPEN AUDIO COMMENTARY
+                11 PM – 2 AM HOSTEL TOURNAMENT SUITE • OPEN AUDIO COMMENTARY
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="px-2.5 py-1 bg-neutral-900 border border-neutral-700 text-yellow-400 font-black text-xs uppercase rounded">
-              🏆 POT: 2,400 AURA
-            </span>
+            {/* Create Tournament Button */}
+            <button
+              type="button"
+              onClick={() => setCreateModalOpen(true)}
+              className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs uppercase rounded-lg transition-all shadow-[0_0_20px_rgba(245,158,11,0.3)] flex items-center gap-1.5 cursor-pointer active:scale-95"
+            >
+              <Plus className="w-4 h-4" />
+              <span>[ + CREATE TOURNAMENT ]</span>
+            </button>
+
+            {activeTournament && (
+              <span className="px-2.5 py-1 bg-neutral-900 border border-neutral-700 text-yellow-400 font-black text-xs uppercase rounded">
+                🏆 POT: {activeTournament.totalPot} AURA
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Spectator Soundboard for Eliminated Players */}
+        {/* Active Campus Tournament Selector Tabs */}
+        {tournaments.length > 0 && (
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-3">
+            <span className="text-[10px] text-neutral-500 font-bold uppercase shrink-0">
+              ACTIVE CUPS:
+            </span>
+            {tournaments.map((tour) => (
+              <button
+                key={tour.id}
+                type="button"
+                onClick={() => setSelectedTournamentId(tour.id)}
+                className={`px-3 py-1 text-xs font-black uppercase rounded-lg border transition-all shrink-0 cursor-pointer ${
+                  selectedTournamentId === tour.id
+                    ? "border-amber-400 bg-amber-950/50 text-white shadow-md"
+                    : "border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-600"
+                }`}
+              >
+                {tour.title} ({Object.keys(tour.registeredPlayers || {}).length}/{tour.size}P)
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* 1-Tap WhatsApp Tournament Registration & Link Bar */}
+        {activeTournament && (
+          <div className="bg-neutral-950 border border-neutral-800 p-3 rounded-xl mb-4 flex items-center justify-between flex-wrap gap-2">
+            <div className="space-y-0.5">
+              <span className="text-xs font-black uppercase text-white flex items-center gap-2">
+                <span>{activeTournament.title}</span>
+                <span className="text-[10px] text-neutral-400 border border-neutral-800 px-1.5 py-0.5 rounded">
+                  {activeTournament.gameType.toUpperCase()}
+                </span>
+                <span className="text-[10px] text-amber-400 font-bold">
+                  STATUS: {activeTournament.status}
+                </span>
+              </span>
+              <p className="text-[10px] text-neutral-400 font-bold">
+                Host: {activeTournament.hostHandle} • Entry: {activeTournament.stakes} Aura • Prize: +{activeTournament.totalPot} Aura
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <a
+                href={`https://api.whatsapp.com/send?text=${encodeURIComponent(whatsappTournamentInvite)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => soundSynth.playAirhorn()}
+                className="px-3 py-1.5 bg-[#25D366] hover:bg-[#20bd5a] text-black font-black text-xs uppercase rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
+              >
+                <span>💬 INVITE ON WHATSAPP</span>
+              </a>
+
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className="px-3 py-1.5 border border-neutral-700 bg-neutral-900 hover:border-white text-white font-bold text-xs uppercase rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copied ? "COPIED!" : "COPY LINK"}</span>
+              </button>
+
+              {!activeTournament.registeredPlayers[currentUid] && activeTournament.status === "REGISTRATION" && (
+                <button
+                  type="button"
+                  onClick={() => handleJoinSlot()}
+                  className="px-4 py-1.5 bg-white hover:bg-neutral-200 text-black font-black text-xs uppercase rounded-lg transition-all shadow-md cursor-pointer active:scale-95"
+                >
+                  [ 🎮 CLAIM BRACKET SLOT ]
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Spectator Soundboard for Eliminated Players & Audience */}
         <div className="bg-neutral-950 border border-neutral-800 p-3 rounded-xl mb-4 space-y-2">
           <div className="flex items-center justify-between text-xs font-black text-neutral-300">
             <span className="flex items-center gap-1.5 uppercase">
               <Radio className="w-4 h-4 text-red-500 animate-pulse" />
               <span>LIVE SPECTATOR VOICE SOUNDBOARD (MEME DROPS)</span>
             </span>
-            <span className="text-[10px] text-neutral-500 uppercase">
-              TAP TO DROP AUDIO REACTION INTO ROOM
+            <span className="text-[10px] text-neutral-500 uppercase font-bold">
+              TAP TO DROP AUDIO MEME INTO LIVE COMMENTARY
             </span>
           </div>
 
@@ -136,7 +273,7 @@ export default function ArcadeTournamentBracketModal({
               <button
                 key={meme.name}
                 type="button"
-                onClick={() => handlePlaySoundMeme(meme)}
+                onClick={() => meme.action()}
                 className="px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 hover:border-white text-white font-black text-[11px] uppercase rounded-lg transition-all cursor-pointer active:scale-95 flex items-center gap-1.5"
               >
                 <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
@@ -149,74 +286,84 @@ export default function ArcadeTournamentBracketModal({
         {/* Visual Interactive Bracket Tree */}
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-            {/* Column 1: Quarterfinals */}
+            {/* Column 1: Quarterfinals / Round of 16 */}
             <div className="space-y-3">
               <div className="text-xs font-black uppercase text-neutral-400 text-center border-b border-neutral-800 pb-1">
-                QUARTERFINALS (8P)
+                {activeTournament?.size === 16 ? "ROUND OF 16" : "QUARTERFINALS"}
               </div>
-              {nodes
-                .filter((n) => n.round === 2)
-                .map((node, idx) => (
+              {(nodes.filter((n) => n.round === (activeTournament?.size === 16 ? 1 : 2)).length > 0
+                ? nodes.filter((n) => n.round === (activeTournament?.size === 16 ? 1 : 2))
+                : [
+                    { id: "qf1", round: 2, matchIndex: 1, player1: { uid: "p1", handle: "@ROHIT_IIT" }, player2: { uid: "p2", handle: "@ABHISHEK_07" }, status: "COMPLETED" as const, winnerUid: "p2" },
+                    { id: "qf2", round: 2, matchIndex: 2, player1: { uid: "p3", handle: "@NEURAL_BOT" }, player2: { uid: "p4", handle: "@PRIYA_HOSTEL" }, status: "COMPLETED" as const, winnerUid: "p4" },
+                    { id: "qf3", round: 2, matchIndex: 3, player1: { uid: "p5", handle: "@VIKRAM_NIT" }, player2: { uid: "p6", handle: "@KABIR_99" }, status: "LIVE" as const },
+                    { id: "qf4", round: 2, matchIndex: 4, player1: { uid: "p7", handle: "@ANANYA_BITS" }, player2: { uid: "p8", handle: "@RISHI_ROOM4" }, status: "PENDING" as const },
+                  ]
+              ).map((node, idx) => (
+                <div
+                  key={node.id}
+                  className={`p-2.5 border-2 rounded-xl space-y-1.5 transition-all ${
+                    node.status === "LIVE"
+                      ? "border-emerald-400 bg-emerald-950/30 shadow-[0_0_15px_rgba(16,185,129,0.3)] animate-pulse"
+                      : "border-neutral-800 bg-neutral-950"
+                  }`}
+                >
+                  <div className="flex justify-between items-center text-[10px] font-bold text-neutral-400">
+                    <span>MATCH {idx + 1}</span>
+                    <span className={node.status === "LIVE" ? "text-emerald-400 font-black" : ""}>
+                      {node.status}
+                    </span>
+                  </div>
+
+                  {/* Player 1 */}
                   <div
-                    key={node.id}
-                    className={`p-2.5 border-2 rounded-xl space-y-1.5 transition-all ${
-                      node.status === "LIVE"
-                        ? "border-emerald-400 bg-emerald-950/30 shadow-[0_0_15px_rgba(16,185,129,0.3)] animate-pulse"
-                        : "border-neutral-800 bg-neutral-950"
+                    className={`flex justify-between items-center p-1.5 rounded text-xs font-black ${
+                      node.winnerUid === node.player1?.uid
+                        ? "bg-white text-black font-black"
+                        : "text-white bg-black/40"
                     }`}
                   >
-                    <div className="flex justify-between items-center text-[10px] font-bold text-neutral-400">
-                      <span>MATCH {idx + 1}</span>
-                      <span className={node.status === "LIVE" ? "text-emerald-400 font-black" : ""}>
-                        {node.status}
-                      </span>
-                    </div>
-
-                    {/* Player 1 */}
-                    <div
-                      className={`flex justify-between items-center p-1.5 rounded text-xs font-black ${
-                        node.winnerUid === node.player1?.uid
-                          ? "bg-white text-black font-black"
-                          : "text-white"
-                      }`}
-                    >
-                      <span className="truncate">{node.player1?.handle || "TBD"}</span>
-                      {node.winnerUid === node.player1?.uid && <Crown className="w-3.5 h-3.5 text-amber-500" />}
-                    </div>
-
-                    {/* Player 2 */}
-                    <div
-                      className={`flex justify-between items-center p-1.5 rounded text-xs font-black ${
-                        node.winnerUid === node.player2?.uid
-                          ? "bg-white text-black font-black"
-                          : "text-white"
-                      }`}
-                    >
-                      <span className="truncate">{node.player2?.handle || "TBD"}</span>
-                      {node.winnerUid === node.player2?.uid && <Crown className="w-3.5 h-3.5 text-amber-500" />}
-                    </div>
-
-                    {/* Host Winner Controls */}
-                    {isHost && node.status === "LIVE" && (
-                      <div className="grid grid-cols-2 gap-1 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => handleAdvanceWinner(node.id, node.player1?.uid || "")}
-                          className="py-1 bg-emerald-600 hover:bg-emerald-500 text-black font-black text-[10px] uppercase rounded cursor-pointer"
-                        >
-                          ADVANCE P1
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleAdvanceWinner(node.id, node.player2?.uid || "")}
-                          className="py-1 bg-emerald-600 hover:bg-emerald-500 text-black font-black text-[10px] uppercase rounded cursor-pointer"
-                        >
-                          ADVANCE P2
-                        </button>
-                      </div>
-                    )}
+                    <span className="truncate">{node.player1?.handle || "OPEN SLOT"}</span>
+                    {node.winnerUid === node.player1?.uid && <Crown className="w-3.5 h-3.5 text-amber-500" />}
                   </div>
-                ))}
+
+                  {/* Player 2 */}
+                  <div
+                    className={`flex justify-between items-center p-1.5 rounded text-xs font-black ${
+                      node.winnerUid === node.player2?.uid
+                        ? "bg-white text-black font-black"
+                        : "text-white bg-black/40"
+                    }`}
+                  >
+                    <span className="truncate">{node.player2?.handle || "OPEN SLOT"}</span>
+                    {node.winnerUid === node.player2?.uid && <Crown className="w-3.5 h-3.5 text-amber-500" />}
+                  </div>
+
+                  {/* Host Winner Advancement Controls */}
+                  {isHost && (
+                    <div className="grid grid-cols-2 gap-1 pt-1">
+                      {node.player1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleAdvance(node.id, node.player1?.uid || "")}
+                          className="py-1 bg-emerald-600 hover:bg-emerald-500 text-black font-black text-[9px] uppercase rounded cursor-pointer"
+                        >
+                          ADV P1
+                        </button>
+                      )}
+                      {node.player2 && (
+                        <button
+                          type="button"
+                          onClick={() => handleAdvance(node.id, node.player2?.uid || "")}
+                          className="py-1 bg-emerald-600 hover:bg-emerald-500 text-black font-black text-[9px] uppercase rounded cursor-pointer"
+                        >
+                          ADV P2
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
 
             {/* Column 2: Semifinals */}
@@ -224,25 +371,52 @@ export default function ArcadeTournamentBracketModal({
               <div className="text-xs font-black uppercase text-neutral-400 text-center border-b border-neutral-800 pb-1">
                 SEMIFINALS (4P)
               </div>
-              {nodes
-                .filter((n) => n.round === 3)
-                .map((node, idx) => (
-                  <div
-                    key={node.id}
-                    className="p-3 border-2 border-neutral-800 bg-neutral-950 rounded-xl space-y-2"
-                  >
-                    <div className="text-[10px] font-bold text-neutral-400">SEMI-FINAL {idx + 1}</div>
-                    <div className="p-1.5 bg-neutral-900 rounded text-xs font-black text-white flex justify-between">
-                      <span>{node.player1?.handle || "WINNER QF1"}</span>
-                    </div>
-                    <div className="p-1.5 bg-neutral-900 rounded text-xs font-black text-white flex justify-between">
-                      <span>{node.player2?.handle || "WINNER QF2"}</span>
-                    </div>
+              {(nodes.filter((n) => n.round === 3).length > 0
+                ? nodes.filter((n) => n.round === 3)
+                : [
+                    { id: "sf1", round: 3, matchIndex: 1, player1: { uid: "p2", handle: "@ABHISHEK_07" }, player2: { uid: "p4", handle: "@PRIYA_HOSTEL" }, status: "PENDING" as const },
+                    { id: "sf2", round: 3, matchIndex: 2, player1: null, player2: null, status: "PENDING" as const },
+                  ]
+              ).map((node, idx) => (
+                <div
+                  key={node.id}
+                  className="p-3 border-2 border-neutral-800 bg-neutral-950 rounded-xl space-y-2"
+                >
+                  <div className="text-[10px] font-bold text-neutral-400">SEMI-FINAL {idx + 1}</div>
+                  <div className="p-1.5 bg-neutral-900 rounded text-xs font-black text-white flex justify-between">
+                    <span>{node.player1?.handle || "WINNER MATCH 1"}</span>
                   </div>
-                ))}
+                  <div className="p-1.5 bg-neutral-900 rounded text-xs font-black text-white flex justify-between">
+                    <span>{node.player2?.handle || "WINNER MATCH 2"}</span>
+                  </div>
+
+                  {isHost && (node.player1 || node.player2) && (
+                    <div className="grid grid-cols-2 gap-1 pt-1">
+                      {node.player1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleAdvance(node.id, node.player1?.uid || "")}
+                          className="py-1 bg-emerald-600 hover:bg-emerald-500 text-black font-black text-[9px] uppercase rounded cursor-pointer"
+                        >
+                          ADV P1
+                        </button>
+                      )}
+                      {node.player2 && (
+                        <button
+                          type="button"
+                          onClick={() => handleAdvance(node.id, node.player2?.uid || "")}
+                          className="py-1 bg-emerald-600 hover:bg-emerald-500 text-black font-black text-[9px] uppercase rounded cursor-pointer"
+                        >
+                          ADV P2
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
 
-            {/* Column 3: Grand Final */}
+            {/* Column 3: Grand Final & Champion */}
             <div className="space-y-4">
               <div className="text-xs font-black uppercase text-amber-400 text-center border-b border-amber-400/40 pb-1">
                 👑 GRAND FINAL & CHAMPION
@@ -254,16 +428,32 @@ export default function ArcadeTournamentBracketModal({
                     CHAMPIONSHIP DUEL
                   </div>
                   <div className="p-2 bg-black border border-neutral-800 rounded font-black text-sm text-white">
-                    @ABHISHEK_07 vs @PRIYA_HOSTEL
+                    {activeTournament?.winnerHandle ? (
+                      <span className="text-emerald-400">👑 {activeTournament.winnerHandle} CROWNED CHAMPION!</span>
+                    ) : (
+                      <span>FINAL MATCH IN PROGRESS</span>
+                    )}
                   </div>
                 </div>
                 <div className="text-[10px] text-neutral-400 uppercase font-bold">
-                  Winner takes +1,600 Aura Points & Dorm Champion Badge!
+                  Winner takes +{activeTournament?.totalPot || 1600} Aura Points & Campus Champion Badge!
                 </div>
               </div>
             </div>
           </div>
         </div>
+
+        {/* User Tournament Creator Modal Sub-Component */}
+        {createModalOpen && (
+          <ArcadeTournamentCreateModal
+            isOpen={createModalOpen}
+            onClose={() => setCreateModalOpen(false)}
+            user={{ uid: currentUid, handle: `@USER_${currentUid.slice(0, 5)}` }}
+            onTournamentCreated={(tourId) => {
+              setSelectedTournamentId(tourId);
+            }}
+          />
+        )}
       </div>
     </div>
   );
