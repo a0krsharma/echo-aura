@@ -62,6 +62,8 @@ import MathBlitzGame from "@/app/components/arcade/MathBlitzGame";
 import ArcadeInviteModal from "@/app/components/arcade/ArcadeInviteModal";
 import ArcadeCreateModal from "@/app/components/arcade/ArcadeCreateModal";
 import ArcadeGameRulesModal from "@/app/components/arcade/ArcadeGameRulesModal";
+import ArcadeRevengeCardModal from "@/app/components/arcade/ArcadeRevengeCardModal";
+import ArcadeTournamentBracketModal from "@/app/components/arcade/ArcadeTournamentBracketModal";
 import {
   Gamepad2,
   Trophy,
@@ -162,6 +164,8 @@ function ArcadeContent() {
   const [inviteModalMatch, setInviteModalMatch] = useState<ArcadeMatch | null>(null);
   const [rulesModalOpen, setRulesModalOpen] = useState(false);
   const [rulesModalGameType, setRulesModalGameType] = useState<string>("ludo");
+  const [revengeModalMatch, setRevengeModalMatch] = useState<ArcadeMatch | null>(null);
+  const [tournamentModalOpen, setTournamentModalOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -336,15 +340,23 @@ function ArcadeContent() {
         <div className="flex items-center gap-2 text-xs">
           <button
             type="button"
+            onClick={() => setTournamentModalOpen(true)}
+            className="px-2.5 py-1 border border-amber-400 bg-amber-950/40 text-amber-300 hover:bg-amber-400 hover:text-black font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
+          >
+            <Trophy className="w-3.5 h-3.5" />
+            <span>[ 🏆 CAMPUS TOURNAMENT ]</span>
+          </button>
+          <button
+            type="button"
             onClick={() => handleOpenRules(activeMatch?.gameType || "ludo")}
             className="px-2.5 py-1 border border-emerald-400 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-400 hover:text-black font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
           >
             <HelpCircle className="w-3.5 h-3.5" />
-            <span>[ ❓ RULES & MANUAL ]</span>
+            <span>[ ❓ RULES ]</span>
           </button>
           <span className="text-white font-bold border border-white bg-neutral-900 px-2 py-0.5 hidden sm:inline flex items-center gap-1.5">
             <Mic2 className="w-3 h-3 text-emerald-400 animate-pulse" />
-            <span>LIVE VOICE ENABLED</span>
+            <span>LIVE VOICE</span>
           </span>
         </div>
       </header>
@@ -361,7 +373,18 @@ function ArcadeContent() {
                 <span>•</span>
                 <span>HOST: {activeMatch.hostHandle}</span>
               </span>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {activeMatch.status === "FINISHED" && (
+                  <button
+                    type="button"
+                    onClick={() => setRevengeModalMatch(activeMatch)}
+                    className="px-2.5 py-1 border-2 border-red-500 bg-red-600 hover:bg-red-500 text-white font-black uppercase text-[10px] transition-all flex items-center gap-1 cursor-pointer shadow-lg animate-bounce"
+                  >
+                    <Swords className="w-3.5 h-3.5" />
+                    <span>[ ⚔️ REVENGE CARD / SHARE ]</span>
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={() => handleOpenRules(activeMatch.gameType)}
@@ -861,6 +884,27 @@ function ArcadeContent() {
           isOpen={!!inviteModalMatch}
           onClose={() => setInviteModalMatch(null)}
           match={inviteModalMatch}
+        />
+      )}
+
+      {/* Dynamic Revenge Card Modal */}
+      {revengeModalMatch && (
+        <ArcadeRevengeCardModal
+          isOpen={!!revengeModalMatch}
+          onClose={() => setRevengeModalMatch(null)}
+          match={revengeModalMatch}
+          currentUid={user?.uid || ""}
+        />
+      )}
+
+      {/* Campus Night Battles Tournament Bracket Modal */}
+      {tournamentModalOpen && (
+        <ArcadeTournamentBracketModal
+          isOpen={tournamentModalOpen}
+          onClose={() => setTournamentModalOpen(false)}
+          gameType={activeMatch?.gameType || "hand_cricket"}
+          hostUid={activeMatch?.hostUid || user?.uid || ""}
+          currentUid={user?.uid || ""}
         />
       )}
     </div>
