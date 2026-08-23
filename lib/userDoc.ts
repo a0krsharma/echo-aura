@@ -508,9 +508,14 @@ export function getThoughtRemainingHours(user: any): number {
 }
 
 export async function awardAura(uid: string, amount: number): Promise<void> {
-  const db = getFirebaseDb();
-  const userRef = doc(db, "users", uid);
-  await updateDoc(userRef, {
-    auraScore: increment(amount),
-  });
+  if (!uid || uid.startsWith("bot_") || uid === "bot") return;
+  try {
+    const db = getFirebaseDb();
+    const userRef = doc(db, "users", uid);
+    await updateDoc(userRef, {
+      auraScore: increment(amount),
+    });
+  } catch (err) {
+    console.warn("[awardAura] Non-critical aura score update skipped:", err);
+  }
 }
