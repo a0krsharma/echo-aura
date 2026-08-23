@@ -50,7 +50,8 @@ import HangmanGame from "./HangmanGame";
 import MathBlitzGame from "./MathBlitzGame";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeCreateModal from "./ArcadeCreateModal";
-import { Gamepad2, X, Users, Trophy, Play, Sparkles, Share2, Mic2 } from "lucide-react";
+import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
+import { Gamepad2, X, Users, Trophy, Play, Sparkles, Share2, Mic2, HelpCircle } from "lucide-react";
 
 interface ArcadeRoomDockProps {
   roomId: string;
@@ -66,6 +67,7 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
   const [selectedGameType, setSelectedGameType] = useState<ArcadeGameType>("poker");
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
 
   // Auto-open if matchId URL param exists
   useEffect(() => {
@@ -136,6 +138,14 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
           </span>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setRulesOpen(true)}
+            className="px-2 py-1 border border-emerald-400 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-400 hover:text-black font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
+          >
+            <HelpCircle className="w-3 h-3" />
+            <span>[ ❓ RULES ]</span>
+          </button>
           {match && (
             <button
               type="button"
@@ -438,6 +448,13 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
           match={match}
         />
       )}
+
+      {/* Master Rules Modal */}
+      <ArcadeGameRulesModal
+        isOpen={rulesOpen}
+        onClose={() => setRulesOpen(false)}
+        initialGameType={match?.gameType || selectedGameType}
+      />
     </div>
   );
 }
