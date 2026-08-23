@@ -363,9 +363,11 @@ export interface UnoCard {
 export interface UnoState {
   discardTop: UnoCard;
   handsStr: string; // Record<string, UnoCard[]>
+  drawDeckStr?: string; // UnoCard[]
   currentTurnUid: string;
   direction: 1 | -1;
   drawCountPenalty: number;
+  hasCalledUno?: Record<string, boolean>;
   lastActionLog?: string;
 }
 
@@ -1516,32 +1518,57 @@ export async function createArcadeMatch(params: {
       lastActionLog: "Klondike Solitaire ready. Build Ace to King on foundation piles!",
     };
   } else if (params.gameType === "uno") {
+    const colors: ("RED" | "BLUE" | "GREEN" | "YELLOW")[] = ["RED", "BLUE", "GREEN", "YELLOW"];
+    const deck: UnoCard[] = [];
+
+    // Build standard 108-card deck
+    for (const color of colors) {
+      deck.push({ color, value: "0" });
+      for (let i = 1; i <= 9; i++) {
+        deck.push({ color, value: i.toString() });
+        deck.push({ color, value: i.toString() });
+      }
+      deck.push({ color, value: "SKIP" });
+      deck.push({ color, value: "SKIP" });
+      deck.push({ color, value: "REVERSE" });
+      deck.push({ color, value: "REVERSE" });
+      deck.push({ color, value: "+2" });
+      deck.push({ color, value: "+2" });
+    }
+    for (let i = 0; i < 4; i++) {
+      deck.push({ color: "WILD", value: "WILD" });
+      deck.push({ color: "WILD", value: "+4" });
+    }
+
+    // Shuffle deck
+    for (let i = deck.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [deck[i], deck[j]] = [deck[j], deck[i]];
+    }
+
     const botUid = `bot_${matchId}_ai`;
     const initialHands: Record<string, UnoCard[]> = {
-      [params.hostUid]: [
-        { color: "RED", value: "7" },
-        { color: "BLUE", value: "3" },
-        { color: "GREEN", value: "SKIP" },
-        { color: "YELLOW", value: "+2" },
-        { color: "WILD", value: "WILD" },
-      ],
+      [params.hostUid]: deck.splice(0, 7),
     };
     if (mode === "VS_COMPUTER") {
-      initialHands[botUid] = [
-        { color: "RED", value: "5" },
-        { color: "BLUE", value: "8" },
-        { color: "GREEN", value: "4" },
-        { color: "YELLOW", value: "2" },
-        { color: "WILD", value: "+4" },
-      ];
+      initialHands[botUid] = deck.splice(0, 7);
     }
+
+    // Starting discard card (ensure non-wild for starter)
+    let startingDiscard = deck.pop() || { color: "RED", value: "7" };
+    if (startingDiscard.color === "WILD") {
+      startingDiscard = { color: "BLUE", value: "5" };
+    }
+
     matchData.unoState = {
-      discardTop: { color: "RED", value: "5" },
+      discardTop: startingDiscard,
       handsStr: JSON.stringify(initialHands),
+      drawDeckStr: JSON.stringify(deck),
       currentTurnUid: params.hostUid,
       direction: 1,
       drawCountPenalty: 0,
-      lastActionLog: "Flow Override online. Match color [RED] or value [5].",
+      hasCalledUno: {},
+      lastActionLog: `Uno Arena online! Starter card is [${startingDiscard.color} ${startingDiscard.value}].`,
     };
   } else if (params.gameType === "liars_dice") {
     const botUid = `bot_${matchId}_ai`;
@@ -3005,11 +3032,13 @@ export async function playBlackjackAction(
 }
 
 // ── Uno Actions ───────────────────────────────────────────────────────────────
+// ── Uno Actions ───────────────────────────────────────────────────────────────
 export async function playUnoCard(
   matchId: string,
   playerUid: string,
   card: UnoCard,
-  chosenWildColor?: "RED" | "BLUE" | "GREEN" | "YELLOW"
+  chosenWildColor?: "RED" | "BLUE" | "GREEN" | "YELLOW",
+  calledUno?: boolean
 ): Promise<{ won: boolean }> {
   const db = getFirebaseDb();
   const matchRef = doc(db, ARCADE_COLLECTION, matchId);
@@ -3020,6 +3049,7 @@ export async function playUnoCard(
 
   const us = match.unoState;
   const hands: Record<string, UnoCard[]> = JSON.parse(us.handsStr || "{}");
+  let drawDeck: UnoCard[] = JSON.parse(us.drawDeckStr || "[]");
   const playerHand = hands[playerUid] || [];
   const cardIdx = playerHand.findIndex((c) => c.color === card.color && c.value === card.value);
 
@@ -3029,44 +3059,83 @@ export async function playUnoCard(
   hands[playerUid] = playerHand;
 
   const won = playerHand.length === 0;
-  const players = Object.keys(match.players || {});
-  const nextPlayerUid = players.find((u) => u !== playerUid) || playerUid;
+  const playerUids = Object.keys(match.players || {});
+  const numPlayers = playerUids.length;
+  const currentIdx = playerUids.indexOf(playerUid);
 
-  // Final discard top card (if wild, use the chosen color)
+  let direction: 1 | -1 = us.direction || 1;
+  let skipNext = false;
+  let drawCount = 0;
+
+  if (card.value === "REVERSE") {
+    if (numPlayers === 2) {
+      skipNext = true;
+    } else {
+      direction = (direction === 1 ? -1 : 1);
+    }
+  } else if (card.value === "SKIP") {
+    skipNext = true;
+  } else if (card.value === "+2") {
+    skipNext = true;
+    drawCount = 2;
+  } else if (card.value === "+4") {
+    skipNext = true;
+    drawCount = 4;
+  }
+
+  // Next player calculation
+  let step = direction * (skipNext ? 2 : 1);
+  let nextIdx = (currentIdx + step) % numPlayers;
+  if (nextIdx < 0) nextIdx += numPlayers;
+  const nextPlayerUid = playerUids[nextIdx] || playerUid;
+
+  // Apply card draw penalties
+  if (drawCount > 0) {
+    let victimIdx = (currentIdx + direction) % numPlayers;
+    if (victimIdx < 0) victimIdx += numPlayers;
+    const victimUid = playerUids[victimIdx];
+    const victimHand = hands[victimUid] || [];
+
+    // Ensure draw deck has cards
+    const colors: ("RED" | "BLUE" | "GREEN" | "YELLOW")[] = ["RED", "BLUE", "GREEN", "YELLOW"];
+    const values = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+2", "SKIP", "REVERSE"];
+    for (let i = 0; i < drawCount; i++) {
+      const drawn = drawDeck.pop() || {
+        color: colors[Math.floor(Math.random() * colors.length)],
+        value: values[Math.floor(Math.random() * values.length)],
+      };
+      victimHand.push(drawn);
+    }
+    hands[victimUid] = victimHand;
+  }
+
+  // Final discard top card
   const discardCard: UnoCard = {
     color: card.color === "WILD" && chosenWildColor ? chosenWildColor : card.color,
     value: card.value,
   };
 
-  // Special card penalties
-  const colors: ("RED" | "BLUE" | "GREEN" | "YELLOW")[] = ["RED", "BLUE", "GREEN", "YELLOW"];
-  const values = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+2", "SKIP"];
-
-  if (card.value === "+2" && nextPlayerUid !== playerUid) {
-    const oppHand = hands[nextPlayerUid] || [];
-    for (let i = 0; i < 2; i++) {
-      oppHand.push({
-        color: colors[Math.floor(Math.random() * colors.length)],
-        value: values[Math.floor(Math.random() * values.length)],
-      });
-    }
-    hands[nextPlayerUid] = oppHand;
-  } else if (card.value === "+4" && nextPlayerUid !== playerUid) {
-    const oppHand = hands[nextPlayerUid] || [];
-    for (let i = 0; i < 4; i++) {
-      oppHand.push({
-        color: colors[Math.floor(Math.random() * colors.length)],
-        value: values[Math.floor(Math.random() * values.length)],
-      });
-    }
-    hands[nextPlayerUid] = oppHand;
+  const hasCalled = { ...(us.hasCalledUno || {}) };
+  if (playerHand.length === 1 && calledUno) {
+    hasCalled[playerUid] = true;
+  } else if (playerHand.length > 1) {
+    delete hasCalled[playerUid];
   }
+
+  let actionLog = `${match.players[playerUid]?.handle || "Player"} played [${card.color} ${card.value}]!`;
+  if (card.value === "REVERSE") actionLog += " (REVERSED DIRECTION 🔄)";
+  else if (card.value === "SKIP") actionLog += " (SKIPPED NEXT PLAYER 🚫)";
+  else if (card.value === "+2") actionLog += ` (+2 CARDS & SKIPPED ${match.players[nextPlayerUid]?.handle || "PLAYER"}!)`;
+  else if (card.value === "+4") actionLog += ` (+4 WILD! TABLE COLOR: ${chosenWildColor || "WILD"})`;
 
   const updates: any = {
     "unoState.discardTop": discardCard,
     "unoState.handsStr": JSON.stringify(hands),
+    "unoState.drawDeckStr": JSON.stringify(drawDeck),
     "unoState.currentTurnUid": nextPlayerUid,
-    "unoState.lastActionLog": `${match.players[playerUid]?.handle || "Player"} played [${card.color} ${card.value}]!`,
+    "unoState.direction": direction,
+    "unoState.hasCalledUno": hasCalled,
+    "unoState.lastActionLog": actionLog,
     updatedAt: serverTimestamp(),
   };
 
@@ -3094,27 +3163,35 @@ export async function drawUnoCard(
 
   const us = match.unoState;
   const hands: Record<string, UnoCard[]> = JSON.parse(us.handsStr || "{}");
+  let drawDeck: UnoCard[] = JSON.parse(us.drawDeckStr || "[]");
   const playerHand = hands[playerUid] || [];
 
   const colors: ("RED" | "BLUE" | "GREEN" | "YELLOW")[] = ["RED", "BLUE", "GREEN", "YELLOW"];
   const values = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+2", "SKIP", "REVERSE"];
-  const isWild = Math.random() < 0.1;
+  const isWild = Math.random() < 0.08;
 
-  const drawn: UnoCard = isWild
+  const drawn: UnoCard = drawDeck.pop() || (isWild
     ? { color: "WILD", value: Math.random() < 0.5 ? "WILD" : "+4" }
     : {
         color: colors[Math.floor(Math.random() * colors.length)],
         value: values[Math.floor(Math.random() * values.length)],
-      };
+      });
 
   playerHand.push(drawn);
   hands[playerUid] = playerHand;
 
-  const players = Object.keys(match.players || {});
-  const nextPlayerUid = players.find((u) => u !== playerUid) || playerUid;
+  const playerUids = Object.keys(match.players || {});
+  const numPlayers = playerUids.length;
+  const currentIdx = playerUids.indexOf(playerUid);
+  const direction: 1 | -1 = us.direction || 1;
+
+  let nextIdx = (currentIdx + direction) % numPlayers;
+  if (nextIdx < 0) nextIdx += numPlayers;
+  const nextPlayerUid = playerUids[nextIdx] || playerUid;
 
   await updateDoc(matchRef, {
     "unoState.handsStr": JSON.stringify(hands),
+    "unoState.drawDeckStr": JSON.stringify(drawDeck),
     "unoState.currentTurnUid": nextPlayerUid,
     "unoState.lastActionLog": `${match.players[playerUid]?.handle || "Player"} drew a card from the deck!`,
     updatedAt: serverTimestamp(),
@@ -3122,6 +3199,62 @@ export async function drawUnoCard(
 
   return { drawnCard: drawn };
 }
+
+export async function shoutUno(
+  matchId: string,
+  playerUid: string
+): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) return;
+  const match = snap.data() as ArcadeMatch;
+  if (!match.unoState) return;
+
+  await updateDoc(matchRef, {
+    [`unoState.hasCalledUno.${playerUid}`]: true,
+    "unoState.lastActionLog": `🚨 UNO! ${match.players[playerUid]?.handle || "Player"} SHOUTED UNO (1 CARD REMAINING)!`,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function catchUnoPenalty(
+  matchId: string,
+  challengerUid: string,
+  targetUid: string
+): Promise<{ caught: boolean }> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) return { caught: false };
+  const match = snap.data() as ArcadeMatch;
+  if (!match.unoState) return { caught: false };
+
+  const us = match.unoState;
+  const hands: Record<string, UnoCard[]> = JSON.parse(us.handsStr || "{}");
+  const targetHand = hands[targetUid] || [];
+  const hasCalled = us.hasCalledUno?.[targetUid] || false;
+
+  if (targetHand.length === 1 && !hasCalled) {
+    const colors: ("RED" | "BLUE" | "GREEN" | "YELLOW")[] = ["RED", "BLUE", "GREEN", "YELLOW"];
+    const values = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
+    targetHand.push(
+      { color: colors[Math.floor(Math.random() * colors.length)], value: values[Math.floor(Math.random() * values.length)] },
+      { color: colors[Math.floor(Math.random() * colors.length)], value: values[Math.floor(Math.random() * values.length)] }
+    );
+    hands[targetUid] = targetHand;
+
+    await updateDoc(matchRef, {
+      "unoState.handsStr": JSON.stringify(hands),
+      "unoState.lastActionLog": `🎯 CAUGHT! ${match.players[challengerUid]?.handle || "Challenger"} caught ${match.players[targetUid]?.handle || "Player"} without shouting UNO (+2 CARDS PENALTY)!`,
+      updatedAt: serverTimestamp(),
+    });
+    return { caught: true };
+  }
+
+  return { caught: false };
+}
+
 
 // ── Liar's Dice Actions ───────────────────────────────────────────────────────
 export async function makeLiarsDiceBid(

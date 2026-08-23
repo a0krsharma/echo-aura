@@ -359,7 +359,7 @@ export async function executeChessBotTurn(match: ArcadeMatch): Promise<void> {
 }
 
 /**
- * Uno Bot
+ * Uno Bot (Smart Strategy & Wild Color Picker)
  */
 export async function executeUnoBotTurn(match: ArcadeMatch): Promise<void> {
   if (!match.unoState || match.status !== "PLAYING") return;
@@ -370,31 +370,48 @@ export async function executeUnoBotTurn(match: ArcadeMatch): Promise<void> {
   );
   if (!botPlayer) return;
 
-  const runKey = `${match.id}_uno_bot_${us.currentTurnUid}`;
+  const runKey = `${match.id}_uno_bot_${us.currentTurnUid}_${us.discardTop.color}_${us.discardTop.value}`;
   if (activeBotRuns.has(runKey)) return;
   activeBotRuns.add(runKey);
 
   try {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1200));
 
     const hands: Record<string, UnoCard[]> = JSON.parse(us.handsStr || "{}");
     const botHand = hands[botPlayer.uid] || [];
     const top = us.discardTop;
 
-    const playableCard = botHand.find(
+    // Filter playable cards
+    const playableCards = botHand.filter(
       (c) => c.color === "WILD" || c.color === top.color || c.value === top.value
     );
 
-    if (playableCard) {
-      const chosenColor = playableCard.color === "WILD" ? "RED" : undefined;
-      await playUnoCard(match.id, botPlayer.uid, playableCard, chosenColor);
+    if (playableCards.length > 0) {
+      // Prioritize: +4 / +2 / Action cards > same color > same value > Wild
+      const chosenCard =
+        playableCards.find((c) => c.value === "+4" || c.value === "+2" || c.value === "SKIP" || c.value === "REVERSE") ||
+        playableCards.find((c) => c.color === top.color) ||
+        playableCards.find((c) => c.value === top.value) ||
+        playableCards[0];
+
+      let chosenColor: "RED" | "BLUE" | "GREEN" | "YELLOW" = "RED";
+      if (chosenCard.color === "WILD") {
+        const colorCounts: Record<string, number> = { RED: 0, BLUE: 0, GREEN: 0, YELLOW: 0 };
+        botHand.forEach((c) => {
+          if (c.color !== "WILD") colorCounts[c.color] = (colorCounts[c.color] || 0) + 1;
+        });
+        chosenColor = (Object.entries(colorCounts).sort((a, b) => b[1] - a[1])[0][0] as any) || "RED";
+      }
+
+      const willHaveOneCard = botHand.length === 2;
+      await playUnoCard(match.id, botPlayer.uid, chosenCard, chosenColor, willHaveOneCard);
     } else {
       await drawUnoCard(match.id, botPlayer.uid);
     }
   } catch (err) {
     console.error("[ArcadeBot] Uno error:", err);
   } finally {
-    setTimeout(() => activeBotRuns.delete(runKey), 1500);
+    setTimeout(() => activeBotRuns.delete(runKey), 1600);
   }
 }
 
