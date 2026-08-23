@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useAuth } from "@/app/components/AuthProvider";
 import { useSearchParams } from "next/navigation";
 import {
+  createArcadeMatch,
   joinArcadeMatch,
   subscribeArcadeMatch,
   deleteArcadeMatch,
@@ -117,6 +118,26 @@ function ArcadeContent() {
   const handleOpenCreate = (type: ArcadeGameType) => {
     setDefaultGameType(type);
     setCreateModalOpen(true);
+  };
+
+  const handleLaunchSolo = async (type: ArcadeGameType) => {
+    if (!user) return;
+    try {
+      const matchId = await createArcadeMatch({
+        gameType: type,
+        title: `${type.toUpperCase()} // SOLO PUZZLE GRID`,
+        hostUid: user.uid,
+        hostHandle: user.handle || "@ANON",
+        hostAvatar: user.photoUrl || user.photoURL,
+        mode: "VS_COMPUTER",
+        maxPlayers: 1,
+        enableVoice: false,
+        stakes: 0,
+      });
+      setActiveMatchId(matchId);
+    } catch (e) {
+      console.error("Failed to launch solo match:", e);
+    }
   };
 
   const handleJoinMatch = async (matchId: string) => {
@@ -443,10 +464,10 @@ function ArcadeContent() {
                   <button
                     type="button"
                     disabled={!user}
-                    onClick={() => handleOpenCreate("minesweeper")}
+                    onClick={() => handleLaunchSolo("minesweeper")}
                     className="w-full py-1.5 border border-white bg-white text-black font-bold text-[10px] uppercase hover:bg-neutral-200 transition-all cursor-pointer"
                   >
-                    [ PLAY ]
+                    [ ⚡ PLAY NOW ]
                   </button>
                 </div>
 
@@ -460,10 +481,10 @@ function ArcadeContent() {
                   <button
                     type="button"
                     disabled={!user}
-                    onClick={() => handleOpenCreate("2048")}
+                    onClick={() => handleLaunchSolo("2048")}
                     className="w-full py-1.5 border border-white bg-white text-black font-bold text-[10px] uppercase hover:bg-neutral-200 transition-all cursor-pointer"
                   >
-                    [ PLAY ]
+                    [ ⚡ PLAY NOW ]
                   </button>
                 </div>
 
@@ -477,10 +498,10 @@ function ArcadeContent() {
                   <button
                     type="button"
                     disabled={!user}
-                    onClick={() => handleOpenCreate("snake")}
+                    onClick={() => handleLaunchSolo("snake")}
                     className="w-full py-1.5 border border-white bg-white text-black font-bold text-[10px] uppercase hover:bg-neutral-200 transition-all cursor-pointer"
                   >
-                    [ PLAY ]
+                    [ ⚡ PLAY NOW ]
                   </button>
                 </div>
 
@@ -494,10 +515,10 @@ function ArcadeContent() {
                   <button
                     type="button"
                     disabled={!user}
-                    onClick={() => handleOpenCreate("wordle")}
+                    onClick={() => handleLaunchSolo("wordle")}
                     className="w-full py-1.5 border border-white bg-white text-black font-bold text-[10px] uppercase hover:bg-neutral-200 transition-all cursor-pointer"
                   >
-                    [ PLAY ]
+                    [ ⚡ PLAY NOW ]
                   </button>
                 </div>
               </div>

@@ -207,6 +207,8 @@ export interface ArcadeMatch {
   game2048State?: Game2048State;
   snakeState?: SnakeState;
   wordleState?: WordleState;
+  chatMessages?: ArcadeChatMessage[];
+  recentReaction?: ArcadeReaction;
   createdAt: any;
   updatedAt: any;
 }
@@ -1283,23 +1285,30 @@ export async function passLudoTurn(matchId: string, playerUid: string): Promise<
   });
 }
 
-// ── In-Game Live Chat Engine (Whitelisted room_messages collection) ───────────
+// ── In-Game Live Chat Engine (Zero Permission Issues // Match Doc Sync) ───────
 export async function sendArcadeChatMessage(
   matchId: string,
   user: { uid: string; handle: string; avatar?: string },
   text: string
 ): Promise<void> {
   const db = getFirebaseDb();
-  const msgRef = collection(db, "room_messages");
-  const newDoc = doc(msgRef);
-  await setDoc(newDoc, {
-    roomId: matchId,
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) return;
+  const match = snap.data() as ArcadeMatch;
+  const currentMessages: ArcadeChatMessage[] = match.chatMessages || [];
+  const newMsg: ArcadeChatMessage = {
+    id: `${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
     uid: user.uid,
     handle: user.handle,
     avatar: user.avatar || "",
     text: text.trim(),
-    createdAt: Date.now(),
-    timestamp: serverTimestamp(),
+    timestamp: Date.now(),
+  };
+  const updatedMessages = [...currentMessages.slice(-49), newMsg];
+  await updateDoc(matchRef, {
+    chatMessages: updatedMessages,
+    updatedAt: serverTimestamp(),
   });
 }
 
@@ -1308,29 +1317,17 @@ export function subscribeArcadeChat(
   callback: (messages: ArcadeChatMessage[]) => void
 ): Unsubscribe {
   const db = getFirebaseDb();
-  const q = query(
-    collection(db, "room_messages"),
-    where("roomId", "==", matchId),
-    limit(50)
-  );
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
 
   return onSnapshot(
-    q,
+    matchRef,
     (snap) => {
-      const msgs: ArcadeChatMessage[] = snap.docs.map((d) => {
-        const data = d.data();
-        return {
-          id: d.id,
-          uid: data.uid,
-          handle: data.handle || "@ANON",
-          avatar: data.avatar || "",
-          text: data.text || "",
-          timestamp: data.createdAt || (data.timestamp ? data.timestamp.toMillis() : Date.now()),
-        };
-      });
-      // Client-side sort by timestamp
-      msgs.sort((a, b) => a.timestamp - b.timestamp);
-      callback(msgs);
+      if (!snap.exists()) {
+        callback([]);
+        return;
+      }
+      const data = snap.data() as ArcadeMatch;
+      callback(data.chatMessages || []);
     },
     (err) => {
       console.warn("[Arcade] chat listener note:", err.message);
@@ -1339,21 +1336,23 @@ export function subscribeArcadeChat(
   );
 }
 
-// ── Stage-Style Reaction Surge Engine (Whitelisted room_reactions collection) ──
+// ── Stage-Style Reaction Surge Engine (Match Doc Sync) ────────────────────────
 export async function sendArcadeReaction(
   matchId: string,
   user: { uid: string; handle: string },
   emoji: string
 ): Promise<void> {
   const db = getFirebaseDb();
-  const reactionRef = collection(db, "room_reactions");
-  await addDoc(reactionRef, {
-    roomId: matchId,
-    uid: user.uid,
-    handle: user.handle,
-    emoji,
-    createdAt: Date.now(),
-    timestamp: serverTimestamp(),
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  await updateDoc(matchRef, {
+    recentReaction: {
+      id: `${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      uid: user.uid,
+      handle: user.handle,
+      emoji,
+      timestamp: Date.now(),
+    },
+    updatedAt: serverTimestamp(),
   });
 }
 
@@ -1362,34 +1361,18 @@ export function subscribeArcadeReactions(
   callback: (reaction: ArcadeReaction) => void
 ): Unsubscribe {
   const db = getFirebaseDb();
-  const q = query(
-    collection(db, "room_reactions"),
-    where("roomId", "==", matchId),
-    limit(40)
-  );
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
 
-  let initialLoad = true;
+  let lastReactionId = "";
   return onSnapshot(
-    q,
+    matchRef,
     (snap) => {
-      if (initialLoad) {
-        initialLoad = false;
-        return;
+      if (!snap.exists()) return;
+      const data = snap.data() as ArcadeMatch;
+      if (data.recentReaction && data.recentReaction.id !== lastReactionId) {
+        lastReactionId = data.recentReaction.id;
+        callback(data.recentReaction);
       }
-      snap.docChanges().forEach((change) => {
-        if (change.type === "added") {
-          const data = change.doc.data();
-          if (data.emoji && data.uid) {
-            callback({
-              id: change.doc.id,
-              uid: data.uid,
-              handle: data.handle || "@ANON",
-              emoji: data.emoji,
-              timestamp: data.createdAt || Date.now(),
-            });
-          }
-        }
-      });
     },
     (err) => {
       console.warn("[Arcade] reaction listener note:", err.message);
