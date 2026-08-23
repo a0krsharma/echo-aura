@@ -17,7 +17,7 @@ import {
   ArrowLeft, ArrowUp, Volume2, Lock, Mic2, Users,
   MessageSquare, UserPlus, UserCheck, Share2, Radio,
   Play, Pause, Flame, X, Sparkles, Shield, Check,
-  Grid, Repeat2, Heart
+  Grid, Repeat2, Heart, Swords
 } from "lucide-react";
 import { collection, query, where, getDocs, limit, onSnapshot } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
@@ -30,6 +30,7 @@ import { useAuth } from "@/app/components/AuthProvider";
 import { ChatWidget } from "@/app/components/ChatWidget";
 import { getPlayableUrl } from "@/lib/cloudinary";
 import { isThoughtActive, getThoughtRemainingHours } from "@/lib/userDoc";
+import ChallengeModal from "@/app/components/ChallengeModal";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -258,6 +259,7 @@ export default function HandlePage({ params }: { params?: { handle?: string } })
   const [orbiting, setOrbiting] = useState(false);
   const [startingWire, setStartingWire] = useState(false);
   const [copiedShare, setCopiedShare] = useState(false);
+  const [showChallengeModal, setShowChallengeModal] = useState(false);
 
   // Followers & Following Lists
   const [followersList, setFollowersList] = useState<Follow[]>([]);
@@ -662,13 +664,13 @@ export default function HandlePage({ params }: { params?: { handle?: string } })
             )}
           </div>
 
-          {/* Action Row: [ ORBIT / ORBITING ], [ WIRE ] (Duplicate share button removed) */}
+          {/* Action Row: [ ORBIT / ORBITING ], [ WIRE ], [ CHALLENGE ] */}
           {!isOwnProfile && profile.uid !== "anon" && (
-            <div className="flex items-center gap-2 pt-2">
+            <div className="flex items-center gap-2 pt-2 flex-wrap sm:flex-nowrap">
               {user && (
                 <button
                   onClick={handleToggleOrbit}
-                  className={`flex-1 py-2 px-3 border font-mono text-xs font-bold tracking-wider uppercase transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
+                  className={`flex-1 py-2 px-3 border font-mono text-xs font-bold tracking-wider uppercase transition-colors cursor-pointer flex items-center justify-center gap-1.5 min-w-[100px] ${
                     orbiting
                       ? "border-neutral-800 bg-neutral-900 text-neutral-400 hover:border-neutral-600 hover:text-white"
                       : "border-white bg-white text-black hover:bg-neutral-200"
@@ -683,10 +685,21 @@ export default function HandlePage({ params }: { params?: { handle?: string } })
                 <button
                   onClick={handleStartWire}
                   disabled={startingWire}
-                  className="flex-1 py-2 px-3 border border-neutral-800 bg-neutral-900 hover:border-neutral-600 hover:bg-neutral-800 font-mono text-xs font-bold tracking-wider uppercase transition-colors cursor-pointer text-white disabled:opacity-30 flex items-center justify-center gap-1.5"
+                  className="flex-1 py-2 px-3 border border-neutral-800 bg-neutral-900 hover:border-neutral-600 hover:bg-neutral-800 font-mono text-xs font-bold tracking-wider uppercase transition-colors cursor-pointer text-white disabled:opacity-30 flex items-center justify-center gap-1.5 min-w-[90px]"
                 >
                   <MessageSquare size={14} />
                   <span>{startingWire ? "CONNECTING..." : "WIRE"}</span>
+                </button>
+              )}
+
+              {user && (
+                <button
+                  onClick={() => setShowChallengeModal(true)}
+                  className="flex-1 py-2 px-3 border border-red-800 hover:border-red-500 bg-red-950/40 hover:bg-red-900/60 font-mono text-xs font-bold tracking-wider uppercase transition-colors cursor-pointer text-red-400 hover:text-white flex items-center justify-center gap-1.5 min-w-[110px]"
+                  title={`Challenge ${displayHandle} to a live 1v1 debate clash`}
+                >
+                  <Swords size={14} />
+                  <span>CHALLENGE</span>
                 </button>
               )}
             </div>
@@ -819,6 +832,14 @@ export default function HandlePage({ params }: { params?: { handle?: string } })
       {canStartWire && (
         <ChatWidget targetUid={profile.uid} targetHandle={displayHandle} />
       )}
+
+      {/* 1v1 Stage Debate Challenge Modal */}
+      <ChallengeModal
+        isOpen={showChallengeModal}
+        onClose={() => setShowChallengeModal(false)}
+        defaultOpponentHandle={profile.handle || displayHandle}
+        defaultOpponentUid={profile.uid}
+      />
     </div>
   );
 }

@@ -40,6 +40,8 @@ export interface EchoNotification {
   postCaption?: string;
   roomId?:     string;
   roomName?:   string;
+  clashId?:    string;
+  clashTitle?: string;
   text:        string;
   read:        boolean;
   createdAt:   Timestamp | null;
@@ -61,6 +63,8 @@ export async function createNotification(
     postCaption?: string;
     roomId?:      string;
     roomName?:    string;
+    clashId?:     string;
+    clashTitle?:  string;
     text:         string;
   }
 ): Promise<void> {

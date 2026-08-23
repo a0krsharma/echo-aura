@@ -4,136 +4,11 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Swords, X, Users, Radio, Trash2, Share2 } from "lucide-react";
-import { subscribeToClashes, createClash, voteOnClash, deleteClash, type ClashItem } from "@/lib/clashes";
+import { subscribeToClashes, voteOnClash, deleteClash, type ClashItem } from "@/lib/clashes";
 import { useAuth } from "@/app/components/AuthProvider";
+import ChallengeModal from "@/app/components/ChallengeModal";
 
 function fmt(n: number): string { return n >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(n); }
-
-function ChallengeModal({ onClose }: { onClose: () => void }) {
-  const { user } = useAuth();
-  const router = useRouter();
-  const [handle, setHandle] = useState("");
-  const [topic, setTopic]   = useState("");
-  const [title, setTitle]   = useState("");
-  const [posA, setPosA]     = useState("");
-  const [posB, setPosB]     = useState("");
-  const [busy, setBusy]     = useState(false);
-
-  const canSend = topic.trim().length > 5 && posA.trim().length > 5 && posB.trim().length > 5;
-
-  async function handleSend() {
-    if (!canSend) return;
-    setBusy(true);
-    try {
-      const myHandle = user?.handle || "@YOU";
-      const newId = await createClash({
-        title: title || "LIVE STAGE DEBATE",
-        topic: topic.trim(),
-        handleA: myHandle,
-        posA: posA.trim(),
-        handleB: handle || "@CHALLENGER",
-        posB: posB.trim(),
-        creatorUid: user?.uid,
-        creatorHandle: myHandle,
-      });
-      onClose();
-      router.push(`/stage/${newId}`);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/90 backdrop-blur-sm animate-fade-in font-mono">
-      <div className="w-full max-w-md bg-black border border-white p-6 md:p-8 animate-slide-up space-y-4 shadow-2xl">
-        <div className="flex items-start justify-between border-b border-neutral-900 pb-3">
-          <div>
-            <p className="text-[10px] tracking-widest text-neutral-500 uppercase">// CHALLENGE TO [ STAGE ]</p>
-            <h2 className="text-sm font-bold text-white uppercase mt-0.5">SET DEBATE MOTION</h2>
-          </div>
-          <button onClick={onClose} className="text-neutral-500 hover:text-white transition-colors cursor-pointer p-1">
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className="space-y-3 text-xs">
-          <div>
-            <label className="text-[10px] tracking-widest text-neutral-500 block mb-1 uppercase">DEBATE TITLE</label>
-            <input
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              placeholder="e.g. AI VS HUMAN CREATIVITY"
-              className="w-full bg-neutral-950 border border-neutral-800 p-2.5 text-xs text-white placeholder-neutral-700 outline-none focus:border-white uppercase"
-            />
-          </div>
-
-          <div>
-            <label className="text-[10px] tracking-widest text-neutral-500 block mb-1 uppercase">OPPONENT HANDLE</label>
-            <input
-              value={handle}
-              onChange={e => setHandle(e.target.value)}
-              placeholder="@HANDLE"
-              className="w-full bg-neutral-950 border border-neutral-800 p-2.5 text-xs text-white placeholder-neutral-700 outline-none focus:border-white uppercase"
-            />
-          </div>
-
-          <div>
-            <label className="text-[10px] tracking-widest text-neutral-500 block mb-1 uppercase">DEBATE TOPIC / MOTION</label>
-            <textarea
-              value={topic}
-              onChange={e => setTopic(e.target.value)}
-              placeholder="State the debate question..."
-              rows={2}
-              className="w-full bg-neutral-950 border border-neutral-800 p-2.5 text-xs text-white placeholder-neutral-700 outline-none focus:border-white resize-none"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="text-[9px] tracking-widest text-neutral-500 block mb-1 uppercase">SIDE A STANCE</label>
-              <textarea
-                value={posA}
-                onChange={e => setPosA(e.target.value)}
-                placeholder="Side A stance..."
-                rows={2}
-                className="w-full bg-neutral-950 border border-neutral-800 p-2 text-xs text-white placeholder-neutral-700 outline-none focus:border-white resize-none"
-              />
-            </div>
-            <div>
-              <label className="text-[9px] tracking-widest text-neutral-500 block mb-1 uppercase">SIDE B STANCE</label>
-              <textarea
-                value={posB}
-                onChange={e => setPosB(e.target.value)}
-                placeholder="Side B stance..."
-                rows={2}
-                className="w-full bg-neutral-950 border border-neutral-800 p-2 text-xs text-white placeholder-neutral-700 outline-none focus:border-white resize-none"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-neutral-900">
-          <button
-            onClick={onClose}
-            className="text-xs tracking-widest uppercase text-neutral-500 hover:text-white transition-colors cursor-pointer"
-          >
-            CANCEL
-          </button>
-          <button
-            disabled={!canSend || busy}
-            onClick={handleSend}
-            className="flex items-center gap-2 text-xs tracking-widest uppercase border border-white bg-white text-black font-bold px-5 py-2.5 hover:bg-neutral-200 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            <Swords size={13} strokeWidth={2.5} />
-            <span>{busy ? "INITIALIZING..." : "[ LAUNCH DEBATE ]"}</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function StagePage() {
   const { user } = useAuth();
@@ -180,7 +55,7 @@ export default function StagePage() {
 
   return (
     <div className="min-h-screen bg-black text-white pb-28 md:pb-12 font-mono">
-      {showChallenge && <ChallengeModal onClose={() => setShowChallenge(false)} />}
+      <ChallengeModal isOpen={showChallenge} onClose={() => setShowChallenge(false)} />
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-8 space-y-8 w-full">
         {/* Top Header */}

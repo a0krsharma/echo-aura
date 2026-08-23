@@ -25,6 +25,7 @@ import {
   type Timestamp,
 } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
+import { createNotification } from "@/lib/notifications";
 
 export interface ClashItem {
   id:           string;
@@ -32,10 +33,13 @@ export interface ClashItem {
   topic:        string;
   creatorUid?:  string;
   creatorHandle?: string;
+  targetUid?:   string;
+  targetHandle?: string;
   sideA:        { handle: string; uid?: string; position: string; votes: number };
   sideB:        { handle: string; uid?: string; position: string; votes: number };
   listeners:    number;
   status:       "live" | "upcoming" | "ended";
+  scheduledFor?: Timestamp | null;
   createdAt:    Timestamp | null;
   // Timer fields
   timerEnabled: boolean;
@@ -66,7 +70,7 @@ export interface ClashQuestion {
 
 /**
  * createClash
- * Launch a live clash/debate doc in Firestore.
+ * Launch a live or scheduled clash/debate doc in Firestore.
  */
 export async function createClash(data: {
   title:    string;
@@ -77,18 +81,24 @@ export async function createClash(data: {
   posB:     string;
   creatorUid?: string;
   creatorHandle?: string;
+  targetUid?: string;
+  status?: "live" | "upcoming";
+  scheduledFor?: Timestamp | null;
   timerDuration?: number; // Optional timer duration in seconds
 }): Promise<string> {
   const db = getFirebaseDb();
   const docRef = await addDoc(collection(db, "clashes"), {
-    title:     data.title,
+    title:     data.title || "LIVE STAGE DEBATE",
     topic:     data.topic,
     creatorUid: data.creatorUid || null,
     creatorHandle: data.creatorHandle || data.handleA || null,
-    sideA:     { handle: data.handleA, position: data.posA, votes: 0 },
-    sideB:     { handle: data.handleB, position: data.posB, votes: 0 },
+    targetUid: data.targetUid || null,
+    targetHandle: data.handleB || null,
+    sideA:     { handle: data.handleA, position: data.posA || "IN FAVOR / PRO", votes: 0 },
+    sideB:     { handle: data.handleB, position: data.posB || "AGAINST / CON", votes: 0 },
     listeners: 1,
-    status:    "live",
+    status:    data.status || "live",
+    scheduledFor: data.scheduledFor || null,
     createdAt: serverTimestamp(),
     // Timer fields
     timerEnabled: !!data.timerDuration,
@@ -102,6 +112,32 @@ export async function createClash(data: {
     qaEnabled: false,
     qaModerated: true,
   });
+
+  // Notify opponent if targetUid or handleB is available
+  try {
+    let opponentUid = data.targetUid;
+    if (!opponentUid && data.handleB && data.handleB !== "@CHALLENGER") {
+      const cleanHandle = data.handleB.replace(/^@/, "").toLowerCase();
+      const uQ = query(collection(db, "users"), where("handle", "==", cleanHandle), limit(1));
+      const uSnap = await getDocs(uQ);
+      if (!uSnap.empty) {
+        opponentUid = uSnap.docs[0].id;
+      }
+    }
+
+    if (opponentUid && data.creatorUid && opponentUid !== data.creatorUid) {
+      await createNotification(opponentUid, {
+        type: "stage",
+        fromUid: data.creatorUid,
+        fromHandle: data.creatorHandle || data.handleA || "@CREATOR",
+        clashId: docRef.id,
+        clashTitle: data.title,
+        text: `challenged you to a live 1v1 debate: "${data.topic}"`,
+      });
+    }
+  } catch (err) {
+    console.warn("[Clashes] Error sending opponent challenge notification:", err);
+  }
 
   return docRef.id;
 }

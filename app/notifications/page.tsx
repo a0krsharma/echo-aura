@@ -141,7 +141,7 @@ export default function NotificationsPage() {
     } else if (notif.type === "wire" || notif.type === "whisper") {
       router.push("/wire");
     } else if (notif.type === "stage") {
-      router.push("/clash");
+      router.push(notif.clashId ? `/stage/${notif.clashId}` : "/clash");
     } else if (notif.postId) {
       router.push(`/#${notif.postId}`);
     } else if (notif.type === "orbiter") {
@@ -292,11 +292,15 @@ export default function NotificationsPage() {
                       </span>
                     </div>
 
-                    {notif.postCaption && (
+                    {notif.text ? (
+                      <p className="font-mono text-neutral-300 text-xs leading-snug">
+                        {notif.text}
+                      </p>
+                    ) : notif.postCaption ? (
                       <p className="font-mono text-neutral-400 text-xs leading-snug truncate">
                         "{notif.postCaption}"
                       </p>
-                    )}
+                    ) : null}
 
                     <p className="font-mono text-[9px] text-neutral-600 tracking-widest uppercase">
                       {timeAgo(notif.createdAt)}
@@ -335,6 +339,16 @@ export default function NotificationsPage() {
                       onClick={(e) => { e.stopPropagation(); handleMarkOne(notif); }}
                     >
                       [ 📻 ROOM ]
+                    </Link>
+                  )}
+
+                  {notif.type === "stage" && (
+                    <Link
+                      href={notif.clashId ? `/stage/${notif.clashId}` : "/clash"}
+                      className="font-mono text-[9px] border border-red-800 bg-red-950/60 text-red-300 font-bold px-2 py-1 uppercase tracking-wider hover:bg-red-900 hover:text-white transition-colors shrink-0"
+                      onClick={(e) => { e.stopPropagation(); handleMarkOne(notif); }}
+                    >
+                      [ ⚔️ JOIN DEBATE ]
                     </Link>
                   )}
 
