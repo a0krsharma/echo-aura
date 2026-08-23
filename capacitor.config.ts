@@ -6,6 +6,8 @@ const config: CapacitorConfig = {
   webDir: 'out',
 
   server: {
+    // Live Production Endpoint for instant OTA updates without APK re-installs
+    url: 'https://echo-aura.vercel.app',
     allowNavigation: [
       '*.firebaseapp.com',
       '*.firebase.google.com',
@@ -17,44 +19,25 @@ const config: CapacitorConfig = {
       '*.agora.io',
       '*.edge.agora.io',
       '*.agoraio.cn',
+      '*.spotify.com',
+      'open.spotify.com',
+      'echo-aura.vercel.app',
     ],
     cleartext: false,
   },
 
   android: {
-    allowMixedContent:           false,
+    allowMixedContent: true,
     webContentsDebuggingEnabled: false,
-    backgroundColor:             '#000000',
-  },
-
-  ios: {
     backgroundColor: '#000000',
-    contentInset:    'automatic',
-    scrollEnabled:   true,
   },
 
   plugins: {
     SplashScreen: {
-      launchShowDuration:         1200,
-      backgroundColor:            '#000000',
-      showSpinner:                false,
-      androidSplashResourceName:  'splash',
-      androidScaleType:           'CENTER_CROP',
+      launchShowDuration: 1200,
+      backgroundColor: '#000000',
+      showSpinner: false,
     },
-
-    Keyboard: {
-      resize:             'body' as any,
-      resizeOnFullScreen: true,
-    },
-
-    // Native Google Sign-In — shows device account picker on Android
-    GoogleAuth: {
-      scopes:                  ['profile', 'email'],
-      serverClientId:          '29569599076-kco7vvdltgv52fjr92qbjq3a6og1321g.apps.googleusercontent.com',
-      clientId:                '29569599076-kco7vvdltgv52fjr92qbjq3a6og1321g.apps.googleusercontent.com',
-      androidClientId:         '29569599076-kco7vvdltgv52fjr92qbjq3a6og1321g.apps.googleusercontent.com',
-      forceCodeForRefreshToken: true,
-    } as any,
   },
 };
 
