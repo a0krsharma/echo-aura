@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { soundSynth } from "@/lib/soundSynthesizer";
 import { updateSnakeScore, type ArcadeMatch } from "@/lib/arcade";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
-import { Trophy, Play, RefreshCw, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from "lucide-react";
+import { Trophy, Play, RefreshCw, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Gauge } from "lucide-react";
 
 interface SnakeGameProps {
   match: ArcadeMatch;
@@ -14,7 +14,16 @@ interface SnakeGameProps {
 
 const GRID_SIZE = 20;
 
+type Difficulty = "EASY" | "MEDIUM" | "HARD";
+
+const DIFFICULTY_CONFIG: Record<Difficulty, { speedMs: number; multiplier: number; label: string; desc: string }> = {
+  EASY: { speedMs: 180, multiplier: 1, label: "EASY (RELAXED)", desc: "180ms // 1x Points" },
+  MEDIUM: { speedMs: 110, multiplier: 2, label: "MEDIUM (TACTICAL)", desc: "110ms // 2x Points" },
+  HARD: { speedMs: 65, multiplier: 3, label: "HARD (HYPER DRIVE)", desc: "65ms // 3x Points" },
+};
+
 export default function SnakeGame({ match, currentUid }: SnakeGameProps) {
+  const [difficulty, setDifficulty] = useState<Difficulty>("MEDIUM");
   const [snake, setSnake] = useState<[number, number][]>([
     [10, 10],
     [10, 11],
@@ -23,11 +32,15 @@ export default function SnakeGame({ match, currentUid }: SnakeGameProps) {
   const [food, setFood] = useState<[number, number]>([5, 5]);
   const [direction, setDirection] = useState<"UP" | "DOWN" | "LEFT" | "RIGHT">("UP");
   const [score, setScore] = useState<number>(0);
+  const [highScore, setHighScore] = useState<number>(0);
   const [isGameOver, setIsGameOver] = useState<boolean>(false);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
 
   const directionRef = useRef(direction);
   directionRef.current = direction;
+
+  const difficultyRef = useRef(difficulty);
+  difficultyRef.current = difficulty;
 
   const spawnFood = (currentSnake: [number, number][]): [number, number] => {
     while (true) {
@@ -94,7 +107,12 @@ export default function SnakeGame({ match, currentUid }: SnakeGameProps) {
       // Food collision
       if (newHead[0] === food[0] && newHead[1] === food[1]) {
         soundSynth.playSubtlePop();
-        setScore((s) => s + 10);
+        const points = 10 * DIFFICULTY_CONFIG[difficultyRef.current].multiplier;
+        setScore((s) => {
+          const next = s + points;
+          if (next > highScore) setHighScore(next);
+          return next;
+        });
         setFood(spawnFood(newSnake));
       } else {
         newSnake.pop();
@@ -102,13 +120,14 @@ export default function SnakeGame({ match, currentUid }: SnakeGameProps) {
 
       return newSnake;
     });
-  }, [isPlaying, isGameOver, food, score, match.id, currentUid]);
+  }, [isPlaying, isGameOver, food, score, highScore, match.id, currentUid]);
 
   useEffect(() => {
     if (!isPlaying || isGameOver) return;
-    const interval = setInterval(step, 130);
+    const speed = DIFFICULTY_CONFIG[difficulty].speedMs;
+    const interval = setInterval(step, speed);
     return () => clearInterval(interval);
-  }, [isPlaying, isGameOver, step]);
+  }, [isPlaying, isGameOver, difficulty, step]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -127,11 +146,50 @@ export default function SnakeGame({ match, currentUid }: SnakeGameProps) {
       {/* Header */}
       <div className="flex items-center justify-between border-b-2 border-white pb-2 text-xs">
         <span className="font-extrabold uppercase tracking-widest text-white">
-          // SNAKE [ PHOSPHOR TERMINAL PROTOCOL ]
+          // SNAKE [ PHOSPHOR TERMINAL ]
         </span>
-        <span className="px-2 py-0.5 border border-white bg-white text-black font-extrabold">
-          SCORE: {score}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-neutral-400">
+            HI: <span className="text-white font-bold">{highScore}</span>
+          </span>
+          <span className="px-2 py-0.5 border border-white bg-white text-black font-extrabold">
+            SCORE: {score}
+          </span>
+        </div>
+      </div>
+
+      {/* Difficulty Selector Chips */}
+      <div className="space-y-1">
+        <div className="flex items-center justify-between text-[10px] text-neutral-400 font-bold uppercase">
+          <span className="flex items-center gap-1">
+            <Gauge className="w-3 h-3 text-white" />
+            <span>VELOCITY MODE:</span>
+          </span>
+          <span className="text-white font-mono">{DIULTY_LABEL(difficulty)}</span>
+        </div>
+        <div className="grid grid-cols-3 gap-1.5">
+          {(["EASY", "MEDIUM", "HARD"] as Difficulty[]).map((diff) => {
+            const isSel = difficulty === diff;
+            return (
+              <button
+                key={diff}
+                type="button"
+                disabled={isPlaying}
+                onClick={() => {
+                  setDifficulty(diff);
+                  soundSynth.playSubtlePop();
+                }}
+                className={`py-1.5 text-center font-bold text-[10px] uppercase border transition-all cursor-pointer disabled:opacity-40 ${
+                  isSel
+                    ? "border-white bg-white text-black font-extrabold shadow-[0_0_10px_#fff]"
+                    : "border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-600 hover:text-white"
+                }`}
+              >
+                {diff === "EASY" ? "🟢 EASY" : diff === "MEDIUM" ? "🟡 MEDIUM" : "🔴 HARD"}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Snake Grid */}
@@ -168,18 +226,33 @@ export default function SnakeGame({ match, currentUid }: SnakeGameProps) {
         </div>
 
         {!isPlaying && (
-          <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center p-4 space-y-3">
-            {isGameOver && (
-              <p className="text-white font-extrabold text-sm uppercase">
-                💥 TERMINAL CRASH // SCORE: {score}
-              </p>
+          <div className="absolute inset-0 bg-black/85 flex flex-col items-center justify-center p-4 space-y-3">
+            {isGameOver ? (
+              <div className="text-center space-y-1">
+                <p className="text-white font-extrabold text-sm uppercase">
+                  💥 TERMINAL CRASH // SCORE: {score}
+                </p>
+                <p className="text-[10px] text-neutral-400 uppercase">
+                  MODE: {difficulty} ({DIFFICULTY_CONFIG[difficulty].multiplier}X MULTIPLIER)
+                </p>
+              </div>
+            ) : (
+              <div className="text-center space-y-1">
+                <p className="text-white font-extrabold text-sm uppercase tracking-wider">
+                  SNAKE ARENA READY
+                </p>
+                <p className="text-[10px] text-neutral-400">
+                  Select speed above & use Arrow keys / D-Pad
+                </p>
+              </div>
             )}
+
             <button
               type="button"
               onClick={handleStart}
-              className="px-6 py-2.5 border-2 border-white bg-white text-black hover:bg-black hover:text-white font-extrabold text-xs uppercase transition-all cursor-pointer shadow-xl"
+              className="px-6 py-2.5 border-2 border-white bg-white text-black hover:bg-black hover:text-white font-extrabold text-xs uppercase transition-all cursor-pointer shadow-xl active:scale-95"
             >
-              {isGameOver ? "[ RETRY PROTOCOL 🔄 ]" : "[ START SNAKE 🐍 ]"}
+              {isGameOver ? "[ RETRY PROTOCOL 🔄 ]" : `[ START (${difficulty}) 🐍 ]`}
             </button>
           </div>
         )}
@@ -222,4 +295,8 @@ export default function SnakeGame({ match, currentUid }: SnakeGameProps) {
       <ArcadeSocialDeck match={match} currentUid={currentUid} />
     </div>
   );
+}
+
+function DIULTY_LABEL(diff: Difficulty) {
+  return DIFFICULTY_CONFIG[diff].desc;
 }
