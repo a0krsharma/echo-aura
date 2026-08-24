@@ -5,7 +5,8 @@ import { soundSynth } from "@/lib/soundSynthesizer";
 import { rollYahtzeeDice, type ArcadeMatch } from "@/lib/arcade";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
-import { Trophy, Share2, Sparkles, Dices, Lock } from "lucide-react";
+import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
+import { Trophy, Share2, Sparkles, Dices, Lock, HelpCircle } from "lucide-react";
 
 interface YahtzeeGameProps {
   match: ArcadeMatch;
@@ -15,6 +16,7 @@ interface YahtzeeGameProps {
 
 export default function YahtzeeGame({ match, currentUid }: YahtzeeGameProps) {
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const [locked, setLocked] = useState<boolean[]>([false, false, false, false, false]);
 
   const ys = match.yahtzeeState;
@@ -49,6 +51,14 @@ export default function YahtzeeGame({ match, currentUid }: YahtzeeGameProps) {
           // YAHTZEE [ DICE PROTOCOL ]
         </span>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setRulesOpen(true)}
+            className="px-2 py-0.5 border border-white bg-black hover:bg-white hover:text-black font-black uppercase text-[10px] transition-all flex items-center gap-1 cursor-pointer"
+          >
+            <HelpCircle className="w-3 h-3" />
+            <span>[ ❓ RULES ]</span>
+          </button>
           <button
             type="button"
             onClick={() => setInviteOpen(true)}
@@ -111,6 +121,12 @@ export default function YahtzeeGame({ match, currentUid }: YahtzeeGameProps) {
           <span className="truncate uppercase font-bold">{ys.lastActionLog}</span>
         </div>
       )}
+
+      <ArcadeGameRulesModal
+        isOpen={rulesOpen}
+        onClose={() => setRulesOpen(false)}
+        initialGameType="yahtzee"
+      />
 
       <ArcadeInviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} match={match} />
       <ArcadeSocialDeck match={match} currentUid={currentUid} />

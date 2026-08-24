@@ -6,7 +6,8 @@ import { fireBattleshipShot, type ArcadeMatch } from "@/lib/arcade";
 import { executeBattleshipBotTurn } from "@/lib/arcadeBots";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
-import { Trophy, Crosshair, Share2, Sparkles, Shield } from "lucide-react";
+import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
+import { Trophy, Crosshair, Share2, Sparkles, Shield, HelpCircle } from "lucide-react";
 
 interface BattleshipGameProps {
   match: ArcadeMatch;
@@ -16,6 +17,7 @@ interface BattleshipGameProps {
 
 export default function BattleshipGame({ match, currentUid }: BattleshipGameProps) {
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const bs = match.battleshipState;
   if (!bs) return <div className="text-white font-mono p-4">Loading Radar Command...</div>;
 
@@ -73,6 +75,14 @@ export default function BattleshipGame({ match, currentUid }: BattleshipGameProp
           </span>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setRulesOpen(true)}
+            className="px-2.5 py-1 border border-white bg-black hover:bg-white hover:text-black font-black uppercase text-[10px] transition-all flex items-center gap-1 cursor-pointer"
+          >
+            <HelpCircle className="w-3 h-3" />
+            <span>[ ❓ RULES ]</span>
+          </button>
           <button
             type="button"
             onClick={() => setInviteOpen(true)}
@@ -192,6 +202,12 @@ export default function BattleshipGame({ match, currentUid }: BattleshipGameProp
           </p>
         </div>
       )}
+
+      <ArcadeGameRulesModal
+        isOpen={rulesOpen}
+        onClose={() => setRulesOpen(false)}
+        initialGameType="battleship"
+      />
 
       <ArcadeInviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} match={match} />
       <ArcadeSocialDeck match={match} currentUid={currentUid} />

@@ -5,7 +5,8 @@ import { soundSynth } from "@/lib/soundSynthesizer";
 import { submitSkribblStroke, submitSkribblGuess, type ArcadeMatch } from "@/lib/arcade";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
-import { Trophy, Share2, Sparkles, Paintbrush, Send } from "lucide-react";
+import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
+import { Trophy, Share2, Sparkles, Paintbrush, Send, HelpCircle } from "lucide-react";
 
 interface SkribblGameProps {
   match: ArcadeMatch;
@@ -18,6 +19,7 @@ const CANVAS_HEIGHT = 280;
 
 export default function SkribblGame({ match, currentUid }: SkribblGameProps) {
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const [guessInput, setGuessInput] = useState("");
   const [isDrawing, setIsDrawing] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -102,6 +104,14 @@ export default function SkribblGame({ match, currentUid }: SkribblGameProps) {
         <div className="flex items-center gap-2">
           <button
             type="button"
+            onClick={() => setRulesOpen(true)}
+            className="px-2 py-0.5 border border-white bg-black hover:bg-white hover:text-black font-black uppercase text-[10px] transition-all flex items-center gap-1 cursor-pointer"
+          >
+            <HelpCircle className="w-3 h-3" />
+            <span>[ ❓ RULES ]</span>
+          </button>
+          <button
+            type="button"
             onClick={() => setInviteOpen(true)}
             className="px-2 py-0.5 border border-white hover:bg-white hover:text-black font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
           >
@@ -167,6 +177,12 @@ export default function SkribblGame({ match, currentUid }: SkribblGameProps) {
           <span className="truncate uppercase font-bold">{ss.lastActionLog}</span>
         </div>
       )}
+
+      <ArcadeGameRulesModal
+        isOpen={rulesOpen}
+        onClose={() => setRulesOpen(false)}
+        initialGameType="skribbl"
+      />
 
       <ArcadeInviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} match={match} />
       <ArcadeSocialDeck match={match} currentUid={currentUid} />

@@ -6,7 +6,8 @@ import { dropConnect4Token, type ArcadeMatch } from "@/lib/arcade";
 import { executeConnect4BotTurn } from "@/lib/arcadeBots";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
-import { Trophy, Zap, Share2, Sparkles, CircleDot } from "lucide-react";
+import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
+import { Trophy, Zap, Share2, Sparkles, CircleDot, HelpCircle } from "lucide-react";
 
 interface Connect4GameProps {
   match: ArcadeMatch;
@@ -16,6 +17,7 @@ interface Connect4GameProps {
 
 export default function Connect4Game({ match, currentUid }: Connect4GameProps) {
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const [droppingCol, setDroppingCol] = useState<number | null>(null);
 
   const c4 = match.connect4State;
@@ -71,6 +73,14 @@ export default function Connect4Game({ match, currentUid }: Connect4GameProps) {
           </span>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setRulesOpen(true)}
+            className="px-2.5 py-1 border border-white bg-black hover:bg-white hover:text-black font-black uppercase text-[10px] transition-all flex items-center gap-1 cursor-pointer"
+          >
+            <HelpCircle className="w-3 h-3" />
+            <span>[ ❓ RULES ]</span>
+          </button>
           <button
             type="button"
             onClick={() => setInviteOpen(true)}
@@ -153,6 +163,12 @@ export default function Connect4Game({ match, currentUid }: Connect4GameProps) {
           </p>
         </div>
       )}
+
+      <ArcadeGameRulesModal
+        isOpen={rulesOpen}
+        onClose={() => setRulesOpen(false)}
+        initialGameType="connect4"
+      />
 
       <ArcadeInviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} match={match} />
       <ArcadeSocialDeck match={match} currentUid={currentUid} />

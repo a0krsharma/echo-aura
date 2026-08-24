@@ -5,7 +5,8 @@ import { soundSynth } from "@/lib/soundSynthesizer";
 import { submitNPATEntry, type ArcadeMatch } from "@/lib/arcade";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
-import { Trophy, Share2, Sparkles, FileText, Send } from "lucide-react";
+import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
+import { Trophy, Share2, Sparkles, FileText, Send, HelpCircle } from "lucide-react";
 
 interface NPATGameProps {
   match: ArcadeMatch;
@@ -15,6 +16,7 @@ interface NPATGameProps {
 
 export default function NPATGame({ match, currentUid }: NPATGameProps) {
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const [name, setName] = useState("");
   const [place, setPlace] = useState("");
   const [animal, setAnimal] = useState("");
@@ -47,6 +49,14 @@ export default function NPATGame({ match, currentUid }: NPATGameProps) {
           // NAME, PLACE, ANIMAL, THING [ NPAT ]
         </span>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setRulesOpen(true)}
+            className="px-2 py-0.5 border border-white bg-black hover:bg-white hover:text-black font-black uppercase text-[10px] transition-all flex items-center gap-1 cursor-pointer"
+          >
+            <HelpCircle className="w-3 h-3" />
+            <span>[ ❓ RULES ]</span>
+          </button>
           <button
             type="button"
             onClick={() => setInviteOpen(true)}
@@ -148,6 +158,12 @@ export default function NPATGame({ match, currentUid }: NPATGameProps) {
           <span className="truncate uppercase font-bold">{ns.lastActionLog}</span>
         </div>
       )}
+
+      <ArcadeGameRulesModal
+        isOpen={rulesOpen}
+        onClose={() => setRulesOpen(false)}
+        initialGameType="npat"
+      />
 
       <ArcadeInviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} match={match} />
       <ArcadeSocialDeck match={match} currentUid={currentUid} />

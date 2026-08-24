@@ -5,7 +5,8 @@ import { soundSynth } from "@/lib/soundSynthesizer";
 import { selectCodenamesCard, type ArcadeMatch } from "@/lib/arcade";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
-import { Trophy, Share2, Sparkles, Shield, Eye } from "lucide-react";
+import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
+import { Trophy, Share2, Sparkles, Shield, Eye, HelpCircle } from "lucide-react";
 
 interface CodenamesGameProps {
   match: ArcadeMatch;
@@ -22,6 +23,7 @@ const TYPE_STYLES: Record<string, string> = {
 
 export default function CodenamesGame({ match, currentUid, isHost }: CodenamesGameProps) {
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const [isSpymasterView, setIsSpymasterView] = useState(false);
 
   const cs = match.codenamesState;
@@ -47,6 +49,14 @@ export default function CodenamesGame({ match, currentUid, isHost }: CodenamesGa
           // CODENAMES [ DECRYPTION GRID ]
         </span>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setRulesOpen(true)}
+            className="px-2 py-0.5 border border-white bg-black hover:bg-white hover:text-black font-black uppercase text-[10px] transition-all flex items-center gap-1 cursor-pointer"
+          >
+            <HelpCircle className="w-3 h-3" />
+            <span>[ ❓ RULES ]</span>
+          </button>
           <button
             type="button"
             onClick={() => setInviteOpen(true)}
@@ -116,6 +126,12 @@ export default function CodenamesGame({ match, currentUid, isHost }: CodenamesGa
           </p>
         </div>
       )}
+
+      <ArcadeGameRulesModal
+        isOpen={rulesOpen}
+        onClose={() => setRulesOpen(false)}
+        initialGameType="codenames"
+      />
 
       <ArcadeInviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} match={match} />
       <ArcadeSocialDeck match={match} currentUid={currentUid} />

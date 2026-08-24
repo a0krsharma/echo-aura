@@ -5,6 +5,7 @@ import { soundSynth } from "@/lib/soundSynthesizer";
 import { guessHangmanLetter, type ArcadeMatch } from "@/lib/arcade";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
+import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
 import { Trophy, Share2, Sparkles, HelpCircle } from "lucide-react";
 
 interface HangmanGameProps {
@@ -74,6 +75,7 @@ const GALLOWS_STAGES = [
 
 export default function HangmanGame({ match, currentUid }: HangmanGameProps) {
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const hs = match.hangmanState;
   if (!hs) return <div className="text-white font-mono p-4">Loading Word Scaffold...</div>;
 
@@ -103,6 +105,14 @@ export default function HangmanGame({ match, currentUid }: HangmanGameProps) {
           // HANGMAN [ WORD SCAFFOLD ]
         </span>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setRulesOpen(true)}
+            className="px-2 py-0.5 border border-white bg-black hover:bg-white hover:text-black font-black uppercase text-[10px] transition-all flex items-center gap-1 cursor-pointer"
+          >
+            <HelpCircle className="w-3 h-3" />
+            <span>[ ❓ RULES ]</span>
+          </button>
           <button
             type="button"
             onClick={() => setInviteOpen(true)}
@@ -181,6 +191,12 @@ export default function HangmanGame({ match, currentUid }: HangmanGameProps) {
           </p>
         </div>
       )}
+
+      <ArcadeGameRulesModal
+        isOpen={rulesOpen}
+        onClose={() => setRulesOpen(false)}
+        initialGameType="hangman"
+      />
 
       <ArcadeInviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} match={match} />
       <ArcadeSocialDeck match={match} currentUid={currentUid} />

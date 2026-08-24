@@ -5,7 +5,8 @@ import { soundSynth } from "@/lib/soundSynthesizer";
 import { buzzMelodyTrack, type ArcadeMatch } from "@/lib/arcade";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
-import { Trophy, Share2, Sparkles, Music, BellRing } from "lucide-react";
+import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
+import { Trophy, Share2, Sparkles, Music, BellRing, HelpCircle } from "lucide-react";
 
 interface MelodyBuzzerGameProps {
   match: ArcadeMatch;
@@ -15,6 +16,7 @@ interface MelodyBuzzerGameProps {
 
 export default function MelodyBuzzerGame({ match, currentUid }: MelodyBuzzerGameProps) {
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const ms = match.melodyBuzzerState;
   if (!ms) return <div className="text-white font-mono p-4">Loading Melody Buzzer...</div>;
 
@@ -42,6 +44,14 @@ export default function MelodyBuzzerGame({ match, currentUid }: MelodyBuzzerGame
           // MELODY HUMMER [ SPEED BUZZER ]
         </span>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setRulesOpen(true)}
+            className="px-2 py-0.5 border border-white bg-black hover:bg-white hover:text-black font-black uppercase text-[10px] transition-all flex items-center gap-1 cursor-pointer"
+          >
+            <HelpCircle className="w-3 h-3" />
+            <span>[ ❓ RULES ]</span>
+          </button>
           <button
             type="button"
             onClick={() => setInviteOpen(true)}
@@ -110,6 +120,12 @@ export default function MelodyBuzzerGame({ match, currentUid }: MelodyBuzzerGame
           <span className="truncate uppercase font-bold">{ms.lastActionLog}</span>
         </div>
       )}
+
+      <ArcadeGameRulesModal
+        isOpen={rulesOpen}
+        onClose={() => setRulesOpen(false)}
+        initialGameType="melody_buzzer"
+      />
 
       <ArcadeInviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} match={match} />
       <ArcadeSocialDeck match={match} currentUid={currentUid} />
