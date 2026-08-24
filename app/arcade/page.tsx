@@ -22,8 +22,6 @@ import WordleGame from "@/app/components/arcade/WordleGame";
 import PoolGame from "@/app/components/arcade/PoolGame";
 import CarromGame from "@/app/components/arcade/CarromGame";
 import GlowHockeyGame from "@/app/components/arcade/GlowHockeyGame";
-import GomokuGame from "@/app/components/arcade/GomokuGame";
-import ReversiGame from "@/app/components/arcade/ReversiGame";
 import DotsAndBoxesGame from "@/app/components/arcade/DotsAndBoxesGame";
 import SnakesLaddersGame from "@/app/components/arcade/SnakesLaddersGame";
 import Puzzle15Game from "@/app/components/arcade/Puzzle15Game";
@@ -112,21 +110,19 @@ const MASTER_50_GAMES: MasterRankedGame[] = [
   { rank: 17, id: "sudoku", name: "Sudoku Data Matrix", category: "PUZZLE", categoryLabel: "Solo Logic", icon: "🧩", mechanic: "9x9 number-placement puzzle with zero calculation errors.", isPlayable: true },
   { rank: 18, id: "2048", name: "2048 Binary Merge", category: "PUZZLE", categoryLabel: "Tile Merge", icon: "🔢", mechanic: "Merging powers-of-two tiles along a 4x4 sliding grid.", isPlayable: true },
   { rank: 19, id: "glow_hockey", name: "Glow Hockey", category: "PHYSICS", categoryLabel: "Fast 2D Physics", icon: "⚡", mechanic: "Neon paddle deflection and puck striking duels.", isPlayable: true },
-  { rank: 20, id: "gomoku", name: "Gomoku (5 in a Row)", category: "TACTICAL", categoryLabel: "15x15 Matrix", icon: "⬛", mechanic: "Connecting five consecutive stones on grid intersections.", isPlayable: true },
-  { rank: 21, id: "reversi", name: "Reversi / Othello", category: "TACTICAL", categoryLabel: "Disk Flipping", icon: "🔄", mechanic: "Flanking opponent disks to flip them to your color.", isPlayable: true },
-  { rank: 22, id: "dots_and_boxes", name: "Dots and Boxes (Dabba)", category: "TACTICAL", categoryLabel: "Territory Grid", icon: "🕸️", mechanic: "Drawing lines between nodes to complete 4-sided captured boxes.", isPlayable: true },
-  { rank: 23, id: "hangman", name: "Hangman Word Scaffold", category: "PAPER", categoryLabel: "Word Deduction", icon: "🔤", mechanic: "Guessing secret phrase letters before gallows limbs appear.", isPlayable: true },
-  { rank: 24, id: "math_blitz", name: "Arithmetic Math Blitz", category: "PUZZLE", categoryLabel: "Math Speed Duel", icon: "⚡", mechanic: "Rapid 1v1 mental math speed battle with 3s timers.", isPlayable: true },
-  { rank: 25, id: "wordle", name: "Wordle / Cipher", category: "PUZZLE", categoryLabel: "Linguistic Strategy", icon: "🔐", mechanic: "Deduce 5-letter cipher with color feedback.", isPlayable: true },
-  { rank: 26, id: "skribbl", name: "Skribbl / Pictionary", category: "PARTY", categoryLabel: "Vector Canvas", icon: "🎨", mechanic: "Vector path drawing with live open-mic guessing.", isPlayable: true },
-  { rank: 27, id: "codenames", name: "Codenames Decryption", category: "PARTY", categoryLabel: "Deduction Grid", icon: "🕵️", mechanic: "5x5 operative word grid decryption via one-word clues.", isPlayable: true },
-  { rank: 28, id: "twenty_questions", name: "20 Questions / Decryption", category: "PARTY", categoryLabel: "Verbal Deduction", icon: "❓", mechanic: "Yes/No interrogations to identify a hidden entity.", isPlayable: true },
-  { rank: 29, id: "npat", name: "Name, Place, Animal, Thing", category: "PAPER", categoryLabel: "Rapid Vocabulary", icon: "📝", mechanic: "30-second timed round naming categories for a specific letter.", isPlayable: true },
-  { rank: 30, id: "melody_buzzer", name: "Antakshari / Melody Relay", category: "PARTY", categoryLabel: "Voice Music Relay", icon: "🎵", mechanic: "Singing/reciting poetry starting with previous ending verse.", isPlayable: true },
-  { rank: 31, id: "two_truths", name: "Two Truths & a Lie", category: "PARTY", categoryLabel: "Voice Bluffing", icon: "🎭", mechanic: "Audio deduction identifying 1 fabricate lie amongst truths.", isPlayable: true },
-  { rank: 32, id: "taboo", name: "Taboo Word Shield", category: "PARTY", categoryLabel: "Voice Vocabulary", icon: "🚫", mechanic: "Describing keywords without uttering forbidden taboo terms.", isPlayable: true },
-  { rank: 33, id: "pitch_arena", name: "Pitch Arena (Absurd Defense)", category: "PARTY", categoryLabel: "Voice Debate", icon: "🎙️", mechanic: "60-second rapid absurd pitch with audience tip voting.", isPlayable: true },
-  { rank: 34, id: "puzzle15", name: "15-Puzzle Sliding Matrix", category: "PUZZLE", categoryLabel: "Tile Sliding", icon: "🔢", mechanic: "Sliding numbered square tiles into 1-15 numerical order.", isPlayable: true },
+  { rank: 20, id: "dots_and_boxes", name: "Dots and Boxes (Dabba)", category: "TACTICAL", categoryLabel: "Territory Grid", icon: "🕸️", mechanic: "Drawing lines between nodes to complete 4-sided captured boxes.", isPlayable: true },
+  { rank: 21, id: "hangman", name: "Hangman Word Scaffold", category: "PAPER", categoryLabel: "Word Deduction", icon: "🔤", mechanic: "Guessing secret phrase letters before gallows limbs appear.", isPlayable: true },
+  { rank: 22, id: "math_blitz", name: "Arithmetic Math Blitz", category: "PUZZLE", categoryLabel: "Math Speed Duel", icon: "⚡", mechanic: "Rapid 1v1 mental math speed battle with 3s timers.", isPlayable: true },
+  { rank: 23, id: "wordle", name: "Wordle / Cipher", category: "PUZZLE", categoryLabel: "Linguistic Strategy", icon: "🔐", mechanic: "Deduce 5-letter cipher with color feedback.", isPlayable: true },
+  { rank: 24, id: "skribbl", name: "Skribbl / Pictionary", category: "PARTY", categoryLabel: "Vector Canvas", icon: "🎨", mechanic: "Vector path drawing with live open-mic guessing.", isPlayable: true },
+  { rank: 25, id: "codenames", name: "Codenames Decryption", category: "PARTY", categoryLabel: "Deduction Grid", icon: "🕵️", mechanic: "5x5 operative word grid decryption via one-word clues.", isPlayable: true },
+  { rank: 26, id: "twenty_questions", name: "20 Questions / Decryption", category: "PARTY", categoryLabel: "Verbal Deduction", icon: "❓", mechanic: "Yes/No interrogations to identify a hidden entity.", isPlayable: true },
+  { rank: 27, id: "npat", name: "Name, Place, Animal, Thing", category: "PAPER", categoryLabel: "Rapid Vocabulary", icon: "📝", mechanic: "30-second timed round naming categories for a specific letter.", isPlayable: true },
+  { rank: 28, id: "melody_buzzer", name: "Antakshari / Melody Relay", category: "PARTY", categoryLabel: "Voice Music Relay", icon: "🎵", mechanic: "Singing/reciting poetry starting with previous ending verse.", isPlayable: true },
+  { rank: 29, id: "two_truths", name: "Two Truths & a Lie", category: "PARTY", categoryLabel: "Voice Bluffing", icon: "🎭", mechanic: "Audio deduction identifying 1 fabricate lie amongst truths.", isPlayable: true },
+  { rank: 30, id: "taboo", name: "Taboo Word Shield", category: "PARTY", categoryLabel: "Voice Vocabulary", icon: "🚫", mechanic: "Describing keywords without uttering forbidden taboo terms.", isPlayable: true },
+  { rank: 31, id: "pitch_arena", name: "Pitch Arena (Absurd Defense)", category: "PARTY", categoryLabel: "Voice Debate", icon: "🎙️", mechanic: "60-second rapid absurd pitch with audience tip voting.", isPlayable: true },
+  { rank: 32, id: "puzzle15", name: "15-Puzzle Sliding Matrix", category: "PUZZLE", categoryLabel: "Tile Sliding", icon: "🔢", mechanic: "Sliding numbered square tiles into 1-15 numerical order.", isPlayable: true },
 ];
 
 function ArcadeContent() {
@@ -488,12 +484,6 @@ function ArcadeContent() {
             )}
             {activeMatch.gameType === "chess" && (
               <ChessGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
-            )}
-            {activeMatch.gameType === "gomoku" && (
-              <GomokuGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
-            )}
-            {activeMatch.gameType === "reversi" && (
-              <ReversiGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
             )}
             {activeMatch.gameType === "dots_and_boxes" && (
               <DotsAndBoxesGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />

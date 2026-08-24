@@ -29,8 +29,6 @@ const GAME_META: Record<string, { name: string; icon: string; desc: string; maxA
   connect4: { name: "CONNECT FOUR MATRIX", icon: "🔴", desc: "7x6 data-stream token drop battle", maxAllowed: 2 },
   sudoku: { name: "1V1 SUDOKU RACE", icon: "🧩", desc: "Speed data-grid hacking race", maxAllowed: 2 },
   glow_hockey: { name: "GLOW HOCKEY", icon: "⚡", desc: "Neon air hockey 60fps clash", maxAllowed: 2 },
-  gomoku: { name: "GOMOKU (5 IN A ROW)", icon: "⬛", desc: "15x15 tactical stone alignment", maxAllowed: 2 },
-  reversi: { name: "REVERSI / OTHELLO", icon: "🔄", desc: "8x8 disk flipping battle", maxAllowed: 2 },
   dots_and_boxes: { name: "DOTS & BOXES", icon: "🕸️", desc: "Grid lock box capture strategy", maxAllowed: 2 },
   snakes_and_ladders: { name: "SNAKES & LADDERS", icon: "🪜", desc: "10x10 circuit jumpers race", maxAllowed: 4 },
   "2048": { name: "2048 BINARY MERGE", icon: "🔢", desc: "Slide & merge matching numbers", maxAllowed: 1 },

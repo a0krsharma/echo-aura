@@ -19,8 +19,6 @@ import WordleGame from "./WordleGame";
 import PoolGame from "./PoolGame";
 import CarromGame from "./CarromGame";
 import GlowHockeyGame from "./GlowHockeyGame";
-import GomokuGame from "./GomokuGame";
-import ReversiGame from "./ReversiGame";
 import DotsAndBoxesGame from "./DotsAndBoxesGame";
 import SnakesLaddersGame from "./SnakesLaddersGame";
 import Puzzle15Game from "./Puzzle15Game";
@@ -357,12 +355,6 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
           )}
           {match.gameType === "chess" && (
             <ChessGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
-          )}
-          {match.gameType === "gomoku" && (
-            <GomokuGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
-          )}
-          {match.gameType === "reversi" && (
-            <ReversiGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
           )}
           {match.gameType === "dots_and_boxes" && (
             <DotsAndBoxesGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
