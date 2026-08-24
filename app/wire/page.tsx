@@ -46,6 +46,7 @@ import {
   type AvatarConfig,
   type AvatarGesture,
   DEFAULT_AVATAR_CONFIG,
+  detectEmotionGesture,
 } from "@/lib/avatarRig";
 import { soundSynth } from "@/lib/soundSynthesizer";
 
@@ -428,10 +429,55 @@ function ChatWindow({
     if (!text || sending) return;
     setInput("");
     setSending(true);
+    soundSynth.playSubtlePop();
+
+    // Auto-detect 3D expressive gesture from message text or emojis
+    const detectedGesture = detectEmotionGesture(text);
+    let gesturePayload = undefined;
+    if (detectedGesture) {
+      const meta = GESTURE_CATALOG[detectedGesture];
+      gesturePayload = {
+        gesture: detectedGesture,
+        emoji: meta.emoji,
+        label: meta.label,
+        avatarConfig: myAvatarConfig,
+      };
+    }
+
     try {
-      await sendWhisper(conv.id, myUid, myHandle, text);
+      await sendWhisper(conv.id, myUid, myHandle, text, undefined, gesturePayload);
+      setTimeout(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+        }
+      }, 60);
     } catch (err) {
       console.error("Send failed:", err);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleQuickEmojiSend = async (emoji: string) => {
+    if (sending) return;
+    const detectedGesture = detectEmotionGesture(emoji) || "GREETING_WAVE";
+    const meta = GESTURE_CATALOG[detectedGesture];
+    soundSynth.playFanfare();
+    setSending(true);
+    try {
+      await sendWhisper(conv.id, myUid, myHandle, emoji, undefined, {
+        gesture: detectedGesture,
+        emoji: emoji,
+        label: meta.label,
+        avatarConfig: myAvatarConfig,
+      });
+      setTimeout(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+        }
+      }, 60);
+    } catch (err) {
+      console.error("Quick emoji send failed:", err);
     } finally {
       setSending(false);
     }
@@ -551,26 +597,32 @@ function ChatWindow({
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-neutral-900 shrink-0">
-        <div className="flex items-center gap-3 min-w-0">
+    <div className="flex flex-col h-full min-h-0 relative overflow-hidden bg-black">
+      {/* Top Header */}
+      <div className="flex items-center justify-between gap-3 px-3 sm:px-4 py-2.5 border-b border-neutral-900 shrink-0 bg-black z-10">
+        <div className="flex items-center gap-2.5 min-w-0">
           <button
             onClick={onBack}
-            className="md:hidden text-neutral-500 hover:text-white transition-colors cursor-pointer p-1 shrink-0"
+            className="md:hidden text-neutral-400 hover:text-white transition-colors cursor-pointer p-1 shrink-0"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="w-5 h-5" />
           </button>
           <Link
             href={`/${theirHandle.replace("@", "")}`}
-            className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer min-w-0"
+            className="flex items-center gap-2.5 hover:opacity-90 transition-opacity cursor-pointer min-w-0"
             title={`View @${theirHandle.replace("@", "")}'s profile`}
           >
-            <div className="w-8 h-8 border border-neutral-700 hover:border-white flex items-center justify-center font-mono text-xs text-white uppercase shrink-0 transition-colors">
-              {theirHandle.replace("@", "").charAt(0)}
+            {/* Interactive 3D Avatar in Chat Header */}
+            <div className="w-9 h-9 rounded-full border border-neutral-800 hover:border-white bg-neutral-950 flex items-center justify-center shrink-0 shadow overflow-hidden">
+              <ExpressiveAvatar
+                config={DEFAULT_AVATAR_CONFIG}
+                gesture="IDLE"
+                size={38}
+              />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <p className="font-mono text-xs text-white tracking-widest hover:underline truncate">{theirHandle}</p>
+                <p className="font-mono text-xs font-bold text-white tracking-wider hover:underline truncate">{theirHandle}</p>
                 {peerPresence.state === "online" ? (
                   <span className="flex items-center gap-1 font-mono text-[9px] text-green-400 bg-green-950/60 border border-green-900/80 px-1.5 py-0.5 uppercase tracking-widest shrink-0">
                     <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
@@ -582,7 +634,7 @@ function ChatWindow({
                   </span>
                 )}
               </div>
-              <p className="font-mono text-[10px] text-neutral-500 hover:text-neutral-300 uppercase tracking-wider">[ VIEW PROFILE ]</p>
+              <p className="font-mono text-[9px] text-neutral-500 hover:text-neutral-300 uppercase tracking-wider">[ VIEW PROFILE ]</p>
             </div>
           </Link>
         </div>
@@ -591,47 +643,51 @@ function ChatWindow({
           {!callActive ? (
             <button
               onClick={startCall}
-              className="px-3 py-1 border border-white text-white font-mono text-xs hover:bg-white hover:text-black transition-colors cursor-pointer flex items-center gap-2"
+              className="px-2.5 py-1 border border-white text-white font-mono text-xs hover:bg-white hover:text-black transition-colors cursor-pointer flex items-center gap-1.5"
             >
-              <Phone className="w-3 h-3" /> [ CALL ]
+              <Phone className="w-3.5 h-3.5" /> <span className="hidden sm:inline">[ CALL ]</span>
             </button>
           ) : (
             <button
               onClick={hangUp}
-              className="px-3 py-1 border border-red-500 text-red-500 font-mono text-xs hover:bg-red-500 hover:text-black transition-colors cursor-pointer flex items-center gap-2"
+              className="px-2.5 py-1 border border-red-500 text-red-500 font-mono text-xs hover:bg-red-500 hover:text-black transition-colors cursor-pointer flex items-center gap-1.5"
             >
-              <PhoneOff className="w-3 h-3" /> [ HANG UP ]
+              <PhoneOff className="w-3.5 h-3.5" /> <span className="hidden sm:inline">[ HANG UP ]</span>
             </button>
           )}
         </div>
       </div>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
+      {/* Main Messages List (100% visible, fully scrollable, never hidden) */}
+      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-3 pb-8 scroll-smooth">
         {messages.length === 0 ? (
-          <div className="text-center py-8 font-mono text-xs text-neutral-600">
-            NO MESSAGES YET. START THE CONVERSATION.
+          <div className="text-center py-12 font-mono text-xs text-neutral-600 space-y-2">
+            <p className="text-neutral-400 font-bold">[ NO MESSAGES YET ]</p>
+            <p className="text-[10px]">Send a 3D avatar expression or voice echo to break the ice!</p>
           </div>
         ) : (
           messages.map((msg) => {
             const isMe = msg.senderUid === myUid;
             const peerLastReadTS = conv.lastRead?.[otherUid];
             const teleStatus = isMe ? getTelemetryStatus(msg, peerLastReadTS) : null;
+            const inlineGesture = !msg.emotionGesture ? detectEmotionGesture(msg.text) : null;
+
             return (
               <div
                 key={msg.id}
-                className={`flex items-center gap-2 group ${isMe ? "justify-end" : "justify-start"}`}
+                className={`flex items-end gap-2 group ${isMe ? "justify-end" : "justify-start"}`}
               >
                 {isMe && (
                   <button
                     onClick={() => handleDeleteMessage(msg.id)}
                     title="Delete message"
-                    className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-neutral-600 hover:text-red-400 p-1.5 transition-opacity cursor-pointer shrink-0"
+                    className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-neutral-600 hover:text-red-400 p-1.5 transition-opacity cursor-pointer shrink-0 mb-1"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 )}
                 <div
-                  className={`max-w-[85%] px-3.5 py-2.5 space-y-1.5 rounded-lg shadow ${
+                  className={`max-w-[85%] px-3.5 py-2.5 space-y-1.5 rounded-lg shadow-md ${
                     isMe
                       ? "bg-white text-black"
                       : "bg-neutral-900 text-white border border-neutral-800"
@@ -650,21 +706,49 @@ function ChatWindow({
                       }}
                       className="flex items-center gap-3 p-1 rounded cursor-pointer hover:opacity-90 transition-opacity"
                     >
-                      <div className="w-12 h-12 rounded-full border-2 border-current bg-black/80 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(255,255,255,0.2)] overflow-hidden">
+                      <div className="w-13 h-13 rounded-full border-2 border-current bg-black/80 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(255,255,255,0.2)] overflow-hidden">
                         <ExpressiveAvatar
                           config={msg.emotionGesture.avatarConfig || DEFAULT_AVATAR_CONFIG}
                           gesture={msg.emotionGesture.gesture}
-                          size={52}
+                          size={54}
                         />
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 font-mono text-[10px] font-black uppercase tracking-wider">
                           <span>{msg.emotionGesture.emoji || "✨"}</span>
-                          <span className="underline">{msg.emotionGesture.label || "EXPRESSION"}</span>
+                          <span className="underline">{msg.emotionGesture.label || "3D EXPRESSION"}</span>
                         </div>
                         <p className="font-mono text-xs font-bold">{msg.text}</p>
                         <span className="text-[8px] opacity-75 font-mono uppercase block pt-0.5">
                           [ 🔍 TAP TO PLAY 3D EXPRESSION ]
+                        </span>
+                      </div>
+                    </div>
+                  ) : inlineGesture ? (
+                    /* Auto 3D Avatar Render for Emoji/Expressive Messages */
+                    <div
+                      onClick={() => {
+                        setGreetingModal({
+                          isOpen: true,
+                          senderHandle: msg.senderHandle,
+                          gesture: inlineGesture,
+                          text: msg.text,
+                          avatarConfig: DEFAULT_AVATAR_CONFIG,
+                        });
+                      }}
+                      className="flex items-center gap-2.5 p-1 rounded cursor-pointer hover:opacity-90 transition-opacity"
+                    >
+                      <div className="w-11 h-11 rounded-full border border-current bg-black/80 flex items-center justify-center shrink-0 shadow overflow-hidden">
+                        <ExpressiveAvatar
+                          config={DEFAULT_AVATAR_CONFIG}
+                          gesture={inlineGesture}
+                          size={46}
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-mono text-xs font-bold">{msg.text}</p>
+                        <span className="text-[8px] opacity-75 font-mono uppercase block pt-0.5">
+                          [ 3D LIVE AVATAR FX ]
                         </span>
                       </div>
                     </div>
@@ -676,7 +760,7 @@ function ChatWindow({
                       <WireVoicePlayer audioUrl={msg.audioUrl} isMe={isMe} />
                     </div>
                   ) : (
-                    <p className="font-mono text-xs">{msg.text}</p>
+                    <p className="font-mono text-xs leading-relaxed break-words">{msg.text}</p>
                   )}
                   <div className="flex items-center justify-between gap-3 pt-0.5">
                     <p className="font-mono text-[9px] opacity-60 tracking-widest uppercase">
@@ -689,136 +773,141 @@ function ChatWindow({
                     )}
                   </div>
                 </div>
-              {msg.senderUid !== myUid && (
-                <button
-                  onClick={() => handleDeleteMessage(msg.id)}
-                  title="Delete message"
-                  className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-neutral-600 hover:text-red-400 p-1.5 transition-opacity cursor-pointer shrink-0"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              )}
+                {msg.senderUid !== myUid && (
+                  <button
+                    onClick={() => handleDeleteMessage(msg.id)}
+                    title="Delete message"
+                    className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-neutral-600 hover:text-red-400 p-1.5 transition-opacity cursor-pointer shrink-0 mb-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Bottom Control Dock (Cleanly docked with shrink-0, zero overlap on web) */}
+      <div className="shrink-0 bg-black border-t border-neutral-900 relative z-20">
+        {/* Voice Echo Recording Indicator Bar */}
+        {isRecording && (
+          <div className="p-2.5 bg-red-950/60 border-b border-red-900/60 flex items-center justify-between font-mono text-xs text-red-400">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
+              <span className="font-bold">RECORDING VOICE ECHO... {recordElapsed}s / 30s</span>
             </div>
-          );
-        })
-      )}
-      </div>
-
-      {/* Voice Echo Recording Indicator Bar */}
-      {isRecording && (
-        <div className="p-3 bg-red-950/60 border-t border-red-900/60 flex items-center justify-between font-mono text-xs text-red-400">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
-            <span className="font-bold">RECORDING VOICE ECHO... {recordElapsed}s / 30s</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={cancelVoiceRecording}
+                className="px-2 py-1 border border-neutral-800 text-neutral-400 hover:text-white uppercase cursor-pointer text-[10px]"
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={stopAndSendVoice}
+                className="px-3 py-1 bg-red-600 text-white font-bold uppercase hover:bg-red-500 cursor-pointer text-[10px]"
+              >
+                STOP &amp; SEND
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={cancelVoiceRecording}
-              className="px-2 py-1 border border-neutral-800 text-neutral-400 hover:text-white uppercase cursor-pointer"
-            >
-              CANCEL
-            </button>
-            <button
-              onClick={stopAndSendVoice}
-              className="px-3 py-1 bg-red-600 text-white font-bold uppercase hover:bg-red-500 cursor-pointer"
-            >
-              STOP &amp; SEND
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Quick 3D Emotion Gesture Action Bar */}
-      <div className="px-3 py-1.5 bg-neutral-950 border-t border-neutral-900 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
-        <span className="font-mono text-[9px] text-neutral-500 uppercase font-black shrink-0 flex items-center gap-1">
-          <Sparkles className="w-2.5 h-2.5 text-emerald-400" />
-          <span>3D FX:</span>
-        </span>
-        {(["GREETING_WAVE", "LOVE_HEART", "APOLOGY_BOW", "LOL_LAUGH", "GG_CLAP", "MINDBLOWN", "HYPE_FIRE"] as AvatarGesture[]).map((g) => {
-          const meta = GESTURE_CATALOG[g];
-          return (
-            <button
-              key={g}
-              type="button"
-              disabled={sending || isRecording}
-              onClick={() => handleSendGesture(g)}
-              className="px-2 py-1 bg-black border border-neutral-800 hover:border-white hover:bg-white hover:text-black rounded text-[10px] font-mono font-bold uppercase transition-all flex items-center gap-1 shrink-0 cursor-pointer active:scale-95 disabled:opacity-40"
-            >
-              <span>{meta.emoji}</span>
-              <span>{meta.label}</span>
-            </button>
-          );
-        })}
-        <button
-          type="button"
-          onClick={() => setCustomizerOpen(true)}
-          className="px-2 py-1 bg-neutral-900 border border-neutral-700 hover:border-white text-white rounded text-[10px] font-mono font-bold uppercase transition-all flex items-center gap-1 shrink-0 cursor-pointer active:scale-95 ml-auto whitespace-nowrap"
-          title="Customize your 3D Avatar"
-        >
-          <Palette className="w-3 h-3 text-cyan-400" />
-          <span>[ 👤 3D STUDIO ]</span>
-        </button>
-      </div>
-
-      <div className="relative">
-        {/* World-Class WhatsApp/Discord-Level Emoji & Reaction Drawer */}
-        <WorldClassEmojiPicker
-          isOpen={emojiPickerOpen}
-          onClose={() => setEmojiPickerOpen(false)}
-          onSelectEmoji={(emoji) => {
-            setInput((prev) => prev + emoji);
-          }}
-        />
-      </div>
-
-      <form onSubmit={handleSend} className="p-2.5 sm:p-4 border-t border-neutral-900 flex items-center gap-1.5 sm:gap-2 bg-black shrink-0 sticky bottom-0 z-30 pb-safe sm:pb-4">
-        {/* Emoji Drawer Toggle Button */}
-        <button
-          type="button"
-          onClick={() => setEmojiPickerOpen((prev) => !prev)}
-          className={`p-2 rounded border transition-colors cursor-pointer shrink-0 flex items-center justify-center ${
-            emojiPickerOpen
-              ? "bg-white text-black border-white"
-              : "border-neutral-800 bg-neutral-900 text-neutral-300 hover:text-white hover:border-neutral-600"
-          }`}
-          title="Open Emoji & Stickers Drawer"
-        >
-          <span className="text-sm">😊</span>
-        </button>
-
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Send a wire..."
-          disabled={isRecording}
-          className="flex-1 bg-neutral-900 border border-neutral-800 px-3 py-2 font-mono text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white transition-colors disabled:opacity-40 min-w-0"
-        />
-
-        {/* Voice Echo Mic Button */}
-        {!isRecording && (
-          <button
-            type="button"
-            onClick={startVoiceRecording}
-            disabled={sending}
-            className="px-2.5 py-2 border border-neutral-700 text-neutral-300 hover:border-white hover:text-white font-mono text-[11px] sm:text-xs tracking-wider uppercase transition-colors cursor-pointer flex items-center gap-1 shrink-0 whitespace-nowrap"
-            title="Record Voice Echo"
-          >
-            <Mic className="w-3.5 h-3.5 text-white" />
-            <span className="hidden xs:inline">[ 🎙 VOICE ]</span>
-            <span className="xs:hidden">VOICE</span>
-          </button>
         )}
 
-        <button
-          type="submit"
-          disabled={!input.trim() || sending || isRecording}
-          className="px-3 sm:px-4 py-2 border border-white text-white font-mono text-[11px] sm:text-xs tracking-wider uppercase hover:bg-white hover:text-black transition-colors cursor-pointer disabled:opacity-30 flex items-center gap-1.5 shrink-0 font-bold whitespace-nowrap"
-        >
-          {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-          <span>SEND</span>
-        </button>
-      </form>
+        {/* Quick 3D Emotion Gesture Action Bar */}
+        <div className="px-3 py-1.5 bg-neutral-950 border-b border-neutral-900 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+          <span className="font-mono text-[9px] text-neutral-500 uppercase font-black shrink-0 flex items-center gap-1">
+            <Sparkles className="w-2.5 h-2.5 text-white" />
+            <span>3D FX:</span>
+          </span>
+          {(["GREETING_WAVE", "LOVE_HEART", "APOLOGY_BOW", "LOL_LAUGH", "GG_CLAP", "MINDBLOWN", "HYPE_FIRE"] as AvatarGesture[]).map((g) => {
+            const meta = GESTURE_CATALOG[g];
+            return (
+              <button
+                key={g}
+                type="button"
+                disabled={sending || isRecording}
+                onClick={() => handleSendGesture(g)}
+                className="px-2 py-1 bg-black border border-neutral-800 hover:border-white hover:bg-white hover:text-black rounded text-[10px] font-mono font-bold uppercase transition-all flex items-center gap-1 shrink-0 cursor-pointer active:scale-95 disabled:opacity-40"
+              >
+                <span>{meta.emoji}</span>
+                <span>{meta.label}</span>
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            onClick={() => setCustomizerOpen(true)}
+            className="px-2 py-1 bg-neutral-900 border border-neutral-700 hover:border-white text-white rounded text-[10px] font-mono font-bold uppercase transition-all flex items-center gap-1 shrink-0 cursor-pointer active:scale-95 ml-auto whitespace-nowrap"
+            title="Customize your 3D Avatar"
+          >
+            <Palette className="w-3 h-3 text-cyan-400" />
+            <span>[ 👤 3D STUDIO ]</span>
+          </button>
+        </div>
+
+        {/* World-Class WhatsApp/Discord-Level Emoji & Reaction Drawer */}
+        <div className="relative">
+          <WorldClassEmojiPicker
+            isOpen={emojiPickerOpen}
+            onClose={() => setEmojiPickerOpen(false)}
+            onSelectEmoji={(emoji) => {
+              setInput((prev) => prev + emoji);
+            }}
+            onQuickSend={handleQuickEmojiSend}
+          />
+        </div>
+
+        {/* Message Input Bar */}
+        <form onSubmit={handleSend} className="p-2 sm:p-3 flex items-center gap-1.5 sm:gap-2 bg-black">
+          {/* Emoji Drawer Toggle Button */}
+          <button
+            type="button"
+            onClick={() => setEmojiPickerOpen((prev) => !prev)}
+            className={`p-2 rounded border transition-colors cursor-pointer shrink-0 flex items-center justify-center ${
+              emojiPickerOpen
+                ? "bg-white text-black border-white"
+                : "border-neutral-800 bg-neutral-900 text-neutral-300 hover:text-white hover:border-neutral-600"
+            }`}
+            title="Open Emoji & Stickers Drawer"
+          >
+            <span className="text-sm">😊</span>
+          </button>
+
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Send a wire or emoji (❤️, 🔥, 😂)..."
+            disabled={isRecording}
+            className="flex-1 bg-neutral-900 border border-neutral-800 px-3 py-2 font-mono text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white transition-colors disabled:opacity-40 min-w-0"
+          />
+
+          {/* Voice Echo Mic Button */}
+          {!isRecording && (
+            <button
+              type="button"
+              onClick={startVoiceRecording}
+              disabled={sending}
+              className="px-2.5 py-2 border border-neutral-700 text-neutral-300 hover:border-white hover:text-white font-mono text-[11px] sm:text-xs tracking-wider uppercase transition-colors cursor-pointer flex items-center gap-1 shrink-0 whitespace-nowrap"
+              title="Record Voice Echo"
+            >
+              <Mic className="w-3.5 h-3.5 text-white" />
+              <span className="hidden xs:inline">[ 🎙 VOICE ]</span>
+              <span className="xs:hidden">VOICE</span>
+            </button>
+          )}
+
+          <button
+            type="submit"
+            disabled={!input.trim() || sending || isRecording}
+            className="px-3 sm:px-4 py-2 border border-white text-white font-mono text-[11px] sm:text-xs tracking-wider uppercase hover:bg-white hover:text-black transition-colors cursor-pointer disabled:opacity-30 flex items-center gap-1.5 shrink-0 font-bold whitespace-nowrap"
+          >
+            {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+            <span>SEND</span>
+          </button>
+        </form>
+      </div>
 
       {/* Expressive Greeting Dialog */}
       <ExpressiveGreetingModal
@@ -976,10 +1065,10 @@ export default function WirePage() {
   }
 
   return (
-    <div className="bg-black text-white font-mono h-[calc(100dvh-53px)] md:h-[calc(100vh-60px)] flex flex-col">
-      <div className="max-w-4xl mx-auto flex-1 flex flex-col md:flex-row overflow-hidden min-h-0 w-full h-full">
+    <div className="bg-black text-white font-mono h-[calc(100dvh-56px)] md:h-[calc(100dvh-64px)] flex flex-col min-h-0 overflow-hidden">
+      <div className="max-w-4xl mx-auto flex-1 flex flex-col md:flex-row overflow-hidden min-h-0 w-full h-full border-x border-neutral-900">
         {/* Conversation List */}
-        <div className={`w-full md:w-80 border-r border-neutral-900 flex flex-col h-full ${activeConv ? 'hidden md:flex' : 'flex'}`}>
+        <div className={`w-full md:w-80 border-r border-neutral-900 flex flex-col h-full min-h-0 ${activeConv ? 'hidden md:flex' : 'flex'}`}>
           <div className="p-3 sm:p-4 border-b border-neutral-900 shrink-0">
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-sm font-bold tracking-widest uppercase flex items-center gap-1.5">

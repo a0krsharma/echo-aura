@@ -60,18 +60,40 @@ export default function ExpressiveAvatar({
     }
   }, [gesture]);
 
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!driverRef.current) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
+    const y = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
+    driverRef.current.setPointer(x, y);
+  };
+
+  const handlePointerLeave = () => {
+    if (driverRef.current) {
+      driverRef.current.resetPointer();
+    }
+  };
+
+  const handleClick = () => {
+    if (driverRef.current) {
+      driverRef.current.triggerInteractivePoke();
+    }
+    if (onClick) onClick();
+  };
+
   return (
     <div
-      onClick={onClick}
+      onClick={handleClick}
+      onPointerMove={handlePointerMove}
+      onPointerLeave={handlePointerLeave}
       style={{ width: size, height: size }}
-      className={`relative inline-flex items-center justify-center select-none ${
-        onClick ? "cursor-pointer active:scale-95 transition-transform" : ""
-      } ${className}`}
+      className={`relative inline-flex items-center justify-center select-none cursor-pointer active:scale-95 transition-transform ${className}`}
+      title="3D Expressive Avatar (Tracks Cursor & Touch)"
     >
       <canvas
         ref={canvasRef}
         style={{ width: size, height: size }}
-        className="w-full h-full block"
+        className="w-full h-full block pointer-events-none"
       />
     </div>
   );

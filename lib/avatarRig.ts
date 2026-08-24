@@ -145,7 +145,95 @@ interface Particle {
 }
 
 /**
- * 2.5D Realistic Canvas Rig Animation Driver
+ * Automatically detects an expressive avatar gesture from user text or emojis
+ */
+export function detectEmotionGesture(text: string): AvatarGesture | null {
+  if (!text) return null;
+  const lower = text.toLowerCase();
+  if (
+    text.includes("❤️") ||
+    text.includes("💖") ||
+    text.includes("💕") ||
+    text.includes("🥰") ||
+    text.includes("😍") ||
+    text.includes("😘") ||
+    lower.includes("love") ||
+    lower.includes("pyar")
+  ) {
+    return "LOVE_HEART";
+  }
+  if (
+    text.includes("🔥") ||
+    text.includes("⚡") ||
+    text.includes("💯") ||
+    text.includes("🚀") ||
+    lower.includes("hype") ||
+    lower.includes("op") ||
+    lower.includes("fire")
+  ) {
+    return "HYPE_FIRE";
+  }
+  if (
+    text.includes("😂") ||
+    text.includes("🤣") ||
+    text.includes("😆") ||
+    lower.includes("lol") ||
+    lower.includes("lmao") ||
+    lower.includes("haha") ||
+    lower.includes("rofl")
+  ) {
+    return "LOL_LAUGH";
+  }
+  if (
+    text.includes("👋") ||
+    text.includes("🙋") ||
+    lower.includes("hi ") ||
+    lower.includes("hello") ||
+    lower.includes("hey") ||
+    lower.includes("namaste") ||
+    lower.includes("sup")
+  ) {
+    return "GREETING_WAVE";
+  }
+  if (
+    text.includes("👏") ||
+    text.includes("🎉") ||
+    text.includes("🏆") ||
+    text.includes("👍") ||
+    lower.includes("gg") ||
+    lower.includes("congrats") ||
+    lower.includes("cheers")
+  ) {
+    return "GG_CLAP";
+  }
+  if (
+    text.includes("🙇") ||
+    text.includes("🥺") ||
+    text.includes("😭") ||
+    text.includes("😢") ||
+    text.includes("🙏") ||
+    lower.includes("sorry") ||
+    lower.includes("maaf") ||
+    lower.includes("plz")
+  ) {
+    return "APOLOGY_BOW";
+  }
+  if (
+    text.includes("🤯") ||
+    text.includes("😱") ||
+    text.includes("💀") ||
+    lower.includes("wtf") ||
+    lower.includes("omg") ||
+    lower.includes("mindblown") ||
+    lower.includes("bruh")
+  ) {
+    return "MINDBLOWN";
+  }
+  return null;
+}
+
+/**
+ * 2.5D / 3D Realistic Canvas Rig Animation Driver with Dynamic Cursor/Touch Eye Tracking
  */
 export class AvatarRigDriver {
   private canvas: HTMLCanvasElement;
@@ -155,6 +243,13 @@ export class AvatarRigDriver {
   private time: number = 0;
   private animFrameId: number | null = null;
   private particles: Particle[] = [];
+
+  // Interactive 3D Cursor & Head Tracking
+  public pointerX: number = 0;
+  public pointerY: number = 0;
+  private targetPointerX: number = 0;
+  private targetPointerY: number = 0;
+  private bounceIntensity: number = 0;
 
   constructor(canvas: HTMLCanvasElement, config: AvatarConfig = DEFAULT_AVATAR_CONFIG) {
     this.canvas = canvas;
@@ -171,6 +266,22 @@ export class AvatarRigDriver {
   public setGesture(gesture: AvatarGesture) {
     this.gesture = gesture;
     this.particles = [];
+    this.bounceIntensity = 1.0;
+  }
+
+  public setPointer(normX: number, normY: number) {
+    this.targetPointerX = Math.max(-1, Math.min(1, normX));
+    this.targetPointerY = Math.max(-1, Math.min(1, normY));
+  }
+
+  public resetPointer() {
+    this.targetPointerX = 0;
+    this.targetPointerY = 0;
+  }
+
+  public triggerInteractivePoke() {
+    this.bounceIntensity = 1.4;
+    this.emitParticles(2, "✨", "#ffffff");
   }
 
   public start() {
@@ -229,6 +340,15 @@ export class AvatarRigDriver {
 
     ctx.clearRect(0, 0, width, height);
 
+    // Smooth pointer and bounce physics
+    this.pointerX += (this.targetPointerX - this.pointerX) * 0.15;
+    this.pointerY += (this.targetPointerY - this.pointerY) * 0.15;
+    if (this.bounceIntensity > 0.01) {
+      this.bounceIntensity *= 0.93;
+    } else {
+      this.bounceIntensity = 0;
+    }
+
     // ── Framing & Center (Fully Visible Upper Body & Head) ───────────────────
     const cx = width / 2;
     const cy = height * 0.53;
@@ -244,10 +364,10 @@ export class AvatarRigDriver {
     const hair = HAIR_PALETTES[this.config.hairColor] || HAIR_PALETTES.CYAN;
     const outfit = OUTFIT_PALETTES[this.config.outfitColor] || OUTFIT_PALETTES.OBSIDIAN;
 
-    // ── Kinematic Calculations based on Gesture ──────────────────────────────
-    let headOffsetY = Math.sin(t * 3) * 1.8;
-    let headTilt = Math.sin(t * 2) * 0.035;
-    let torsoTilt = 0;
+    // ── Kinematic Calculations based on Gesture & 3D Pointer Tracking ─────────
+    let headOffsetY = Math.sin(t * 3) * 1.8 + this.pointerY * 3.5 - this.bounceIntensity * 5;
+    let headTilt = Math.sin(t * 2) * 0.035 + this.pointerX * 0.18;
+    let torsoTilt = this.pointerX * 0.08;
     let leftArmAngle = 0.22;
     let rightArmAngle = -0.22;
     let eyeMorph: "OPEN" | "BLINK" | "HEART" | "CRY" | "SQUINT" | "SHOCKED" = "OPEN";
@@ -567,7 +687,7 @@ export class AvatarRigDriver {
       drawShockEye(-15);
       drawShockEye(15);
     } else {
-      // 🌟 Realistic Iris with Glass Specular Catchlights
+      // 🌟 Realistic Iris with Glass Specular Catchlights & 3D Cursor Eye Tracking
       const drawRealisticEye = (ex: number) => {
         // Sclera (White base with upper eyelid shadow)
         ctx.fillStyle = "#ffffff";
@@ -584,29 +704,33 @@ export class AvatarRigDriver {
         ctx.arc(ex, -10, 7.5, Math.PI, 0);
         ctx.fill();
 
+        // Dynamic 3D Iris & Pupil Offset based on Cursor
+        const irisX = ex + this.pointerX * 2.5;
+        const irisY = -9.5 + this.pointerY * 2.0;
+
         // Glowing Colored Iris (Radial Gradient)
-        const irisGrad = ctx.createRadialGradient(ex, -9.5, 1, ex, -9.5, 5);
+        const irisGrad = ctx.createRadialGradient(irisX, irisY, 1, irisX, irisY, 5);
         irisGrad.addColorStop(0, skin.iris);
         irisGrad.addColorStop(0.7, skin.iris);
         irisGrad.addColorStop(1, "#09090b");
         ctx.fillStyle = irisGrad;
         ctx.beginPath();
-        ctx.arc(ex, -9.5, 4.8, 0, Math.PI * 2);
+        ctx.arc(irisX, irisY, 4.8, 0, Math.PI * 2);
         ctx.fill();
 
         // Deep Pupil
         ctx.fillStyle = "#000000";
         ctx.beginPath();
-        ctx.arc(ex, -9.5, 2.5, 0, Math.PI * 2);
+        ctx.arc(irisX, irisY, 2.5, 0, Math.PI * 2);
         ctx.fill();
 
         // Glass Catchlights (Double Specular)
         ctx.fillStyle = "#ffffff";
         ctx.beginPath();
-        ctx.arc(ex - 1.8, -11.5, 1.8, 0, Math.PI * 2);
+        ctx.arc(irisX - 1.8, irisY - 1.8, 1.8, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(ex + 1.5, -8, 1, 0, Math.PI * 2);
+        ctx.arc(irisX + 1.5, irisY + 1.5, 1, 0, Math.PI * 2);
         ctx.fill();
 
         // Upper Eyelash Line
