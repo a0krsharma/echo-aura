@@ -883,82 +883,45 @@ function ArcadeContent() {
             {/* 50 Games Directory Grid / Table */}
             <div className="space-y-3 font-mono">
               <div className="flex items-center justify-between text-xs text-neutral-400 font-bold uppercase">
-                <span>DIRECTORY SHOWING {filteredGames.length} OF 50 RANKED GAMES</span>
-                <span>SORTED BY ENGAGEMENT & RETENTION RANK</span>
+                <span>GAMES DIRECTORY ({filteredGames.length})</span>
+                <span className="text-[10px] text-neutral-500">TAP TO PLAY INSTANTLY</span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                 {filteredGames.map((game) => (
                   <div
-                    key={`${game.rank}-${game.id}`}
-                    className="border border-neutral-800 hover:border-white bg-neutral-950 p-4 space-y-3 flex flex-col justify-between transition-all rounded-none shadow-md group"
+                    key={game.id}
+                    className="border border-neutral-800 hover:border-white bg-neutral-950 p-3.5 flex flex-col justify-between transition-all rounded shadow-md group hover:bg-neutral-900/60"
                   >
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-[10px] text-neutral-400 uppercase">
-                        <span className="font-black text-white bg-neutral-900 border border-neutral-800 px-1.5 py-0.5">
-                          RANK #{game.rank}
-                        </span>
-                        <span className="border border-neutral-800 bg-black text-neutral-400 px-1.5 py-0.5">
-                          {game.categoryLabel}
-                        </span>
+                    <div className="space-y-2 text-center sm:text-left">
+                      <div className="text-3xl sm:text-2xl group-hover:scale-110 transition-transform">
+                        {game.icon}
                       </div>
-
-                      <div className="flex items-center gap-2 pt-1">
-                        <span className="text-2xl group-hover:scale-110 transition-transform">{game.icon}</span>
-                        <h4 className="font-black text-xs uppercase text-white tracking-wide">
-                          {game.name}
-                        </h4>
-                      </div>
-
-                      <p className="text-[11px] text-neutral-400 leading-relaxed min-h-[34px]">
-                        {game.mechanic}
-                      </p>
+                      <h4 className="font-bold text-xs uppercase text-white tracking-wide truncate" title={game.name}>
+                        {game.name}
+                      </h4>
                     </div>
 
-                    <div className="space-y-2 pt-2 border-t border-neutral-900">
-                      <div className="grid grid-cols-2 gap-1.5">
-                        <button
-                          type="button"
-                          disabled={!user}
-                          onClick={() => handleLaunchSolo(game.id)}
-                          className="py-1.5 px-2 border border-neutral-700 bg-black hover:border-white hover:bg-white hover:text-black text-white font-extrabold text-[10px] uppercase transition-all cursor-pointer text-center"
-                          title={`Play ${game.name} vs AI Bot`}
-                        >
-                          [ 🤖 VS BOT ]
-                        </button>
+                    <div className="grid grid-cols-2 gap-1.5 pt-3 border-t border-neutral-900 mt-2">
+                      <button
+                        type="button"
+                        disabled={!user}
+                        onClick={() => handleLaunchSolo(game.id)}
+                        className="py-1.5 px-1 border border-neutral-700 bg-black hover:border-white hover:bg-white hover:text-black text-white font-bold text-[10px] uppercase transition-all cursor-pointer text-center truncate"
+                        title={`Play ${game.name} vs AI Bot`}
+                      >
+                        [ 🤖 BOT ]
+                      </button>
 
-                        <button
-                          type="button"
-                          disabled={!user}
-                          onClick={() => handleOpenCreate(game.id)}
-                          className="py-1.5 px-2 border border-white bg-white text-black hover:bg-neutral-200 font-extrabold text-[10px] uppercase transition-all cursor-pointer text-center shadow"
-                          title={`Create Multiplayer Room in ${game.name}`}
-                        >
-                          [ 👥 PLAY PvP ]
-                        </button>
-                      </div>
-
-                      <div className="flex items-center justify-between gap-1.5 text-[10px]">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenRules(game.id)}
-                          className="flex-1 py-1 border border-neutral-800 hover:border-neutral-600 text-neutral-400 hover:text-white transition-colors cursor-pointer text-center flex items-center justify-center gap-1 uppercase"
-                          title={`Read ${game.name} Rules`}
-                        >
-                          <HelpCircle className="w-3 h-3" />
-                          <span>RULES</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleOpenChallenge(game.id, game.name, "room_8912", "match_8912")}
-                          className="flex-1 py-1 border border-neutral-800 hover:border-neutral-600 text-neutral-400 hover:text-white transition-colors cursor-pointer text-center flex items-center justify-center gap-1 uppercase"
-                          title={`1v1 Trash-Talk Duel in ${game.name}`}
-                        >
-                          <Swords className="w-3 h-3" />
-                          <span>1V1 DUEL</span>
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        disabled={!user}
+                        onClick={() => handleOpenCreate(game.id)}
+                        className="py-1.5 px-1 border border-white bg-white text-black hover:bg-neutral-200 font-bold text-[10px] uppercase transition-all cursor-pointer text-center truncate shadow"
+                        title={`Create PvP Room in ${game.name}`}
+                      >
+                        [ 👥 PvP ]
+                      </button>
                     </div>
                   </div>
                 ))}
