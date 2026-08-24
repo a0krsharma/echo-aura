@@ -19,7 +19,6 @@ import BattleshipGame from "@/app/components/arcade/BattleshipGame";
 import SudokuGame from "@/app/components/arcade/SudokuGame";
 import MinesweeperGame from "@/app/components/arcade/MinesweeperGame";
 import Game2048 from "@/app/components/arcade/Game2048";
-import SnakeGame from "@/app/components/arcade/SnakeGame";
 import WordleGame from "@/app/components/arcade/WordleGame";
 import PoolGame from "@/app/components/arcade/PoolGame";
 import CarromGame from "@/app/components/arcade/CarromGame";
@@ -29,7 +28,6 @@ import ReversiGame from "@/app/components/arcade/ReversiGame";
 import DotsAndBoxesGame from "@/app/components/arcade/DotsAndBoxesGame";
 import SnakesLaddersGame from "@/app/components/arcade/SnakesLaddersGame";
 import Puzzle15Game from "@/app/components/arcade/Puzzle15Game";
-import MastermindGame from "@/app/components/arcade/MastermindGame";
 import PokerGame from "@/app/components/arcade/PokerGame";
 import BlackjackGame from "@/app/components/arcade/BlackjackGame";
 import UnoGame from "@/app/components/arcade/UnoGame";
@@ -44,7 +42,6 @@ import SolitaireGame from "@/app/components/arcade/SolitaireGame";
 import LiarsDiceGame from "@/app/components/arcade/LiarsDiceGame";
 import CodenamesGame from "@/app/components/arcade/CodenamesGame";
 import SkribblGame from "@/app/components/arcade/SkribblGame";
-import TriviaGame from "@/app/components/arcade/TriviaGame";
 import QuoridorGame from "@/app/components/arcade/QuoridorGame";
 import YahtzeeGame from "@/app/components/arcade/YahtzeeGame";
 import MelodyBuzzerGame from "@/app/components/arcade/MelodyBuzzerGame";
@@ -140,17 +137,6 @@ const MASTER_50_GAMES: MasterRankedGame[] = [
   { rank: 37, id: "taboo", name: "Taboo Word Shield", category: "PARTY", categoryLabel: "Voice Vocabulary", icon: "🚫", mechanic: "Describing keywords without uttering forbidden taboo terms.", isPlayable: true },
   { rank: 38, id: "pitch_arena", name: "Pitch Arena (Absurd Defense)", category: "PARTY", categoryLabel: "Voice Debate", icon: "🎙️", mechanic: "60-second rapid absurd pitch with audience tip voting.", isPlayable: true },
   { rank: 39, id: "puzzle15", name: "15-Puzzle Sliding Matrix", category: "PUZZLE", categoryLabel: "Tile Sliding", icon: "🔢", mechanic: "Sliding numbered square tiles into 1-15 numerical order.", isPlayable: true },
-  { rank: 40, id: "mastermind", name: "Mastermind Codebreaker", category: "PUZZLE", categoryLabel: "Cipher Deduction", icon: "🔒", mechanic: "Cracking a hidden 4-digit color sequence in 10 attempts.", isPlayable: true },
-  { rank: 41, id: "snake", name: "Retro Snake Phosphor", category: "TACTICAL", categoryLabel: "Arcade Reflex", icon: "🐍", mechanic: "Guiding growing snake across terminal grid without wall crash.", isPlayable: true },
-  { rank: 42, id: "trivia", name: "Neural Trivia Protocol", category: "PARTY", categoryLabel: "Rapid Quiz", icon: "💡", mechanic: "High-speed trivia challenges across tech, cinema, and history.", isPlayable: true },
-  { rank: 43, id: "go", name: "Go / Weiqi Territory", category: "TACTICAL", categoryLabel: "Territory Capture", icon: "⚪", mechanic: "Ancient 19x19 stone surrounding and territory capture.", isPlayable: true },
-  { rank: 44, id: "bagh_chal", name: "Bagh-Chal (Tigers & Goats)", category: "TACTICAL", categoryLabel: "Asymmetric Board", icon: "🐅", mechanic: "4 Tigers hunting vs. 20 Goats encircling on a 5x5 grid.", isPlayable: true },
-  { rank: 45, id: "nine_mens_morris", name: "Nine Men's Morris", category: "TACTICAL", categoryLabel: "Ancient Mill Alignment", icon: "🏛️", mechanic: "Aligning 3 tokens in a row to form mills and remove enemy pieces.", isPlayable: true },
-  { rank: 46, id: "chain_reaction", name: "Chain Reaction (Orbital)", category: "TACTICAL", categoryLabel: "Cascade Explosions", icon: "💥", mechanic: "Critical mass orb stacking that triggers board-wide conversions.", isPlayable: true },
-  { rank: 47, id: "neon_pong", name: "Neon Pong Rally", category: "PHYSICS", categoryLabel: "Fast Reflex Paddle", icon: "🏓", mechanic: "High-velocity vertical ball deflection and scoring rallies.", isPlayable: true },
-  { rank: 48, id: "hot_potato", name: "Hot Potato Mic Relay", category: "PARTY", categoryLabel: "Voice Speed Relay", icon: "🥔", mechanic: "Answering rapid-fire questions before the audio buzzer explodes.", isPlayable: true },
-  { rank: 49, id: "dilemma_debate", name: "Dilemma Debate Arena", category: "PARTY", categoryLabel: "Moral Dilemmas", icon: "⚖️", mechanic: "Debating controversial moral choices with live room voting.", isPlayable: true },
-  { rank: 50, id: "spyfall", name: "Spyfall Impostor Node", category: "PARTY", categoryLabel: "Voice Deduction", icon: "🕵️", mechanic: "Questioning room members to find the spy who doesn't know the secret location.", isPlayable: true },
 ];
 
 function ArcadeContent() {
@@ -468,9 +454,6 @@ function ArcadeContent() {
             {activeMatch.gameType === "skribbl" && (
               <SkribblGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
             )}
-            {activeMatch.gameType === "trivia" && (
-              <TriviaGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
-            )}
             {activeMatch.gameType === "quoridor" && (
               <QuoridorGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
             )}
@@ -555,17 +538,11 @@ function ArcadeContent() {
             {activeMatch.gameType === "2048" && (
               <Game2048 match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
             )}
-            {activeMatch.gameType === "snake" && (
-              <SnakeGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
-            )}
             {activeMatch.gameType === "wordle" && (
               <WordleGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
             )}
             {activeMatch.gameType === "puzzle15" && (
               <Puzzle15Game match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
-            )}
-            {activeMatch.gameType === "mastermind" && (
-              <MastermindGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
             )}
 
             {user && !activeMatch.players?.[user.uid] && activeMatch.status !== "FINISHED" && (
