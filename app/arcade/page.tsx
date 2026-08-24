@@ -179,8 +179,15 @@ function ArcadeContent() {
   const [activeVoiceFilter, setActiveVoiceFilter] = useState<VoiceFilterMode>("clean");
   const [voicePartyOpen, setVoicePartyOpen] = useState(false);
   const [voiceMechanicOpen, setVoiceMechanicOpen] = useState(false);
-  const [viralHubOpen, setViralHubOpen] = useState(false);
   const [badgesModalOpen, setBadgesModalOpen] = useState(false);
+  const [viralHubOpen, setViralHubOpen] = useState(false);
+  const [botDifficultyModalOpen, setBotDifficultyModalOpen] = useState(false);
+  const [pendingBotGameType, setPendingBotGameType] = useState<ArcadeGameType | null>(null);
+
+  const handleOpenBotDifficulty = (gameId: ArcadeGameType) => {
+    setPendingBotGameType(gameId);
+    setBotDifficultyModalOpen(true);
+  };
 
   const handleChallengeBounty = (target: StreakBountyTarget) => {
     handleOpenChallenge(
@@ -278,7 +285,7 @@ function ArcadeContent() {
     setRulesModalOpen(true);
   };
 
-  const handleLaunchSolo = async (type: ArcadeGameType) => {
+  const handleLaunchSolo = async (type: ArcadeGameType, difficulty: "EASY" | "MEDIUM" | "HARD" = "MEDIUM") => {
     if (!user) return;
     try {
       let maxPlayers = 2;
@@ -320,6 +327,7 @@ function ArcadeContent() {
         maxPlayers,
         enableVoice: false,
         stakes: 0,
+        difficulty,
       });
       setActiveMatchId(matchId);
     } catch (e) {
@@ -876,7 +884,7 @@ function ArcadeContent() {
                       <button
                         type="button"
                         disabled={!user}
-                        onClick={() => handleLaunchSolo(game.id)}
+                        onClick={() => handleOpenBotDifficulty(game.id)}
                         className="py-1.5 px-1 border border-neutral-700 bg-black hover:border-white hover:bg-white hover:text-black text-white font-bold text-[10px] uppercase transition-all cursor-pointer text-center truncate"
                         title={`Play ${game.name} vs AI Bot`}
                       >
@@ -1091,6 +1099,68 @@ function ArcadeContent() {
           setActiveMatchId(challenge.roomId);
         }}
       />
+
+      {/* Bot Difficulty Modal */}
+      {botDifficultyModalOpen && pendingBotGameType && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/90 backdrop-blur-md animate-in fade-in select-none">
+          <div className="relative w-full max-w-sm bg-black border-2 border-white p-6 font-mono text-white shadow-[0_0_50px_rgba(255,255,255,0.2)] flex flex-col items-center">
+            <button
+              onClick={() => {
+                setBotDifficultyModalOpen(false);
+                setPendingBotGameType(null);
+              }}
+              className="absolute top-4 right-4 p-1.5 border border-neutral-700 hover:border-white text-neutral-400 hover:text-white transition-all cursor-pointer rounded"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="flex items-center justify-center mb-4 w-12 h-12 bg-white rounded-full">
+              <span className="text-2xl">🤖</span>
+            </div>
+            <h2 className="text-lg font-black uppercase text-center mb-1 tracking-widest">
+              SELECT AI DIFFICULTY
+            </h2>
+            <p className="text-xs text-neutral-400 text-center mb-6 max-w-[250px]">
+              Choose the intelligence level of your Neural Bot opponent.
+            </p>
+
+            <div className="w-full space-y-3">
+              <button
+                type="button"
+                onClick={() => {
+                  handleLaunchSolo(pendingBotGameType, "EASY");
+                  setBotDifficultyModalOpen(false);
+                }}
+                className="w-full py-3 border-2 border-green-500 bg-green-950/40 text-green-400 font-black text-sm uppercase hover:bg-green-900 transition-colors cursor-pointer group flex justify-between px-4 items-center"
+              >
+                <span>[ CASUAL ]</span>
+                <span className="text-[10px] font-bold opacity-70 group-hover:opacity-100">EASY</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  handleLaunchSolo(pendingBotGameType, "MEDIUM");
+                  setBotDifficultyModalOpen(false);
+                }}
+                className="w-full py-3 border-2 border-yellow-500 bg-yellow-950/40 text-yellow-400 font-black text-sm uppercase hover:bg-yellow-900 transition-colors cursor-pointer group flex justify-between px-4 items-center"
+              >
+                <span>[ NEURAL ]</span>
+                <span className="text-[10px] font-bold opacity-70 group-hover:opacity-100">MEDIUM</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  handleLaunchSolo(pendingBotGameType, "HARD");
+                  setBotDifficultyModalOpen(false);
+                }}
+                className="w-full py-3 border-2 border-red-500 bg-red-950/40 text-red-400 font-black text-sm uppercase hover:bg-red-900 transition-colors cursor-pointer shadow-[0_0_15px_rgba(239,68,68,0.3)] group flex justify-between px-4 items-center"
+              >
+                <span>[ TERMINATOR ]</span>
+                <span className="text-[10px] font-bold opacity-70 group-hover:opacity-100">HARD</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Terminal Winner Badges & Profile Flairs Modal */}
       {badgesModalOpen && (

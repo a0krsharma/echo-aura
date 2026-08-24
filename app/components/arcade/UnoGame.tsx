@@ -42,40 +42,45 @@ interface UnoGameProps {
   isHost: boolean;
 }
 
-const COLOR_MAP: Record<string, { bg: string; text: string; border: string; glow: string; label: string }> = {
+const COLOR_MAP: Record<string, { bg: string; text: string; innerText: string; border: string; glow: string; label: string }> = {
   RED: {
-    bg: "bg-gradient-to-br from-red-600 via-rose-600 to-red-700",
-    text: "text-white",
-    border: "border-red-400",
-    glow: "shadow-[0_0_20px_rgba(239,68,68,0.6)]",
+    bg: "bg-red-600",
+    text: "text-white drop-shadow-md",
+    innerText: "text-red-600 drop-shadow-[2px_2px_0px_rgba(0,0,0,0.8)]",
+    border: "border-white",
+    glow: "shadow-xl",
     label: "RED",
   },
   BLUE: {
-    bg: "bg-gradient-to-br from-blue-600 via-sky-600 to-indigo-700",
-    text: "text-white",
-    border: "border-blue-400",
-    glow: "shadow-[0_0_20px_rgba(59,130,246,0.6)]",
+    bg: "bg-blue-600",
+    text: "text-white drop-shadow-md",
+    innerText: "text-blue-600 drop-shadow-[2px_2px_0px_rgba(0,0,0,0.8)]",
+    border: "border-white",
+    glow: "shadow-xl",
     label: "BLUE",
   },
   GREEN: {
-    bg: "bg-gradient-to-br from-emerald-600 via-teal-600 to-green-700",
-    text: "text-white",
-    border: "border-emerald-400",
-    glow: "shadow-[0_0_20px_rgba(16,185,129,0.6)]",
+    bg: "bg-green-600",
+    text: "text-white drop-shadow-md",
+    innerText: "text-green-600 drop-shadow-[2px_2px_0px_rgba(0,0,0,0.8)]",
+    border: "border-white",
+    glow: "shadow-xl",
     label: "GREEN",
   },
   YELLOW: {
-    bg: "bg-gradient-to-br from-amber-400 via-yellow-400 to-amber-500",
-    text: "text-neutral-950",
-    border: "border-amber-300",
-    glow: "shadow-[0_0_20px_rgba(245,158,11,0.6)]",
+    bg: "bg-yellow-400",
+    text: "text-white drop-shadow-md",
+    innerText: "text-yellow-400 drop-shadow-[2px_2px_0px_rgba(0,0,0,0.8)]",
+    border: "border-white",
+    glow: "shadow-xl",
     label: "YELLOW",
   },
   WILD: {
-    bg: "bg-gradient-to-br from-red-500 via-amber-400 via-emerald-500 to-blue-600",
-    text: "text-white",
-    border: "border-purple-300",
-    glow: "shadow-[0_0_25px_rgba(168,85,247,0.7)]",
+    bg: "bg-black",
+    text: "text-white drop-shadow-md",
+    innerText: "text-black drop-shadow-[2px_2px_0px_rgba(255,255,255,0.8)]",
+    border: "border-white",
+    glow: "shadow-[0_0_25px_rgba(255,255,255,0.4)]",
     label: "WILD",
   },
 };
@@ -459,8 +464,8 @@ export default function UnoGame({ match, currentUid }: UnoGameProps) {
             </span>
 
             {/* Center Oval Emblem */}
-            <div className="w-14 h-16 bg-white/90 rounded-[50%] -rotate-12 border-2 border-neutral-900 flex items-center justify-center shadow-md">
-              <span className="text-2xl font-black italic text-black leading-none drop-shadow">
+            <div className="w-14 h-16 bg-white rounded-[50%] -rotate-12 flex items-center justify-center shadow-inner">
+              <span className={`text-2xl font-black italic leading-none ${COLOR_MAP[us.discardTop.color]?.innerText || "text-black"}`}>
                 {us.discardTop.value}
               </span>
             </div>
@@ -611,8 +616,8 @@ export default function UnoGame({ match, currentUid }: UnoGameProps) {
                 </span>
 
                 {/* Center Badge */}
-                <div className="w-8 h-11 bg-white/90 rounded-[50%] -rotate-12 border border-neutral-900 flex items-center justify-center shadow-inner">
-                  <span className="text-xs sm:text-sm font-black italic text-black leading-none">
+                <div className="w-8 h-11 bg-white rounded-[50%] -rotate-12 flex items-center justify-center shadow-inner">
+                  <span className={`text-xs sm:text-sm font-black italic leading-none ${style.innerText || "text-black"}`}>
                     {card.value}
                   </span>
                 </div>

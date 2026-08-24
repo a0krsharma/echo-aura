@@ -756,6 +756,7 @@ export interface ArcadeMatch {
   players: { [uid: string]: ArcadePlayer };
   maxPlayers: number;
   stakes: number; // Aura stakes
+  difficulty?: "EASY" | "MEDIUM" | "HARD";
   winnerUid?: string;
   winnerHandle?: string;
   rummyState?: RummyState;
@@ -902,6 +903,7 @@ export async function createArcadeMatch(params: {
   maxPlayers?: number;
   enableVoice?: boolean;
   stakes?: number;
+  difficulty?: "EASY" | "MEDIUM" | "HARD";
 }): Promise<string> {
   const db = getFirebaseDb();
   const matchRef = doc(collection(db, ARCADE_COLLECTION));
@@ -986,6 +988,7 @@ export async function createArcadeMatch(params: {
     mode,
     enableVoice,
     gameType: params.gameType,
+    difficulty: params.difficulty || "MEDIUM",
     title: params.title || `${params.gameType.toUpperCase()} ARENA`,
     hostUid: params.hostUid,
     hostHandle: params.hostHandle,

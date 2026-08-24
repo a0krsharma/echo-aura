@@ -178,7 +178,7 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
       symbol: "🔴",
       tokenBg: "bg-gradient-to-br from-red-500 to-red-700 text-white font-black shadow-[0_4px_6px_rgba(239,68,68,0.5)] border-2 border-red-900 rounded-full",
       baseBorder: "border-4 border-red-600",
-      baseBg: "bg-red-950/40",
+      baseBg: "bg-red-500",
       label: "RED",
     },
     GREEN: {
@@ -186,7 +186,7 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
       symbol: "🟢",
       tokenBg: "bg-gradient-to-br from-green-500 to-green-700 text-white font-black shadow-[0_4px_6px_rgba(34,197,94,0.5)] border-2 border-green-900 rounded-full",
       baseBorder: "border-4 border-green-600",
-      baseBg: "bg-green-950/40",
+      baseBg: "bg-green-500",
       label: "GRN",
     },
     YELLOW: {
@@ -194,7 +194,7 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
       symbol: "🟡",
       tokenBg: "bg-gradient-to-br from-yellow-400 to-yellow-600 text-black font-black shadow-[0_4px_6px_rgba(234,179,8,0.5)] border-2 border-yellow-800 rounded-full",
       baseBorder: "border-4 border-yellow-500",
-      baseBg: "bg-yellow-950/40",
+      baseBg: "bg-yellow-400",
       label: "YLW",
     },
     BLUE: {
@@ -202,7 +202,7 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
       symbol: "🔵",
       tokenBg: "bg-gradient-to-br from-blue-500 to-blue-700 text-white font-black shadow-[0_4px_6px_rgba(59,130,246,0.5)] border-2 border-blue-900 rounded-full",
       baseBorder: "border-4 border-blue-600",
-      baseBg: "bg-blue-950/40",
+      baseBg: "bg-blue-500",
       label: "BLU",
     },
   };
@@ -362,7 +362,7 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
                     <div
                       key={`${r}-${c}`}
                       style={{ gridColumn: "span 6", gridRow: "span 6" }}
-                      className="border-2 border-white bg-black p-2 flex flex-col justify-between"
+                      className={`${classicMeta.RED.baseBorder} ${classicMeta.RED.baseBg} p-2 flex flex-col justify-between`}
                     >
                       <div className="flex justify-between items-center text-[10px] text-white font-extrabold border-b border-neutral-800 pb-1">
                         <span>◆ RED BASE</span>
@@ -407,7 +407,7 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
                     <div
                       key={`${r}-${c}`}
                       style={{ gridColumn: "span 6", gridRow: "span 6" }}
-                      className="border-2 border-neutral-400 bg-neutral-950 p-2 flex flex-col justify-between"
+                      className={`${classicMeta.GREEN.baseBorder} ${classicMeta.GREEN.baseBg} p-2 flex flex-col justify-between`}
                     >
                       <div className="flex justify-between items-center text-[10px] text-white font-extrabold border-b border-neutral-800 pb-1">
                         <span>▲ GRN BASE</span>
@@ -452,7 +452,7 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
                     <div
                       key={`${r}-${c}`}
                       style={{ gridColumn: "span 6", gridRow: "span 6" }}
-                      className="border-2 border-dotted border-white bg-neutral-950 p-2 flex flex-col justify-between"
+                      className={`${classicMeta.BLUE.baseBorder} ${classicMeta.BLUE.baseBg} p-2 flex flex-col justify-between`}
                     >
                       <div className="flex justify-between items-center text-[10px] text-white font-extrabold border-b border-neutral-800 pb-1">
                         <span>✚ BLU BASE</span>
@@ -497,7 +497,7 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
                     <div
                       key={`${r}-${c}`}
                       style={{ gridColumn: "span 6", gridRow: "span 6" }}
-                      className="border-2 border-dashed border-white bg-black p-2 flex flex-col justify-between"
+                      className={`${classicMeta.YELLOW.baseBorder} ${classicMeta.YELLOW.baseBg} p-2 flex flex-col justify-between`}
                     >
                       <div className="flex justify-between items-center text-[10px] text-white font-extrabold border-b border-neutral-800 pb-1">
                         <span>● YEL BASE</span>
@@ -576,19 +576,19 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
               const isYellowPath = r === 7 && c >= 9 && c <= 13;
               const isBluePath = c === 7 && r >= 9 && r <= 13;
 
-              let cellBg = "bg-black";
+              let cellBg = "bg-white"; // Standard track cell background
               let arrowIcon = "";
               if (isRedPath) {
-                cellBg = "bg-neutral-900";
+                cellBg = "bg-red-200 border-red-500 shadow-inner";
                 arrowIcon = HOME_ARROWS.RED;
               } else if (isGreenPath) {
-                cellBg = "bg-neutral-900";
+                cellBg = "bg-green-200 border-green-500 shadow-inner";
                 arrowIcon = HOME_ARROWS.GREEN;
               } else if (isYellowPath) {
-                cellBg = "bg-neutral-900";
+                cellBg = "bg-yellow-200 border-yellow-500 shadow-inner";
                 arrowIcon = HOME_ARROWS.YELLOW;
               } else if (isBluePath) {
-                cellBg = "bg-neutral-900";
+                cellBg = "bg-blue-200 border-blue-500 shadow-inner";
                 arrowIcon = HOME_ARROWS.BLUE;
               }
 
