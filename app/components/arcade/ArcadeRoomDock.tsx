@@ -44,6 +44,7 @@ import MathBlitzGame from "./MathBlitzGame";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeCreateModal from "./ArcadeCreateModal";
 import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
+import LiveVoiceFilterDock from "./LiveVoiceFilterDock";
 import { Gamepad2, X, Users, Trophy, Play, Sparkles, Share2, Mic2, HelpCircle } from "lucide-react";
 
 interface ArcadeRoomDockProps {
@@ -283,6 +284,9 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
         </div>
       ) : (
         <div className="space-y-4">
+          {/* Decoupled Live Voice Filters & Reaction Soundboard */}
+          <LiveVoiceFilterDock />
+
           {/* Active Game Renderers */}
           {match.gameType === "poker" && (
             <PokerGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
