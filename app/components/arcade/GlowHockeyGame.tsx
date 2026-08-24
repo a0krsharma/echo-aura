@@ -205,67 +205,76 @@ export default function GlowHockeyGame({ match, currentUid }: GlowHockeyGameProp
       }
 
       // 3. Render Canvas
-      ctx.fillStyle = "#050508";
+      // 3. Render Canvas
+      ctx.fillStyle = "#040914"; // Deep arcade cabinet background
       ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
       // Table Glow Lines
-      ctx.strokeStyle = "rgba(16, 185, 129, 0.6)";
-      ctx.lineWidth = 3;
+      ctx.strokeStyle = "rgba(16, 200, 255, 0.6)"; // Neon cyan border
+      ctx.lineWidth = 4;
+      ctx.shadowColor = "#0ea5e9";
+      ctx.shadowBlur = 10;
       ctx.strokeRect(4, 4, WIDTH - 8, HEIGHT - 8);
 
       // Center Line and Circle
-      ctx.strokeStyle = "rgba(16, 185, 129, 0.3)";
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = "rgba(16, 200, 255, 0.4)";
+      ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.moveTo(4, HEIGHT / 2);
       ctx.lineTo(WIDTH - 4, HEIGHT / 2);
       ctx.stroke();
 
       ctx.beginPath();
-      ctx.arc(WIDTH / 2, HEIGHT / 2, 45, 0, Math.PI * 2);
+      ctx.arc(WIDTH / 2, HEIGHT / 2, 50, 0, Math.PI * 2);
       ctx.stroke();
+      ctx.shadowBlur = 0; // Reset shadow
 
       // Goals (Top & Bottom Slots with Neon Glow)
-      ctx.fillStyle = "#22c55e";
-      ctx.shadowColor = "#22c55e";
-      ctx.shadowBlur = 10;
-      ctx.fillRect((WIDTH - GOAL_WIDTH) / 2, 0, GOAL_WIDTH, 6);
+      ctx.fillStyle = "#ff0055"; // Top Goal (Opponent)
+      ctx.shadowColor = "#ff0055";
+      ctx.shadowBlur = 20;
+      ctx.fillRect((WIDTH - GOAL_WIDTH) / 2, 0, GOAL_WIDTH, 8);
 
-      ctx.fillStyle = "#38bdf8";
-      ctx.shadowColor = "#38bdf8";
-      ctx.shadowBlur = 10;
-      ctx.fillRect((WIDTH - GOAL_WIDTH) / 2, HEIGHT - 6, GOAL_WIDTH, 6);
+      ctx.fillStyle = "#00ffcc"; // Bottom Goal (Player)
+      ctx.shadowColor = "#00ffcc";
+      ctx.shadowBlur = 20;
+      ctx.fillRect((WIDTH - GOAL_WIDTH) / 2, HEIGHT - 8, GOAL_WIDTH, 8);
       ctx.shadowBlur = 0;
 
-      // Render P2 Paddle (Green Glow)
+      // Render P2 Paddle (Red Glow)
       ctx.beginPath();
       ctx.arc(p2.x, p2.y, PADDLE_RADIUS, 0, Math.PI * 2);
-      ctx.fillStyle = "#22c55e";
-      ctx.shadowColor = "#22c55e";
-      ctx.shadowBlur = 15;
+      ctx.fillStyle = "#ff0055";
+      ctx.shadowColor = "#ff0055";
+      ctx.shadowBlur = 20;
+      ctx.fill();
+      ctx.fillStyle = "#330011"; // Inner circle for realistic paddle look
+      ctx.beginPath();
+      ctx.arc(p2.x, p2.y, PADDLE_RADIUS - 6, 0, Math.PI * 2);
       ctx.fill();
       ctx.shadowBlur = 0;
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 2;
-      ctx.stroke();
 
       // Render P1 Paddle (Cyan Glow)
       ctx.beginPath();
       ctx.arc(p1.x, p1.y, PADDLE_RADIUS, 0, Math.PI * 2);
-      ctx.fillStyle = "#38bdf8";
-      ctx.shadowColor = "#38bdf8";
-      ctx.shadowBlur = 15;
+      ctx.fillStyle = "#00ffcc";
+      ctx.shadowColor = "#00ffcc";
+      ctx.shadowBlur = 20;
+      ctx.fill();
+      ctx.fillStyle = "#002211"; // Inner circle for realistic paddle look
+      ctx.beginPath();
+      ctx.arc(p1.x, p1.y, PADDLE_RADIUS - 6, 0, Math.PI * 2);
       ctx.fill();
       ctx.shadowBlur = 0;
-      ctx.strokeStyle = "#ffffff";
+      ctx.strokeStyle = "rgba(0, 255, 204, 0.5)";
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      // Render Puck (Neon Red Glow)
+      // Render Puck (Neon Yellow Glow for realistic arcade puck)
       ctx.beginPath();
       ctx.arc(puck.x, puck.y, PUCK_RADIUS, 0, Math.PI * 2);
-      ctx.fillStyle = "#ef4444";
-      ctx.shadowColor = "#ef4444";
+      ctx.fillStyle = "#ffcc00";
+      ctx.shadowColor = "#ffcc00";
       ctx.shadowBlur = 18;
       ctx.fill();
       ctx.shadowBlur = 0;

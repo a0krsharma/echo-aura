@@ -154,38 +154,55 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
     await passLudoTurn(match.id, currentUid);
   };
 
-  // Pure Monochrome High-Contrast Faction Meta
-  const monochromeMeta = {
+  // Auto-play / Auto-pass UX
+  useEffect(() => {
+    if (isMyTurn && ludoState.hasRolled && roll) {
+      if (!hasValidMoves) {
+        const timer = setTimeout(() => {
+          handlePassTurn();
+        }, 800);
+        return () => clearTimeout(timer);
+      } else if (validTokenIdsToMove.length === 1) {
+        const timer = setTimeout(() => {
+          handleMove(validTokenIdsToMove[0]);
+        }, 500);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [isMyTurn, ludoState.hasRolled, roll, hasValidMoves, validTokenIdsToMove]);
+
+  // Classic Realistic Ludo Colors
+  const classicMeta = {
     RED: {
-      name: "FACTION I (SOLID WHITE)",
-      symbol: "◆",
-      tokenBg: "bg-white text-black font-black shadow-[0_4px_10px_rgba(255,255,255,0.4)] border-2 border-black",
-      baseBorder: "border-2 border-white",
-      baseBg: "bg-black",
+      name: "RED TEAM",
+      symbol: "🔴",
+      tokenBg: "bg-gradient-to-br from-red-500 to-red-700 text-white font-black shadow-[0_4px_6px_rgba(239,68,68,0.5)] border-2 border-red-900 rounded-full",
+      baseBorder: "border-4 border-red-600",
+      baseBg: "bg-red-950/40",
       label: "RED",
     },
     GREEN: {
-      name: "FACTION II (INVERTED RING)",
-      symbol: "▲",
-      tokenBg: "bg-black text-white font-black shadow-[0_4px_10px_rgba(255,255,255,0.3)] border-2 border-white ring-1 ring-white",
-      baseBorder: "border-2 border-neutral-400",
-      baseBg: "bg-neutral-950",
+      name: "GREEN TEAM",
+      symbol: "🟢",
+      tokenBg: "bg-gradient-to-br from-green-500 to-green-700 text-white font-black shadow-[0_4px_6px_rgba(34,197,94,0.5)] border-2 border-green-900 rounded-full",
+      baseBorder: "border-4 border-green-600",
+      baseBg: "bg-green-950/40",
       label: "GRN",
     },
     YELLOW: {
-      name: "FACTION III (DOTTED CORE)",
-      symbol: "●",
-      tokenBg: "bg-zinc-200 text-black font-black shadow-[0_4px_10px_rgba(255,255,255,0.3)] border-2 border-neutral-900",
-      baseBorder: "border-2 border-dashed border-white",
-      baseBg: "bg-black",
-      label: "YEL",
+      name: "YELLOW TEAM",
+      symbol: "🟡",
+      tokenBg: "bg-gradient-to-br from-yellow-400 to-yellow-600 text-black font-black shadow-[0_4px_6px_rgba(234,179,8,0.5)] border-2 border-yellow-800 rounded-full",
+      baseBorder: "border-4 border-yellow-500",
+      baseBg: "bg-yellow-950/40",
+      label: "YLW",
     },
     BLUE: {
-      name: "FACTION IV (CROSSHAIR)",
-      symbol: "✚",
-      tokenBg: "bg-neutral-900 text-white font-black shadow-[0_4px_10px_rgba(255,255,255,0.3)] border-2 border-dashed border-white",
-      baseBorder: "border-2 border-dotted border-white",
-      baseBg: "bg-neutral-950",
+      name: "BLUE TEAM",
+      symbol: "🔵",
+      tokenBg: "bg-gradient-to-br from-blue-500 to-blue-700 text-white font-black shadow-[0_4px_6px_rgba(59,130,246,0.5)] border-2 border-blue-900 rounded-full",
+      baseBorder: "border-4 border-blue-600",
+      baseBg: "bg-blue-950/40",
       label: "BLU",
     },
   };
@@ -283,7 +300,7 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
           const isTurn = ludoState.currentTurn === team;
           const tokens = ludoState.tokens[team] || [];
           const homeCount = tokens.filter((t) => t.isHome).length;
-          const meta = monochromeMeta[team];
+          const meta = classicMeta[team];
 
           return (
             <div
@@ -364,7 +381,7 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
                                 t.isHome
                                   ? "bg-white text-black border-white"
                                   : t.stepCount > 0
-                                  ? monochromeMeta.RED.tokenBg
+                                  ? classicMeta.RED.tokenBg
                                   : "bg-neutral-950 text-neutral-500 border-neutral-700"
                               } ${
                                 isMovable
@@ -409,7 +426,7 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
                                 t.isHome
                                   ? "bg-white text-black border-white"
                                   : t.stepCount > 0
-                                  ? monochromeMeta.GREEN.tokenBg
+                                  ? classicMeta.GREEN.tokenBg
                                   : "bg-neutral-950 text-neutral-500 border-neutral-700"
                               } ${
                                 isMovable
@@ -454,7 +471,7 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
                                 t.isHome
                                   ? "bg-white text-black border-white"
                                   : t.stepCount > 0
-                                  ? monochromeMeta.BLUE.tokenBg
+                                  ? classicMeta.BLUE.tokenBg
                                   : "bg-neutral-950 text-neutral-500 border-neutral-700"
                               } ${
                                 isMovable
@@ -499,7 +516,7 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
                                 t.isHome
                                   ? "bg-white text-black border-white"
                                   : t.stepCount > 0
-                                  ? monochromeMeta.YELLOW.tokenBg
+                                  ? classicMeta.YELLOW.tokenBg
                                   : "bg-neutral-950 text-neutral-500 border-neutral-700"
                               } ${
                                 isMovable
@@ -592,7 +609,7 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
                   {/* Render Occupying Pawns on this cell */}
                   {tokensOnCell.map((tok) => {
                     const isMovable = validTokenIdsToMove.includes(tok.id) && myTeam === tok.color;
-                    const meta = monochromeMeta[tok.color];
+                    const meta = classicMeta[tok.color];
                     return (
                       <button
                         key={`${tok.color}-${tok.id}`}

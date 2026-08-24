@@ -262,20 +262,20 @@ export default function ChessGame({ match, currentUid, isHost }: ChessGameProps)
                   onClick={() => handleCellClick(r, c)}
                   className={`relative flex items-center justify-center font-black transition-all cursor-pointer ${
                     isSelected
-                      ? "bg-white text-black ring-4 ring-white z-10 scale-105"
+                      ? "bg-amber-300 ring-4 ring-amber-500 z-10 scale-105"
                       : isDark
-                      ? "bg-neutral-900 text-white hover:bg-neutral-800"
-                      : "bg-black text-white hover:bg-neutral-950"
+                      ? "bg-[#b58863] text-black hover:bg-[#a37955]"
+                      : "bg-[#f0d9b5] text-black hover:bg-[#e0c8a3]"
                   }`}
                 >
                   {/* Coordinate labels */}
                   {c === 0 && (
-                    <span className="absolute left-1 top-0.5 text-[8px] text-neutral-600 font-mono pointer-events-none">
+                    <span className={`absolute left-1 top-0.5 text-[8px] font-mono pointer-events-none ${isDark ? "text-[#f0d9b5]" : "text-[#b58863]"}`}>
                       {ranks[r]}
                     </span>
                   )}
                   {r === 7 && (
-                    <span className="absolute right-1 bottom-0.5 text-[8px] text-neutral-600 font-mono pointer-events-none">
+                    <span className={`absolute right-1 bottom-0.5 text-[8px] font-mono pointer-events-none ${isDark ? "text-[#f0d9b5]" : "text-[#b58863]"}`}>
                       {files[c]}
                     </span>
                   )}
@@ -284,8 +284,8 @@ export default function ChessGame({ match, currentUid, isHost }: ChessGameProps)
                   {pieceGlyph && (
                     <span
                       className={`text-2xl sm:text-3xl transition-transform ${
-                        cell?.color === "w" ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]" : "text-neutral-400 drop-shadow-[0_0_4px_rgba(0,0,0,0.9)]"
-                      } ${isSelected ? "text-black drop-shadow-none" : ""}`}
+                        cell?.color === "w" ? "text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]" : "text-black drop-shadow-[0_1px_1px_rgba(255,255,255,0.3)]"
+                      }`}
                     >
                       {pieceGlyph}
                     </span>
