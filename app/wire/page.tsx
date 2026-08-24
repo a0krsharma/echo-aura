@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Mic, Mic2, Lock, Plus, Search, X, Send, ChevronLeft, Loader2, Phone, PhoneOff, Play, Pause, Square, Trash2 } from "lucide-react";
+import { Mic, Mic2, Lock, Plus, Search, X, Send, ChevronLeft, Loader2, Phone, PhoneOff, Play, Pause, Square, Trash2, Sparkles, Smile, User, Palette } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
 import { uploadAudio, getPlayableUrl } from "@/lib/cloudinary";
 import {
@@ -37,6 +37,16 @@ import { subscribeToUserPresence, type UserPresence } from "@/lib/presence";
 import { getFirebaseDb } from "@/lib/firebase";
 import { doc, getDoc, collection, getDocs, query, limit } from "firebase/firestore";
 import { subscribeToFollowing, type Follow } from "@/lib/follows";
+import ExpressiveAvatar from "@/app/components/avatar/ExpressiveAvatar";
+import ExpressiveGreetingModal from "@/app/components/avatar/ExpressiveGreetingModal";
+import AvatarCustomizerModal from "@/app/components/avatar/AvatarCustomizerModal";
+import {
+  GESTURE_CATALOG,
+  type AvatarConfig,
+  type AvatarGesture,
+  DEFAULT_AVATAR_CONFIG,
+} from "@/lib/avatarRig";
+import { soundSynth } from "@/lib/soundSynthesizer";
 
 // ─── Custom Wire Voice Player (No download button) ───────────────────────────
 function WireVoicePlayer({ audioUrl, isMe }: { audioUrl: string; isMe: boolean }) {
@@ -255,6 +265,70 @@ function ChatWindow({
       updateThreadLastRead(conv.id, myUid).catch(() => {});
     }
   }, [messages.length, conv.id, myUid]);
+
+  // ── 3D Avatar & Gesture states ──────────────────────────────────────────
+  const [myAvatarConfig, setMyAvatarConfig] = useState<AvatarConfig>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("echo_avatar_config");
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return DEFAULT_AVATAR_CONFIG;
+  });
+
+  const [customizerOpen, setCustomizerOpen] = useState(false);
+  const [greetingModal, setGreetingModal] = useState<{
+    isOpen: boolean;
+    senderHandle: string;
+    gesture: AvatarGesture;
+    text?: string;
+    avatarConfig?: AvatarConfig;
+  }>({
+    isOpen: false,
+    senderHandle: "@ANON",
+    gesture: "GREETING_WAVE",
+  });
+
+  const handleSendGesture = async (gesture: AvatarGesture) => {
+    if (sending) return;
+    const meta = GESTURE_CATALOG[gesture];
+    if (meta.soundType === "fanfare") soundSynth.playFanfare();
+    else if (meta.soundType === "airhorn") soundSynth.playAirhorn();
+    else if (meta.soundType === "gong") soundSynth.playGong();
+    else if (meta.soundType === "snare") soundSynth.playSnare();
+    else soundSynth.playSubtlePop();
+
+    setSending(true);
+    try {
+      await sendWhisper(
+        conv.id,
+        myUid,
+        myHandle,
+        meta.tagline,
+        undefined,
+        {
+          gesture,
+          emoji: meta.emoji,
+          label: meta.label,
+          avatarConfig: myAvatarConfig,
+        }
+      );
+    } catch (err) {
+      console.error("[Wire] Failed to send gesture:", err);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleSaveAvatar = (newConfig: AvatarConfig) => {
+    setMyAvatarConfig(newConfig);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("echo_avatar_config", JSON.stringify(newConfig));
+      } catch {}
+    }
+  };
 
   const [callActive, setCallActive] = useState(false);
   const pcRef = useRef<RTCPeerConnection | null>(null);
@@ -555,13 +629,44 @@ function ChatWindow({
                   </button>
                 )}
                 <div
-                  className={`max-w-[85%] px-3.5 py-2.5 space-y-1.5 ${
+                  className={`max-w-[85%] px-3.5 py-2.5 space-y-1.5 rounded-lg shadow ${
                     isMe
                       ? "bg-white text-black"
                       : "bg-neutral-900 text-white border border-neutral-800"
                   }`}
                 >
-                  {msg.audioUrl ? (
+                  {msg.emotionGesture ? (
+                    <div
+                      onClick={() => {
+                        setGreetingModal({
+                          isOpen: true,
+                          senderHandle: msg.senderHandle,
+                          gesture: msg.emotionGesture!.gesture,
+                          text: msg.text,
+                          avatarConfig: msg.emotionGesture!.avatarConfig || DEFAULT_AVATAR_CONFIG,
+                        });
+                      }}
+                      className="flex items-center gap-3 p-1 rounded cursor-pointer hover:opacity-90 transition-opacity"
+                    >
+                      <div className="w-12 h-12 rounded-full border-2 border-current bg-black/80 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(255,255,255,0.2)] overflow-hidden">
+                        <ExpressiveAvatar
+                          config={msg.emotionGesture.avatarConfig || DEFAULT_AVATAR_CONFIG}
+                          gesture={msg.emotionGesture.gesture}
+                          size={52}
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 font-mono text-[10px] font-black uppercase tracking-wider">
+                          <span>{msg.emotionGesture.emoji || "✨"}</span>
+                          <span className="underline">{msg.emotionGesture.label || "EXPRESSION"}</span>
+                        </div>
+                        <p className="font-mono text-xs font-bold">{msg.text}</p>
+                        <span className="text-[8px] opacity-75 font-mono uppercase block pt-0.5">
+                          [ 🔍 TAP TO PLAY 3D EXPRESSION ]
+                        </span>
+                      </div>
+                    </div>
+                  ) : msg.audioUrl ? (
                     <div className="space-y-1">
                       <p className="font-mono text-[10px] font-bold flex items-center gap-1.5 opacity-80 uppercase tracking-widest">
                         <Mic className="w-3 h-3" /> VOICE ECHO
@@ -572,11 +677,11 @@ function ChatWindow({
                     <p className="font-mono text-xs">{msg.text}</p>
                   )}
                   <div className="flex items-center justify-between gap-3 pt-0.5">
-                    <p className="font-mono text-[9px] text-neutral-500 tracking-widest uppercase">
+                    <p className="font-mono text-[9px] opacity-60 tracking-widest uppercase">
                       {timeStr(msg.createdAt)}
                     </p>
                     {isMe && (
-                      <p className="font-mono text-[9px] text-neutral-500 tracking-widest uppercase">
+                      <p className="font-mono text-[9px] opacity-60 tracking-widest uppercase">
                         {`>> [ ${teleStatus} ]`}
                       </p>
                     )}
@@ -607,19 +712,51 @@ function ChatWindow({
           <div className="flex items-center gap-2">
             <button
               onClick={cancelVoiceRecording}
-              className="px-2 py-1 border border-neutral-800 text-neutral-400 hover:text-white uppercase"
+              className="px-2 py-1 border border-neutral-800 text-neutral-400 hover:text-white uppercase cursor-pointer"
             >
               CANCEL
             </button>
             <button
               onClick={stopAndSendVoice}
-              className="px-3 py-1 bg-red-600 text-white font-bold uppercase hover:bg-red-500"
+              className="px-3 py-1 bg-red-600 text-white font-bold uppercase hover:bg-red-500 cursor-pointer"
             >
               STOP &amp; SEND
             </button>
           </div>
         </div>
       )}
+
+      {/* Quick 3D Emotion Gesture Action Bar */}
+      <div className="px-3 py-1.5 bg-neutral-950 border-t border-neutral-900 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+        <span className="font-mono text-[9px] text-neutral-500 uppercase font-black shrink-0 flex items-center gap-1">
+          <Sparkles className="w-2.5 h-2.5 text-emerald-400" />
+          <span>3D FX:</span>
+        </span>
+        {(["GREETING_WAVE", "LOVE_HEART", "APOLOGY_BOW", "LOL_LAUGH", "GG_CLAP", "MINDBLOWN", "HYPE_FIRE"] as AvatarGesture[]).map((g) => {
+          const meta = GESTURE_CATALOG[g];
+          return (
+            <button
+              key={g}
+              type="button"
+              disabled={sending || isRecording}
+              onClick={() => handleSendGesture(g)}
+              className="px-2 py-1 bg-black border border-neutral-800 hover:border-white hover:bg-white hover:text-black rounded text-[10px] font-mono font-bold uppercase transition-all flex items-center gap-1 shrink-0 cursor-pointer active:scale-95 disabled:opacity-40"
+            >
+              <span>{meta.emoji}</span>
+              <span>{meta.label}</span>
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          onClick={() => setCustomizerOpen(true)}
+          className="px-2 py-1 bg-neutral-900 border border-neutral-700 hover:border-white text-white rounded text-[10px] font-mono font-bold uppercase transition-all flex items-center gap-1 shrink-0 cursor-pointer active:scale-95 ml-auto whitespace-nowrap"
+          title="Customize your 3D Avatar"
+        >
+          <Palette className="w-3 h-3 text-cyan-400" />
+          <span>[ 👤 3D STUDIO ]</span>
+        </button>
+      </div>
 
       <form onSubmit={handleSend} className="p-2.5 sm:p-4 border-t border-neutral-900 flex items-center gap-1.5 sm:gap-2 bg-black shrink-0 sticky bottom-0 z-30 pb-safe sm:pb-4">
         <input
@@ -655,6 +792,25 @@ function ChatWindow({
           <span>SEND</span>
         </button>
       </form>
+
+      {/* Expressive Greeting Dialog */}
+      <ExpressiveGreetingModal
+        isOpen={greetingModal.isOpen}
+        onClose={() => setGreetingModal({ ...greetingModal, isOpen: false })}
+        senderHandle={greetingModal.senderHandle}
+        gesture={greetingModal.gesture}
+        text={greetingModal.text}
+        avatarConfig={greetingModal.avatarConfig}
+        onQuickReply={(replyGesture) => handleSendGesture(replyGesture)}
+      />
+
+      {/* 3D Avatar Customizer Studio Modal */}
+      <AvatarCustomizerModal
+        isOpen={customizerOpen}
+        onClose={() => setCustomizerOpen(false)}
+        initialConfig={myAvatarConfig}
+        onSave={handleSaveAvatar}
+      />
     </div>
   );
 }

@@ -39,6 +39,14 @@ import {
   type Timestamp,
 } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
+import type { AvatarConfig, AvatarGesture } from "@/lib/avatarRig";
+
+export interface EmotionGesturePayload {
+  gesture: AvatarGesture;
+  emoji?: string;
+  label?: string;
+  avatarConfig?: AvatarConfig;
+}
 
 export interface WhisperConversation {
   id:           string;
@@ -51,14 +59,15 @@ export interface WhisperConversation {
 }
 
 export interface WhisperMessage {
-  id:           string;
-  senderUid:    string;
-  senderHandle: string;
-  text:         string;
-  audioUrl?:    string;
-  readBy:       string[];
-  status?:      "SENT" | "DELIVERED" | "SEEN" | "IGNORED" | "DISMISSED";
-  createdAt:    Timestamp | null;
+  id:              string;
+  senderUid:       string;
+  senderHandle:    string;
+  text:            string;
+  audioUrl?:       string;
+  emotionGesture?: EmotionGesturePayload;
+  readBy:          string[];
+  status?:         "SENT" | "DELIVERED" | "SEEN" | "IGNORED" | "DISMISSED";
+  createdAt:       Timestamp | null;
 }
 
 /**
@@ -180,18 +189,23 @@ export async function startOrGetConversation(
 
 /**
  * sendWhisper
- * Send a text or audio message in a conversation.
+ * Send a text, audio, or 3D expressive emotion gesture message in a conversation.
  */
 export async function sendWhisper(
   conversationId: string,
   senderUid: string,
   senderHandle: string,
   text: string,
-  audioUrl?: string
+  audioUrl?: string,
+  emotionGesture?: EmotionGesturePayload
 ): Promise<string> {
   const db = getFirebaseDb();
   const convRef = doc(db, "whispers", conversationId);
   const uids = conversationId.split("__").filter(Boolean);
+
+  const displayPreview = emotionGesture
+    ? `${emotionGesture.emoji || "✨"} [${emotionGesture.label || "Expression"}] ${text}`.trim()
+    : text || (audioUrl ? "🎙 Voice message" : "Message");
 
   // 1. Try updating parent conversation doc (non-blocking)
   try {
@@ -204,7 +218,7 @@ export async function sendWhisper(
           handles: {
             [senderUid]: senderHandle || "@ANON",
           },
-          lastMessage: text || "🎙 Voice message",
+          lastMessage: displayPreview,
           lastAt: serverTimestamp(),
           createdAt: serverTimestamp(),
         },
@@ -214,7 +228,7 @@ export async function sendWhisper(
       await updateDoc(convRef, {
         participants: arrayUnion(...(uids.length > 0 ? uids : [senderUid])),
         [`handles.${senderUid}`]: senderHandle || "@ANON",
-        lastMessage: text || "🎙 Voice message",
+        lastMessage: displayPreview,
         lastAt: serverTimestamp(),
       });
     }
@@ -226,27 +240,35 @@ export async function sendWhisper(
   let msgRefId = "";
   try {
     const messagesRef = collection(db, "whispers", conversationId, "messages");
-    const msgRef = await addDoc(messagesRef, {
+    const msgData: Record<string, any> = {
       senderUid,
       senderHandle,
       text,
       audioUrl: audioUrl || null,
       readBy: [senderUid],
       createdAt: serverTimestamp(),
-    });
+    };
+    if (emotionGesture) {
+      msgData.emotionGesture = emotionGesture;
+    }
+    const msgRef = await addDoc(messagesRef, msgData);
     msgRefId = msgRef.id;
   } catch (msgErr) {
     console.warn("[sendWhisper] Warning adding message to whispers subcollection:", msgErr);
     try {
       const wireMsgRef = collection(db, "wire", conversationId, "messages");
-      const msgRef = await addDoc(wireMsgRef, {
+      const msgData: Record<string, any> = {
         senderUid,
         senderHandle,
         text,
         audioUrl: audioUrl || null,
         readBy: [senderUid],
         createdAt: serverTimestamp(),
-      });
+      };
+      if (emotionGesture) {
+        msgData.emotionGesture = emotionGesture;
+      }
+      const msgRef = await addDoc(wireMsgRef, msgData);
       msgRefId = msgRef.id;
     } catch (aliasErr) {
       console.warn("[sendWhisper] Alias write warning:", aliasErr);

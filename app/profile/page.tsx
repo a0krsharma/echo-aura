@@ -57,6 +57,9 @@ import {
   isThoughtActive,
   getThoughtRemainingHours,
 } from "@/lib/userDoc";
+import ExpressiveAvatar from "@/app/components/avatar/ExpressiveAvatar";
+import AvatarCustomizerModal from "@/app/components/avatar/AvatarCustomizerModal";
+import { type AvatarConfig, DEFAULT_AVATAR_CONFIG } from "@/lib/avatarRig";
 
 // Global Audio Singleton Manager — ensures only one audio echo plays at a time
 let globalAudioInstance: HTMLAudioElement | null = null;
@@ -287,6 +290,37 @@ export default function ProfilePage() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.photoURL || user?.avatarUrl || null);
   const [savingProfile, setSavingProfile] = useState(false);
+
+  // 3D Avatar Studio state
+  const [avatarStudioOpen, setAvatarStudioOpen] = useState(false);
+  const [avatarConfig, setAvatarConfig] = useState<AvatarConfig>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("echo_avatar_config");
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return DEFAULT_AVATAR_CONFIG;
+  });
+
+  const handleSaveAvatarConfig = async (newConfig: AvatarConfig) => {
+    setAvatarConfig(newConfig);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("echo_avatar_config", JSON.stringify(newConfig));
+      } catch {}
+    }
+    if (user) {
+      try {
+        const db = getFirebaseDb();
+        await updateDoc(doc(db, "users", user.uid), {
+          avatarConfig: newConfig,
+        });
+      } catch (err) {
+        console.warn("Failed to persist avatarConfig to Firestore:", err);
+      }
+    }
+  };
 
   // Real-time listener for user document (aura, voice bio, vibe read & profile data)
   useEffect(() => {
@@ -1020,12 +1054,19 @@ export default function ProfilePage() {
           </div>
 
           {/* Utilitarian Action Deck */}
-          <div className="flex items-center gap-2 pt-1">
+          <div className="flex items-center gap-2 pt-1 flex-wrap sm:flex-nowrap">
             <button
               onClick={() => setEditProfileOpen(true)}
               className="flex-1 py-2 px-3 border border-neutral-800 bg-neutral-950 hover:border-white text-white font-mono text-xs tracking-wider uppercase transition-colors cursor-pointer text-center"
             >
               [ EDIT PROFILE ]
+            </button>
+            <button
+              onClick={() => setAvatarStudioOpen(true)}
+              className="flex-1 py-2 px-3 border border-cyan-500/60 bg-cyan-950/20 hover:border-cyan-400 text-cyan-300 hover:text-white font-mono text-xs tracking-wider uppercase transition-colors cursor-pointer text-center flex items-center justify-center gap-1.5"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+              <span>[ 👤 3D AVATAR ]</span>
             </button>
             <button
               onClick={() => setShareModalOpen(true)}
@@ -1562,6 +1603,14 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
+
+      {/* 3D Avatar Customizer Studio Modal */}
+      <AvatarCustomizerModal
+        isOpen={avatarStudioOpen}
+        onClose={() => setAvatarStudioOpen(false)}
+        initialConfig={avatarConfig}
+        onSave={handleSaveAvatarConfig}
+      />
     </div>
   );
 }
