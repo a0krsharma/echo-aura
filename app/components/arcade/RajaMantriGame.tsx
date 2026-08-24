@@ -96,7 +96,7 @@ export default function RajaMantriGame({ match, currentUid, isHost }: RajaMantri
             MANTRI ACTION: TAP THE NODE YOU SUSPECT IS THE CHOR:
           </span>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {Object.entries(match.players).map(([uid, p]) => {
+            {Object.entries(match.players || {}).map(([uid, p]) => {
               if (uid === currentUid) return null;
               return (
                 <button

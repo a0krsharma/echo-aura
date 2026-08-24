@@ -107,7 +107,7 @@ export default function GlowHockeyGame({ match, currentUid }: GlowHockeyGameProp
           soundSynth.playBuzzer();
           setP2Score((s) => {
             const next = s + 1;
-            updateGlowHockeyScore(match.id, Object.keys(match.players).find(u => u !== currentUid) || currentUid, p1Score, next);
+            updateGlowHockeyScore(match.id, Object.keys(match.players || {}).find(u => u !== currentUid) || currentUid, p1Score, next);
             return next;
           });
           resetPuck(false);

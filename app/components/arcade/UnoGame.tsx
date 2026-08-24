@@ -325,7 +325,7 @@ export default function UnoGame({ match, currentUid }: UnoGameProps) {
       {/* Opponents Radar & Rotation Direction HUD */}
       <div className="flex items-center justify-between bg-neutral-950 p-2.5 border border-neutral-800 rounded-lg flex-wrap gap-2">
         <div className="flex items-center gap-2 flex-wrap">
-          {Object.entries(match.players).map(([uid, p]) => {
+          {Object.entries(match.players || {}).map(([uid, p]) => {
             if (uid === currentUid) return null;
             const oppHand = hands[uid] || [];
             const oppCount = oppHand.length;
@@ -482,7 +482,7 @@ export default function UnoGame({ match, currentUid }: UnoGameProps) {
             <span>7 RULE ACTIVATED: CHOOSE OPPONENT TO SWAP YOUR ENTIRE HAND!</span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {Object.entries(match.players)
+            {Object.entries(match.players || {})
               .filter(([uid]) => uid !== currentUid)
               .map(([uid, p]) => (
                 <button
@@ -532,7 +532,7 @@ export default function UnoGame({ match, currentUid }: UnoGameProps) {
           <div className="flex items-center gap-2 text-xs font-black text-red-300">
             <ShieldAlert className="w-4 h-4 text-red-400" />
             <span>
-              {match.players[catchableOpponent[0]]?.handle} HAS 1 CARD WITHOUT SHOUTING UNO!
+              {match.players?.[catchableOpponent[0]]?.handle || "@PLAYER"} HAS 1 CARD WITHOUT SHOUTING UNO!
             </span>
           </div>
           <button

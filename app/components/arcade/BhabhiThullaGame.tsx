@@ -92,7 +92,7 @@ export default function BhabhiThullaGame({ match, currentUid }: BhabhiThullaGame
         <div className="flex items-center gap-2">
           <DoorOpen className="w-4 h-4 text-emerald-400" />
           <span className="text-[10px] text-neutral-400 font-bold uppercase">
-            ESCAPED (GOT AWAY): {bts.escapedPlayers.length > 0 ? bts.escapedPlayers.map(u => match.players[u]?.handle).join(", ") : "NONE YET"}
+            ESCAPED (GOT AWAY): {bts.escapedPlayers.length > 0 ? bts.escapedPlayers.map(u => match.players?.[u]?.handle).filter(Boolean).join(", ") : "NONE YET"}
           </span>
         </div>
         {hasEscaped && (
@@ -149,7 +149,7 @@ export default function BhabhiThullaGame({ match, currentUid }: BhabhiThullaGame
             {bts.bhabhiUid === currentUid ? "🚨 YOU ARE THE BHABHI!" : `🏆 ${match.winnerHandle} GOT AWAY & WON!`}
           </h2>
           <p className="text-xs text-neutral-300 uppercase font-bold">
-            {bts.bhabhiUid ? `BHABHI: ${match.players[bts.bhabhiUid]?.handle}` : "ROUND COMPLETE"}
+            {bts.bhabhiUid ? `BHABHI: ${match.players?.[bts.bhabhiUid]?.handle || "@PLAYER"}` : "ROUND COMPLETE"}
           </p>
         </div>
       )}

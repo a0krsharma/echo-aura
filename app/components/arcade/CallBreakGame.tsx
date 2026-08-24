@@ -102,8 +102,8 @@ export default function CallBreakGame({ match, currentUid }: CallBreakGameProps)
       {/* Players Bids & Tricks HUD */}
       <div className="grid grid-cols-4 gap-2 bg-neutral-950 p-2.5 border border-neutral-800 rounded text-center">
         {Object.entries(match.players || {}).slice(0, 4).map(([uid, p]) => {
-          const bid = cbs.bids[uid];
-          const won = cbs.tricksWon[uid] || 0;
+          const bid = cbs.bids?.[uid];
+          const won = cbs.tricksWon?.[uid] || 0;
           const isPlayerTurn = cbs.currentTurnUid === uid;
           return (
             <div
@@ -143,7 +143,7 @@ export default function CallBreakGame({ match, currentUid }: CallBreakGameProps)
                 >
                   <span className="text-[10px] self-start leading-none">{play.card.slice(0, -1)}</span>
                   <span className="text-xl leading-none">{play.card.slice(-1)}</span>
-                  <span className="text-[8px] truncate max-w-[40px]">{match.players[play.playerUid]?.handle}</span>
+                  <span className="text-[8px] truncate max-w-[40px]">{match.players?.[play.playerUid]?.handle || "@PLAYER"}</span>
                 </div>
               );
             })
