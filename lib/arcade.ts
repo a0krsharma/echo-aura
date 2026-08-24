@@ -375,6 +375,37 @@ export interface UnoState {
   lastActionLog?: string;
 }
 
+export function createUnoDeck(): UnoCard[] {
+  const colors: ("RED" | "BLUE" | "GREEN" | "YELLOW")[] = ["RED", "BLUE", "GREEN", "YELLOW"];
+  const deck: UnoCard[] = [];
+
+  // Build standard 108-card deck
+  for (const color of colors) {
+    deck.push({ color, value: "0" });
+    for (let i = 1; i <= 9; i++) {
+      deck.push({ color, value: i.toString() });
+      deck.push({ color, value: i.toString() });
+    }
+    deck.push({ color, value: "SKIP" });
+    deck.push({ color, value: "SKIP" });
+    deck.push({ color, value: "REVERSE" });
+    deck.push({ color, value: "REVERSE" });
+    deck.push({ color, value: "+2" });
+    deck.push({ color, value: "+2" });
+  }
+  for (let i = 0; i < 4; i++) {
+    deck.push({ color: "WILD", value: "WILD" });
+    deck.push({ color: "WILD", value: "+4" });
+  }
+
+  // Fisher-Yates shuffle
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+  return deck;
+}
+
 export interface LiarsDiceState {
   diceRollsStr: string; // Record<string, number[]>
   currentBid: { count: number; face: number; bidderUid: string } | null;
@@ -1522,34 +1553,7 @@ export async function createArcadeMatch(params: {
       lastActionLog: "Klondike Solitaire ready. Build Ace to King on foundation piles!",
     };
   } else if (params.gameType === "uno") {
-    const colors: ("RED" | "BLUE" | "GREEN" | "YELLOW")[] = ["RED", "BLUE", "GREEN", "YELLOW"];
-    const deck: UnoCard[] = [];
-
-    // Build standard 108-card deck
-    for (const color of colors) {
-      deck.push({ color, value: "0" });
-      for (let i = 1; i <= 9; i++) {
-        deck.push({ color, value: i.toString() });
-        deck.push({ color, value: i.toString() });
-      }
-      deck.push({ color, value: "SKIP" });
-      deck.push({ color, value: "SKIP" });
-      deck.push({ color, value: "REVERSE" });
-      deck.push({ color, value: "REVERSE" });
-      deck.push({ color, value: "+2" });
-      deck.push({ color, value: "+2" });
-    }
-    for (let i = 0; i < 4; i++) {
-      deck.push({ color: "WILD", value: "WILD" });
-      deck.push({ color: "WILD", value: "+4" });
-    }
-
-    // Shuffle deck
-    for (let i = deck.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [deck[i], deck[j]] = [deck[j], deck[i]];
-    }
-
+    const deck = createUnoDeck();
     const botUid = `bot_${matchId}_ai`;
     const initialHands: Record<string, UnoCard[]> = {
       [params.hostUid]: deck.splice(0, 7),
@@ -1979,6 +1983,19 @@ export async function joinArcadeMatch(
 
   if (match.gameType === "battleship" && !match.battleshipState?.p2Uid) {
     updates["battleshipState.p2Uid"] = user.uid;
+  }
+
+  if (match.gameType === "uno" && match.unoState) {
+    const hands: Record<string, UnoCard[]> = JSON.parse(match.unoState.handsStr || "{}");
+    let drawDeck: UnoCard[] = JSON.parse(match.unoState.drawDeckStr || "[]");
+    if (!hands[user.uid] || hands[user.uid].length === 0) {
+      if (drawDeck.length < 7) {
+        drawDeck = [...drawDeck, ...createUnoDeck()];
+      }
+      hands[user.uid] = drawDeck.splice(0, 7);
+      updates["unoState.handsStr"] = JSON.stringify(hands);
+      updates["unoState.drawDeckStr"] = JSON.stringify(drawDeck);
+    }
   }
 
   await updateDoc(matchRef, updates);
@@ -3338,15 +3355,12 @@ export async function acceptUnoDrawPenalty(
   let drawDeck: UnoCard[] = JSON.parse(us.drawDeckStr || "[]");
   const playerHand = hands[playerUid] || [];
   const countToDraw = us.pendingDrawStack || 2;
-
-  const colors: ("RED" | "BLUE" | "GREEN" | "YELLOW")[] = ["RED", "BLUE", "GREEN", "YELLOW"];
-  const values = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+2", "SKIP", "REVERSE"];
+  if (drawDeck.length < countToDraw) {
+    drawDeck = [...drawDeck, ...createUnoDeck()];
+  }
 
   for (let i = 0; i < countToDraw; i++) {
-    const drawn = drawDeck.pop() || {
-      color: colors[Math.floor(Math.random() * colors.length)],
-      value: values[Math.floor(Math.random() * values.length)],
-    };
+    const drawn = drawDeck.pop() || { color: "RED", value: "5" };
     playerHand.push(drawn);
   }
   hands[playerUid] = playerHand;
@@ -3396,17 +3410,11 @@ export async function drawUnoCard(
   let drawDeck: UnoCard[] = JSON.parse(us.drawDeckStr || "[]");
   const playerHand = hands[playerUid] || [];
 
-  const colors: ("RED" | "BLUE" | "GREEN" | "YELLOW")[] = ["RED", "BLUE", "GREEN", "YELLOW"];
-  const values = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+2", "SKIP", "REVERSE"];
-  const isWild = Math.random() < 0.08;
+  if (drawDeck.length < 5) {
+    drawDeck = [...drawDeck, ...createUnoDeck()];
+  }
 
-  const drawn: UnoCard = drawDeck.pop() || (isWild
-    ? { color: "WILD", value: Math.random() < 0.5 ? "WILD" : "+4" }
-    : {
-        color: colors[Math.floor(Math.random() * colors.length)],
-        value: values[Math.floor(Math.random() * values.length)],
-      });
-
+  const drawn: UnoCard = drawDeck.pop() || { color: "RED", value: "7" };
   playerHand.push(drawn);
   hands[playerUid] = playerHand;
 

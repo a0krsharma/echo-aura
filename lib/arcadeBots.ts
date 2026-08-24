@@ -455,7 +455,7 @@ export async function executeUnoBotTurn(match: ArcadeMatch): Promise<void> {
   } catch (err) {
     console.error("[ArcadeBot] Uno error:", err);
   } finally {
-    setTimeout(() => activeBotRuns.delete(runKey), 1600);
+    activeBotRuns.delete(runKey);
   }
 }
 

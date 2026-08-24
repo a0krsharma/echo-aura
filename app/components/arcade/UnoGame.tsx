@@ -115,6 +115,9 @@ export default function UnoGame({ match, currentUid }: UnoGameProps) {
     us?.discardTop?.value,
     us?.pendingDrawStack,
     us?.pendingSwapUid,
+    us?.handsStr,
+    us?.lastActionLog,
+    match.status,
   ]);
 
   if (!us) return <div className="text-white font-mono p-4">Loading Uno Matrix...</div>;
