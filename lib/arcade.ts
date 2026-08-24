@@ -1984,6 +1984,26 @@ export async function joinArcadeMatch(
   await updateDoc(matchRef, updates);
 }
 
+export async function leaveArcadeMatch(
+  matchId: string,
+  playerUid: string
+): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) return;
+  const match = snap.data() as ArcadeMatch;
+  if (!match.players || !match.players[playerUid]) return;
+
+  const players = { ...match.players };
+  delete players[playerUid];
+
+  await updateDoc(matchRef, {
+    players,
+    updatedAt: serverTimestamp(),
+  });
+}
+
 // ── Subscribe to Match ───────────────────────────────────────────────────────
 export function subscribeArcadeMatch(
   matchId: string,
