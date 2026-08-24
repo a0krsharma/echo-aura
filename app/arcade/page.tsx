@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useAuth } from "@/app/components/AuthProvider";
 import { useSearchParams } from "next/navigation";
+import { findOrJoinQueue } from "@/lib/arcadeQueue";
 import {
   createArcadeMatch,
   joinArcadeMatch,
@@ -95,6 +96,7 @@ import {
 import Link from "next/link";
 import { collection, query, limit, onSnapshot } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
+import { updateArcadeElo } from "@/lib/userDoc";
 
 type CategoryFilter = "ALL" | "CARD" | "PAPER" | "PHYSICS" | "TACTICAL" | "PARTY" | "PUZZLE";
 
@@ -163,6 +165,38 @@ function ArcadeContent() {
   const [initialTournamentId, setInitialTournamentId] = useState<string | undefined>(undefined);
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchingGame, setSearchingGame] = useState<string | null>(null);
+  const cancelQueueRef = React.useRef<(() => void) | null>(null);
+
+  const handleFindMatch = async (gameId: ArcadeGameType) => {
+    if (!user) return;
+    setIsSearching(true);
+    setSearchingGame(gameId);
+    
+    const cancelFn = await findOrJoinQueue(
+      user?.uid,
+      user.handle || "@ANON",
+      user.photoUrl || user.photoURL || "",
+      gameId,
+      (matchId) => {
+        setIsSearching(false);
+        setSearchingGame(null);
+        setActiveMatchId(matchId);
+      }
+    );
+    cancelQueueRef.current = cancelFn;
+  };
+
+  const handleCancelSearch = () => {
+    if (cancelQueueRef.current) {
+      cancelQueueRef.current();
+      cancelQueueRef.current = null;
+    }
+    setIsSearching(false);
+    setSearchingGame(null);
+  };
+
   
   const rtcClient = React.useMemo(() => AgoraRTC.createClient({ codec: "vp8", mode: "rtc" }), []);
   const [rawMicStream, setRawMicStream] = useState<MediaStream | null>(null);
@@ -224,7 +258,7 @@ function ArcadeContent() {
       const matchId = await createArcadeMatch({
         gameType: preset.gameType as ArcadeGameType,
         title: preset.title,
-        hostUid: user.uid,
+        hostUid: user?.uid,
         hostHandle: `${user.handle || "@ANON"} [👻 GHOST]`,
         hostAvatar: user.photoUrl || user.photoURL,
         mode: "MULTIPLAYER",
@@ -285,7 +319,7 @@ function ArcadeContent() {
     if (
       activeMatch &&
       user &&
-      !activeMatch.players?.[user.uid] &&
+      !activeMatch.players?.[user?.uid] &&
       activeMatch.status !== "FINISHED"
     ) {
       const currentCount = Object.keys(activeMatch.players || {}).length;
@@ -363,7 +397,7 @@ function ArcadeContent() {
       const matchId = await createArcadeMatch({
         gameType: type,
         title: `${type.toUpperCase()} // SOLO VS NEURAL BOT`,
-        hostUid: user.uid,
+        hostUid: user?.uid,
         hostHandle: user.handle || "@ANON",
         hostAvatar: user.photoUrl || user.photoURL,
         mode: maxPlayers === 1 ? "MULTIPLAYER" : "VS_COMPUTER",
@@ -382,7 +416,7 @@ function ArcadeContent() {
     if (!user) return;
     try {
       await joinArcadeMatch(matchId, {
-        uid: user.uid,
+        uid: user?.uid,
         handle: user.handle || "@ANON",
         avatar: user.photoUrl || user.photoURL,
       });
@@ -413,18 +447,32 @@ function ArcadeContent() {
     setActiveMatch(null);
     if (user) {
       try {
-        await leaveArcadeMatch(mId, user.uid);
+        await leaveArcadeMatch(mId, user?.uid);
       } catch (e) {
         console.warn("Failed to clean up match:", e);
       }
     }
   };
 
+  // Update Elo once per match on the Winner's client
+  const eloUpdatedRef = React.useRef<string | null>(null);
+  useEffect(() => {
+    if (activeMatch?.status === "FINISHED" && activeMatch.winnerUid === user?.uid) {
+      if (eloUpdatedRef.current !== activeMatch.id) {
+        eloUpdatedRef.current = activeMatch.id;
+        const loserUid = Object.keys(activeMatch.players || {}).find(id => id !== user?.uid && !id.startsWith("bot"));
+        if (loserUid) {
+          if(user) updateArcadeElo(user.uid, loserUid).catch(() => {});
+        }
+      }
+    }
+  }, [activeMatch?.status, activeMatch?.winnerUid, user?.uid]);
+
   // Auto-clean match if user closes tab or navigates away
   useEffect(() => {
     const handleUnload = () => {
       if (activeMatchId && user) {
-        leaveArcadeMatch(activeMatchId, user.uid).catch(() => {});
+        leaveArcadeMatch(activeMatchId, user?.uid).catch(() => {});
       }
     };
     window.addEventListener("beforeunload", handleUnload);
@@ -622,7 +670,7 @@ function ArcadeContent() {
             </div>
 
             {/* In-Match Live Voice Filters & Reaction Soundboard */}
-            {user && !activeMatch.players?.[user.uid] ? (
+            {user && !activeMatch.players?.[user?.uid] ? (
               <div className="w-full bg-neutral-950 border-2 border-dashed border-neutral-700 p-3 mb-4 rounded-lg flex items-center justify-between shadow-[0_0_15px_rgba(0,0,0,0.5)]">
                 <div className="flex items-center gap-2">
                   <span className="relative flex h-3 w-3">
@@ -802,7 +850,7 @@ function ArcadeContent() {
               <Puzzle15Game match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
             )}
 
-            {user && !activeMatch.players?.[user.uid] && activeMatch.status !== "FINISHED" && (
+            {user && !activeMatch.players?.[user?.uid] && activeMatch.status !== "FINISHED" && (
               <button
                 type="button"
                 onClick={() => handleJoinMatch(activeMatch.id)}
@@ -1137,7 +1185,7 @@ function ArcadeContent() {
           isOpen={createModalOpen}
           onClose={() => setCreateModalOpen(false)}
           user={{
-            uid: user.uid,
+            uid: user?.uid,
             handle: user.handle || "@ANON",
             photoUrl: user.photoUrl || user.photoURL,
           }}
@@ -1202,7 +1250,7 @@ function ArcadeContent() {
           roomId={challengeParams.roomId}
           matchId={challengeParams.matchId}
           user={{
-            uid: user.uid,
+            uid: user?.uid,
             handle: user.handle || "@ANON",
             photoUrl: user.photoUrl || user.photoURL,
           }}
@@ -1211,7 +1259,7 @@ function ArcadeContent() {
 
       {/* In-App Real-Time Incoming Challenge Alert */}
       <IncomingChallengeListener
-        user={user ? { uid: user.uid, handle: user.handle || "@ANON" } : null}
+        user={user ? { uid: user?.uid, handle: user.handle || "@ANON" } : null}
         onAcceptChallenge={(challenge) => {
           setActiveMatchId(challenge.roomId);
         }}

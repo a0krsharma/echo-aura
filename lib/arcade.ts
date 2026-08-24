@@ -894,6 +894,7 @@ const WORDLE_WORDS = [
 
 // ── Create Arcade Match (All Games) ──────────────────────────────────────────
 export async function createArcadeMatch(params: {
+  id?: string;
   gameType: ArcadeGameType;
   title: string;
   hostUid: string;
@@ -907,7 +908,7 @@ export async function createArcadeMatch(params: {
   difficulty?: "EASY" | "MEDIUM" | "HARD";
 }): Promise<string> {
   const db = getFirebaseDb();
-  const matchRef = doc(collection(db, ARCADE_COLLECTION));
+  const matchRef = params.id ? doc(db, ARCADE_COLLECTION, params.id) : doc(collection(db, ARCADE_COLLECTION));
   const matchId = matchRef.id;
 
   const mode = params.mode || "MULTIPLAYER";

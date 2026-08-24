@@ -5,7 +5,7 @@
  * for an authenticated Firebase user.
  */
 
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp, increment, arrayUnion, arrayRemove, type Timestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, increment, arrayUnion, arrayRemove, type Timestamp, runTransaction } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 import type { User as FirebaseUser } from "firebase/auth";
 
@@ -19,6 +19,8 @@ export interface EchoUser {
   avatarUrl?:  string;
   bio?:        string;
   auraScore:   number;
+  arcadeElo:   number;
+  arcadeTotalWins: number;
   badges:      string[];
   inventory:   string[];
   tags:        string[];
@@ -110,6 +112,8 @@ export async function getOrCreateUserDoc(firebaseUser: FirebaseUser): Promise<Ec
     displayName: firebaseUser.displayName ?? "",
     photoUrl:    firebaseUser.photoURL ?? "",
     auraScore:   0,
+    arcadeElo:   1000,
+    arcadeTotalWins: 0,
     badges:      [],
     inventory:   [],
     tags:        [],
@@ -548,5 +552,31 @@ export async function purchaseStoreItem(uid: string, itemId: string, cost: numbe
   } catch (err) {
     console.error("Failed to purchase item:", err);
     return false;
+  }
+}
+
+
+export async function updateArcadeElo(winnerUid: string, loserUid: string) {
+  if (!winnerUid || !loserUid || winnerUid.startsWith("bot") || loserUid.startsWith("bot")) return;
+  try {
+    const db = getFirebaseDb();
+    const winnerRef = doc(db, "users", winnerUid);
+    const loserRef = doc(db, "users", loserUid);
+    await runTransaction(db, async (tx) => {
+      const winnerDoc = await tx.get(winnerRef);
+      const loserDoc = await tx.get(loserRef);
+      const wElo = winnerDoc.data()?.arcadeElo ?? 1000;
+      const lElo = loserDoc.data()?.arcadeElo ?? 1000;
+      const wWins = winnerDoc.data()?.arcadeTotalWins ?? 0;
+      const expectedWinner = 1 / (1 + Math.pow(10, (lElo - wElo) / 400));
+      const expectedLoser = 1 / (1 + Math.pow(10, (wElo - lElo) / 400));
+      const k = 32;
+      const newWElo = Math.round(wElo + k * (1 - expectedWinner));
+      const newLElo = Math.round(lElo + k * (0 - expectedLoser));
+      tx.update(winnerRef, { arcadeElo: newWElo, arcadeTotalWins: wWins + 1 });
+      tx.update(loserRef, { arcadeElo: Math.max(0, newLElo) });
+    });
+  } catch (err) {
+    console.error("Failed to update Elo", err);
   }
 }
