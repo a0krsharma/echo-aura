@@ -378,17 +378,18 @@ export class AvatarRigDriver {
     const outfit = OUTFIT_PALETTES[this.config.outfitColor] || OUTFIT_PALETTES.OBSIDIAN;
 
     // ── Kinematic Calculations based on Gesture & 3D Pointer Tracking ─────────
-    let headOffsetY = Math.sin(t * 3) * 1.8 + this.pointerY * 3.5 - this.bounceIntensity * 5;
-    let headTilt = Math.sin(t * 2) * 0.035 + this.pointerX * 0.18;
-    let torsoTilt = this.pointerX * 0.08;
-    let leftArmAngle = 0.22;
-    let rightArmAngle = -0.22;
+    const servoJitter = Math.sin(t * 30) * 0.003;
+    let headOffsetY = Math.sin(t * 3.5) * 2.2 + this.pointerY * 4.0 - this.bounceIntensity * 6;
+    let headTilt = Math.sin(t * 2.5) * 0.04 + this.pointerX * 0.2 + servoJitter;
+    let torsoTilt = this.pointerX * 0.09;
+    let leftArmAngle = 0.22 + Math.sin(t * 3) * 0.05;
+    let rightArmAngle = -0.22 - Math.sin(t * 3) * 0.05;
     let eyeMorph: "OPEN" | "BLINK" | "HEART" | "CRY" | "SQUINT" | "SHOCKED" = "OPEN";
     let mouthMorph: "SMILE" | "OPEN_LAUGH" | "POUT" | "SHOCKED" | "TALK" = "SMILE";
     let showCrown = false;
 
-    // Natural periodic eye blink
-    if (Math.sin(t * 1.4) > 0.94) {
+    // Robotic Mechanical Eyelid/Optic Blink
+    if (Math.sin(t * 1.5) > 0.93) {
       eyeMorph = "BLINK";
     }
 
@@ -397,8 +398,8 @@ export class AvatarRigDriver {
 
     switch (this.gesture) {
       case "GREETING_WAVE":
-        headTilt = Math.sin(t * 6) * 0.08 + this.pointerX * 0.15;
-        rightArmAngle = -1.7 + Math.sin(t * 11) * 0.45;
+        headTilt = Math.sin(t * 6) * 0.09 + this.pointerX * 0.15;
+        rightArmAngle = -1.75 + Math.sin(t * 12) * 0.5;
         eyeMorph = "OPEN";
         mouthMorph = "SMILE";
         neonColor = "#38bdf8";
@@ -406,7 +407,7 @@ export class AvatarRigDriver {
         break;
 
       case "LOVE_HEART":
-        headOffsetY = Math.sin(t * 5) * 3.5 + this.pointerY * 2;
+        headOffsetY = Math.sin(t * 5) * 3.8 + this.pointerY * 2;
         eyeMorph = "HEART";
         mouthMorph = "SMILE";
         neonColor = "#f43f5e";
@@ -416,9 +417,9 @@ export class AvatarRigDriver {
         break;
 
       case "APOLOGY_BOW":
-        torsoTilt = 0.25 + Math.sin(t * 3) * 0.04;
-        headOffsetY = 10;
-        headTilt = 0.15;
+        torsoTilt = 0.28 + Math.sin(t * 3) * 0.04;
+        headOffsetY = 12;
+        headTilt = 0.16;
         eyeMorph = "CRY";
         mouthMorph = "POUT";
         neonColor = "#06b6d4";
@@ -428,19 +429,19 @@ export class AvatarRigDriver {
         break;
 
       case "LOL_LAUGH":
-        headOffsetY = Math.sin(t * 16) * 3.5;
-        headTilt = Math.sin(t * 8) * 0.1;
+        headOffsetY = Math.sin(t * 18) * 3.8;
+        headTilt = Math.sin(t * 8) * 0.12;
         eyeMorph = "SQUINT";
         mouthMorph = "OPEN_LAUGH";
         neonColor = "#facc15";
-        leftArmAngle = 0.5 + Math.sin(t * 12) * 0.18;
-        rightArmAngle = -0.5 - Math.sin(t * 12) * 0.18;
+        leftArmAngle = 0.5 + Math.sin(t * 12) * 0.2;
+        rightArmAngle = -0.5 - Math.sin(t * 12) * 0.2;
         if (Math.random() < 0.15) this.emitParticles(1, "✨", "#facc15");
         break;
 
       case "GG_CLAP":
-        leftArmAngle = -1.0 + Math.sin(t * 14) * 0.3;
-        rightArmAngle = 1.0 - Math.sin(t * 14) * 0.3;
+        leftArmAngle = -1.05 + Math.sin(t * 14) * 0.35;
+        rightArmAngle = 1.05 - Math.sin(t * 14) * 0.35;
         eyeMorph = "OPEN";
         mouthMorph = "SMILE";
         neonColor = "#a855f7";
@@ -449,19 +450,19 @@ export class AvatarRigDriver {
         break;
 
       case "MINDBLOWN":
-        headOffsetY = -5 + Math.sin(t * 8) * 1.5;
+        headOffsetY = -6 + Math.sin(t * 8) * 1.8;
         eyeMorph = "SHOCKED";
         mouthMorph = "SHOCKED";
         neonColor = "#ec4899";
-        leftArmAngle = -1.5;
-        rightArmAngle = 1.5;
+        leftArmAngle = -1.55;
+        rightArmAngle = 1.55;
         if (Math.random() < 0.2) this.emitParticles(1, "⚡", "#38bdf8");
         break;
 
       case "HYPE_FIRE":
-        headOffsetY = Math.sin(t * 10) * 4;
-        leftArmAngle = -1.95 + Math.sin(t * 8) * 0.18;
-        rightArmAngle = 1.95 - Math.sin(t * 8) * 0.18;
+        headOffsetY = Math.sin(t * 10) * 4.2;
+        leftArmAngle = -2.0 + Math.sin(t * 8) * 0.2;
+        rightArmAngle = 2.0 - Math.sin(t * 8) * 0.2;
         eyeMorph = "OPEN";
         mouthMorph = "OPEN_LAUGH";
         neonColor = "#f97316";
@@ -474,8 +475,8 @@ export class AvatarRigDriver {
 
     // ── 1. BACKGROUND GLOW AURA ───────────────────────────────────────────────
     const auraGrad = ctx.createRadialGradient(0, -10, 10, 0, -10, 85);
-    auraGrad.addColorStop(0, `${neonColor}22`);
-    auraGrad.addColorStop(0.7, `${neonColor}08`);
+    auraGrad.addColorStop(0, `${neonColor}28`);
+    auraGrad.addColorStop(0.7, `${neonColor}0a`);
     auraGrad.addColorStop(1, "rgba(0,0,0,0)");
     ctx.fillStyle = auraGrad;
     ctx.beginPath();
@@ -510,7 +511,7 @@ export class AvatarRigDriver {
     ctx.lineTo(24, 48);
     ctx.stroke();
 
-    // Glowing Central Arc Power Core
+    // Glowing Central Arc Power Core with Rotating Reactor Rays
     const coreGrad = ctx.createRadialGradient(0, 52, 1, 0, 52, 9);
     coreGrad.addColorStop(0, "#ffffff");
     coreGrad.addColorStop(0.4, neonColor);
@@ -524,7 +525,7 @@ export class AvatarRigDriver {
     ctx.stroke();
 
     // Core pulsing ring
-    ctx.strokeStyle = `${neonColor}88`;
+    ctx.strokeStyle = `${neonColor}99`;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.arc(0, 52, 11 + Math.sin(t * 6) * 1.5, 0, Math.PI * 2);
@@ -566,10 +567,10 @@ export class AvatarRigDriver {
       ctx.lineWidth = 1.2;
       ctx.stroke();
 
-      // Glowing Palm Core
+      // Glowing Palm Repulsor
       ctx.fillStyle = neonColor;
       ctx.beginPath();
-      ctx.arc(0, 22, 2.5, 0, Math.PI * 2);
+      ctx.arc(0, 22, 2.5 + Math.sin(t * 8) * 0.5, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.restore();
@@ -666,6 +667,11 @@ export class AvatarRigDriver {
     ctx.roundRect(-34 + pX * 0.5, -38 + pY * 0.5, 68, 56, [22, 22, 18, 18]);
     ctx.fill();
     ctx.stroke();
+
+    // Dynamic Holographic Scanline Sweep
+    const scanlineY = -36 + ((t * 25) % 52);
+    ctx.fillStyle = `${neonColor}15`;
+    ctx.fillRect(-32 + pX * 0.5, scanlineY + pY * 0.5, 64, 4);
 
     // Glass Visor 3D Specular Arc Reflection (Top Curvature Glare)
     const glassGlare = ctx.createLinearGradient(-30, -36, 30, -15);

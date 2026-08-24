@@ -20,6 +20,16 @@ const PADDLE_RADIUS = 22;
 const PUCK_RADIUS = 14;
 const GOAL_WIDTH = 130;
 
+interface Spark {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  maxLife: number;
+  color: string;
+}
+
 export default function GlowHockeyGame({ match, currentUid }: GlowHockeyGameProps) {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
@@ -29,12 +39,28 @@ export default function GlowHockeyGame({ match, currentUid }: GlowHockeyGameProp
   const [p1Score, setP1Score] = useState(gh?.p1Score || 0);
   const [p2Score, setP2Score] = useState(gh?.p2Score || 0);
 
-  const isHostPlayer = match.hostUid === currentUid;
   const isVsBot = match.mode === "VS_COMPUTER";
 
   const puckRef = useRef({ x: WIDTH / 2, y: HEIGHT / 2, vx: 3, vy: 4 });
-  const p1PaddleRef = useRef({ x: WIDTH / 2, y: HEIGHT - 60 });
-  const p2PaddleRef = useRef({ x: WIDTH / 2, y: 60 });
+  const p1PaddleRef = useRef({ x: WIDTH / 2, y: HEIGHT - 60, prevX: WIDTH / 2, prevY: HEIGHT - 60 });
+  const p2PaddleRef = useRef({ x: WIDTH / 2, y: 60, prevX: WIDTH / 2, prevY: 60 });
+  const sparksRef = useRef<Spark[]>([]);
+
+  const emitSparks = (x: number, y: number, color: string, count = 8) => {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 5 + 2;
+      sparksRef.current.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 0,
+        maxLife: Math.random() * 0.3 + 0.2,
+        color,
+      });
+    }
+  };
 
   // Main 60FPS Game Loop
   useEffect(() => {
@@ -57,122 +83,165 @@ export default function GlowHockeyGame({ match, currentUid }: GlowHockeyGameProp
       const p1 = p1PaddleRef.current;
       const p2 = p2PaddleRef.current;
 
-      // 1. Bot AI Movement (if playing vs AI)
+      // 1. Bot AI Movement (Adaptive Smooth Interpolation)
       if (isVsBot) {
+        p2.prevX = p2.x;
+        p2.prevY = p2.y;
         const targetX = puck.x;
-        p2.x += (targetX - p2.x) * 0.12;
+        // Bot defense strategy
+        p2.x += (targetX - p2.x) * 0.14;
         p2.x = Math.max(PADDLE_RADIUS, Math.min(WIDTH - PADDLE_RADIUS, p2.x));
+        const targetY = puck.y < HEIGHT / 2 ? Math.max(60, puck.y - 30) : 60;
+        p2.y += (targetY - p2.y) * 0.08;
       }
 
-      // 2. Move Puck
-      puck.x += puck.vx;
-      puck.y += puck.vy;
+      // 2. Sub-step Physics (2 passes per frame to prevent tunneling)
+      for (let step = 0; step < 2; step++) {
+        puck.x += puck.vx * 0.5;
+        puck.y += puck.vy * 0.5;
 
-      // Friction
-      puck.vx *= 0.994;
-      puck.vy *= 0.994;
+        // Friction
+        puck.vx *= 0.997;
+        puck.vy *= 0.997;
 
-      // Side Wall Bounces
-      if (puck.x - PUCK_RADIUS < 0) {
-        puck.x = PUCK_RADIUS;
-        puck.vx = -puck.vx * 0.95;
-        soundSynth.playSubtlePop();
-      } else if (puck.x + PUCK_RADIUS > WIDTH) {
-        puck.x = WIDTH - PUCK_RADIUS;
-        puck.vx = -puck.vx * 0.95;
-        soundSynth.playSubtlePop();
-      }
-
-      // Goal Checks (Top and Bottom)
-      const inGoalX = puck.x > (WIDTH - GOAL_WIDTH) / 2 && puck.x < (WIDTH + GOAL_WIDTH) / 2;
-
-      if (puck.y - PUCK_RADIUS < 0) {
-        if (inGoalX) {
-          // P1 Scored Goal!
-          soundSynth.playFanfare();
-          setP1Score((s) => {
-            const next = s + 1;
-            updateGlowHockeyScore(match.id, currentUid, next, p2Score);
-            return next;
-          });
-          resetPuck(true);
-        } else {
-          puck.y = PUCK_RADIUS;
-          puck.vy = -puck.vy * 0.95;
+        // Side Wall Bounces
+        if (puck.x - PUCK_RADIUS < 0) {
+          puck.x = PUCK_RADIUS;
+          puck.vx = Math.abs(puck.vx) * 0.96;
+          emitSparks(puck.x, puck.y, "#38bdf8", 4);
+          soundSynth.playSubtlePop();
+        } else if (puck.x + PUCK_RADIUS > WIDTH) {
+          puck.x = WIDTH - PUCK_RADIUS;
+          puck.vx = -Math.abs(puck.vx) * 0.96;
+          emitSparks(puck.x, puck.y, "#38bdf8", 4);
           soundSynth.playSubtlePop();
         }
-      } else if (puck.y + PUCK_RADIUS > HEIGHT) {
-        if (inGoalX) {
-          // P2 Scored Goal!
-          soundSynth.playBuzzer();
-          setP2Score((s) => {
-            const next = s + 1;
-            updateGlowHockeyScore(match.id, Object.keys(match.players || {}).find(u => u !== currentUid) || currentUid, p1Score, next);
-            return next;
-          });
-          resetPuck(false);
-        } else {
-          puck.y = HEIGHT - PUCK_RADIUS;
-          puck.vy = -puck.vy * 0.95;
-          soundSynth.playSubtlePop();
+
+        // Goal Checks (Top and Bottom)
+        const inGoalX = puck.x > (WIDTH - GOAL_WIDTH) / 2 && puck.x < (WIDTH + GOAL_WIDTH) / 2;
+
+        if (puck.y - PUCK_RADIUS < 0) {
+          if (inGoalX) {
+            soundSynth.playFanfare();
+            emitSparks(puck.x, 10, "#22c55e", 20);
+            setP1Score((s) => {
+              const next = s + 1;
+              updateGlowHockeyScore(match.id, currentUid, next, p2Score);
+              return next;
+            });
+            resetPuck(true);
+            break;
+          } else {
+            puck.y = PUCK_RADIUS;
+            puck.vy = Math.abs(puck.vy) * 0.96;
+            emitSparks(puck.x, puck.y, "#38bdf8", 4);
+            soundSynth.playSubtlePop();
+          }
+        } else if (puck.y + PUCK_RADIUS > HEIGHT) {
+          if (inGoalX) {
+            soundSynth.playBuzzer();
+            emitSparks(puck.x, HEIGHT - 10, "#ef4444", 20);
+            setP2Score((s) => {
+              const next = s + 1;
+              updateGlowHockeyScore(match.id, Object.keys(match.players || {}).find(u => u !== currentUid) || currentUid, p1Score, next);
+              return next;
+            });
+            resetPuck(false);
+            break;
+          } else {
+            puck.y = HEIGHT - PUCK_RADIUS;
+            puck.vy = -Math.abs(puck.vy) * 0.96;
+            emitSparks(puck.x, puck.y, "#38bdf8", 4);
+            soundSynth.playSubtlePop();
+          }
         }
+
+        // Paddle Collisions (Dynamic impulse transfer based on swing velocity)
+        const handlePaddleCollision = (pad: { x: number; y: number; prevX?: number; prevY?: number }, isPlayer: boolean) => {
+          const dx = puck.x - pad.x;
+          const dy = puck.y - pad.y;
+          const dist = Math.hypot(dx, dy);
+
+          if (dist < PUCK_RADIUS + PADDLE_RADIUS) {
+            const nx = dx / (dist || 1);
+            const ny = dy / (dist || 1);
+
+            puck.x = pad.x + nx * (PUCK_RADIUS + PADDLE_RADIUS + 2);
+            puck.y = pad.y + ny * (PUCK_RADIUS + PADDLE_RADIUS + 2);
+
+            const padVx = (pad.x - (pad.prevX || pad.x)) * 0.4;
+            const padVy = (pad.y - (pad.prevY || pad.y)) * 0.4;
+
+            const baseSpeed = Math.max(7, Math.hypot(puck.vx, puck.vy) * 1.06);
+            puck.vx = nx * baseSpeed + padVx;
+            puck.vy = ny * baseSpeed + padVy;
+
+            // Cap max speed
+            const currentSpeed = Math.hypot(puck.vx, puck.vy);
+            if (currentSpeed > 18) {
+              puck.vx = (puck.vx / currentSpeed) * 18;
+              puck.vy = (puck.vy / currentSpeed) * 18;
+            }
+
+            emitSparks(puck.x, puck.y, isPlayer ? "#38bdf8" : "#22c55e", 10);
+            soundSynth.playSnare();
+          }
+        };
+
+        handlePaddleCollision(p1, true);
+        handlePaddleCollision(p2, false);
       }
 
-      // Paddle Collisions (Elastic reflection)
-      const handlePaddleCollision = (pad: { x: number; y: number }) => {
-        const dx = puck.x - pad.x;
-        const dy = puck.y - pad.y;
-        const dist = Math.hypot(dx, dy);
-
-        if (dist < PUCK_RADIUS + PADDLE_RADIUS) {
-          const nx = dx / (dist || 1);
-          const ny = dy / (dist || 1);
-
-          puck.x = pad.x + nx * (PUCK_RADIUS + PADDLE_RADIUS + 2);
-          puck.y = pad.y + ny * (PUCK_RADIUS + PADDLE_RADIUS + 2);
-
-          const speed = Math.max(6, Math.hypot(puck.vx, puck.vy) * 1.05);
-          puck.vx = nx * speed;
-          puck.vy = ny * speed;
-          soundSynth.playSnare();
+      // Update Sparks
+      const sparks = sparksRef.current;
+      for (let i = sparks.length - 1; i >= 0; i--) {
+        const sp = sparks[i];
+        sp.life += 0.016;
+        sp.x += sp.vx;
+        sp.y += sp.vy;
+        if (sp.life >= sp.maxLife) {
+          sparks.splice(i, 1);
         }
-      };
-
-      handlePaddleCollision(p1);
-      handlePaddleCollision(p2);
+      }
 
       // 3. Render Canvas
-      ctx.fillStyle = "#000000";
+      ctx.fillStyle = "#050508";
       ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
       // Table Glow Lines
-      ctx.strokeStyle = "#10b981";
-      ctx.lineWidth = 4;
-      ctx.strokeRect(2, 2, WIDTH - 4, HEIGHT - 4);
+      ctx.strokeStyle = "rgba(16, 185, 129, 0.6)";
+      ctx.lineWidth = 3;
+      ctx.strokeRect(4, 4, WIDTH - 8, HEIGHT - 8);
 
       // Center Line and Circle
-      ctx.strokeStyle = "rgba(16, 185, 129, 0.4)";
+      ctx.strokeStyle = "rgba(16, 185, 129, 0.3)";
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(0, HEIGHT / 2);
-      ctx.lineTo(WIDTH, HEIGHT / 2);
+      ctx.moveTo(4, HEIGHT / 2);
+      ctx.lineTo(WIDTH - 4, HEIGHT / 2);
       ctx.stroke();
 
       ctx.beginPath();
       ctx.arc(WIDTH / 2, HEIGHT / 2, 45, 0, Math.PI * 2);
       ctx.stroke();
 
-      // Goals (Top & Bottom Slots)
+      // Goals (Top & Bottom Slots with Neon Glow)
       ctx.fillStyle = "#22c55e";
+      ctx.shadowColor = "#22c55e";
+      ctx.shadowBlur = 10;
       ctx.fillRect((WIDTH - GOAL_WIDTH) / 2, 0, GOAL_WIDTH, 6);
-      ctx.fillStyle = "#38bdf8";
-      ctx.fillRect((WIDTH - GOAL_WIDTH) / 2, HEIGHT - 6, GOAL_WIDTH, 6);
 
-      // Render P1 Paddle (Cyan Glow)
-      ctx.beginPath();
-      ctx.arc(p1.x, p1.y, PADDLE_RADIUS, 0, Math.PI * 2);
       ctx.fillStyle = "#38bdf8";
       ctx.shadowColor = "#38bdf8";
+      ctx.shadowBlur = 10;
+      ctx.fillRect((WIDTH - GOAL_WIDTH) / 2, HEIGHT - 6, GOAL_WIDTH, 6);
+      ctx.shadowBlur = 0;
+
+      // Render P2 Paddle (Green Glow)
+      ctx.beginPath();
+      ctx.arc(p2.x, p2.y, PADDLE_RADIUS, 0, Math.PI * 2);
+      ctx.fillStyle = "#22c55e";
+      ctx.shadowColor = "#22c55e";
       ctx.shadowBlur = 15;
       ctx.fill();
       ctx.shadowBlur = 0;
@@ -180,11 +249,11 @@ export default function GlowHockeyGame({ match, currentUid }: GlowHockeyGameProp
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      // Render P2 Paddle (Green Glow)
+      // Render P1 Paddle (Cyan Glow)
       ctx.beginPath();
-      ctx.arc(p2.x, p2.y, PADDLE_RADIUS, 0, Math.PI * 2);
-      ctx.fillStyle = "#22c55e";
-      ctx.shadowColor = "#22c55e";
+      ctx.arc(p1.x, p1.y, PADDLE_RADIUS, 0, Math.PI * 2);
+      ctx.fillStyle = "#38bdf8";
+      ctx.shadowColor = "#38bdf8";
       ctx.shadowBlur = 15;
       ctx.fill();
       ctx.shadowBlur = 0;
@@ -204,6 +273,16 @@ export default function GlowHockeyGame({ match, currentUid }: GlowHockeyGameProp
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
+      // Render Collision Sparks
+      for (const sp of sparks) {
+        ctx.fillStyle = sp.color;
+        ctx.globalAlpha = Math.max(0, 1 - sp.life / sp.maxLife);
+        ctx.beginPath();
+        ctx.arc(sp.x, sp.y, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
       animId = requestAnimationFrame(update);
     };
 
@@ -212,11 +291,19 @@ export default function GlowHockeyGame({ match, currentUid }: GlowHockeyGameProp
   }, [isVsBot, match.id, currentUid, p2Score, p1Score]);
 
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
 
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const scaleX = WIDTH / rect.width;
+    const scaleY = HEIGHT / rect.height;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+
+    // Record previous position for swing momentum
+    p1PaddleRef.current.prevX = p1PaddleRef.current.x;
+    p1PaddleRef.current.prevY = p1PaddleRef.current.y;
 
     // Player controls bottom half paddle
     p1PaddleRef.current.x = Math.max(PADDLE_RADIUS, Math.min(WIDTH - PADDLE_RADIUS, x));

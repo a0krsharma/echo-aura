@@ -696,18 +696,18 @@ function ArcadeContent() {
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <span className="text-[10px] font-black text-white bg-neutral-900 border border-neutral-800 px-2 py-0.5 uppercase tracking-widest flex items-center gap-1.5">
                   <Gamepad2 className="w-3 h-3 text-white" />
-                  <span>50 RANKED GAMES // LOW-LATENCY AUDIO // ZERO SERVER COST</span>
+                  <span>ECHO ARCADE // 50 MULTIPLAYER ARENAS</span>
                 </span>
-                <span className="text-[10px] text-neutral-500 uppercase tracking-widest font-bold">
-                  RETRO MULTIPLAYER SUITE
+                <span className="text-[10px] text-neutral-400 uppercase tracking-widest font-bold">
+                  LIVE AUDIO LOUNGE &amp; PvP
                 </span>
               </div>
 
               <h2 className="text-lg sm:text-xl font-black uppercase tracking-tight text-white leading-tight">
-                Classroom Classics, Card Bluffing, 2D Physics & Voice Party Showdowns.
+                Real-Time Multiplayer &amp; Party Arenas
               </h2>
               <p className="text-xs text-neutral-400 max-w-3xl leading-relaxed">
-                Connect in real-time voice channels to play Raja Mantri Chor Sipahi, Hand Cricket, Book Cricket, 8-Ball Pool, Texas Hold'em, Uno, Carrom, Ludo, Skribbl, Codenames, Bingo, Hangman, and retro arcade classics with friends or smart AI bots.
+                Play Carrom, 8-Ball Pool, Glow Hockey, Ludo, Card Bluffing, Raja Mantri, and Retro Classics live with friends or intelligent AI bots.
               </p>
 
               {/* Quick Launchers */}

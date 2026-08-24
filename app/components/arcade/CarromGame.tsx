@@ -236,14 +236,18 @@ export default function CarromGame({ match, currentUid }: CarromGameProps) {
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!isMyTurn || match.status === "FINISHED") return;
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
 
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const scaleX = BOARD_SIZE / rect.width;
+    const scaleY = BOARD_SIZE / rect.height;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
     const striker = piecesRef.current.find((p) => p.type === "striker");
 
-    if (striker && Math.hypot(striker.x - x, striker.y - y) < striker.radius * 2.5) {
+    if (striker && Math.hypot(striker.x - x, striker.y - y) < striker.radius * 3) {
       setIsAiming(true);
       setDragStart({ x, y });
       setDragCurrent({ x, y });
@@ -252,14 +256,21 @@ export default function CarromGame({ match, currentUid }: CarromGameProps) {
 
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!isAiming || !dragStart) return;
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
 
-    const current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const scaleX = BOARD_SIZE / rect.width;
+    const scaleY = BOARD_SIZE / rect.height;
+    const current = {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY,
+    };
     setDragCurrent(current);
 
     const pullDist = Math.hypot(dragStart.x - current.x, dragStart.y - current.y);
-    setPower(Math.min(Math.round((pullDist / 100) * 100), 100));
+    setPower(Math.min(Math.round((pullDist / 110) * 100), 100));
   };
 
   const handlePointerUp = async () => {
@@ -267,8 +278,8 @@ export default function CarromGame({ match, currentUid }: CarromGameProps) {
 
     const striker = piecesRef.current.find((p) => p.type === "striker");
     if (striker) {
-      const impulseX = (dragStart.x - dragCurrent.x) * 0.24;
-      const impulseY = (dragStart.y - dragCurrent.y) * 0.24;
+      const impulseX = (dragStart.x - dragCurrent.x) * 0.25;
+      const impulseY = (dragStart.y - dragCurrent.y) * 0.25;
 
       striker.vx = impulseX;
       striker.vy = impulseY;

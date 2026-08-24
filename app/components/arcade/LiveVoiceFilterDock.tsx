@@ -68,10 +68,10 @@ export default function LiveVoiceFilterDock({
       <div className="flex items-center justify-between border-b border-neutral-800 pb-2.5">
         <div className="flex items-center gap-2 text-xs font-black uppercase text-white">
           <Mic className="w-4 h-4" />
-          <span>// CLIENT-SIDE VOICE MODULATORS [ $0 SERVER COST ]</span>
+          <span>// LIVE VOICE FILTERS &amp; FX</span>
         </div>
         <span className="text-[10px] text-neutral-500 font-bold uppercase">
-          WEB AUDIO API DSP
+          PRO AUDIO DSP
         </span>
       </div>
 

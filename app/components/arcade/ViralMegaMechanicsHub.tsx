@@ -117,7 +117,7 @@ export default function ViralMegaMechanicsHub({
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-xs font-black uppercase text-white">
             <Zap className="w-4 h-4 text-white" />
-            <span>// 5 VIRAL MEGA-MECHANICS ENGINE [ ZERO SERVER COST ]</span>
+            <span>// VIRAL COMMUNITY CHALLENGES &amp; BOUNTIES</span>
           </div>
           <h2 className="text-base sm:text-lg font-black uppercase text-white">
             Ghost Protocol, Streak Bounties, Mystery Roulette & Turf Wars

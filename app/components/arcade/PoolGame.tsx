@@ -237,14 +237,18 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!isMyTurn || match.status === "FINISHED") return;
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
 
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const scaleX = TABLE_WIDTH / rect.width;
+    const scaleY = TABLE_HEIGHT / rect.height;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
     const cue = ballsRef.current.find((b) => b.type === "cue");
 
-    if (cue && Math.hypot(cue.x - x, cue.y - y) < cue.radius * 3) {
+    if (cue && Math.hypot(cue.x - x, cue.y - y) < cue.radius * 3.5) {
       setIsAiming(true);
       setDragStart({ x, y });
       setDragCurrent({ x, y });
@@ -253,14 +257,21 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
 
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!isAiming || !dragStart) return;
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
 
-    const current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const scaleX = TABLE_WIDTH / rect.width;
+    const scaleY = TABLE_HEIGHT / rect.height;
+    const current = {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY,
+    };
     setDragCurrent(current);
 
     const pullDist = Math.hypot(dragStart.x - current.x, dragStart.y - current.y);
-    setPower(Math.min(Math.round((pullDist / 100) * 100), 100));
+    setPower(Math.min(Math.round((pullDist / 120) * 100), 100));
   };
 
   const handlePointerUp = async () => {
@@ -268,8 +279,8 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
 
     const cue = ballsRef.current.find((b) => b.type === "cue");
     if (cue) {
-      const impulseX = (dragStart.x - dragCurrent.x) * 0.22;
-      const impulseY = (dragStart.y - dragCurrent.y) * 0.22;
+      const impulseX = (dragStart.x - dragCurrent.x) * 0.24;
+      const impulseY = (dragStart.y - dragCurrent.y) * 0.24;
 
       cue.vx = impulseX;
       cue.vy = impulseY;
