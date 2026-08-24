@@ -32,7 +32,7 @@ import {
   where,
   orderBy,
   limit,
-  type Unsubscribe,
+  type Unsubscribe, runTransaction,
 } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 import { awardAura } from "@/lib/userDoc";
@@ -758,6 +758,7 @@ export interface ArcadeMatch {
   stakes: number; // Aura stakes
   difficulty?: "EASY" | "MEDIUM" | "HARD";
   winnerUid?: string;
+  spectatorWagers?: Record<string, { playerUid: string; amount: number; }>;
   winnerHandle?: string;
   lastSpectatorEvent?: { type: string; handle: string; ts: number };
   rummyState?: RummyState;
@@ -4983,4 +4984,89 @@ export async function sendSpectatorEvent(matchId: string, handle: string, type: 
   } catch (e) {
     console.error("Failed to send spectator event", e);
   }
+}
+
+
+// ── Spectator Wagering ──────────────────────────────────────────────────────────
+export async function placeSpectatorWager(
+  matchId: string,
+  spectatorUid: string,
+  targetPlayerUid: string,
+  amount: number
+): Promise<boolean> {
+  const db = getFirebaseDb();
+  
+  try {
+    const success = await runTransaction(db, async (tx) => {
+      // Check user balance
+      const userRef = doc(db, "users", spectatorUid);
+      const userSnap = await tx.get(userRef);
+      if (!userSnap.exists()) return false;
+      const aura = userSnap.data()?.auraScore || 0;
+      if (aura < amount) return false;
+
+      // Check match status
+      const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+      const matchSnap = await tx.get(matchRef);
+      if (!matchSnap.exists()) return false;
+      const matchData = matchSnap.data() as ArcadeMatch;
+      
+      // Can't bet if game is finished
+      if (matchData.status === "FINISHED") return false;
+      
+      // Can't bet if you are playing
+      if (matchData.players[spectatorUid]) return false;
+
+      // Deduct aura from user
+      tx.update(userRef, { auraScore: increment(-amount) });
+
+      // Add wager to match
+      tx.update(matchRef, {
+        [`spectatorWagers.${spectatorUid}`]: { playerUid: targetPlayerUid, amount }
+      });
+
+      return true;
+    });
+    return success;
+  } catch (err) {
+    console.error("Wager failed:", err);
+    return false;
+  }
+}
+
+
+export async function processWagerPayouts(matchId: string, winnerUid: string): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) return;
+  const match = snap.data() as ArcadeMatch;
+  
+  if (!match.spectatorWagers) return;
+  if (match.status !== "FINISHED") return;
+  
+  // To prevent double payouts, we can clear the wagers map after processing,
+  // or just trust that this only runs once per match via the client ref.
+  // We'll clear it for extra safety.
+  
+  const payoutUpdates: Record<string, any> = {};
+  
+  for (const [spectatorUid, w] of Object.entries(match.spectatorWagers)) { const wager = w as { playerUid: string; amount: number; };
+    if (wager.playerUid === winnerUid) {
+      // Spectator won! Give them 2x
+      try {
+        const specRef = doc(db, "users", spectatorUid);
+        await updateDoc(specRef, {
+          auraScore: increment(wager.amount * 2)
+        });
+      } catch (e) {
+        console.error("Payout failed for", spectatorUid, e);
+      }
+    }
+  }
+  
+  // Clear wagers so they aren't processed again
+  await updateDoc(matchRef, {
+    spectatorWagers: {}
+  });
 }

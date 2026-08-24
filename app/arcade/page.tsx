@@ -12,6 +12,8 @@ import {
   deleteArcadeMatch,
   leaveArcadeMatch,
   sendSpectatorEvent,
+  placeSpectatorWager,
+  processWagerPayouts,
   type ArcadeMatch,
   type ArcadeGameType,
 } from "@/lib/arcade";
@@ -223,6 +225,19 @@ function ArcadeContent() {
 
   const [voiceDockOpen, setVoiceDockOpen] = useState(false);
   const [activeVoiceFilter, setActiveVoiceFilter] = useState<VoiceFilterMode>("clean");
+  const [wagerMenuOpen, setWagerMenuOpen] = useState(false);
+  const [wagerAmount, setWagerAmount] = useState(500);
+  
+  const handlePlaceWager = async (targetUid: string) => {
+    if (!user || !activeMatch) return;
+    const success = await placeSpectatorWager(activeMatch.id, user.uid, targetUid, wagerAmount);
+    if (success) {
+      alert("Wager Placed! If they win, you get 2x back.");
+      setWagerMenuOpen(false);
+    } else {
+      alert("Wager Failed. Check your Aura balance.");
+    }
+  };
   const [voicePartyOpen, setVoicePartyOpen] = useState(false);
   const [voiceMechanicOpen, setVoiceMechanicOpen] = useState(false);
   const [badgesModalOpen, setBadgesModalOpen] = useState(false);
@@ -465,6 +480,7 @@ function ArcadeContent() {
         const loserUid = Object.keys(activeMatch.players || {}).find(id => id !== user?.uid && !id.startsWith("bot"));
         if (loserUid) {
           if(user) updateArcadeElo(user.uid, loserUid).catch(() => {});
+          if(user) processWagerPayouts(activeMatch.id, user.uid).catch(() => {});
         }
       }
     }
