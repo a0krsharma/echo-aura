@@ -918,7 +918,7 @@ export default function ArcadeGameRulesModal({
                 >
                   <div className="flex items-center gap-2 truncate">
                     <span>{rule.icon}</span>
-                    <span className="truncate">#{rule.rank} {rule.name}</span>
+                    <span className="truncate">{rule.name}</span>
                   </div>
                   {isSelected && <span className="text-[9px] font-mono shrink-0">● ACTIVE</span>}
                 </button>
@@ -931,9 +931,9 @@ export default function ArcadeGameRulesModal({
             {/* Header info */}
             <div className="border-b border-neutral-800 pb-3 space-y-1.5">
               <div className="flex items-center justify-between text-[10px] text-neutral-400 font-bold uppercase">
-                <span>RANK #{currentRule.rank} // {currentRule.category}</span>
-                <span className="text-white border border-white bg-black px-1.5 py-0.5">
-                  $0 SERVER INFRASTRUCTURE
+                <span>{currentRule.category}</span>
+                <span className="text-white border border-neutral-800 bg-neutral-900 px-1.5 py-0.5">
+                  OFFICIAL RULES
                 </span>
               </div>
               <h3 className="text-base sm:text-lg font-black text-white uppercase flex items-center gap-2">

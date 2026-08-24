@@ -98,65 +98,62 @@ import { getFirebaseDb } from "@/lib/firebase";
 type CategoryFilter = "ALL" | "CARD" | "PAPER" | "PHYSICS" | "TACTICAL" | "PARTY" | "PUZZLE";
 
 interface MasterRankedGame {
-  rank: number;
   id: ArcadeGameType;
   name: string;
   category: CategoryFilter;
-  categoryLabel: string;
   icon: string;
-  mechanic: string;
   isPlayable: boolean;
 }
 
 const MASTER_50_GAMES: MasterRankedGame[] = [
   // ── ♠️ Card & Bluffing ──
-  { rank: 1, id: "rummy", name: "Indian 13-Card Rummy", category: "CARD", categoryLabel: "Card & Sequences", icon: "🃏", mechanic: "Pure sequence, second sequence, and sets with wild jokers and 0 deadwood show.", isPlayable: true },
-  { rank: 2, id: "call_break", name: "Call Break (Lakdi)", category: "CARD", categoryLabel: "Trick-Taking Trump", icon: "♠️", mechanic: "Spades permanent trumps, bidding 1-13 tricks with overtrick bonus scoring.", isPlayable: true },
-  { rank: 3, id: "teen_patti", name: "Teen Patti (3-Card Flush)", category: "CARD", categoryLabel: "Social Wagering", icon: "🔥", mechanic: "Blind vs Seen betting, Trail/Sequence/Color hand rankings, and pot showdowns.", isPlayable: true },
-  { rank: 4, id: "uno", name: "Uno / Crazy Eights", category: "CARD", categoryLabel: "Card & Discard", icon: "🎴", mechanic: "Color, number, and action card matching with turn reversals.", isPlayable: true },
-  { rank: 5, id: "satte_pe_satta", name: "Satte Pe Satta (7 of Hearts)", category: "CARD", categoryLabel: "Card Shedding", icon: "❤️", mechanic: "7 of Hearts opening table, extending 8->K and 6->A across four suits.", isPlayable: true },
-  { rank: 6, id: "cheat_bluff", name: "Cheat / Bluff (I Doubt It)", category: "CARD", categoryLabel: "Card Bluffing", icon: "🚨", mechanic: "Sequential face-down discards with high-stakes 'Cheat!' challenge callouts.", isPlayable: true },
-  { rank: 7, id: "poker", name: "Texas Hold'em Poker", category: "CARD", categoryLabel: "Card Bluffing", icon: "♦️", mechanic: "2-card hole, community flop/turn/river betting, and pot calculation.", isPlayable: true },
-  { rank: 8, id: "blackjack", name: "Blackjack 21", category: "CARD", categoryLabel: "Card Probability", icon: "♣️", mechanic: "Hitting, standing, doubling to beat dealer hand total without exceeding 21.", isPlayable: true },
-  { rank: 9, id: "liars_dice", name: "Liar's Dice / Perudo", category: "CARD", categoryLabel: "Dice Bluffing", icon: "🎲", mechanic: "Secret 5-dice rolls with consecutive global bids and bluff callouts.", isPlayable: true },
+  { id: "rummy", name: "Indian Rummy", category: "CARD", icon: "🃏", isPlayable: true },
+  { id: "call_break", name: "Call Break", category: "CARD", icon: "♠️", isPlayable: true },
+  { id: "teen_patti", name: "Teen Patti", category: "CARD", icon: "🔥", isPlayable: true },
+  { id: "uno", name: "Uno", category: "CARD", icon: "🎴", isPlayable: true },
+  { id: "satte_pe_satta", name: "Satte Pe Satta", category: "CARD", icon: "❤️", isPlayable: true },
+  { id: "cheat_bluff", name: "Cheat / Bluff", category: "CARD", icon: "🚨", isPlayable: true },
+  { id: "poker", name: "Texas Hold'em Poker", category: "CARD", icon: "♦️", isPlayable: true },
+  { id: "blackjack", name: "Blackjack 21", category: "CARD", icon: "♣️", isPlayable: true },
+  { id: "liars_dice", name: "Liar's Dice", category: "CARD", icon: "🎲", isPlayable: true },
 
   // ── 👑 Nostalgic Paper & Desi ──
-  { rank: 10, id: "raja_mantri", name: "Raja Mantri Chor Sipahi", category: "PAPER", categoryLabel: "Paper Chit", icon: "👑", mechanic: "4-chit role distribution with voice cross-examination and micro-bluffing.", isPlayable: true },
-  { rank: 11, id: "hand_cricket", name: "Hand Cricket (Odd-Even)", category: "PAPER", categoryLabel: "Schoolyard Mind", icon: "🏏", mechanic: "1–6 number throws with run accumulation and wicket sniping.", isPlayable: true },
-  { rank: 12, id: "book_cricket", name: "Book Cricket", category: "PAPER", categoryLabel: "Classroom Paper", icon: "📖", mechanic: "Page-flipping run scoring based on even/odd digits.", isPlayable: true },
-  { rank: 13, id: "bingo", name: "Bingo / 25-Cross", category: "PAPER", categoryLabel: "Classroom Grid", icon: "🔢", mechanic: "Crossing off 1–25 called numbers to complete 5 linear lines.", isPlayable: true },
-  { rank: 14, id: "npat", name: "Name, Place, Animal, Thing", category: "PAPER", categoryLabel: "Rapid Vocabulary", icon: "📝", mechanic: "30-second timed round naming categories for a specific letter.", isPlayable: true },
-  { rank: 15, id: "hangman", name: "Hangman Word Scaffold", category: "PAPER", categoryLabel: "Word Deduction", icon: "🔤", mechanic: "Guessing secret phrase letters before gallows limbs appear.", isPlayable: true },
+  { id: "raja_mantri", name: "Raja Mantri Chor Sipahi", category: "PAPER", icon: "👑", isPlayable: true },
+  { id: "hand_cricket", name: "Hand Cricket", category: "PAPER", icon: "🏏", isPlayable: true },
+  { id: "book_cricket", name: "Book Cricket", category: "PAPER", icon: "📖", isPlayable: true },
+  { id: "bingo", name: "Bingo", category: "PAPER", icon: "🔢", isPlayable: true },
+  { id: "npat", name: "Name Place Animal Thing", category: "PAPER", icon: "📝", isPlayable: true },
+  { id: "hangman", name: "Hangman", category: "PAPER", icon: "🔤", isPlayable: true },
 
   // ── 🎱 2D Physics & Tabletop ──
-  { rank: 16, id: "pool", name: "8-Ball Pool Matrix", category: "PHYSICS", categoryLabel: "Billiards Physics", icon: "🎱", mechanic: "2D physics cue stroke aiming, solids/stripes pot clearance and 8-ball victory.", isPlayable: true },
-  { rank: 17, id: "carrom", name: "Cyber Carrom Strike Arena", category: "PHYSICS", categoryLabel: "Striker Physics", icon: "⚪", mechanic: "Baseline striker aiming, queen cover rules, and corner pocket rebound angles.", isPlayable: true },
-  { rank: 18, id: "glow_hockey", name: "Glow Hockey", category: "PHYSICS", categoryLabel: "Fast 2D Physics", icon: "⚡", mechanic: "Neon paddle deflection and puck striking duels.", isPlayable: true },
+  { id: "pool", name: "8-Ball Pool", category: "PHYSICS", icon: "🎱", isPlayable: true },
+  { id: "carrom", name: "Carrom", category: "PHYSICS", icon: "⚪", isPlayable: true },
+  { id: "glow_hockey", name: "Glow Hockey", category: "PHYSICS", icon: "⚡", isPlayable: true },
 
   // ── ♟️ Tactical Boards & Grids ──
-  { rank: 19, id: "ludo", name: "Ludo (Terminal Edition)", category: "TACTICAL", categoryLabel: "Tactical Board", icon: "🎲", mechanic: "4-token home run race with real-time dice rolls, bot re-rolls, and voice banter.", isPlayable: true },
-  { rank: 20, id: "chess", name: "Chess (Grid Protocol)", category: "TACTICAL", categoryLabel: "Tactical Board", icon: "♟️", mechanic: "Pure black & white grandmaster mastery with FIDE rule validation.", isPlayable: true },
-  { rank: 21, id: "connect4", name: "Connect Four Matrix", category: "TACTICAL", categoryLabel: "Grid Alignment", icon: "🔴", mechanic: "Dropping colored tokens into a 7x6 vertical matrix.", isPlayable: true },
-  { rank: 22, id: "snakes_and_ladders", name: "Snakes & Ladders (Circuit)", category: "TACTICAL", categoryLabel: "Board Race", icon: "🪜", mechanic: "100-tile boustrophedon track with 3D dice rolls and live player tickers.", isPlayable: true },
-  { rank: 23, id: "dots_and_boxes", name: "Dots and Boxes (Dabba)", category: "TACTICAL", categoryLabel: "Territory Grid", icon: "🕸️", mechanic: "Drawing lines between nodes to complete 4-sided captured boxes.", isPlayable: true },
-  { rank: 24, id: "battleship", name: "Naval Battleship Matrix", category: "TACTICAL", categoryLabel: "Hidden Grid", icon: "🚢", mechanic: "10x10 radar grid fleet positioning, missile strikes, and enemy ship sinking.", isPlayable: true },
+  { id: "ludo", name: "Ludo", category: "TACTICAL", icon: "🎲", isPlayable: true },
+  { id: "chess", name: "Chess", category: "TACTICAL", icon: "♟️", isPlayable: true },
+  { id: "connect4", name: "Connect 4", category: "TACTICAL", icon: "🔴", isPlayable: true },
+  { id: "snakes_and_ladders", name: "Snakes & Ladders", category: "TACTICAL", icon: "🪜", isPlayable: true },
+  { id: "dots_and_boxes", name: "Dots and Boxes", category: "TACTICAL", icon: "🕸️", isPlayable: true },
+  { id: "battleship", name: "Battleship", category: "TACTICAL", icon: "🚢", isPlayable: true },
 
   // ── 🎙️ Voice Party & Deduction ──
-  { rank: 25, id: "skribbl", name: "Skribbl / Pictionary", category: "PARTY", categoryLabel: "Vector Canvas", icon: "🎨", mechanic: "Vector path drawing with live open-mic guessing.", isPlayable: true },
-  { rank: 26, id: "codenames", name: "Codenames Decryption", category: "PARTY", categoryLabel: "Deduction Grid", icon: "🕵️", mechanic: "5x5 operative word grid decryption via one-word clues.", isPlayable: true },
-  { rank: 27, id: "twenty_questions", name: "20 Questions / Decryption", category: "PARTY", categoryLabel: "Verbal Deduction", icon: "❓", mechanic: "Yes/No interrogations to identify a hidden entity.", isPlayable: true },
-  { rank: 28, id: "melody_buzzer", name: "Antakshari / Melody Relay", category: "PARTY", categoryLabel: "Voice Music Relay", icon: "🎵", mechanic: "Singing/reciting poetry starting with previous ending verse.", isPlayable: true },
-  { rank: 29, id: "two_truths", name: "Two Truths & a Lie", category: "PARTY", categoryLabel: "Voice Bluffing", icon: "🎭", mechanic: "Audio deduction identifying 1 fabricate lie amongst truths.", isPlayable: true },
-  { rank: 30, id: "taboo", name: "Taboo Word Shield", category: "PARTY", categoryLabel: "Voice Vocabulary", icon: "🚫", mechanic: "Describing keywords without uttering forbidden taboo terms.", isPlayable: true },
-  { rank: 31, id: "pitch_arena", name: "Pitch Arena (Absurd Defense)", category: "PARTY", categoryLabel: "Voice Debate", icon: "🎙️", mechanic: "60-second rapid absurd pitch with audience tip voting.", isPlayable: true },
+  { id: "skribbl", name: "Skribbl", category: "PARTY", icon: "🎨", isPlayable: true },
+  { id: "codenames", name: "Codenames", category: "PARTY", icon: "🕵️", isPlayable: true },
+  { id: "twenty_questions", name: "20 Questions", category: "PARTY", icon: "❓", isPlayable: true },
+  { id: "melody_buzzer", name: "Melody Relay", category: "PARTY", icon: "🎵", isPlayable: true },
+  { id: "two_truths", name: "Two Truths & a Lie", category: "PARTY", icon: "🎭", isPlayable: true },
+  { id: "taboo", name: "Taboo", category: "PARTY", icon: "🚫", isPlayable: true },
+  { id: "pitch_arena", name: "Pitch Arena", category: "PARTY", icon: "🎙️", isPlayable: true },
 
   // ── 🧩 Solo Logic & Puzzles ──
-  { rank: 32, id: "sudoku", name: "Sudoku Data Matrix", category: "PUZZLE", categoryLabel: "Solo Logic", icon: "🧩", mechanic: "9x9 number-placement puzzle with zero calculation errors.", isPlayable: true },
-  { rank: 33, id: "2048", name: "2048 Binary Merge", category: "PUZZLE", categoryLabel: "Tile Merge", icon: "🔢", mechanic: "Merging powers-of-two tiles along a 4x4 sliding grid.", isPlayable: true },
-  { rank: 34, id: "wordle", name: "Wordle / Cipher", category: "PUZZLE", categoryLabel: "Linguistic Strategy", icon: "🔐", mechanic: "Deduce 5-letter cipher with color feedback.", isPlayable: true },
-  { rank: 35, id: "math_blitz", name: "Arithmetic Math Blitz", category: "PUZZLE", categoryLabel: "Math Speed Duel", icon: "⚡", mechanic: "Rapid 1v1 mental math speed battle with 3s timers.", isPlayable: true },
-  { rank: 36, id: "puzzle15", name: "15-Puzzle Sliding Matrix", category: "PUZZLE", categoryLabel: "Tile Sliding", icon: "🔢", mechanic: "Sliding numbered square tiles into 1-15 numerical order.", isPlayable: true },
-  { rank: 37, id: "yahtzee", name: "Yahtzee Matrix Dice", category: "PUZZLE", categoryLabel: "Scorecard Dice", icon: "🎲", mechanic: "5-dice combinations across 13 scoring categories with reroll mechanics.", isPlayable: true },
+  { id: "sudoku", name: "Sudoku", category: "PUZZLE", icon: "🧩", isPlayable: true },
+  { id: "2048", name: "2048", category: "PUZZLE", icon: "🔢", isPlayable: true },
+  { id: "wordle", name: "Wordle", category: "PUZZLE", icon: "🔐", isPlayable: true },
+  { id: "math_blitz", name: "Math Blitz", category: "PUZZLE", icon: "⚡", isPlayable: true },
+  { id: "puzzle15", name: "15 Puzzle", category: "PUZZLE", icon: "🔢", isPlayable: true },
+  { id: "yahtzee", name: "Yahtzee", category: "PUZZLE", icon: "🎲", isPlayable: true },
 ];
 
 function ArcadeContent() {
@@ -403,8 +400,7 @@ function ArcadeContent() {
     const matchesCategory = activeCategory === "ALL" || g.category === activeCategory;
     const matchesSearch =
       g.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      g.mechanic.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      g.categoryLabel.toLowerCase().includes(searchQuery.toLowerCase());
+      g.id.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
