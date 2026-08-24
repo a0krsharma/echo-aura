@@ -435,13 +435,53 @@ Arena: *${gameName}*
 
             {/* Action Buttons */}
             <div className="space-y-2 pt-2">
+              {typeof navigator !== "undefined" && navigator.share ? (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const canvas = canvasRef.current;
+                      if (!canvas) return;
+                      
+                      canvas.toBlob(async (blob) => {
+                        if (!blob) return;
+                        
+                        const file = new File([blob], `echo_victory.png`, { type: "image/png" });
+                        
+                        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                          await navigator.share({
+                            files: [file],
+                            title: `${gameName} VICTORY!`,
+                            text: `Tap to Duel me LIVE: ${roomUrl}`,
+                          });
+                        } else {
+                          // Fallback to link only
+                          await navigator.share({
+                            title: `${gameName} VICTORY!`,
+                            text: `I just dominated ${gameName}!\n\n"${customTaunt}"\n\n${caption}\n\nTap to Duel me LIVE:`,
+                            url: roomUrl,
+                          });
+                        }
+                        soundSynth.playApplause();
+                      }, "image/png");
+                    } catch (err) {
+                      console.error("Share failed:", err);
+                    }
+                  }}
+                  className="w-full py-3 bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 hover:opacity-90 text-white font-black text-xs uppercase rounded-lg transition-all shadow-[0_0_20px_rgba(236,72,153,0.5)] flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                >
+                  <Share2 className="w-4 h-4" />
+                  <span>[ 📸 SHARE TO INSTAGRAM / OS ]</span>
+                </button>
+              ) : null}
+              
               <button
                 type="button"
                 onClick={handleShareWhatsApp}
                 className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs uppercase rounded-lg transition-all shadow-xl flex items-center justify-center gap-2 cursor-pointer active:scale-95"
               >
                 <Share2 className="w-4 h-4" />
-                <span>[ 📲 1-TAP SHARE ON WHATSAPP STATUS ]</span>
+                <span>[ 📲 1-TAP SHARE ON WHATSAPP ]</span>
               </button>
 
               <div className="grid grid-cols-2 gap-2">

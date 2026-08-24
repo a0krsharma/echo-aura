@@ -86,6 +86,7 @@ import {
   Volume2,
   Activity,
   X,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { collection, query, limit, onSnapshot } from "firebase/firestore";
@@ -583,6 +584,37 @@ function ArcadeContent() {
               currentFilter={activeVoiceFilter}
               onFilterChange={(f) => setActiveVoiceFilter(f)}
             />
+
+            {/* Victory Story Showcase Overlay */}
+            {activeMatch.status === "FINISHED" && activeMatch.winnerUid === user?.uid && (
+              <div className="w-full bg-gradient-to-r from-emerald-950 to-emerald-900 border-2 border-emerald-400 p-4 mb-4 flex flex-col sm:flex-row items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2 shadow-[0_0_30px_rgba(16,185,129,0.3)] rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-emerald-500 text-black rounded-full flex items-center justify-center font-black shadow-[0_0_15px_#10b981] shrink-0">
+                    <Sparkles className="w-6 h-6 animate-pulse" />
+                  </div>
+                  <div>
+                    <h3 className="text-white font-black uppercase text-lg sm:text-xl tracking-widest drop-shadow-md">
+                      VICTORY SECURED
+                    </h3>
+                    <p className="text-xs text-emerald-200 font-bold uppercase tracking-wider">
+                      Showcase this win on your Insta / WhatsApp Story
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleOpenStory(
+                    activeMatch.gameType.toUpperCase(),
+                    `Just dominated ${activeMatch.gameType.toUpperCase()}!`,
+                    activeMatch.id
+                  )}
+                  className="w-full sm:w-auto px-6 py-3 bg-white hover:bg-neutral-200 text-black font-black uppercase text-sm rounded shadow-[0_0_20px_rgba(255,255,255,0.5)] transition-all active:scale-95 flex items-center justify-center gap-2 shrink-0"
+                >
+                  <Share2 className="w-5 h-5" />
+                  <span>[ SHARE TO STORY ]</span>
+                </button>
+              </div>
+            )}
 
             {/* Game Renderers */}
             {activeMatch.gameType === "rummy" && (
