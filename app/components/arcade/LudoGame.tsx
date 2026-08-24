@@ -160,14 +160,11 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
       if (!hasValidMoves) {
         const timer = setTimeout(() => {
           handlePassTurn();
-        }, 800);
+        }, 1200); // Give them a bit more time to see they had no moves
         return () => clearTimeout(timer);
-      } else if (validTokenIdsToMove.length === 1) {
-        const timer = setTimeout(() => {
-          handleMove(validTokenIdsToMove[0]);
-        }, 500);
-        return () => clearTimeout(timer);
-      }
+      } 
+      // Removed the auto-move for validTokenIdsToMove.length === 1
+      // Players want the satisfaction of clicking their own token ("goti")
     }
   }, [isMyTurn, ludoState.hasRolled, roll, hasValidMoves, validTokenIdsToMove]);
 
@@ -176,23 +173,23 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
     RED: {
       name: "RED TEAM",
       symbol: "🔴",
-      tokenBg: "bg-gradient-to-br from-red-500 to-red-700 text-white font-black shadow-[0_4px_6px_rgba(239,68,68,0.5)] border-2 border-red-900 rounded-full",
-      baseBorder: "border-4 border-red-600",
-      baseBg: "bg-red-500",
+      tokenBg: "bg-gradient-to-br from-red-600 to-red-800 text-white font-black shadow-[inset_0_-2px_4px_rgba(0,0,0,0.7),_0_4px_6px_rgba(0,0,0,0.8)] border-[3px] border-red-950 rounded-full",
+      baseBorder: "border-4 border-red-700",
+      baseBg: "bg-red-600",
       label: "RED",
     },
     GREEN: {
       name: "GREEN TEAM",
       symbol: "🟢",
-      tokenBg: "bg-gradient-to-br from-green-500 to-green-700 text-white font-black shadow-[0_4px_6px_rgba(34,197,94,0.5)] border-2 border-green-900 rounded-full",
-      baseBorder: "border-4 border-green-600",
-      baseBg: "bg-green-500",
+      tokenBg: "bg-gradient-to-br from-green-600 to-green-800 text-white font-black shadow-[inset_0_-2px_4px_rgba(0,0,0,0.7),_0_4px_6px_rgba(0,0,0,0.8)] border-[3px] border-green-950 rounded-full",
+      baseBorder: "border-4 border-green-700",
+      baseBg: "bg-green-600",
       label: "GRN",
     },
     YELLOW: {
       name: "YELLOW TEAM",
       symbol: "🟡",
-      tokenBg: "bg-gradient-to-br from-yellow-400 to-yellow-600 text-black font-black shadow-[0_4px_6px_rgba(234,179,8,0.5)] border-2 border-yellow-800 rounded-full",
+      tokenBg: "bg-gradient-to-br from-yellow-500 to-yellow-600 text-black font-black shadow-[inset_0_-2px_4px_rgba(0,0,0,0.7),_0_4px_6px_rgba(0,0,0,0.8)] border-[3px] border-yellow-800 rounded-full",
       baseBorder: "border-4 border-yellow-500",
       baseBg: "bg-yellow-400",
       label: "YLW",
@@ -200,9 +197,9 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
     BLUE: {
       name: "BLUE TEAM",
       symbol: "🔵",
-      tokenBg: "bg-gradient-to-br from-blue-500 to-blue-700 text-white font-black shadow-[0_4px_6px_rgba(59,130,246,0.5)] border-2 border-blue-900 rounded-full",
-      baseBorder: "border-4 border-blue-600",
-      baseBg: "bg-blue-500",
+      tokenBg: "bg-gradient-to-br from-blue-600 to-blue-800 text-white font-black shadow-[inset_0_-2px_4px_rgba(0,0,0,0.7),_0_4px_6px_rgba(0,0,0,0.8)] border-[3px] border-blue-950 rounded-full",
+      baseBorder: "border-4 border-blue-700",
+      baseBg: "bg-blue-600",
       label: "BLU",
     },
   };
@@ -337,16 +334,16 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
         </div>
       )}
 
-      {/* ── 15x15 Realistic Physical Ludo Board (Pure Black & White) ── */}
-      <div className="relative aspect-square max-w-[420px] sm:max-w-[460px] mx-auto border-4 border-white bg-black p-1.5 shadow-[0_0_40px_rgba(255,255,255,0.15)]">
+      {/* ── 15x15 Realistic Physical Ludo Board (Classic Wooden) ── */}
+      <div className="relative aspect-square max-w-[420px] sm:max-w-[460px] mx-auto border-8 border-[#5c2e0e] bg-[#e1c699] p-2 shadow-[inset_0_0_20px_rgba(0,0,0,0.4),_0_10px_20px_rgba(0,0,0,0.5)] rounded-lg">
         {/* Corner Bolts */}
-        <span className="absolute top-1 left-1 text-[8px] text-white select-none">✚</span>
-        <span className="absolute top-1 right-1 text-[8px] text-white select-none">✚</span>
-        <span className="absolute bottom-1 left-1 text-[8px] text-white select-none">✚</span>
-        <span className="absolute bottom-1 right-1 text-[8px] text-white select-none">✚</span>
+        <span className="absolute top-1 left-1 text-[8px] text-[#5c2e0e] select-none">O</span>
+        <span className="absolute top-1 right-1 text-[8px] text-[#5c2e0e] select-none">O</span>
+        <span className="absolute bottom-1 left-1 text-[8px] text-[#5c2e0e] select-none">O</span>
+        <span className="absolute bottom-1 right-1 text-[8px] text-[#5c2e0e] select-none">O</span>
 
         <div
-          className="w-full h-full grid gap-[1px] bg-neutral-800 border border-neutral-700"
+          className="w-full h-full grid gap-[1.5px] bg-[#3a1d08] border border-[#291404] p-[1.5px] rounded"
           style={{
             gridTemplateColumns: "repeat(15, minmax(0, 1fr))",
             gridTemplateRows: "repeat(15, minmax(0, 1fr))",
@@ -576,26 +573,26 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
               const isYellowPath = r === 7 && c >= 9 && c <= 13;
               const isBluePath = c === 7 && r >= 9 && r <= 13;
 
-              let cellBg = "bg-white"; // Standard track cell background
+              let cellBg = "bg-[#fffff0]"; // Standard track cell background (ivory/cream)
               let arrowIcon = "";
               if (isRedPath) {
-                cellBg = "bg-red-200 border-red-500 shadow-inner";
+                cellBg = "bg-red-200 border-red-500 shadow-[inset_0_0_5px_rgba(239,68,68,0.3)]";
                 arrowIcon = HOME_ARROWS.RED;
               } else if (isGreenPath) {
-                cellBg = "bg-green-200 border-green-500 shadow-inner";
+                cellBg = "bg-green-200 border-green-500 shadow-[inset_0_0_5px_rgba(34,197,94,0.3)]";
                 arrowIcon = HOME_ARROWS.GREEN;
               } else if (isYellowPath) {
-                cellBg = "bg-yellow-200 border-yellow-500 shadow-inner";
+                cellBg = "bg-yellow-200 border-yellow-500 shadow-[inset_0_0_5px_rgba(234,179,8,0.3)]";
                 arrowIcon = HOME_ARROWS.YELLOW;
               } else if (isBluePath) {
-                cellBg = "bg-blue-200 border-blue-500 shadow-inner";
+                cellBg = "bg-blue-200 border-blue-500 shadow-[inset_0_0_5px_rgba(59,130,246,0.3)]";
                 arrowIcon = HOME_ARROWS.BLUE;
               }
 
               return (
                 <div
                   key={`${r}-${c}`}
-                  className={`relative flex items-center justify-center ${cellBg} border border-neutral-800 transition-colors`}
+                  className={`relative flex items-center justify-center ${cellBg} border border-[#d2b48c] transition-colors`}
                 >
                   {isStarCell && (
                     <span className="text-[10px] text-white font-extrabold select-none">★</span>
