@@ -3384,6 +3384,16 @@ export async function swapUnoHands(
   });
 }
 
+export async function syncGlowHockeyState(matchId: string, updates: Partial<GlowHockeyState>) {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const firestoreUpdates: any = {};
+  for (const [key, val] of Object.entries(updates)) {
+    firestoreUpdates[`glowHockeyState.${key}`] = val;
+  }
+  await updateDoc(matchRef, firestoreUpdates);
+}
+
 export async function acceptUnoDrawPenalty(
   matchId: string,
   playerUid: string

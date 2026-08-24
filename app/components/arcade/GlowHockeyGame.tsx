@@ -3,7 +3,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import Matter from "matter-js";
 import { soundSynth } from "@/lib/soundSynthesizer";
-import { updateGlowHockeyScore, type ArcadeMatch } from "@/lib/arcade";
+import { updateGlowHockeyScore, syncGlowHockeyState, type ArcadeMatch } from "@/lib/arcade";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
 import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
@@ -32,7 +32,7 @@ interface Spark {
   color: string;
 }
 
-export default function GlowHockeyGame({ match, currentUid }: GlowHockeyGameProps) {
+export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockeyGameProps) {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -44,6 +44,8 @@ export default function GlowHockeyGame({ match, currentUid }: GlowHockeyGameProp
 
   const sparksRef = useRef<Spark[]>([]);
   const p1TargetRef = useRef({ x: WIDTH / 2, y: HEIGHT - 60 });
+  const p2TargetRef = useRef({ x: WIDTH / 2, y: 60 });
+  const lastSyncRef = useRef<number>(0);
   
   const emitSparks = (x: number, y: number, color: string, count = 8) => {
     for (let i = 0; i < count; i++) {
@@ -158,6 +160,49 @@ export default function GlowHockeyGame({ match, currentUid }: GlowHockeyGameProp
       const dy1 = p1Target.y - p1Paddle.position.y;
       Matter.Body.setVelocity(p1Paddle, { x: dx1 * 0.3, y: dy1 * 0.3 });
 
+      // --- SYNC LOGIC ---
+      const now = Date.now();
+      if (!isVsBot) {
+        // Read from Firebase if it exists
+        if (gh?.puckStr && !isHost) {
+           try {
+             const p = JSON.parse(gh.puckStr);
+             // Soft interpolate or snap
+             Matter.Body.setPosition(puck, { x: p.x, y: p.y });
+             Matter.Body.setVelocity(puck, { x: p.vx, y: p.vy });
+           } catch (e) {}
+        }
+        if (gh?.p2PaddleStr && isHost) {
+           try {
+             const p2 = JSON.parse(gh.p2PaddleStr);
+             p2TargetRef.current.x = p2.x;
+             p2TargetRef.current.y = p2.y;
+           } catch(e) {}
+        }
+        if (gh?.p1PaddleStr && !isHost) {
+           try {
+             const p1 = JSON.parse(gh.p1PaddleStr);
+             p1TargetRef.current.x = p1.x;
+             p1TargetRef.current.y = p1.y;
+           } catch(e) {}
+        }
+        
+        // Write to Firebase
+        if (now - lastSyncRef.current > 100) {
+          lastSyncRef.current = now;
+          if (isHost) {
+             syncGlowHockeyState(match.id, {
+               puckStr: JSON.stringify({ x: puck.position.x, y: puck.position.y, vx: puck.velocity.x, vy: puck.velocity.y }),
+               p1PaddleStr: JSON.stringify({ x: p1TargetRef.current.x, y: p1TargetRef.current.y })
+             });
+          } else {
+             syncGlowHockeyState(match.id, {
+               p2PaddleStr: JSON.stringify({ x: p2TargetRef.current.x, y: p2TargetRef.current.y })
+             });
+          }
+        }
+      }
+
       // Player 2 Bot Logic
       if (isVsBot) {
         let p2TargetX = puck.position.x;
@@ -170,10 +215,16 @@ export default function GlowHockeyGame({ match, currentUid }: GlowHockeyGameProp
         const dx2 = p2TargetX - p2Paddle.position.x;
         const dy2 = p2TargetY - p2Paddle.position.y;
         Matter.Body.setVelocity(p2Paddle, { x: dx2 * 0.12, y: dy2 * 0.12 });
+      } else {
+        const dx2 = p2TargetRef.current.x - p2Paddle.position.x;
+        const dy2 = p2TargetRef.current.y - p2Paddle.position.y;
+        Matter.Body.setVelocity(p2Paddle, { x: dx2 * 0.3, y: dy2 * 0.3 });
       }
 
-      // Step Physics Engine
-      Matter.Engine.update(engine, 1000 / 60);
+      // Step Physics Engine (Only Host or Bot Mode runs physics authoritative)
+      if (isHost || isVsBot) {
+        Matter.Engine.update(engine, 1000 / 60);
+      }
 
       // Clamp puck velocity to prevent crazy clipping
       const speed = Math.hypot(puck.velocity.x, puck.velocity.y);
@@ -342,9 +393,17 @@ export default function GlowHockeyGame({ match, currentUid }: GlowHockeyGameProp
     const x = (e.clientX - rect.left) * scaleX;
     const y = (e.clientY - rect.top) * scaleY;
 
-    // Player 1 controls bottom half paddle
-    p1TargetRef.current.x = Math.max(PADDLE_RADIUS, Math.min(WIDTH - PADDLE_RADIUS, x));
-    p1TargetRef.current.y = Math.max(HEIGHT / 2 + PADDLE_RADIUS, Math.min(HEIGHT - PADDLE_RADIUS, y));
+    let mappedX = x;
+    let mappedY = y;
+    if (!isHost && !isVsBot) {
+      mappedX = WIDTH - x;
+      mappedY = HEIGHT - y;
+      p2TargetRef.current.x = Math.max(PADDLE_RADIUS, Math.min(WIDTH - PADDLE_RADIUS, mappedX));
+      p2TargetRef.current.y = Math.max(PADDLE_RADIUS, Math.min(HEIGHT / 2 - PADDLE_RADIUS, mappedY));
+    } else {
+      p1TargetRef.current.x = Math.max(PADDLE_RADIUS, Math.min(WIDTH - PADDLE_RADIUS, mappedX));
+      p1TargetRef.current.y = Math.max(HEIGHT / 2 + PADDLE_RADIUS, Math.min(HEIGHT - PADDLE_RADIUS, mappedY));
+    }
   };
 
   return (
@@ -378,7 +437,7 @@ export default function GlowHockeyGame({ match, currentUid }: GlowHockeyGameProp
           height={HEIGHT}
           onPointerMove={handlePointerMove}
           onPointerDown={handlePointerMove}
-          className="touch-none cursor-grab max-w-full"
+          className="touch-none cursor-grab max-w-full" style={{ transform: (!isHost && !isVsBot) ? 'rotate(180deg)' : 'none' }}
         />
       </div>
 
