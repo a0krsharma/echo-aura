@@ -40,6 +40,7 @@ import { subscribeToFollowing, type Follow } from "@/lib/follows";
 import ExpressiveAvatar from "@/app/components/avatar/ExpressiveAvatar";
 import ExpressiveGreetingModal from "@/app/components/avatar/ExpressiveGreetingModal";
 import AvatarCustomizerModal from "@/app/components/avatar/AvatarCustomizerModal";
+import WorldClassEmojiPicker from "@/app/components/wire/WorldClassEmojiPicker";
 import {
   GESTURE_CATALOG,
   type AvatarConfig,
@@ -278,6 +279,7 @@ function ChatWindow({
   });
 
   const [customizerOpen, setCustomizerOpen] = useState(false);
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const [greetingModal, setGreetingModal] = useState<{
     isOpen: boolean;
     senderHandle: string;
@@ -758,7 +760,32 @@ function ChatWindow({
         </button>
       </div>
 
+      <div className="relative">
+        {/* World-Class WhatsApp/Discord-Level Emoji & Reaction Drawer */}
+        <WorldClassEmojiPicker
+          isOpen={emojiPickerOpen}
+          onClose={() => setEmojiPickerOpen(false)}
+          onSelectEmoji={(emoji) => {
+            setInput((prev) => prev + emoji);
+          }}
+        />
+      </div>
+
       <form onSubmit={handleSend} className="p-2.5 sm:p-4 border-t border-neutral-900 flex items-center gap-1.5 sm:gap-2 bg-black shrink-0 sticky bottom-0 z-30 pb-safe sm:pb-4">
+        {/* Emoji Drawer Toggle Button */}
+        <button
+          type="button"
+          onClick={() => setEmojiPickerOpen((prev) => !prev)}
+          className={`p-2 rounded border transition-colors cursor-pointer shrink-0 flex items-center justify-center ${
+            emojiPickerOpen
+              ? "bg-white text-black border-white"
+              : "border-neutral-800 bg-neutral-900 text-neutral-300 hover:text-white hover:border-neutral-600"
+          }`}
+          title="Open Emoji & Stickers Drawer"
+        >
+          <span className="text-sm">😊</span>
+        </button>
+
         <input
           type="text"
           value={input}
