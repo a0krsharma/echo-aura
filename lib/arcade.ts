@@ -759,6 +759,7 @@ export interface ArcadeMatch {
   difficulty?: "EASY" | "MEDIUM" | "HARD";
   winnerUid?: string;
   winnerHandle?: string;
+  lastSpectatorEvent?: { type: string; handle: string; ts: number };
   rummyState?: RummyState;
   callBreakState?: CallBreakState;
   teenPattiState?: TeenPattiState;
@@ -4961,3 +4962,14 @@ export async function drawSolitaireCard(
   });
 }
 
+export async function sendSpectatorEvent(matchId: string, handle: string, type: string) {
+  try {
+    const db = getFirebaseDb();
+    const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+    await updateDoc(matchRef, {
+      lastSpectatorEvent: { type, handle, ts: Date.now() },
+    });
+  } catch (e) {
+    console.error("Failed to send spectator event", e);
+  }
+}

@@ -72,6 +72,7 @@ import {
   type UnoCard,
   type CarromPiece,
   type PoolBall,
+  sendArcadeChatMessage,
 } from "./arcade";
 
 const activeBotRuns = new Set<string>();
@@ -119,6 +120,7 @@ export async function executePoolBotShot(match: ArcadeMatch): Promise<void> {
       impulseY,
       balls
     );
+    await tryBotTrashTalk(match.id, botPlayer, 0.15);
   } catch (err) {
     console.error("[ArcadeBot] Pool error:", err);
   } finally {
@@ -267,6 +269,7 @@ export async function executeLudoBotTurn(match: ArcadeMatch): Promise<void> {
     }
 
     await moveLudoToken(match.id, botPlayer.uid, chosenToken.id);
+    await tryBotTrashTalk(match.id, botPlayer, 0.15);
   } catch (err) {
     console.error("[ArcadeBot] Ludo error:", err);
   } finally {
@@ -353,6 +356,7 @@ export async function executeChessBotTurn(match: ArcadeMatch): Promise<void> {
     const chosen = possibleMoves[0];
 
     await makeChessMove(match.id, botPlayer.uid, chosen.from, chosen.to);
+    await tryBotTrashTalk(match.id, botPlayer, 0.15);
   } catch (err) {
     console.error("[ArcadeBot] Chess error:", err);
   } finally {
@@ -452,6 +456,7 @@ export async function executeUnoBotTurn(match: ArcadeMatch): Promise<void> {
     } else {
       await drawUnoCard(match.id, botPlayer.uid);
     }
+    await tryBotTrashTalk(match.id, botPlayer, 0.15);
   } catch (err) {
     console.error("[ArcadeBot] Uno error:", err);
   } finally {
@@ -1177,6 +1182,35 @@ export async function executeCheatBluffBotTurn(match: ArcadeMatch): Promise<void
     console.error("[ArcadeBot] Cheat Bluff error:", err);
   } finally {
     setTimeout(() => activeBotRuns.delete(runKey), 2000);
+  }
+}
+
+const TRASH_TALK_POOL = [
+  "You call that a move? 🥱",
+  "Calculating your defeat... 100% certainty.",
+  "My CPU runs on your tears.",
+  "Error 404: Player skill not found.",
+  "I've seen random number generators with better strategy.",
+  "Is that your best shot?",
+  "I'm not even using 1% of my processing power.",
+  "Just forfeit already.",
+  "Beep boop. You're terrible. Boop.",
+  "This is almost too easy.",
+  "Are you even trying?",
+  "I was coded in a weekend and I'm still beating you.",
+];
+
+export async function tryBotTrashTalk(matchId: string, botPlayer: any, chance = 0.2) {
+  if (Math.random() > chance) return;
+  const text = TRASH_TALK_POOL[Math.floor(Math.random() * TRASH_TALK_POOL.length)];
+  try {
+    await sendArcadeChatMessage(matchId, {
+      uid: botPlayer.uid,
+      handle: botPlayer.handle + " [AI]",
+      avatar: "🤖"
+    }, text);
+  } catch (e) {
+    // ignore
   }
 }
 

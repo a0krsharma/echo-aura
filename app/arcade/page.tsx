@@ -10,6 +10,7 @@ import {
   subscribeLobbyArcadeMatches,
   deleteArcadeMatch,
   leaveArcadeMatch,
+  sendSpectatorEvent,
   type ArcadeMatch,
   type ArcadeGameType,
 } from "@/lib/arcade";
@@ -63,6 +64,7 @@ import { TERMINAL_BADGES, getAllBadges } from "@/lib/terminalBadges";
 import { type StreakBountyTarget } from "@/lib/viralMechanics";
 import { type VoiceFilterMode } from "@/lib/voiceModulator";
 import { type GhostLoungePreset } from "@/lib/midnightGhost";
+import { soundSynth } from "@/lib/soundSynthesizer";
 import {
   Gamepad2,
   Trophy,
@@ -167,6 +169,7 @@ function ArcadeContent() {
     scoreText: "Wiped the lobby with 4 home runs!",
     roomId: "8912",
   });
+  const lastSpectatorEventTs = React.useRef<number>(0);
 
   const [challengeLauncherOpen, setChallengeLauncherOpen] = useState(false);
   const [challengeParams, setChallengeParams] = useState({
@@ -275,6 +278,19 @@ function ArcadeContent() {
       if (unsub) unsub();
     };
   }, []);
+
+  // Listen for Spectator Soundboard Events
+  useEffect(() => {
+    if (activeMatch?.lastSpectatorEvent) {
+      const event = activeMatch.lastSpectatorEvent;
+      if (event.ts > lastSpectatorEventTs.current) {
+        lastSpectatorEventTs.current = event.ts;
+        if (event.type === "AIRHORN") soundSynth.playAirhorn();
+        if (event.type === "APPLAUSE") soundSynth.playApplause();
+        if (event.type === "BOING") soundSynth.playBoing();
+      }
+    }
+  }, [activeMatch?.lastSpectatorEvent]);
 
   const handleOpenCreate = (type: ArcadeGameType) => {
     setDefaultGameType(type);
@@ -580,10 +596,44 @@ function ArcadeContent() {
             </div>
 
             {/* In-Match Live Voice Filters & Reaction Soundboard */}
-            <LiveVoiceFilterDock
-              currentFilter={activeVoiceFilter}
-              onFilterChange={(f) => setActiveVoiceFilter(f)}
-            />
+            {user && !activeMatch.players?.[user.uid] ? (
+              <div className="w-full bg-neutral-950 border-2 border-dashed border-neutral-700 p-3 mb-4 rounded-lg flex items-center justify-between shadow-[0_0_15px_rgba(0,0,0,0.5)]">
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                  </span>
+                  <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest">
+                    LIVE SPECTATOR MODE
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => sendSpectatorEvent(activeMatch.id, user.handle, "AIRHORN")}
+                    className="px-3 py-1.5 bg-neutral-900 border border-blue-900 hover:bg-blue-900 hover:border-blue-500 text-blue-400 font-bold text-[10px] uppercase rounded transition-all"
+                  >
+                    📢 AIRHORN
+                  </button>
+                  <button
+                    onClick={() => sendSpectatorEvent(activeMatch.id, user.handle, "APPLAUSE")}
+                    className="px-3 py-1.5 bg-neutral-900 border border-emerald-900 hover:bg-emerald-900 hover:border-emerald-500 text-emerald-400 font-bold text-[10px] uppercase rounded transition-all"
+                  >
+                    👏 APPLAUSE
+                  </button>
+                  <button
+                    onClick={() => sendSpectatorEvent(activeMatch.id, user.handle, "BOING")}
+                    className="px-3 py-1.5 bg-neutral-900 border border-amber-900 hover:bg-amber-900 hover:border-amber-500 text-amber-400 font-bold text-[10px] uppercase rounded transition-all"
+                  >
+                    🤪 BOING
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <LiveVoiceFilterDock
+                currentFilter={activeVoiceFilter}
+                onFilterChange={(f) => setActiveVoiceFilter(f)}
+              />
+            )}
 
             {/* Victory Story Showcase Overlay */}
             {activeMatch.status === "FINISHED" && activeMatch.winnerUid === user?.uid && (
