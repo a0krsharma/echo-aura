@@ -424,9 +424,9 @@ function ArcadeContent() {
 
           <button
             type="button"
-            onClick={() => handleOpenChallenge(activeMatch?.gameType || "ludo", "Ludo Cyber Master", activeMatch?.id || "room_8912", activeMatch?.id || "match_8912")}
-            className="px-2.5 py-1 border border-rose-500 bg-rose-950/40 text-rose-300 hover:bg-rose-500 hover:text-black font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
-            title="1v1 Trash-Talk Poke & Challenge Rival"
+            onClick={() => handleOpenChallenge("ludo", "Cyber Arcade Challenge", "lobby", "global")}
+            className="px-2.5 py-1 border border-neutral-800 bg-neutral-950 text-neutral-300 hover:border-white hover:text-white font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
+            title="Challenge a rival in a 1v1 duel"
           >
             <Swords className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">[ ⚔️ POKE / DUEL ]</span>
@@ -438,12 +438,12 @@ function ArcadeContent() {
             onClick={() => setVoiceDockOpen(!voiceDockOpen)}
             className={`px-2.5 py-1 border font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer ${
               voiceDockOpen
-                ? "border-emerald-400 bg-emerald-400 text-black"
-                : "border-neutral-700 bg-black text-neutral-300 hover:border-white"
+                ? "border-white bg-white text-black"
+                : "border-neutral-800 bg-neutral-950 text-neutral-300 hover:border-white hover:text-white"
             }`}
             title="Toggle Client-Side Voice Modulators & Soundboard"
           >
-            <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
+            <Volume2 className="w-3.5 h-3.5" />
             <span>[ 🎙️ VOICE FX ]</span>
           </button>
 
@@ -452,12 +452,12 @@ function ArcadeContent() {
             onClick={() => setVoicePartyOpen(!voicePartyOpen)}
             className={`px-2.5 py-1 border font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer ${
               voicePartyOpen
-                ? "border-purple-400 bg-purple-400 text-black"
-                : "border-purple-800 bg-purple-950/40 text-purple-300 hover:border-purple-400"
+                ? "border-white bg-white text-black"
+                : "border-neutral-800 bg-neutral-950 text-neutral-300 hover:border-white hover:text-white"
             }`}
             title="60s Roast Ring, Defend Absurd, Mimicry & Truth/Dare"
           >
-            <Mic2 className="w-3.5 h-3.5 text-purple-400" />
+            <Mic2 className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">[ 🎙️ VOICE PARTY ]</span>
           </button>
 
@@ -466,12 +466,12 @@ function ArcadeContent() {
             onClick={() => setVoiceMechanicOpen(!voiceMechanicOpen)}
             className={`px-2.5 py-1 border font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer ${
               voiceMechanicOpen
-                ? "border-amber-400 bg-amber-400 text-black"
-                : "border-amber-800 bg-amber-950/40 text-amber-300 hover:border-amber-400"
+                ? "border-white bg-white text-black"
+                : "border-neutral-800 bg-neutral-950 text-neutral-300 hover:border-white hover:text-white"
             }`}
             title="1v1 Tongue Twister Faceoff with Friend"
           >
-            <Flame className="w-3.5 h-3.5 text-amber-400" />
+            <Flame className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">[ 👅 TONGUE TWISTERS ]</span>
             <span className="sm:hidden">[ 👅 TWISTERS ]</span>
           </button>
@@ -479,10 +479,10 @@ function ArcadeContent() {
           <button
             type="button"
             onClick={() => setBadgesModalOpen(true)}
-            className="px-2.5 py-1 border border-yellow-500/80 bg-yellow-950/40 text-yellow-300 hover:bg-yellow-400 hover:text-black font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
+            className="px-2.5 py-1 border border-neutral-800 bg-neutral-950 text-neutral-300 hover:border-white hover:text-white font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
             title="View Terminal Winner Badges & Profile Flairs"
           >
-            <Crown className="w-3.5 h-3.5 text-yellow-400" />
+            <Crown className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">[ 👑 BADGES ]</span>
           </button>
 
@@ -491,12 +491,12 @@ function ArcadeContent() {
             onClick={() => setViralHubOpen(!viralHubOpen)}
             className={`px-2.5 py-1 border font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer ${
               viralHubOpen
-                ? "border-rose-500 bg-rose-500 text-white"
-                : "border-rose-800 bg-rose-950/40 text-rose-300 hover:border-rose-400"
+                ? "border-white bg-white text-black"
+                : "border-neutral-800 bg-neutral-950 text-neutral-300 hover:border-white hover:text-white"
             }`}
             title="Ghost Protocol, Streak Bounties, Mystery Node & Turf Wars"
           >
-            <Zap className="w-3.5 h-3.5 text-rose-400" />
+            <Zap className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">[ ⚡ HIT LIST & BOUNTIES ]</span>
             <span className="sm:hidden">[ ⚡ BOUNTIES ]</span>
           </button>
@@ -504,7 +504,7 @@ function ArcadeContent() {
           <button
             type="button"
             onClick={() => setTournamentModalOpen(true)}
-            className="px-2.5 py-1 border border-amber-400 bg-amber-950/40 text-amber-300 hover:bg-amber-400 hover:text-black font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
+            className="px-2.5 py-1 border border-neutral-800 bg-neutral-950 text-neutral-300 hover:border-white hover:text-white font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
           >
             <Trophy className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">[ 🏆 TOURNAMENT ]</span>
@@ -513,7 +513,7 @@ function ArcadeContent() {
           <button
             type="button"
             onClick={() => handleOpenRules(activeMatch?.gameType || "ludo")}
-            className="px-2.5 py-1 border border-neutral-700 bg-black text-neutral-400 hover:border-white hover:text-white font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
+            className="px-2.5 py-1 border border-neutral-800 bg-neutral-950 text-neutral-300 hover:border-white hover:text-white font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
           >
             <HelpCircle className="w-3.5 h-3.5" />
             <span>[ ❓ ]</span>
@@ -538,25 +538,26 @@ function ArcadeContent() {
                   <button
                     type="button"
                     onClick={() => setRevengeModalMatch(activeMatch)}
-                    className="px-2.5 py-1 border-2 border-red-500 bg-red-600 hover:bg-red-500 text-white font-black uppercase text-[10px] transition-all flex items-center gap-1 cursor-pointer shadow-lg animate-bounce"
+                    className="px-2.5 py-1 border border-white bg-white text-black hover:bg-neutral-200 font-black uppercase text-[10px] transition-all flex items-center gap-1 cursor-pointer shadow"
                   >
                     <Swords className="w-3.5 h-3.5" />
-                    <span>[ ⚔️ REVENGE CARD / SHARE ]</span>
+                    <span>[ ⚔️ REVENGE CARD ]</span>
                   </button>
                 )}
 
                 <button
                   type="button"
                   onClick={() => handleOpenRules(activeMatch.gameType)}
-                  className="px-2 py-1 border border-emerald-400 bg-black text-emerald-300 hover:bg-emerald-400 hover:text-black font-bold uppercase text-[10px] transition-all flex items-center gap-1 cursor-pointer"
+                  className="px-2 py-1 border border-neutral-700 bg-black text-neutral-300 hover:border-white hover:text-white font-bold uppercase text-[10px] transition-all flex items-center gap-1 cursor-pointer"
                 >
                   <HelpCircle className="w-3 h-3" />
                   <span>RULES</span>
                 </button>
+
                 <button
                   type="button"
                   onClick={() => handleOpenStory(activeMatch.gameType.toUpperCase(), "Battling in the cyber arena!", activeMatch.id)}
-                  className="px-2.5 py-1 border border-emerald-400 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-400 hover:text-black font-extrabold uppercase text-[10px] transition-all flex items-center gap-1 cursor-pointer"
+                  className="px-2.5 py-1 border border-neutral-700 bg-black text-neutral-300 hover:border-white hover:text-white font-extrabold uppercase text-[10px] transition-all flex items-center gap-1 cursor-pointer"
                 >
                   <Video className="w-3 h-3" />
                   <span>[ 📱 STATUS VIDEO ]</span>
@@ -565,7 +566,7 @@ function ArcadeContent() {
                 <button
                   type="button"
                   onClick={() => handleOpenChallenge(activeMatch.gameType, activeMatch.gameType.toUpperCase(), activeMatch.id, activeMatch.id)}
-                  className="px-2.5 py-1 border border-rose-500 bg-rose-950/40 text-rose-300 hover:bg-rose-500 hover:text-black font-extrabold uppercase text-[10px] transition-all flex items-center gap-1 cursor-pointer"
+                  className="px-2.5 py-1 border border-neutral-700 bg-black text-neutral-300 hover:border-white hover:text-white font-extrabold uppercase text-[10px] transition-all flex items-center gap-1 cursor-pointer"
                 >
                   <Swords className="w-3 h-3" />
                   <span>[ ⚔️ POKE RIVAL ]</span>
@@ -574,7 +575,7 @@ function ArcadeContent() {
                 <button
                   type="button"
                   onClick={() => setInviteModalMatch(activeMatch)}
-                  className="px-2.5 py-1 border border-white bg-black hover:bg-white hover:text-black font-extrabold uppercase text-[10px] transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                  className="px-2.5 py-1 border border-white bg-white text-black hover:bg-neutral-200 font-extrabold uppercase text-[10px] transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
                 >
                   <Share2 className="w-3 h-3" />
                   <span>[ 🔗 INVITE 🎙️ ]</span>
@@ -584,14 +585,14 @@ function ArcadeContent() {
                   <button
                     type="button"
                     onClick={() => handleDeleteMatch(activeMatch.id)}
-                    className="p-1 border border-red-900 bg-red-950/40 text-red-400 hover:bg-red-900 hover:text-white transition-colors cursor-pointer"
+                    className="p-1 border border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-white hover:text-white transition-colors cursor-pointer"
                     title="Delete / Terminate Arena"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 )}
 
-                <span className="text-white font-bold border border-neutral-700 px-2 py-0.5 uppercase">
+                <span className="text-white font-bold border border-neutral-800 bg-neutral-900 px-2 py-0.5 uppercase">
                   STATUS: {activeMatch.status}
                 </span>
               </div>
@@ -740,36 +741,36 @@ function ArcadeContent() {
             )}
 
             {/* Hero Banner */}
-            <div className="border-2 border-white bg-black p-6 space-y-4 relative overflow-hidden shadow-[0_0_30px_rgba(255,255,255,0.08)]">
+            <div className="border border-white bg-black p-5 sm:p-6 space-y-4 relative overflow-hidden shadow-[0_0_30px_rgba(255,255,255,0.06)] font-mono">
               <div className="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-widest">
                 <Flame className="w-4 h-4 text-white animate-bounce" />
-                <span>// PREMIER RETRO LOUNGE // $0 SERVER INFRASTRUCTURE // LIVE AUDIO</span>
+                <span>// ECHO RETRO ARCADE // 50 RANKED GAMES // ZERO SERVER COST</span>
               </div>
-              <h2 className="text-xl sm:text-2xl font-extrabold uppercase tracking-tight text-white leading-tight">
-                Ranked Multiplayer & Retro Arcade Suite: Paper Chits, 2D Physics, Card Bluffing & Voice Party Showdowns.
+              <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-white leading-tight">
+                Ranked Multiplayer & Retro Classroom Suite: Paper Chits, 2D Physics, Card Bluffing & Voice Party Showdowns.
               </h2>
               <p className="text-xs text-neutral-300 max-w-3xl leading-relaxed">
                 Connect in real-time voice channels to play Raja Mantri Chor Sipahi, Hand Cricket, Book Cricket, 8-Ball Pool, Texas Hold'em, Uno, Carrom, Ludo, Skribbl, Codenames, Bingo, Hangman, and nostalgic classroom & board classics.
               </p>
 
-              {/* 1-Tap Growth Engine Quick Launchers */}
+              {/* Quick Launchers */}
               <div className="flex items-center gap-2.5 flex-wrap pt-2 border-t border-neutral-800">
                 <button
                   type="button"
                   onClick={() => handleOpenStory("ECHO CYBER ARCADE", "Crushing the multiplayer lounge!", "8912")}
-                  className="px-3 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs uppercase rounded-lg transition-all shadow-lg flex items-center gap-1.5 cursor-pointer active:scale-95"
+                  className="px-3 py-1.5 border border-white bg-black hover:bg-white hover:text-black text-white font-black text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
                 >
-                  <Video className="w-4 h-4" />
-                  <span>[ 📱 1-TAP WHATSAPP / IG STATUS VIDEO EXPORT ]</span>
+                  <Video className="w-3.5 h-3.5" />
+                  <span>[ 📱 1-TAP STATUS VIDEO EXPORT ]</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => handleOpenChallenge("ludo", "Ludo Cyber Master", "room_8912", "match_8912")}
-                  className="px-3 py-2 bg-rose-600 hover:bg-rose-500 text-white font-black text-xs uppercase rounded-lg transition-all shadow-lg flex items-center gap-1.5 cursor-pointer active:scale-95"
+                  className="px-3 py-1.5 border border-white bg-white text-black hover:bg-neutral-200 font-black text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shadow"
                 >
-                  <Swords className="w-4 h-4" />
-                  <span>[ ⚔️ 1v1 TRASH-TALK DUEL LAUNCHER ]</span>
+                  <Swords className="w-3.5 h-3.5" />
+                  <span>[ ⚔️ 1V1 TRASH-TALK DUEL ]</span>
                 </button>
               </div>
             </div>
@@ -809,7 +810,7 @@ function ArcadeContent() {
             <MidnightGhostGrid onJoinGhostLounge={handleJoinGhostLounge} />
 
             {/* Category Filter Tabs & Search Bar */}
-            <div className="space-y-3">
+            <div className="space-y-3 font-mono">
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 {/* Search Bar */}
                 <div className="flex-1 min-w-[260px] relative">
@@ -826,7 +827,7 @@ function ArcadeContent() {
                 <button
                   type="button"
                   onClick={() => handleOpenRules("ludo")}
-                  className="px-3 py-2 border-2 border-emerald-400 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-400 hover:text-black font-extrabold text-xs uppercase flex items-center gap-1.5 cursor-pointer shadow-md"
+                  className="px-3 py-2 border border-white bg-black hover:bg-white hover:text-black text-white font-extrabold text-xs uppercase flex items-center gap-1.5 cursor-pointer transition-colors"
                 >
                   <HelpCircle className="w-4 h-4" />
                   <span>[ ❓ READ ALL 50 RULES ]</span>
@@ -835,146 +836,115 @@ function ArcadeContent() {
 
               {/* Filter Tabs */}
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setActiveCategory("ALL")}
-                  className={`px-3 py-1.5 border font-extrabold uppercase whitespace-nowrap transition-all cursor-pointer ${
-                    activeCategory === "ALL"
-                      ? "bg-white text-black border-white"
-                      : "bg-black text-neutral-400 border-neutral-800 hover:border-neutral-600"
-                  }`}
-                >
-                  [ ALL 1-50 RANKED ]
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveCategory("CARD")}
-                  className={`px-3 py-1.5 border font-extrabold uppercase whitespace-nowrap transition-all cursor-pointer flex items-center gap-1 ${
-                    activeCategory === "CARD"
-                      ? "bg-white text-black border-white"
-                      : "bg-black text-neutral-400 border-neutral-800 hover:border-neutral-600"
-                  }`}
-                >
-                  <span>♠️ CARD & BLUFFING</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveCategory("PAPER")}
-                  className={`px-3 py-1.5 border font-extrabold uppercase whitespace-nowrap transition-all cursor-pointer flex items-center gap-1 ${
-                    activeCategory === "PAPER"
-                      ? "bg-amber-400 text-black border-amber-400"
-                      : "bg-black text-neutral-400 border-neutral-800 hover:border-neutral-600"
-                  }`}
-                >
-                  <span>👑 NOSTALGIC PAPER & DESI</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveCategory("PHYSICS")}
-                  className={`px-3 py-1.5 border font-extrabold uppercase whitespace-nowrap transition-all cursor-pointer flex items-center gap-1 ${
-                    activeCategory === "PHYSICS"
-                      ? "bg-white text-black border-white"
-                      : "bg-black text-neutral-400 border-neutral-800 hover:border-neutral-600"
-                  }`}
-                >
-                  <span>🎱 2D PHYSICS TABLES</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveCategory("TACTICAL")}
-                  className={`px-3 py-1.5 border font-extrabold uppercase whitespace-nowrap transition-all cursor-pointer flex items-center gap-1 ${
-                    activeCategory === "TACTICAL"
-                      ? "bg-white text-black border-white"
-                      : "bg-black text-neutral-400 border-neutral-800 hover:border-neutral-600"
-                  }`}
-                >
-                  <span>♟️ TACTICAL BOARDS</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveCategory("PARTY")}
-                  className={`px-3 py-1.5 border font-extrabold uppercase whitespace-nowrap transition-all cursor-pointer flex items-center gap-1 ${
-                    activeCategory === "PARTY"
-                      ? "bg-white text-black border-white"
-                      : "bg-black text-neutral-400 border-neutral-800 hover:border-neutral-600"
-                  }`}
-                >
-                  <span>🎙️ VOICE PARTY & DEDUCTION</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveCategory("PUZZLE")}
-                  className={`px-3 py-1.5 border font-extrabold uppercase whitespace-nowrap transition-all cursor-pointer flex items-center gap-1 ${
-                    activeCategory === "PUZZLE"
-                      ? "bg-white text-black border-white"
-                      : "bg-black text-neutral-400 border-neutral-800 hover:border-neutral-600"
-                  }`}
-                >
-                  <span>🧩 SOLO LOGIC & PUZZLES</span>
-                </button>
+                {(
+                  [
+                    { id: "ALL", label: "ALL 1-50 RANKED" },
+                    { id: "CARD", label: "♠️ CARD & BLUFFING" },
+                    { id: "PAPER", label: "👑 PAPER & DESI" },
+                    { id: "PHYSICS", label: "🎱 2D PHYSICS" },
+                    { id: "TACTICAL", label: "♟️ TACTICAL BOARDS" },
+                    { id: "PARTY", label: "🎙️ VOICE PARTY" },
+                    { id: "PUZZLE", label: "🧩 SOLO LOGIC" },
+                  ] as const
+                ).map((tab) => {
+                  const isActive = activeCategory === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setActiveCategory(tab.id as any)}
+                      className={`px-3 py-1.5 border font-extrabold uppercase whitespace-nowrap transition-all cursor-pointer ${
+                        isActive
+                          ? "bg-white text-black border-white"
+                          : "bg-black text-neutral-400 border-neutral-800 hover:border-neutral-500 hover:text-white"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
             {/* 50 Games Directory Grid / Table */}
-            <div className="space-y-3">
+            <div className="space-y-3 font-mono">
               <div className="flex items-center justify-between text-xs text-neutral-400 font-bold uppercase">
                 <span>DIRECTORY SHOWING {filteredGames.length} OF 50 RANKED GAMES</span>
                 <span>SORTED BY ENGAGEMENT & RETENTION RANK</span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
                 {filteredGames.map((game) => (
                   <div
                     key={`${game.rank}-${game.id}`}
-                    className="border-2 border-neutral-800 hover:border-white bg-neutral-950 p-4 space-y-3 flex flex-col justify-between transition-all rounded-none shadow-md group"
+                    className="border border-neutral-800 hover:border-white bg-neutral-950 p-4 space-y-3 flex flex-col justify-between transition-all rounded-none shadow-md group"
                   >
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-[10px] text-neutral-400 uppercase">
-                        <span className="font-black text-emerald-400">RANK #{game.rank}</span>
-                        <span className="border border-neutral-800 bg-black px-1.5 py-0.5">
+                        <span className="font-black text-white bg-neutral-900 border border-neutral-800 px-1.5 py-0.5">
+                          RANK #{game.rank}
+                        </span>
+                        <span className="border border-neutral-800 bg-black text-neutral-400 px-1.5 py-0.5">
                           {game.categoryLabel}
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 pt-1">
                         <span className="text-2xl group-hover:scale-110 transition-transform">{game.icon}</span>
                         <h4 className="font-black text-xs uppercase text-white tracking-wide">
                           {game.name}
                         </h4>
                       </div>
 
-                      <p className="text-[10px] text-neutral-400 leading-relaxed">
+                      <p className="text-[11px] text-neutral-400 leading-relaxed min-h-[34px]">
                         {game.mechanic}
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-2 pt-2 border-t border-neutral-900">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenRules(game.id)}
-                        className="p-2 border border-neutral-700 hover:border-emerald-400 text-neutral-400 hover:text-emerald-400 transition-colors cursor-pointer"
-                        title={`Read ${game.name} Rules`}
-                      >
-                        <HelpCircle className="w-3.5 h-3.5" />
-                      </button>
+                    <div className="space-y-2 pt-2 border-t border-neutral-900">
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <button
+                          type="button"
+                          disabled={!user}
+                          onClick={() => handleLaunchSolo(game.id)}
+                          className="py-1.5 px-2 border border-neutral-700 bg-black hover:border-white hover:bg-white hover:text-black text-white font-extrabold text-[10px] uppercase transition-all cursor-pointer text-center"
+                          title={`Play ${game.name} vs AI Bot`}
+                        >
+                          [ 🤖 VS BOT ]
+                        </button>
 
-                      <button
-                        type="button"
-                        onClick={() => handleOpenChallenge(game.id, game.name, "room_8912", "match_8912")}
-                        className="p-2 border border-rose-900 bg-rose-950/40 text-rose-300 hover:bg-rose-600 hover:text-white font-bold text-xs uppercase transition-all cursor-pointer"
-                        title={`1v1 Trash-Talk Duel in ${game.name}`}
-                      >
-                        <Swords className="w-3.5 h-3.5" />
-                      </button>
+                        <button
+                          type="button"
+                          disabled={!user}
+                          onClick={() => handleOpenCreate(game.id)}
+                          className="py-1.5 px-2 border border-white bg-white text-black hover:bg-neutral-200 font-extrabold text-[10px] uppercase transition-all cursor-pointer text-center shadow"
+                          title={`Create Multiplayer Room in ${game.name}`}
+                        >
+                          [ 👥 PLAY PvP ]
+                        </button>
+                      </div>
 
-                      <button
-                        type="button"
-                        disabled={!user}
-                        onClick={() => handleOpenCreate(game.id)}
-                        className="flex-1 py-2 border border-white bg-white text-black hover:bg-neutral-200 font-black text-xs uppercase transition-all cursor-pointer shadow"
-                      >
-                        [ 🎮 PLAY #{game.rank} ]
-                      </button>
+                      <div className="flex items-center justify-between gap-1.5 text-[10px]">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenRules(game.id)}
+                          className="flex-1 py-1 border border-neutral-800 hover:border-neutral-600 text-neutral-400 hover:text-white transition-colors cursor-pointer text-center flex items-center justify-center gap-1 uppercase"
+                          title={`Read ${game.name} Rules`}
+                        >
+                          <HelpCircle className="w-3 h-3" />
+                          <span>RULES</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleOpenChallenge(game.id, game.name, "room_8912", "match_8912")}
+                          className="flex-1 py-1 border border-neutral-800 hover:border-neutral-600 text-neutral-400 hover:text-white transition-colors cursor-pointer text-center flex items-center justify-center gap-1 uppercase"
+                          title={`1v1 Trash-Talk Duel in ${game.name}`}
+                        >
+                          <Swords className="w-3 h-3" />
+                          <span>1V1 DUEL</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}

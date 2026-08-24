@@ -125,16 +125,16 @@ export default function ArcadeCreateModal({
         </button>
 
         {/* Modal Header */}
-        <div className="border-b-2 border-white pb-3 space-y-1">
-          <div className="flex items-center gap-2 text-xs font-bold tracking-widest text-emerald-400 uppercase">
-            <Sparkles className="w-4 h-4 animate-pulse" />
+        <div className="border-b border-neutral-800 pb-3 space-y-1">
+          <div className="flex items-center gap-2 text-xs font-bold tracking-widest text-white uppercase">
+            <Sparkles className="w-4 h-4 text-white" />
             <span>// QUICK LAUNCH ARENA</span>
           </div>
-          <h2 className="text-base sm:text-lg font-extrabold uppercase text-white flex items-center gap-2">
+          <h2 className="text-base sm:text-lg font-black uppercase text-white flex items-center gap-2">
             <span>{meta.icon}</span>
             <span>{meta.name}</span>
           </h2>
-          <p className="text-[10px] text-neutral-400">{meta.desc}</p>
+          <p className="text-[11px] text-neutral-400 leading-relaxed">{meta.desc}</p>
         </div>
 
         {/* 1. Opponent / Mode Selector */}
@@ -147,32 +147,32 @@ export default function ArcadeCreateModal({
               <button
                 type="button"
                 onClick={() => setMode("VS_COMPUTER")}
-                className={`p-2.5 border-2 text-left transition-all cursor-pointer flex items-center gap-2 ${
+                className={`p-2.5 border text-left transition-all cursor-pointer flex items-center gap-2 ${
                   mode === "VS_COMPUTER"
-                    ? "border-white bg-neutral-900 text-white font-extrabold ring-1 ring-white"
-                    : "border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-600"
+                    ? "border-white bg-white text-black font-black"
+                    : "border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-600 hover:text-white"
                 }`}
               >
-                <Bot className="w-4 h-4 text-emerald-400 shrink-0" />
+                <Bot className={`w-4 h-4 shrink-0 ${mode === "VS_COMPUTER" ? "text-black" : "text-white"}`} />
                 <div>
-                  <div className="text-xs uppercase font-bold text-white">🤖 VS BOT (SOLO)</div>
-                  <div className="text-[9px] text-neutral-400">Play vs Smart AI</div>
+                  <div className="text-xs uppercase font-bold">🤖 VS BOT</div>
+                  <div className={`text-[9px] ${mode === "VS_COMPUTER" ? "text-neutral-700" : "text-neutral-400"}`}>Play vs Smart AI</div>
                 </div>
               </button>
 
               <button
                 type="button"
                 onClick={() => setMode("MULTIPLAYER")}
-                className={`p-2.5 border-2 text-left transition-all cursor-pointer flex items-center gap-2 ${
+                className={`p-2.5 border text-left transition-all cursor-pointer flex items-center gap-2 ${
                   mode === "MULTIPLAYER"
-                    ? "border-white bg-neutral-900 text-white font-extrabold ring-1 ring-white"
-                    : "border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-600"
+                    ? "border-white bg-white text-black font-black"
+                    : "border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-600 hover:text-white"
                 }`}
               >
-                <Users className="w-4 h-4 text-white shrink-0" />
+                <Users className={`w-4 h-4 shrink-0 ${mode === "MULTIPLAYER" ? "text-black" : "text-white"}`} />
                 <div>
-                  <div className="text-xs uppercase font-bold text-white">👥 MULTIPLAYER</div>
-                  <div className="text-[9px] text-neutral-400">PvP / Invite Friends</div>
+                  <div className="text-xs uppercase font-bold">👥 MULTIPLAYER</div>
+                  <div className={`text-[9px] ${mode === "MULTIPLAYER" ? "text-neutral-700" : "text-neutral-400"}`}>PvP / Invite Friends</div>
                 </div>
               </button>
             </div>
@@ -193,8 +193,8 @@ export default function ArcadeCreateModal({
                   onClick={() => setMaxPlayers(num)}
                   className={`py-2 border text-center font-bold text-xs uppercase transition-all cursor-pointer ${
                     maxPlayers === num
-                      ? "border-white bg-white text-black font-extrabold"
-                      : "border-neutral-800 bg-neutral-950 text-neutral-300 hover:border-neutral-600"
+                      ? "border-white bg-white text-black font-black"
+                      : "border-neutral-800 bg-neutral-950 text-neutral-300 hover:border-neutral-600 hover:text-white"
                   }`}
                 >
                   {num} PLAYERS
@@ -215,8 +215,8 @@ export default function ArcadeCreateModal({
               onClick={() => setEnableVoice(!enableVoice)}
               className={`w-full py-2 px-3 border text-left text-xs font-bold uppercase flex items-center justify-between transition-all cursor-pointer ${
                 enableVoice
-                  ? "border-emerald-500 bg-emerald-950/40 text-emerald-300"
-                  : "border-neutral-800 bg-neutral-950 text-neutral-500"
+                  ? "border-white bg-neutral-900 text-white font-bold"
+                  : "border-neutral-800 bg-neutral-950 text-neutral-500 hover:border-neutral-700"
               }`}
             >
               <div className="flex items-center gap-1.5">
@@ -250,7 +250,7 @@ export default function ArcadeCreateModal({
           type="button"
           disabled={creating}
           onClick={handleCreate}
-          className="w-full py-3.5 border-2 border-white bg-white text-black hover:bg-neutral-200 font-mono font-extrabold text-xs uppercase tracking-widest transition-all active:scale-95 disabled:opacity-40 cursor-pointer flex items-center justify-center gap-2 shadow-2xl"
+          className="w-full py-3 border border-white bg-white text-black hover:bg-neutral-200 font-mono font-black text-xs uppercase tracking-widest transition-all active:scale-95 disabled:opacity-40 cursor-pointer flex items-center justify-center gap-2 shadow-2xl"
         >
           <Play className="w-4 h-4 fill-black" />
           <span>{creating ? "LAUNCHING ARENA..." : `[ ⚔️ START ${meta.name} NOW ]`}</span>

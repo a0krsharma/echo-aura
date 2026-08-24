@@ -117,12 +117,12 @@ Can you recite: "${currentTwister.text}" 3x in 5 seconds without tripping?
   };
 
   return (
-    <div className="bg-black border-2 border-amber-400 p-4 sm:p-6 rounded-xl font-mono text-white space-y-6 shadow-[0_0_50px_rgba(251,191,36,0.15)] select-none">
+    <div className="bg-black border border-neutral-800 p-4 sm:p-6 rounded-xl font-mono text-white space-y-6 shadow-2xl select-none">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-800 pb-3">
         <div className="space-y-1">
-          <div className="flex items-center gap-2 text-xs font-black uppercase text-amber-400">
-            <Flame className="w-4 h-4 text-amber-400 animate-bounce" />
+          <div className="flex items-center gap-2 text-xs font-black uppercase text-white">
+            <Flame className="w-4 h-4 text-white" />
             <span>// 1v1 TONGUE TWISTER VOICE FACEOFF WITH FRIEND</span>
           </div>
           <h2 className="text-lg font-black uppercase text-white flex items-center gap-2">
@@ -137,7 +137,7 @@ Can you recite: "${currentTwister.text}" 3x in 5 seconds without tripping?
         <button
           type="button"
           onClick={handleShareWhatsApp}
-          className="py-2 px-3.5 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs uppercase rounded-lg transition-all cursor-pointer shadow-lg active:scale-95 flex items-center gap-1.5 shrink-0"
+          className="py-2 px-3.5 border border-white bg-white text-black hover:bg-neutral-200 font-black text-xs uppercase rounded transition-all cursor-pointer shadow-lg active:scale-95 flex items-center gap-1.5 shrink-0"
         >
           <Share2 className="w-4 h-4" />
           <span>CHALLENGE FRIEND ON WHATSAPP 📲</span>
@@ -148,19 +148,19 @@ Can you recite: "${currentTwister.text}" 3x in 5 seconds without tripping?
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
         {/* Player 1 Card */}
         <div
-          className={`p-3.5 border-2 rounded-xl transition-all ${
+          className={`p-3.5 border rounded-xl transition-all ${
             activePlayer === 1 && !isGameOver
-              ? "border-emerald-400 bg-emerald-950/40 ring-2 ring-emerald-400"
+              ? "border-white bg-neutral-900"
               : "border-neutral-800 bg-neutral-950 opacity-80"
           }`}
         >
-          <div className="flex items-center justify-between text-xs font-bold text-emerald-400">
+          <div className="flex items-center justify-between text-xs font-bold text-white">
             <span>🔴 PLAYER 1 (HOST)</span>
             <span className="text-white font-black text-sm">{scoreP1} PTS</span>
           </div>
           <div className="text-sm font-black text-white truncate mt-1">{userHandle}</div>
           {activePlayer === 1 && !isGameOver && (
-            <div className="text-[10px] text-emerald-300 font-bold uppercase mt-1 animate-pulse">
+            <div className="text-[10px] text-white font-bold uppercase mt-1 animate-pulse">
               ● ACTIVE TURN (RECITE ON MIC)
             </div>
           )}
@@ -171,7 +171,7 @@ Can you recite: "${currentTwister.text}" 3x in 5 seconds without tripping?
           <div className="text-[10px] text-neutral-400 font-bold uppercase">
             {isGameOver ? "MATCH FINISHED" : `ROUND ${currentRound} OF 3`}
           </div>
-          <div className="text-3xl font-black font-mono text-amber-400">
+          <div className="text-3xl font-black font-mono text-white">
             {twisterTimer}S
           </div>
           <div className="text-[9px] text-neutral-500 font-bold uppercase">
@@ -181,19 +181,19 @@ Can you recite: "${currentTwister.text}" 3x in 5 seconds without tripping?
 
         {/* Player 2 Card (Friend) */}
         <div
-          className={`p-3.5 border-2 rounded-xl transition-all ${
+          className={`p-3.5 border rounded-xl transition-all ${
             activePlayer === 2 && !isGameOver
-              ? "border-cyan-400 bg-cyan-950/40 ring-2 ring-cyan-400"
+              ? "border-white bg-neutral-900"
               : "border-neutral-800 bg-neutral-950 opacity-80"
           }`}
         >
-          <div className="flex items-center justify-between text-xs font-bold text-cyan-400">
+          <div className="flex items-center justify-between text-xs font-bold text-white">
             <span>🔵 PLAYER 2 (FRIEND)</span>
             <span className="text-white font-black text-sm">{scoreP2} PTS</span>
           </div>
           <div className="text-sm font-black text-white truncate mt-1">{friendHandle}</div>
           {activePlayer === 2 && !isGameOver && (
-            <div className="text-[10px] text-cyan-300 font-bold uppercase mt-1 animate-pulse">
+            <div className="text-[10px] text-white font-bold uppercase mt-1 animate-pulse">
               ● ACTIVE TURN (RECITE ON MIC)
             </div>
           )}
@@ -202,8 +202,8 @@ Can you recite: "${currentTwister.text}" 3x in 5 seconds without tripping?
 
       {/* Main Twister Card */}
       {!isGameOver ? (
-        <div className="bg-neutral-950 border-2 border-amber-400 p-5 rounded-xl space-y-3 shadow-xl">
-          <div className="flex items-center justify-between text-xs font-bold text-amber-400 uppercase">
+        <div className="bg-neutral-950 border border-neutral-800 p-5 rounded-xl space-y-3 shadow-xl">
+          <div className="flex items-center justify-between text-xs font-bold text-white uppercase">
             <span className="flex items-center gap-1.5">
               <span>LANGUAGE: {currentTwister.language}</span>
               <span>•</span>
@@ -216,7 +216,7 @@ Can you recite: "${currentTwister.text}" 3x in 5 seconds without tripping?
                 soundSynth.playSubtlePop();
                 setTwisterIdx((i) => (i + 1) % TONGUE_TWISTERS.length);
               }}
-              className="px-2.5 py-1 bg-black border border-neutral-700 hover:border-amber-400 text-neutral-300 hover:text-white rounded text-[10px] cursor-pointer"
+              className="px-2.5 py-1 bg-black border border-neutral-700 hover:border-white text-neutral-300 hover:text-white rounded text-[10px] cursor-pointer"
             >
               CHANGE TWISTER ⏭️
             </button>
@@ -238,7 +238,7 @@ Can you recite: "${currentTwister.text}" 3x in 5 seconds without tripping?
               type="button"
               onClick={handleStartSprint}
               disabled={isTimerRunning}
-              className="w-full sm:w-auto py-3 px-8 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-black font-black text-xs uppercase rounded-xl transition-all cursor-pointer shadow-lg active:scale-95 flex items-center justify-center gap-2"
+              className="w-full sm:w-auto py-3 px-8 border border-white bg-white hover:bg-neutral-200 disabled:opacity-50 text-black font-black text-xs uppercase rounded transition-all cursor-pointer shadow-lg active:scale-95 flex items-center justify-center gap-2"
             >
               <Mic className="w-4 h-4" />
               <span>{isTimerRunning ? "5S CLOCK RUNNING..." : `START ${activePlayer === 1 ? userHandle : friendHandle}'S 5S SPRINT 🎙️`}</span>
@@ -249,7 +249,7 @@ Can you recite: "${currentTwister.text}" 3x in 5 seconds without tripping?
               <button
                 type="button"
                 onClick={() => handleScoreTurn(true)}
-                className="flex-1 sm:flex-initial py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase rounded-lg transition-all cursor-pointer shadow flex items-center justify-center gap-1.5"
+                className="flex-1 sm:flex-initial py-2.5 px-4 border border-white bg-white text-black hover:bg-neutral-200 font-black text-xs uppercase rounded transition-all cursor-pointer shadow flex items-center justify-center gap-1.5"
               >
                 <Check className="w-4 h-4" />
                 <span>FLAWLESS (+10 PTS)</span>
@@ -258,7 +258,7 @@ Can you recite: "${currentTwister.text}" 3x in 5 seconds without tripping?
               <button
                 type="button"
                 onClick={() => handleScoreTurn(false)}
-                className="flex-1 sm:flex-initial py-2.5 px-4 bg-rose-700 hover:bg-rose-600 text-white font-black text-xs uppercase rounded-lg transition-all cursor-pointer shadow flex items-center justify-center gap-1.5"
+                className="flex-1 sm:flex-initial py-2.5 px-4 border border-neutral-800 bg-black text-neutral-400 hover:border-white hover:text-white font-black text-xs uppercase rounded transition-all cursor-pointer shadow flex items-center justify-center gap-1.5"
               >
                 <X className="w-4 h-4" />
                 <span>STUMBLED (0 PTS)</span>
@@ -268,9 +268,9 @@ Can you recite: "${currentTwister.text}" 3x in 5 seconds without tripping?
         </div>
       ) : (
         /* Game Over Trophy Celebration */
-        <div className="bg-neutral-950 border-2 border-yellow-400 p-6 rounded-xl text-center space-y-4 shadow-2xl">
+        <div className="bg-neutral-950 border border-white p-6 rounded-xl text-center space-y-4 shadow-2xl">
           <div className="text-4xl animate-bounce">👑</div>
-          <h3 className="text-xl font-black text-yellow-400 uppercase tracking-wider">
+          <h3 className="text-xl font-black text-white uppercase tracking-wider">
             {scoreP1 > scoreP2
               ? `${userHandle} WINS THE TONGUE TWISTER DUEL!`
               : scoreP2 > scoreP1

@@ -153,12 +153,12 @@ export default function VoicePartyLounge({
   };
 
   return (
-    <div className="bg-black border-2 border-purple-500 p-4 sm:p-6 rounded-xl font-mono text-white space-y-6 shadow-[0_0_60px_rgba(168,85,247,0.2)] select-none">
+    <div className="bg-black border border-neutral-800 p-4 sm:p-6 rounded-xl font-mono text-white space-y-6 shadow-2xl select-none">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-purple-900/60 pb-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-800 pb-3">
         <div className="space-y-1">
-          <div className="flex items-center gap-2 text-xs font-black uppercase text-purple-400">
-            <Mic className="w-4 h-4 text-purple-400 animate-pulse" />
+          <div className="flex items-center gap-2 text-xs font-black uppercase text-white">
+            <Mic className="w-4 h-4 text-white" />
             <span>// 10 WORLD-CLASS VOICE PARTY & TEAM ARENAS [ LIVE AUDIO SYNC ]</span>
           </div>
           <h2 className="text-base sm:text-lg font-black uppercase text-white flex items-center gap-2">
@@ -171,7 +171,7 @@ export default function VoicePartyLounge({
         <button
           type="button"
           onClick={handleSendWhatsAppInvite}
-          className="py-2.5 px-4 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs uppercase rounded-lg transition-all cursor-pointer shadow-lg active:scale-95 flex items-center gap-1.5 shrink-0"
+          className="py-2 px-3 border border-white bg-white text-black hover:bg-neutral-200 font-black text-xs uppercase rounded transition-all cursor-pointer shadow-lg active:scale-95 flex items-center gap-1.5 shrink-0"
         >
           <Share2 className="w-4 h-4" />
           <span>CHALLENGE ON WHATSAPP 📲</span>
@@ -193,10 +193,10 @@ export default function VoicePartyLounge({
                 setTimerSeconds(30);
                 setBuzzerWinner(null);
               }}
-              className={`px-3 py-2 border rounded-lg font-black uppercase whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-3 py-2 border rounded font-black uppercase whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
                 isSelected
-                  ? "border-purple-400 bg-purple-950/60 text-white ring-2 ring-purple-400 shadow-md"
-                  : "border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-700"
+                  ? "border-white bg-white text-black font-black"
+                  : "border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-600 hover:text-white"
               }`}
             >
               <span>{mode.icon}</span>
@@ -207,22 +207,22 @@ export default function VoicePartyLounge({
       </div>
 
       {/* ── 1v1 TEAM / DUEL SCOREBOARD ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-neutral-950 border border-neutral-800 p-3 rounded-xl items-center text-xs">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-neutral-950 border border-neutral-800 p-3 rounded items-center text-xs">
         <div className="space-y-0.5">
-          <div className="text-[10px] text-purple-400 font-bold uppercase">TEAM RED (P1):</div>
+          <div className="text-[10px] text-neutral-400 font-bold uppercase">TEAM 1 (P1):</div>
           <div className="font-black text-white truncate">{player1Handle}</div>
-          <div className="text-emerald-400 font-black">{teamScoreA} PTS</div>
+          <div className="text-white font-black">{teamScoreA} PTS</div>
         </div>
 
         <div className="space-y-0.5">
-          <div className="text-[10px] text-cyan-400 font-bold uppercase">TEAM BLUE (P2):</div>
+          <div className="text-[10px] text-neutral-400 font-bold uppercase">TEAM 2 (P2):</div>
           <div className="font-black text-white truncate">{player2Handle}</div>
-          <div className="text-cyan-400 font-black">{teamScoreB} PTS</div>
+          <div className="text-white font-black">{teamScoreB} PTS</div>
         </div>
 
-        <div className="text-center bg-black border border-neutral-800 p-2 rounded-lg">
+        <div className="text-center bg-black border border-neutral-800 p-2 rounded">
           <div className="text-[9px] text-neutral-400 uppercase font-bold">ACTIVE CLOCK:</div>
-          <div className="text-xl font-black text-amber-400 font-mono">{timerSeconds}S</div>
+          <div className="text-xl font-black text-white font-mono">{timerSeconds}S</div>
         </div>
 
         <div className="flex gap-1.5">
@@ -232,9 +232,9 @@ export default function VoicePartyLounge({
               setTeamScoreA((s) => s + 10);
               soundSynth.playApplause();
             }}
-            className="flex-1 py-2 bg-purple-900 hover:bg-purple-800 text-white font-bold text-[10px] uppercase rounded"
+            className="flex-1 py-2 bg-neutral-900 border border-neutral-700 hover:border-white text-white font-bold text-[10px] uppercase rounded transition-colors"
           >
-            +10 RED
+            +10 P1
           </button>
           <button
             type="button"
@@ -242,9 +242,9 @@ export default function VoicePartyLounge({
               setTeamScoreB((s) => s + 10);
               soundSynth.playApplause();
             }}
-            className="flex-1 py-2 bg-cyan-900 hover:bg-cyan-800 text-white font-bold text-[10px] uppercase rounded"
+            className="flex-1 py-2 bg-neutral-900 border border-neutral-700 hover:border-white text-white font-bold text-[10px] uppercase rounded transition-colors"
           >
-            +10 BLUE
+            +10 P2
           </button>
         </div>
       </div>

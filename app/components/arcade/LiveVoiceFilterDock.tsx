@@ -66,8 +66,8 @@ export default function LiveVoiceFilterDock({
     <div className="bg-neutral-950 border border-neutral-800 p-3 sm:p-4 rounded-xl font-mono text-white space-y-4 shadow-2xl">
       {/* Voice Modulator Header */}
       <div className="flex items-center justify-between border-b border-neutral-800 pb-2.5">
-        <div className="flex items-center gap-2 text-xs font-black uppercase text-emerald-400">
-          <Mic className="w-4 h-4 animate-pulse" />
+        <div className="flex items-center gap-2 text-xs font-black uppercase text-white">
+          <Mic className="w-4 h-4" />
           <span>// CLIENT-SIDE VOICE MODULATORS [ $0 SERVER COST ]</span>
         </div>
         <span className="text-[10px] text-neutral-500 font-bold uppercase">
@@ -84,19 +84,19 @@ export default function LiveVoiceFilterDock({
               key={f.id}
               type="button"
               onClick={() => handleSelectFilter(f.id)}
-              className={`p-2.5 border rounded-lg text-left transition-all cursor-pointer flex flex-col justify-between gap-1.5 ${
+              className={`p-2.5 border rounded text-left transition-all cursor-pointer flex flex-col justify-between gap-1.5 ${
                 isSelected
-                  ? "border-emerald-400 bg-emerald-950/50 text-white font-black ring-1 ring-emerald-400"
-                  : "border-neutral-800 bg-black text-neutral-400 hover:border-neutral-700 hover:text-neutral-200"
+                  ? "border-white bg-white text-black font-black"
+                  : "border-neutral-800 bg-black text-neutral-400 hover:border-neutral-600 hover:text-white"
               }`}
             >
               <div className="flex items-center justify-between">
                 <span className="text-base">{f.icon}</span>
-                {isSelected && <Check className="w-3.5 h-3.5 text-emerald-400" />}
+                {isSelected && <Check className="w-3.5 h-3.5 text-black" />}
               </div>
               <div>
                 <div className="text-[11px] font-bold truncate">{f.name}</div>
-                <div className="text-[9px] text-neutral-500 truncate">{f.tagline}</div>
+                <div className={`text-[9px] truncate ${isSelected ? "text-neutral-700" : "text-neutral-500"}`}>{f.tagline}</div>
               </div>
             </button>
           );
@@ -106,12 +106,12 @@ export default function LiveVoiceFilterDock({
       {/* Reaction Soundboard Header & Buttons */}
       <div className="space-y-2 pt-2 border-t border-neutral-900">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-[11px] font-black uppercase text-amber-400">
+          <div className="flex items-center gap-2 text-[11px] font-black uppercase text-white">
             <Volume2 className="w-3.5 h-3.5" />
-            <span>CUSTOM REACTION SOUNDBOARD (1-SEC MEMES):</span>
+            <span>CUSTOM REACTION SOUNDBOARD:</span>
           </div>
           {lastPlayedSound && (
-            <span className="text-[10px] text-amber-300 font-black uppercase animate-pulse">
+            <span className="text-[10px] text-white font-black uppercase border border-neutral-700 px-1.5 py-0.5">
               PLAYING: {lastPlayedSound}
             </span>
           )}
@@ -123,7 +123,7 @@ export default function LiveVoiceFilterDock({
               key={idx}
               type="button"
               onClick={() => playSoundEffect(item.name, item.action)}
-              className="py-2 px-2.5 bg-neutral-900 border border-neutral-800 hover:border-amber-400 hover:bg-neutral-800 text-white font-bold text-[11px] uppercase rounded-lg transition-all text-center cursor-pointer active:scale-95 shadow-sm"
+              className="py-2 px-2.5 bg-neutral-900 border border-neutral-800 hover:border-white hover:bg-neutral-800 text-white font-bold text-[11px] uppercase rounded transition-all text-center cursor-pointer active:scale-95 shadow-sm"
             >
               {item.name}
             </button>

@@ -111,12 +111,12 @@ export default function ViralMegaMechanicsHub({
   };
 
   return (
-    <div className="bg-black border-2 border-white p-4 sm:p-6 rounded-xl font-mono text-white space-y-6 shadow-2xl select-none">
+    <div className="bg-black border border-neutral-800 p-4 sm:p-6 rounded-xl font-mono text-white space-y-6 shadow-2xl select-none">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-800 pb-3">
         <div className="space-y-1">
-          <div className="flex items-center gap-2 text-xs font-black uppercase text-rose-400">
-            <Zap className="w-4 h-4 text-rose-400 animate-pulse" />
+          <div className="flex items-center gap-2 text-xs font-black uppercase text-white">
+            <Zap className="w-4 h-4 text-white" />
             <span>// 5 VIRAL MEGA-MECHANICS ENGINE [ ZERO SERVER COST ]</span>
           </div>
           <h2 className="text-base sm:text-lg font-black uppercase text-white">
@@ -125,87 +125,50 @@ export default function ViralMegaMechanicsHub({
         </div>
 
         {/* Live Active Hit Bounty Indicator */}
-        <div className="flex items-center gap-2 bg-rose-950/60 border border-rose-600 px-3 py-1.5 rounded-lg text-xs font-bold text-rose-300">
-          <Target className="w-4 h-4 text-rose-400 animate-spin" />
+        <div className="flex items-center gap-2 bg-neutral-950 border border-neutral-800 px-3 py-1.5 rounded text-xs font-bold text-white">
+          <Target className="w-4 h-4 text-white animate-spin" />
           <span>{bounties.length} ACTIVE STREAK BOUNTIES</span>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
-        <button
-          type="button"
-          onClick={() => setActiveTab("BOUNTIES")}
-          className={`px-3 py-2 border rounded-lg font-black uppercase whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === "BOUNTIES"
-              ? "border-rose-500 bg-rose-950/60 text-white ring-2 ring-rose-500 shadow-lg"
-              : "border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-700"
-          }`}
-        >
-          <Target className="w-3.5 h-3.5 text-rose-400" />
-          <span>STREAK BOUNTIES & HIT LIST</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("GHOST")}
-          className={`px-3 py-2 border rounded-lg font-black uppercase whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === "GHOST"
-              ? "border-purple-500 bg-purple-950/60 text-white ring-2 ring-purple-500 shadow-lg"
-              : "border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-700"
-          }`}
-        >
-          <Moon className="w-3.5 h-3.5 text-purple-400" />
-          <span>MIDNIGHT GHOST PROTOCOL</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("ROULETTE")}
-          className={`px-3 py-2 border rounded-lg font-black uppercase whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === "ROULETTE"
-              ? "border-cyan-400 bg-cyan-950/60 text-white ring-2 ring-cyan-400 shadow-lg"
-              : "border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-700"
-          }`}
-        >
-          <Radio className="w-3.5 h-3.5 text-cyan-400" />
-          <span>MYSTERY NODE ROULETTE</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("TURF_WARS")}
-          className={`px-3 py-2 border rounded-lg font-black uppercase whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === "TURF_WARS"
-              ? "border-yellow-400 bg-yellow-950/60 text-white ring-2 ring-yellow-400 shadow-lg"
-              : "border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-700"
-          }`}
-        >
-          <Building className="w-3.5 h-3.5 text-yellow-400" />
-          <span>CAMPUS & CITY TURF WARS</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("CAPSULES")}
-          className={`px-3 py-2 border rounded-lg font-black uppercase whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === "CAPSULES"
-              ? "border-emerald-400 bg-emerald-950/60 text-white ring-2 ring-emerald-400 shadow-lg"
-              : "border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-700"
-          }`}
-        >
-          <Lock className="w-3.5 h-3.5 text-emerald-400" />
-          <span>LOCKED AUDIO CAPSULES</span>
-        </button>
+        {(
+          [
+            { id: "BOUNTIES", label: "STREAK BOUNTIES & HIT LIST", icon: Target },
+            { id: "GHOST", label: "MIDNIGHT GHOST PROTOCOL", icon: Moon },
+            { id: "ROULETTE", label: "MYSTERY NODE ROULETTE", icon: Radio },
+            { id: "TURF_WARS", label: "CAMPUS & CITY TURF WARS", icon: Building },
+            { id: "CAPSULES", label: "LOCKED AUDIO CAPSULES", icon: Lock },
+          ] as const
+        ).map((tab) => {
+          const Icon = tab.icon;
+          const isSelected = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`px-3 py-2 border rounded font-black uppercase whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+                isSelected
+                  ? "border-white bg-white text-black font-black"
+                  : "border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-600 hover:text-white"
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* ── 1. STREAK BOUNTIES & THE HIT LIST ── */}
       {activeTab === "BOUNTIES" && (
-        <div className="bg-neutral-950 border-2 border-rose-600 p-5 rounded-xl space-y-4">
+        <div className="bg-neutral-950 border border-neutral-800 p-5 rounded-xl space-y-4">
           <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
             <div className="space-y-0.5">
-              <h3 className="text-sm font-black uppercase text-rose-400 flex items-center gap-1.5">
-                <Target className="w-4 h-4 text-rose-400" />
+              <h3 className="text-sm font-black uppercase text-white flex items-center gap-1.5">
+                <Target className="w-4 h-4 text-white" />
                 <span>SERVER-WIDE STREAK BOUNTIES (HIT LIST)</span>
               </h3>
               <p className="text-[10px] text-neutral-400">
