@@ -54,6 +54,13 @@ import ArcadeCreateModal from "@/app/components/arcade/ArcadeCreateModal";
 import ArcadeGameRulesModal from "@/app/components/arcade/ArcadeGameRulesModal";
 import ArcadeRevengeCardModal from "@/app/components/arcade/ArcadeRevengeCardModal";
 import ArcadeTournamentBracketModal from "@/app/components/arcade/ArcadeTournamentBracketModal";
+import ViralStoryGeneratorModal from "@/app/components/arcade/ViralStoryGeneratorModal";
+import LiveVoiceFilterDock from "@/app/components/arcade/LiveVoiceFilterDock";
+import MidnightGhostGrid from "@/app/components/arcade/MidnightGhostGrid";
+import ChallengeLauncherModal from "@/app/components/arcade/ChallengeLauncherModal";
+import IncomingChallengeListener from "@/app/components/arcade/IncomingChallengeListener";
+import { type VoiceFilterMode } from "@/lib/voiceModulator";
+import { type GhostLoungePreset } from "@/lib/midnightGhost";
 import {
   Gamepad2,
   Trophy,
@@ -72,6 +79,9 @@ import {
   Crown,
   Search,
   Filter,
+  Video,
+  Moon,
+  Volume2,
 } from "lucide-react";
 import Link from "next/link";
 import { collection, query, limit, onSnapshot } from "firebase/firestore";
@@ -141,6 +151,55 @@ function ArcadeContent() {
   const [initialTournamentId, setInitialTournamentId] = useState<string | undefined>(undefined);
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Viral Growth Engine State
+  const [storyModalOpen, setStoryModalOpen] = useState(false);
+  const [storyParams, setStoryParams] = useState({
+    gameName: "LUDO CYBER MASTER",
+    scoreText: "Wiped the lobby with 4 home runs!",
+    roomId: "8912",
+  });
+
+  const [challengeLauncherOpen, setChallengeLauncherOpen] = useState(false);
+  const [challengeParams, setChallengeParams] = useState({
+    gameType: "ludo",
+    gameName: "Ludo Cyber Master",
+    roomId: "room_8912",
+    matchId: "match_8912",
+  });
+
+  const [voiceDockOpen, setVoiceDockOpen] = useState(false);
+  const [activeVoiceFilter, setActiveVoiceFilter] = useState<VoiceFilterMode>("clean");
+
+  const handleOpenChallenge = (gameType = "ludo", gameName = "Ludo Cyber Master", rId = "room_8912", mId = "match_8912") => {
+    setChallengeParams({ gameType, gameName, roomId: rId, matchId: mId });
+    setChallengeLauncherOpen(true);
+  };
+
+  const handleOpenStory = (gameName = "ARCADE ARENA", scoreText = "Crushed the lobby with high aura!", rId = "8912") => {
+    setStoryParams({ gameName, scoreText, roomId: rId });
+    setStoryModalOpen(true);
+  };
+
+  const handleJoinGhostLounge = async (preset: GhostLoungePreset) => {
+    if (!user) return;
+    try {
+      const matchId = await createArcadeMatch({
+        gameType: preset.gameType as ArcadeGameType,
+        title: preset.title,
+        hostUid: user.uid,
+        hostHandle: `${user.handle || "@ANON"} [👻 GHOST]`,
+        hostAvatar: user.photoUrl || user.photoURL,
+        mode: "MULTIPLAYER",
+        maxPlayers: 4,
+        enableVoice: true,
+        stakes: preset.auraStake,
+      });
+      setActiveMatchId(matchId);
+    } catch (e) {
+      console.error("Ghost lounge creation failed:", e);
+    }
+  };
 
   // Auto-load match or tournament from URL params
   useEffect(() => {
@@ -315,27 +374,60 @@ function ArcadeContent() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-xs">
+        <div className="flex items-center gap-1.5 sm:gap-2 text-xs flex-wrap">
+          <button
+            type="button"
+            onClick={() => handleOpenStory(activeMatch?.gameType ? activeMatch.gameType.toUpperCase() : "RETRO ARCADE", "Crushed the lobby with high aura!", activeMatch?.id || "8912")}
+            className="px-2.5 py-1 border border-emerald-400 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-400 hover:text-black font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
+            title="Export 15s Animated Video or Cassette Story"
+          >
+            <Video className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">[ 📱 STORY STUDIO ]</span>
+            <span className="sm:hidden">[ 📱 STORY ]</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleOpenChallenge(activeMatch?.gameType || "ludo", "Ludo Cyber Master", activeMatch?.id || "room_8912", activeMatch?.id || "match_8912")}
+            className="px-2.5 py-1 border border-rose-500 bg-rose-950/40 text-rose-300 hover:bg-rose-500 hover:text-black font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
+            title="1v1 Trash-Talk Poke & Challenge Rival"
+          >
+            <Swords className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">[ ⚔️ POKE / DUEL ]</span>
+            <span className="sm:hidden">[ ⚔️ DUEL ]</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setVoiceDockOpen(!voiceDockOpen)}
+            className={`px-2.5 py-1 border font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer ${
+              voiceDockOpen
+                ? "border-emerald-400 bg-emerald-400 text-black"
+                : "border-neutral-700 bg-black text-neutral-300 hover:border-white"
+            }`}
+            title="Toggle Client-Side Voice Modulators & Soundboard"
+          >
+            <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
+            <span>[ 🎙️ VOICE FX ]</span>
+          </button>
+
           <button
             type="button"
             onClick={() => setTournamentModalOpen(true)}
             className="px-2.5 py-1 border border-amber-400 bg-amber-950/40 text-amber-300 hover:bg-amber-400 hover:text-black font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
           >
             <Trophy className="w-3.5 h-3.5" />
-            <span>[ 🏆 CAMPUS TOURNAMENT ]</span>
+            <span className="hidden sm:inline">[ 🏆 TOURNAMENT ]</span>
           </button>
+
           <button
             type="button"
             onClick={() => handleOpenRules(activeMatch?.gameType || "ludo")}
-            className="px-2.5 py-1 border border-emerald-400 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-400 hover:text-black font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
+            className="px-2.5 py-1 border border-neutral-700 bg-black text-neutral-400 hover:border-white hover:text-white font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
           >
             <HelpCircle className="w-3.5 h-3.5" />
-            <span>[ ❓ RULES ]</span>
+            <span>[ ❓ ]</span>
           </button>
-          <span className="text-white font-bold border border-white bg-neutral-900 px-2 py-0.5 hidden sm:inline flex items-center gap-1.5">
-            <Mic2 className="w-3 h-3 text-emerald-400 animate-pulse" />
-            <span>LIVE VOICE</span>
-          </span>
         </div>
       </header>
 
@@ -373,11 +465,29 @@ function ArcadeContent() {
                 </button>
                 <button
                   type="button"
+                  onClick={() => handleOpenStory(activeMatch.gameType.toUpperCase(), "Battling in the cyber arena!", activeMatch.id)}
+                  className="px-2.5 py-1 border border-emerald-400 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-400 hover:text-black font-extrabold uppercase text-[10px] transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  <Video className="w-3 h-3" />
+                  <span>[ 📱 STATUS VIDEO ]</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleOpenChallenge(activeMatch.gameType, activeMatch.gameType.toUpperCase(), activeMatch.id, activeMatch.id)}
+                  className="px-2.5 py-1 border border-rose-500 bg-rose-950/40 text-rose-300 hover:bg-rose-500 hover:text-black font-extrabold uppercase text-[10px] transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  <Swords className="w-3 h-3" />
+                  <span>[ ⚔️ POKE RIVAL ]</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => setInviteModalMatch(activeMatch)}
                   className="px-2.5 py-1 border border-white bg-black hover:bg-white hover:text-black font-extrabold uppercase text-[10px] transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
                 >
                   <Share2 className="w-3 h-3" />
-                  <span>[ 🔗 INVITE & TALK 🎙️ ]</span>
+                  <span>[ 🔗 INVITE 🎙️ ]</span>
                 </button>
 
                 {user?.uid === activeMatch.hostUid && (
@@ -396,6 +506,12 @@ function ArcadeContent() {
                 </span>
               </div>
             </div>
+
+            {/* In-Match Live Voice Filters & Reaction Soundboard */}
+            <LiveVoiceFilterDock
+              currentFilter={activeVoiceFilter}
+              onFilterChange={(f) => setActiveVoiceFilter(f)}
+            />
 
             {/* Game Renderers */}
             {activeMatch.gameType === "rummy" && (
@@ -523,19 +639,53 @@ function ArcadeContent() {
         ) : (
           /* ── Arcade Hub & Lobby Discovery ── */
           <div className="space-y-6">
+            {/* Collapsible Voice Modulator & Soundboard Drawer */}
+            {voiceDockOpen && (
+              <div className="animate-in fade-in slide-in-from-top-3 duration-200">
+                <LiveVoiceFilterDock
+                  currentFilter={activeVoiceFilter}
+                  onFilterChange={(f) => setActiveVoiceFilter(f)}
+                />
+              </div>
+            )}
+
             {/* Hero Banner */}
-            <div className="border-2 border-white bg-black p-6 space-y-3 relative overflow-hidden shadow-[0_0_30px_rgba(255,255,255,0.08)]">
+            <div className="border-2 border-white bg-black p-6 space-y-4 relative overflow-hidden shadow-[0_0_30px_rgba(255,255,255,0.08)]">
               <div className="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-widest">
                 <Flame className="w-4 h-4 text-white animate-bounce" />
-                <span>// 50-GAME SOCIAL LOUNGE // $0 SERVER INFRASTRUCTURE // LIVE AUDIO</span>
+                <span>// PREMIER RETRO LOUNGE // $0 SERVER INFRASTRUCTURE // LIVE AUDIO</span>
               </div>
               <h2 className="text-xl sm:text-2xl font-extrabold uppercase tracking-tight text-white leading-tight">
-                Complete Ranked 1–50 Retro Terminal Suite: Paper Chits, 2D Physics, Card Bluffing & Voice Party Showdowns.
+                Ranked Multiplayer & Retro Arcade Suite: Paper Chits, 2D Physics, Card Bluffing & Voice Party Showdowns.
               </h2>
               <p className="text-xs text-neutral-300 max-w-3xl leading-relaxed">
-                Connect in real-time voice channels to play Raja Mantri Chor Sipahi, Hand Cricket, Book Cricket, 8-Ball Pool, Texas Hold'em, Uno, Carrom, Ludo, Skribbl, Codenames, Bingo, Hangman, and 40+ nostalgic classroom and board classics.
+                Connect in real-time voice channels to play Raja Mantri Chor Sipahi, Hand Cricket, Book Cricket, 8-Ball Pool, Texas Hold'em, Uno, Carrom, Ludo, Skribbl, Codenames, Bingo, Hangman, and nostalgic classroom & board classics.
               </p>
+
+              {/* 1-Tap Growth Engine Quick Launchers */}
+              <div className="flex items-center gap-2.5 flex-wrap pt-2 border-t border-neutral-800">
+                <button
+                  type="button"
+                  onClick={() => handleOpenStory("ECHO CYBER ARCADE", "Crushing the multiplayer lounge!", "8912")}
+                  className="px-3 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs uppercase rounded-lg transition-all shadow-lg flex items-center gap-1.5 cursor-pointer active:scale-95"
+                >
+                  <Video className="w-4 h-4" />
+                  <span>[ 📱 1-TAP WHATSAPP / IG STATUS VIDEO EXPORT ]</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleOpenChallenge("ludo", "Ludo Cyber Master", "room_8912", "match_8912")}
+                  className="px-3 py-2 bg-rose-600 hover:bg-rose-500 text-white font-black text-xs uppercase rounded-lg transition-all shadow-lg flex items-center gap-1.5 cursor-pointer active:scale-95"
+                >
+                  <Swords className="w-4 h-4" />
+                  <span>[ ⚔️ 1v1 TRASH-TALK DUEL LAUNCHER ]</span>
+                </button>
+              </div>
             </div>
+
+            {/* The Midnight Ghost Grid (FOMO Time-Locked Lounges 11 PM - 4 AM) */}
+            <MidnightGhostGrid onJoinGhostLounge={handleJoinGhostLounge} />
 
             {/* Category Filter Tabs & Search Bar */}
             <div className="space-y-3">
@@ -685,6 +835,15 @@ function ArcadeContent() {
                         title={`Read ${game.name} Rules`}
                       >
                         <HelpCircle className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleOpenChallenge(game.id, game.name, "room_8912", "match_8912")}
+                        className="p-2 border border-rose-900 bg-rose-950/40 text-rose-300 hover:bg-rose-600 hover:text-white font-bold text-xs uppercase transition-all cursor-pointer"
+                        title={`1v1 Trash-Talk Duel in ${game.name}`}
+                      >
+                        <Swords className="w-3.5 h-3.5" />
                       </button>
 
                       <button
@@ -859,6 +1018,41 @@ function ArcadeContent() {
           initialTournamentId={initialTournamentId}
         />
       )}
+
+      {/* 1-Tap Viral Status & Story Generator Modal */}
+      <ViralStoryGeneratorModal
+        isOpen={storyModalOpen}
+        onClose={() => setStoryModalOpen(false)}
+        gameName={storyParams.gameName}
+        userHandle={user?.handle || "@PLAYER"}
+        scoreText={storyParams.scoreText}
+        roomId={storyParams.roomId}
+      />
+
+      {/* 1v1 Auto-Poke & Trash-Talk Challenge Launcher Modal */}
+      {user && (
+        <ChallengeLauncherModal
+          isOpen={challengeLauncherOpen}
+          onClose={() => setChallengeLauncherOpen(false)}
+          gameType={challengeParams.gameType}
+          gameName={challengeParams.gameName}
+          roomId={challengeParams.roomId}
+          matchId={challengeParams.matchId}
+          user={{
+            uid: user.uid,
+            handle: user.handle || "@ANON",
+            photoUrl: user.photoUrl || user.photoURL,
+          }}
+        />
+      )}
+
+      {/* In-App Real-Time Incoming Challenge Alert */}
+      <IncomingChallengeListener
+        user={user ? { uid: user.uid, handle: user.handle || "@ANON" } : null}
+        onAcceptChallenge={(challenge) => {
+          setActiveMatchId(challenge.roomId);
+        }}
+      />
     </div>
   );
 }
