@@ -301,17 +301,17 @@ function ShellContent({ children }: { children: React.ReactNode }) {
       {/*
        * MAIN CONTENT
        * md: offset right by left sidebar width  (w-52 = 208px)
-       * lg: also offset left by right sidebar   (w-72 = 288px) (disabled on /room/ pages for full width)
+       * lg: also offset left by right sidebar   (w-72 = 288px) (disabled on /room/ and /wire to give chat full focus)
        */}
-      <div className={`md:ml-52 ${pathname.startsWith("/room/") ? "" : "lg:mr-72"} min-h-full`}>
+      <div className={`md:ml-52 ${pathname.startsWith("/room/") || pathname.startsWith("/wire") ? "" : "lg:mr-72"} min-h-full`}>
         {children}
       </div>
 
-      {/* RIGHT SIDEBAR — desktop lg+ (hidden on /room/ pages to give stage full focus) */}
-      {!pathname.startsWith("/room/") && <RightSidebar />}
+      {/* RIGHT SIDEBAR — desktop lg+ (hidden on /room/ and /wire for full focus) */}
+      {!pathname.startsWith("/room/") && !pathname.startsWith("/wire") && <RightSidebar />}
 
       {/* FLOATING ARCADE GAME LAUNCHER */}
-      {!pathname.startsWith("/arcade") && !pathname.startsWith("/room") && !pathname.startsWith("/stage") && (
+      {!pathname.startsWith("/arcade") && !pathname.startsWith("/room") && !pathname.startsWith("/stage") && !pathname.startsWith("/wire") && (
         <Link
           href="/arcade"
           className="fixed bottom-36 md:bottom-20 right-4 md:right-6 z-40 bg-black text-white hover:bg-white hover:text-black border-2 border-white p-3.5 rounded-full shadow-2xl transition-all duration-200 hover:scale-110 flex items-center justify-center gap-2 group cursor-pointer"
@@ -340,8 +340,8 @@ function ShellContent({ children }: { children: React.ReactNode }) {
         </Link>
       )}
 
-      {/* BOTTOM NAV — mobile only (hidden on /room/ to prevent overlap with room controls) */}
-      {!pathname.startsWith("/room/") && <BottomNav />}
+      {/* BOTTOM NAV — mobile only (hidden on /room/ and /wire to prevent overlap with chat/room controls) */}
+      {!pathname.startsWith("/room/") && !pathname.startsWith("/wire") && <BottomNav />}
 
       {/* PWA INSTALL PROMPT */}
       <PWAInstallPrompt />

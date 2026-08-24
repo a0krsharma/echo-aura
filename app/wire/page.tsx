@@ -218,7 +218,6 @@ function ChatWindow({
   const [messages, setMessages] = useState<WhisperMessage[]>([]);
   const [input, setInput]       = useState("");
   const [sending, setSending]   = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
 
   const otherUid = (conv.participants || conv.id.split("__")).find((uid) => uid !== myUid) || "";
   const rawHandle = Object.entries(conv.handles || {}).find(([uid]) => uid !== myUid)?.[1];
@@ -240,14 +239,29 @@ function ChatWindow({
     }
   }, [conv.id, rawHandle, otherUid]);
 
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const bottomSentinelRef = useRef<HTMLDivElement | null>(null);
+
+  const scrollToBottom = (instant: boolean = false) => {
+    if (bottomSentinelRef.current) {
+      bottomSentinelRef.current.scrollIntoView({
+        behavior: instant ? "auto" : "smooth",
+        block: "end",
+      });
+    } else if (scrollRef.current) {
+      scrollRef.current.scrollTo({
+        top: scrollRef.current.scrollHeight + 2000,
+        behavior: instant ? "auto" : "smooth",
+      });
+    }
+  };
+
   useEffect(() => {
     const unsub = subscribeToMessages(conv.id, (msgs) => {
       setMessages(msgs);
-      setTimeout(() => {
-        if (scrollRef.current) {
-          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        }
-      }, 80);
+      setTimeout(() => scrollToBottom(false), 40);
+      setTimeout(() => scrollToBottom(false), 180);
+      setTimeout(() => scrollToBottom(false), 450);
     });
     markMessagesRead(conv.id, myUid).catch(() => {});
     updateThreadLastRead(conv.id, myUid).catch(() => {});
@@ -786,6 +800,8 @@ function ChatWindow({
             );
           })
         )}
+        {/* Bottom sentinel anchor ensuring lowest message is 100% visible */}
+        <div ref={bottomSentinelRef} className="h-8 w-full shrink-0" />
       </div>
 
       {/* Bottom Control Dock (Cleanly docked with shrink-0, zero overlap on web) */}

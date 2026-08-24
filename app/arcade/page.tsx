@@ -379,144 +379,95 @@ function ArcadeContent() {
   return (
     <div className="min-h-screen bg-black text-white font-mono pb-24 relative">
       {/* ── Top Navigation Bar ── */}
-      <header className="sticky top-0 z-30 bg-black/95 backdrop-blur-md border-b border-neutral-900 px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <header className="sticky top-0 z-30 bg-black/90 backdrop-blur-md border-b border-neutral-900 px-3 sm:px-6 py-2.5 flex items-center justify-between">
+        <div className="flex items-center gap-3 min-w-0">
           {activeMatchId ? (
             <button
               onClick={() => {
                 setActiveMatchId(null);
                 setActiveMatch(null);
               }}
-              className="p-1 border border-neutral-800 hover:border-white text-neutral-400 hover:text-white transition-colors cursor-pointer flex items-center gap-1 text-xs"
+              className="px-2.5 py-1 border border-neutral-800 hover:border-white text-neutral-400 hover:text-white transition-colors cursor-pointer flex items-center gap-1 text-xs shrink-0"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-3.5 h-3.5" />
               <span>[ LEAVE ARENA ]</span>
             </button>
           ) : (
             <Link
               href="/"
-              className="p-1 border border-neutral-800 hover:border-white text-neutral-400 hover:text-white transition-colors flex items-center gap-1 text-xs"
+              className="px-2 py-1 border border-neutral-800 hover:border-white text-neutral-400 hover:text-white transition-colors flex items-center gap-1 text-xs shrink-0"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-3.5 h-3.5" />
               <span>[ ECHO ]</span>
             </Link>
           )}
 
-          <div className="flex items-center gap-2">
-            <Gamepad2 className="w-4 h-4 text-white animate-pulse" />
-            <h1 className="font-bold text-sm tracking-widest uppercase text-white">
-              ECHO ARCADE // 50-GAME LOUNGE
+          <div className="flex items-center gap-2 min-w-0">
+            <Gamepad2 className="w-4 h-4 text-white shrink-0" />
+            <h1 className="font-bold text-xs sm:text-sm tracking-widest uppercase text-white truncate">
+              ECHO ARCADE // 50 GAMES
             </h1>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 sm:gap-2 text-xs flex-wrap">
+        {/* Clean, Segmented Top Actions */}
+        <div className="flex items-center gap-1.5 sm:gap-2 text-xs shrink-0">
           <button
             type="button"
-            onClick={() => handleOpenStory(activeMatch?.gameType ? activeMatch.gameType.toUpperCase() : "RETRO ARCADE", "Crushed the lobby with high aura!", activeMatch?.id || "8912")}
-            className="px-2.5 py-1 border border-emerald-400 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-400 hover:text-black font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
-            title="Export 15s Animated Video or Cassette Story"
+            onClick={() => setTournamentModalOpen(true)}
+            className="px-2.5 py-1 border border-neutral-800 bg-neutral-950 text-neutral-300 hover:border-white hover:text-white font-bold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
+            title="Tournaments & Brackets"
           >
-            <Video className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">[ 📱 STORY STUDIO ]</span>
-            <span className="sm:hidden">[ 📱 STORY ]</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleOpenChallenge("ludo", "Cyber Arcade Challenge", "lobby", "global")}
-            className="px-2.5 py-1 border border-neutral-800 bg-neutral-950 text-neutral-300 hover:border-white hover:text-white font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
-            title="Challenge a rival in a 1v1 duel"
-          >
-            <Swords className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">[ ⚔️ POKE / DUEL ]</span>
-            <span className="sm:hidden">[ ⚔️ DUEL ]</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setVoiceDockOpen(!voiceDockOpen)}
-            className={`px-2.5 py-1 border font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer ${
-              voiceDockOpen
-                ? "border-white bg-white text-black"
-                : "border-neutral-800 bg-neutral-950 text-neutral-300 hover:border-white hover:text-white"
-            }`}
-            title="Toggle Client-Side Voice Modulators & Soundboard"
-          >
-            <Volume2 className="w-3.5 h-3.5" />
-            <span>[ 🎙️ VOICE FX ]</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setVoicePartyOpen(!voicePartyOpen)}
-            className={`px-2.5 py-1 border font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer ${
-              voicePartyOpen
-                ? "border-white bg-white text-black"
-                : "border-neutral-800 bg-neutral-950 text-neutral-300 hover:border-white hover:text-white"
-            }`}
-            title="60s Roast Ring, Defend Absurd, Mimicry & Truth/Dare"
-          >
-            <Mic2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">[ 🎙️ VOICE PARTY ]</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setVoiceMechanicOpen(!voiceMechanicOpen)}
-            className={`px-2.5 py-1 border font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer ${
-              voiceMechanicOpen
-                ? "border-white bg-white text-black"
-                : "border-neutral-800 bg-neutral-950 text-neutral-300 hover:border-white hover:text-white"
-            }`}
-            title="1v1 Tongue Twister Faceoff with Friend"
-          >
-            <Flame className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">[ 👅 TONGUE TWISTERS ]</span>
-            <span className="sm:hidden">[ 👅 TWISTERS ]</span>
+            <Trophy className="w-3.5 h-3.5 text-yellow-400" />
+            <span className="hidden md:inline">TOURNAMENT</span>
           </button>
 
           <button
             type="button"
             onClick={() => setBadgesModalOpen(true)}
-            className="px-2.5 py-1 border border-neutral-800 bg-neutral-950 text-neutral-300 hover:border-white hover:text-white font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
-            title="View Terminal Winner Badges & Profile Flairs"
+            className="px-2.5 py-1 border border-neutral-800 bg-neutral-950 text-neutral-300 hover:border-white hover:text-white font-bold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
+            title="Aura Badges & Hall of Fame"
           >
-            <Crown className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">[ 👑 BADGES ]</span>
+            <Crown className="w-3.5 h-3.5 text-white" />
+            <span className="hidden md:inline">BADGES</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setVoicePartyOpen(!voicePartyOpen)}
+            className={`px-2.5 py-1 border font-bold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer ${
+              voicePartyOpen
+                ? "border-white bg-white text-black font-black"
+                : "border-neutral-800 bg-neutral-950 text-neutral-300 hover:border-white hover:text-white"
+            }`}
+            title="Live Voice Lounges & Roast Ring"
+          >
+            <Mic2 className="w-3.5 h-3.5" />
+            <span>VOICE PARTY</span>
           </button>
 
           <button
             type="button"
             onClick={() => setViralHubOpen(!viralHubOpen)}
-            className={`px-2.5 py-1 border font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer ${
+            className={`px-2.5 py-1 border font-bold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer ${
               viralHubOpen
-                ? "border-white bg-white text-black"
+                ? "border-white bg-white text-black font-black"
                 : "border-neutral-800 bg-neutral-950 text-neutral-300 hover:border-white hover:text-white"
             }`}
-            title="Ghost Protocol, Streak Bounties, Mystery Node & Turf Wars"
+            title="Ghost Protocol & Bounties"
           >
             <Zap className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">[ ⚡ HIT LIST & BOUNTIES ]</span>
-            <span className="sm:hidden">[ ⚡ BOUNTIES ]</span>
+            <span className="hidden sm:inline">BOUNTIES</span>
           </button>
 
           <button
             type="button"
-            onClick={() => setTournamentModalOpen(true)}
-            className="px-2.5 py-1 border border-neutral-800 bg-neutral-950 text-neutral-300 hover:border-white hover:text-white font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
+            onClick={() => handleOpenChallenge("ludo", "Cyber Arcade Challenge", "lobby", "global")}
+            className="px-2.5 py-1 border border-white bg-white text-black hover:bg-neutral-200 font-black text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer shadow"
+            title="1v1 Trash-Talk Duel"
           >
-            <Trophy className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">[ 🏆 TOURNAMENT ]</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleOpenRules(activeMatch?.gameType || "ludo")}
-            className="px-2.5 py-1 border border-neutral-800 bg-neutral-950 text-neutral-300 hover:border-white hover:text-white font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
-          >
-            <HelpCircle className="w-3.5 h-3.5" />
-            <span>[ ❓ ]</span>
+            <Swords className="w-3.5 h-3.5" />
+            <span>1V1 DUEL</span>
           </button>
         </div>
       </header>
@@ -741,36 +692,60 @@ function ArcadeContent() {
             )}
 
             {/* Hero Banner */}
-            <div className="border border-white bg-black p-5 sm:p-6 space-y-4 relative overflow-hidden shadow-[0_0_30px_rgba(255,255,255,0.06)] font-mono">
-              <div className="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-widest">
-                <Flame className="w-4 h-4 text-white animate-bounce" />
-                <span>// ECHO RETRO ARCADE // 50 RANKED GAMES // ZERO SERVER COST</span>
+            <div className="border border-neutral-800 bg-neutral-950 p-4 sm:p-5 space-y-3 relative overflow-hidden font-mono">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <span className="text-[10px] font-black text-white bg-neutral-900 border border-neutral-800 px-2 py-0.5 uppercase tracking-widest flex items-center gap-1.5">
+                  <Gamepad2 className="w-3 h-3 text-white" />
+                  <span>50 RANKED GAMES // LOW-LATENCY AUDIO // ZERO SERVER COST</span>
+                </span>
+                <span className="text-[10px] text-neutral-500 uppercase tracking-widest font-bold">
+                  RETRO MULTIPLAYER SUITE
+                </span>
               </div>
-              <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-white leading-tight">
-                Ranked Multiplayer & Retro Classroom Suite: Paper Chits, 2D Physics, Card Bluffing & Voice Party Showdowns.
+
+              <h2 className="text-lg sm:text-xl font-black uppercase tracking-tight text-white leading-tight">
+                Classroom Classics, Card Bluffing, 2D Physics & Voice Party Showdowns.
               </h2>
-              <p className="text-xs text-neutral-300 max-w-3xl leading-relaxed">
-                Connect in real-time voice channels to play Raja Mantri Chor Sipahi, Hand Cricket, Book Cricket, 8-Ball Pool, Texas Hold'em, Uno, Carrom, Ludo, Skribbl, Codenames, Bingo, Hangman, and nostalgic classroom & board classics.
+              <p className="text-xs text-neutral-400 max-w-3xl leading-relaxed">
+                Connect in real-time voice channels to play Raja Mantri Chor Sipahi, Hand Cricket, Book Cricket, 8-Ball Pool, Texas Hold'em, Uno, Carrom, Ludo, Skribbl, Codenames, Bingo, Hangman, and retro arcade classics with friends or smart AI bots.
               </p>
 
               {/* Quick Launchers */}
-              <div className="flex items-center gap-2.5 flex-wrap pt-2 border-t border-neutral-800">
+              <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-neutral-900">
                 <button
                   type="button"
-                  onClick={() => handleOpenStory("ECHO CYBER ARCADE", "Crushing the multiplayer lounge!", "8912")}
-                  className="px-3 py-1.5 border border-white bg-black hover:bg-white hover:text-black text-white font-black text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+                  onClick={() => handleOpenChallenge("ludo", "Ludo Cyber Master", "room_8912", "match_8912")}
+                  className="px-3 py-1.5 border border-white bg-white text-black hover:bg-neutral-200 font-bold text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shadow"
                 >
-                  <Video className="w-3.5 h-3.5" />
-                  <span>[ 📱 1-TAP STATUS VIDEO EXPORT ]</span>
+                  <Swords className="w-3.5 h-3.5" />
+                  <span>1V1 TRASH-TALK DUEL</span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => handleOpenChallenge("ludo", "Ludo Cyber Master", "room_8912", "match_8912")}
-                  className="px-3 py-1.5 border border-white bg-white text-black hover:bg-neutral-200 font-black text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shadow"
+                  onClick={() => setVoicePartyOpen(!voicePartyOpen)}
+                  className="px-3 py-1.5 border border-neutral-700 bg-neutral-900 hover:border-white text-white font-bold text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
                 >
-                  <Swords className="w-3.5 h-3.5" />
-                  <span>[ ⚔️ 1V1 TRASH-TALK DUEL ]</span>
+                  <Mic2 className="w-3.5 h-3.5" />
+                  <span>VOICE LOUNGE</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleOpenRules("ludo")}
+                  className="px-3 py-1.5 border border-neutral-800 bg-black hover:border-neutral-500 text-neutral-300 hover:text-white font-bold text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+                >
+                  <HelpCircle className="w-3.5 h-3.5" />
+                  <span>RULES &amp; MANUAL</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleOpenStory("ECHO CYBER ARCADE", "Crushing the multiplayer lounge!", "8912")}
+                  className="px-3 py-1.5 border border-neutral-800 bg-black hover:border-neutral-500 text-neutral-300 hover:text-white font-bold text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ml-auto"
+                >
+                  <Video className="w-3.5 h-3.5" />
+                  <span>STATUS STORY</span>
                 </button>
               </div>
             </div>
