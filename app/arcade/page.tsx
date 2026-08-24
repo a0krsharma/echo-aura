@@ -61,7 +61,9 @@ import ChallengeLauncherModal from "@/app/components/arcade/ChallengeLauncherMod
 import IncomingChallengeListener from "@/app/components/arcade/IncomingChallengeListener";
 import VoicePartyLounge from "@/app/components/arcade/VoicePartyLounge";
 import VoiceMechanicGames from "@/app/components/arcade/VoiceMechanicGames";
+import ViralMegaMechanicsHub from "@/app/components/arcade/ViralMegaMechanicsHub";
 import { TERMINAL_BADGES, getAllBadges } from "@/lib/terminalBadges";
+import { type StreakBountyTarget } from "@/lib/viralMechanics";
 import { type VoiceFilterMode } from "@/lib/voiceModulator";
 import { type GhostLoungePreset } from "@/lib/midnightGhost";
 import {
@@ -177,7 +179,17 @@ function ArcadeContent() {
   const [activeVoiceFilter, setActiveVoiceFilter] = useState<VoiceFilterMode>("clean");
   const [voicePartyOpen, setVoicePartyOpen] = useState(false);
   const [voiceMechanicOpen, setVoiceMechanicOpen] = useState(false);
+  const [viralHubOpen, setViralHubOpen] = useState(false);
   const [badgesModalOpen, setBadgesModalOpen] = useState(false);
+
+  const handleChallengeBounty = (target: StreakBountyTarget) => {
+    handleOpenChallenge(
+      target.gameType.toLowerCase(),
+      `${target.gameType} BOUNTY CLASH`,
+      "room_bounty",
+      `match_${target.id}`
+    );
+  };
 
   const handleOpenChallenge = (gameType = "ludo", gameName = "Ludo Cyber Master", rId = "room_8912", mId = "match_8912") => {
     setChallengeParams({ gameType, gameName, roomId: rId, matchId: mId });
@@ -456,6 +468,21 @@ function ArcadeContent() {
           >
             <Crown className="w-3.5 h-3.5 text-yellow-400" />
             <span className="hidden sm:inline">[ 👑 BADGES ]</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setViralHubOpen(!viralHubOpen)}
+            className={`px-2.5 py-1 border font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer ${
+              viralHubOpen
+                ? "border-rose-500 bg-rose-500 text-white"
+                : "border-rose-800 bg-rose-950/40 text-rose-300 hover:border-rose-400"
+            }`}
+            title="Ghost Protocol, Streak Bounties, Mystery Node & Turf Wars"
+          >
+            <Zap className="w-3.5 h-3.5 text-rose-400" />
+            <span className="hidden sm:inline">[ ⚡ HIT LIST & BOUNTIES ]</span>
+            <span className="sm:hidden">[ ⚡ BOUNTIES ]</span>
           </button>
 
           <button
@@ -747,6 +774,17 @@ function ArcadeContent() {
                 <VoiceMechanicGames
                   userHandle={user?.handle || "@YOU"}
                   friendHandle="@FRIEND"
+                />
+              </div>
+            )}
+
+            {/* 5 Viral Mega-Mechanics Engine (Ghost Protocol, Streak Bounties, Mystery Node, Turf Wars, Capsules) */}
+            {viralHubOpen && (
+              <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+                <ViralMegaMechanicsHub
+                  userHandle={user?.handle || "@PLAYER"}
+                  onChallengeBounty={handleChallengeBounty}
+                  onJoinGhostLounge={handleJoinGhostLounge}
                 />
               </div>
             )}
