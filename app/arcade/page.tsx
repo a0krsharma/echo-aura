@@ -55,6 +55,7 @@ import ArcadeCreateModal from "@/app/components/arcade/ArcadeCreateModal";
 import ArcadeGameRulesModal from "@/app/components/arcade/ArcadeGameRulesModal";
 import ArcadeRevengeCardModal from "@/app/components/arcade/ArcadeRevengeCardModal";
 import ArcadeTournamentBracketModal from "@/app/components/arcade/ArcadeTournamentBracketModal";
+import ArcadeAuraStore from "@/app/components/arcade/ArcadeAuraStore";
 import ViralStoryGeneratorModal from "@/app/components/arcade/ViralStoryGeneratorModal";
 import LiveVoiceFilterDock from "@/app/components/arcade/LiveVoiceFilterDock";
 import MidnightGhostGrid from "@/app/components/arcade/MidnightGhostGrid";
@@ -156,6 +157,7 @@ function ArcadeContent() {
   const [activeMatchId, setActiveMatchId] = useState<string | null>(null);
   const [lobbyMatches, setLobbyMatches] = useState<ArcadeMatch[]>([]);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [storeModalOpen, setStoreModalOpen] = useState(false);
   const [defaultGameType, setDefaultGameType] = useState<ArcadeGameType>("ludo");
   const [inviteModalMatch, setInviteModalMatch] = useState<ArcadeMatch | null>(null);
   const [rulesModalOpen, setRulesModalOpen] = useState(false);

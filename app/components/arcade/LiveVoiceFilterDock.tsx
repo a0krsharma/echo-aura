@@ -19,11 +19,14 @@ import {
   voiceModulator,
 } from "@/lib/voiceModulator";
 import { soundSynth } from "@/lib/soundSynthesizer";
+import type { EchoUser } from "@/lib/userDoc";
+import { Lock } from "lucide-react";
 
 interface LiveVoiceFilterDockProps {
   currentFilter?: VoiceFilterMode;
   onFilterChange?: (filter: VoiceFilterMode) => void;
   rawMediaStream?: MediaStream | null;
+  user?: EchoUser | null;
   onProcessedStream?: (stream: MediaStream) => void;
 }
 
@@ -32,6 +35,7 @@ export default function LiveVoiceFilterDock({
   onFilterChange,
   rawMediaStream,
   onProcessedStream,
+  user,
 }: LiveVoiceFilterDockProps) {
   const [activeFilter, setActiveFilter] = useState<VoiceFilterMode>(currentFilter);
   const [lastPlayedSound, setLastPlayedSound] = useState<string | null>(null);

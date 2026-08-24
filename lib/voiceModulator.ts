@@ -15,6 +15,8 @@ export interface VoiceFilterOption {
   icon: string;
   tagline: string;
   description: string;
+  cost: number;
+  isPremium: boolean;
 }
 
 export const VOICE_FILTERS: VoiceFilterOption[] = [
@@ -24,6 +26,8 @@ export const VOICE_FILTERS: VoiceFilterOption[] = [
     icon: "🎙️",
     tagline: "Natural HD Audio",
     description: "Unprocessed direct studio voice transmission.",
+    cost: 0,
+    isPremium: false,
   },
   {
     id: "walkie_talkie",
@@ -31,6 +35,8 @@ export const VOICE_FILTERS: VoiceFilterOption[] = [
     icon: "📻",
     tagline: "Vintage Radio Static",
     description: "Bandpass radio filter with crisp military static & crunch.",
+    cost: 0,
+    isPremium: false,
   },
   {
     id: "ghost",
@@ -38,21 +44,27 @@ export const VOICE_FILTERS: VoiceFilterOption[] = [
     icon: "👻",
     tagline: "Deep Social Deduction",
     description: "Deep pitched modulation with dark resonance for secret imposter games.",
+    cost: 2500,
+    isPremium: true,
   },
   {
     id: "cyber_8bit",
-    name: "8-Bit Cyber Synth",
+    name: "8-Bit Robot",
     icon: "🤖",
-    tagline: "Robotic Vocoder Matrix",
-    description: "55Hz ring modulator with retro arcade bitcrushed texture.",
+    tagline: "Glitchy Bitcrusher",
+    description: "Harsh digital distortion mimicking old arcade cabinets.",
+    cost: 5000,
+    isPremium: true,
   },
   {
     id: "megaphone",
-    name: "Riot Megaphone",
+    name: "Stadium Megaphone",
     icon: "📢",
-    tagline: "High-Gain Bullhorn",
-    description: "Loud overdriven resonance for tournament commentary & hype.",
-  },
+    tagline: "Loud & Echoey",
+    description: "Mid-boosted EQ with a fast slapback echo for hype.",
+    cost: 1500,
+    isPremium: true,
+  }
 ];
 
 export class VoiceModulatorManager {

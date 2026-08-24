@@ -580,3 +580,29 @@ export async function updateArcadeElo(winnerUid: string, loserUid: string) {
     console.error("Failed to update Elo", err);
   }
 }
+
+
+export async function purchaseItem(uid: string, itemId: string, cost: number): Promise<boolean> {
+  const db = getFirebaseDb();
+  const ref = doc(db, "users", uid);
+  
+  try {
+    const success = await runTransaction(db, async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists()) return false;
+      const data = snap.data();
+      if ((data.auraScore || 0) < cost) return false;
+      if (data.inventory?.includes(itemId)) return false;
+      
+      tx.update(ref, {
+        auraScore: increment(-cost),
+        inventory: arrayUnion(itemId)
+      });
+      return true;
+    });
+    return success;
+  } catch (err) {
+    console.error("Failed to purchase item", err);
+    return false;
+  }
+}
