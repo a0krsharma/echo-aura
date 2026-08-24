@@ -270,7 +270,7 @@ export async function executeLudoBotTurn(match: ArcadeMatch): Promise<void> {
   } catch (err) {
     console.error("[ArcadeBot] Ludo error:", err);
   } finally {
-    setTimeout(() => activeBotRuns.delete(runKey), 1500);
+    activeBotRuns.delete(runKey);
   }
 }
 

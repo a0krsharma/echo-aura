@@ -96,7 +96,13 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
     if (activePlayer) {
       executeLudoBotTurn(match);
     }
-  }, [ludoState?.currentTurn, ludoState?.hasRolled, match.status]);
+  }, [
+    ludoState?.currentTurn,
+    ludoState?.hasRolled,
+    ludoState?.lastDiceRoll,
+    ludoState?.lastActionLog,
+    match.status,
+  ]);
 
   // Roll dice handler
   const handleRoll = async () => {
