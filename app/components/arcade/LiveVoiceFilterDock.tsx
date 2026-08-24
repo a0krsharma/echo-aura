@@ -24,24 +24,32 @@ interface LiveVoiceFilterDockProps {
   currentFilter?: VoiceFilterMode;
   onFilterChange?: (filter: VoiceFilterMode) => void;
   rawMediaStream?: MediaStream | null;
+  onProcessedStream?: (stream: MediaStream) => void;
 }
 
 export default function LiveVoiceFilterDock({
   currentFilter = "clean",
   onFilterChange,
   rawMediaStream,
+  onProcessedStream,
 }: LiveVoiceFilterDockProps) {
   const [activeFilter, setActiveFilter] = useState<VoiceFilterMode>(currentFilter);
   const [lastPlayedSound, setLastPlayedSound] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (rawMediaStream) {
+      const processed = voiceModulator.processStream(rawMediaStream, activeFilter);
+      if (onProcessedStream) {
+        onProcessedStream(processed);
+      }
+    }
+  }, [rawMediaStream, activeFilter]);
 
   const handleSelectFilter = (mode: VoiceFilterMode) => {
     setActiveFilter(mode);
     soundSynth.playSubtlePop();
     if (onFilterChange) {
       onFilterChange(mode);
-    }
-    if (rawMediaStream) {
-      voiceModulator.processStream(rawMediaStream, mode);
     }
   };
 

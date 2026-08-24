@@ -85,7 +85,9 @@ export class VoiceModulatorManager {
       this.cleanupNodes();
 
       this.sourceNode = ctx.createMediaStreamSource(rawStream);
-      this.destinationNode = ctx.createMediaStreamDestination();
+      if (!this.destinationNode) {
+        this.destinationNode = ctx.createMediaStreamDestination();
+      }
 
       if (filter === "clean") {
         this.sourceNode.connect(this.destinationNode);
@@ -205,6 +207,9 @@ export class VoiceModulatorManager {
   }
 
   private cleanupNodes() {
+    if (this.sourceNode) {
+      try { this.sourceNode.disconnect(); } catch (e) {}
+    }
     this.activeNodes.forEach((node) => {
       try {
         if ("stop" in node && typeof (node as any).stop === "function") {

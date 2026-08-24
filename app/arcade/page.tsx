@@ -14,6 +14,8 @@ import {
   type ArcadeMatch,
   type ArcadeGameType,
 } from "@/lib/arcade";
+import AgoraRTC, { AgoraRTCProvider } from "agora-rtc-react";
+import ArcadeVoiceChannel from "@/app/components/arcade/ArcadeVoiceChannel";
 import LudoGame from "@/app/components/arcade/LudoGame";
 import ChessGame from "@/app/components/arcade/ChessGame";
 import Connect4Game from "@/app/components/arcade/Connect4Game";
@@ -161,6 +163,10 @@ function ArcadeContent() {
   const [initialTournamentId, setInitialTournamentId] = useState<string | undefined>(undefined);
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
+  
+  const rtcClient = React.useMemo(() => AgoraRTC.createClient({ codec: "vp8", mode: "rtc" }), []);
+  const [rawMicStream, setRawMicStream] = useState<MediaStream | null>(null);
+  const [processedMicStream, setProcessedMicStream] = useState<MediaStream | null>(null);
 
   // Viral Growth Engine State
   const [storyModalOpen, setStoryModalOpen] = useState(false);
@@ -253,6 +259,26 @@ function ArcadeContent() {
     });
     return () => unsub();
   }, [activeMatchId]);
+
+  
+  // Microphone capturing for Voice Channels
+  useEffect(() => {
+    let stream: MediaStream | null = null;
+    if (activeMatch && activeMatch.enableVoice && user) {
+      navigator.mediaDevices.getUserMedia({ audio: true }).then((s) => {
+        setRawMicStream(s);
+        stream = s;
+      }).catch(console.error);
+    } else {
+      setRawMicStream(null);
+      setProcessedMicStream(null);
+    }
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+      }
+    };
+  }, [activeMatch?.id, activeMatch?.enableVoice, user]);
 
   // Auto-join if opened via invite link and authenticated
   useEffect(() => {
@@ -629,10 +655,19 @@ function ArcadeContent() {
                 </div>
               </div>
             ) : (
-              <LiveVoiceFilterDock
-                currentFilter={activeVoiceFilter}
-                onFilterChange={(f) => setActiveVoiceFilter(f)}
-              />
+              <AgoraRTCProvider client={rtcClient}>
+                <div className="flex flex-col gap-2">
+                  <LiveVoiceFilterDock
+                    currentFilter={activeVoiceFilter}
+                    onFilterChange={(f) => setActiveVoiceFilter(f)}
+                    rawMediaStream={rawMicStream}
+                    onProcessedStream={setProcessedMicStream}
+                  />
+                  {activeMatch.enableVoice && (
+                    <ArcadeVoiceChannel matchId={activeMatch.id} processedStream={processedMicStream} />
+                  )}
+                </div>
+              </AgoraRTCProvider>
             )}
 
             {/* Victory Story Showcase Overlay */}
