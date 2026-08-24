@@ -181,22 +181,26 @@ function ConversationItem({
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left px-4 py-4 border-b border-neutral-900 flex items-center gap-4 hover:bg-neutral-950 transition-colors ${
+      className={`w-full text-left px-3.5 py-3 border-b border-neutral-900 flex items-center gap-3 hover:bg-neutral-950 transition-all cursor-pointer ${
         active ? "bg-neutral-950 border-l-2 border-l-white" : ""
       }`}
     >
-      <div className="w-9 h-9 border border-neutral-700 flex items-center justify-center shrink-0 font-mono text-xs text-neutral-500">
-        {theirHandle.replace("@", "").charAt(0)}
+      <div className="w-10 h-10 rounded-full border border-neutral-800 bg-neutral-950 flex items-center justify-center shrink-0 overflow-hidden shadow-inner">
+        <ExpressiveAvatar
+          config={DEFAULT_AVATAR_CONFIG}
+          gesture="IDLE"
+          size={40}
+        />
       </div>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between">
-          <p className="font-mono text-xs text-white tracking-widest truncate">{theirHandle}</p>
-          <span className="font-mono text-[10px] text-neutral-700 shrink-0 ml-2">
+        <div className="flex items-center justify-between gap-1">
+          <p className="font-mono text-xs font-bold text-white tracking-wide truncate">{theirHandle}</p>
+          <span className="font-mono text-[9px] text-neutral-500 shrink-0">
             {timeStr(conv.lastAt)}
           </span>
         </div>
-        <p className="font-mono text-[10px] text-neutral-600 truncate mt-0.5">
-          {conv.lastMessage || "No messages yet"}
+        <p className="font-mono text-[10px] text-neutral-400 truncate mt-0.5">
+          {conv.lastMessage || "Start a wire..."}
         </p>
       </div>
     </button>
@@ -718,22 +722,22 @@ function ChatWindow({
                           avatarConfig: msg.emotionGesture!.avatarConfig || DEFAULT_AVATAR_CONFIG,
                         });
                       }}
-                      className="flex items-center gap-3 p-1 rounded cursor-pointer hover:opacity-90 transition-opacity"
+                      className="flex items-center gap-3.5 p-1 rounded cursor-pointer hover:opacity-95 transition-opacity"
                     >
-                      <div className="w-13 h-13 rounded-full border-2 border-current bg-black/80 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(255,255,255,0.2)] overflow-hidden">
+                      <div className="w-16 h-16 rounded-full border-2 border-white/80 bg-black flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(56,189,248,0.35)] overflow-hidden">
                         <ExpressiveAvatar
                           config={msg.emotionGesture.avatarConfig || DEFAULT_AVATAR_CONFIG}
                           gesture={msg.emotionGesture.gesture}
-                          size={54}
+                          size={64}
                         />
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 font-mono text-[10px] font-black uppercase tracking-wider">
                           <span>{msg.emotionGesture.emoji || "✨"}</span>
-                          <span className="underline">{msg.emotionGesture.label || "3D EXPRESSION"}</span>
+                          <span className="underline">{msg.emotionGesture.label || "3D CYBER FX"}</span>
                         </div>
-                        <p className="font-mono text-xs font-bold">{msg.text}</p>
-                        <span className="text-[8px] opacity-75 font-mono uppercase block pt-0.5">
+                        <p className="font-mono text-xs font-bold leading-tight">{msg.text}</p>
+                        <span className="text-[9px] opacity-80 font-mono uppercase block pt-1 text-cyan-400">
                           [ 🔍 TAP TO PLAY 3D EXPRESSION ]
                         </span>
                       </div>
@@ -750,19 +754,19 @@ function ChatWindow({
                           avatarConfig: DEFAULT_AVATAR_CONFIG,
                         });
                       }}
-                      className="flex items-center gap-2.5 p-1 rounded cursor-pointer hover:opacity-90 transition-opacity"
+                      className="flex items-center gap-3 p-1 rounded cursor-pointer hover:opacity-95 transition-opacity"
                     >
-                      <div className="w-11 h-11 rounded-full border border-current bg-black/80 flex items-center justify-center shrink-0 shadow overflow-hidden">
+                      <div className="w-14 h-14 rounded-full border-2 border-white/60 bg-black flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(56,189,248,0.25)] overflow-hidden">
                         <ExpressiveAvatar
                           config={DEFAULT_AVATAR_CONFIG}
                           gesture={inlineGesture}
-                          size={46}
+                          size={56}
                         />
                       </div>
                       <div className="min-w-0">
-                        <p className="font-mono text-xs font-bold">{msg.text}</p>
-                        <span className="text-[8px] opacity-75 font-mono uppercase block pt-0.5">
-                          [ 3D LIVE AVATAR FX ]
+                        <p className="font-mono text-xs font-bold leading-tight">{msg.text}</p>
+                        <span className="text-[9px] opacity-80 font-mono uppercase block pt-1 text-cyan-400">
+                          [ 🤖 3D ROBOT AVATAR FX ]
                         </span>
                       </div>
                     </div>
@@ -1082,9 +1086,9 @@ export default function WirePage() {
 
   return (
     <div className="bg-black text-white font-mono h-[calc(100dvh-56px)] md:h-[calc(100dvh-64px)] flex flex-col min-h-0 overflow-hidden">
-      <div className="max-w-4xl mx-auto flex-1 flex flex-col md:flex-row overflow-hidden min-h-0 w-full h-full border-x border-neutral-900">
+      <div className="w-full max-w-7xl mx-auto flex-1 flex flex-col md:flex-row overflow-hidden min-h-0 h-full border-x border-neutral-900">
         {/* Conversation List */}
-        <div className={`w-full md:w-80 border-r border-neutral-900 flex flex-col h-full min-h-0 ${activeConv ? 'hidden md:flex' : 'flex'}`}>
+        <div className={`w-full md:w-84 border-r border-neutral-900 flex flex-col h-full min-h-0 ${activeConv ? 'hidden md:flex' : 'flex'}`}>
           <div className="p-3 sm:p-4 border-b border-neutral-900 shrink-0">
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-sm font-bold tracking-widest uppercase flex items-center gap-1.5">
@@ -1103,7 +1107,7 @@ export default function WirePage() {
               <p className="text-[9px] font-mono text-neutral-500 uppercase tracking-widest mb-1.5">
                 [ 💫 QUICK WIRE — ACCOUNTS YOU ORBIT ]
               </p>
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
                 {(followingList.length > 0
                   ? followingList.map((f) => ({ uid: f.followingUid, handle: f.followingHandle }))
                   : suggestedVoices
@@ -1138,7 +1142,7 @@ export default function WirePage() {
                   </button>
                 </div>
                 {searchResults.length > 0 && (
-                  <div className="border border-neutral-800 max-h-48 overflow-y-auto bg-neutral-950">
+                  <div className="border border-neutral-800 max-h-48 overflow-y-auto no-scrollbar bg-neutral-950">
                     {searchResults.map((u) => (
                       <button
                         key={u.uid}
@@ -1155,7 +1159,7 @@ export default function WirePage() {
             )}
           </div>
 
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto no-scrollbar">
             {conversations.length === 0 ? (
               <div className="p-4 space-y-4">
                 <div className="p-3 border border-neutral-900 bg-neutral-950 text-center space-y-1">

@@ -157,6 +157,7 @@ export function detectEmotionGesture(text: string): AvatarGesture | null {
     text.includes("🥰") ||
     text.includes("😍") ||
     text.includes("😘") ||
+    text.includes("❤️‍🔥") ||
     lower.includes("love") ||
     lower.includes("pyar")
   ) {
@@ -167,6 +168,9 @@ export function detectEmotionGesture(text: string): AvatarGesture | null {
     text.includes("⚡") ||
     text.includes("💯") ||
     text.includes("🚀") ||
+    text.includes("💥") ||
+    text.includes("💎") ||
+    text.includes("🎯") ||
     lower.includes("hype") ||
     lower.includes("op") ||
     lower.includes("fire")
@@ -187,6 +191,10 @@ export function detectEmotionGesture(text: string): AvatarGesture | null {
   if (
     text.includes("👋") ||
     text.includes("🙋") ||
+    text.includes("🤖") ||
+    text.includes("✨") ||
+    text.includes("🎙️") ||
+    text.includes("📻") ||
     lower.includes("hi ") ||
     lower.includes("hello") ||
     lower.includes("hey") ||
@@ -199,7 +207,9 @@ export function detectEmotionGesture(text: string): AvatarGesture | null {
     text.includes("👏") ||
     text.includes("🎉") ||
     text.includes("🏆") ||
+    text.includes("👑") ||
     text.includes("👍") ||
+    text.includes("🦾") ||
     lower.includes("gg") ||
     lower.includes("congrats") ||
     lower.includes("cheers")
@@ -222,6 +232,9 @@ export function detectEmotionGesture(text: string): AvatarGesture | null {
     text.includes("🤯") ||
     text.includes("😱") ||
     text.includes("💀") ||
+    text.includes("🛸") ||
+    text.includes("🌌") ||
+    text.includes("🔮") ||
     lower.includes("wtf") ||
     lower.includes("omg") ||
     lower.includes("mindblown") ||
@@ -372,7 +385,6 @@ export class AvatarRigDriver {
     let rightArmAngle = -0.22;
     let eyeMorph: "OPEN" | "BLINK" | "HEART" | "CRY" | "SQUINT" | "SHOCKED" = "OPEN";
     let mouthMorph: "SMILE" | "OPEN_LAUGH" | "POUT" | "SHOCKED" | "TALK" = "SMILE";
-    let showBlush = true;
     let showCrown = false;
 
     // Natural periodic eye blink
@@ -380,30 +392,36 @@ export class AvatarRigDriver {
       eyeMorph = "BLINK";
     }
 
+    // Beacon / Ear glow color based on gesture
+    let neonColor = skin.iris || "#38bdf8";
+
     switch (this.gesture) {
       case "GREETING_WAVE":
-        headTilt = Math.sin(t * 6) * 0.07;
-        rightArmAngle = -1.7 + Math.sin(t * 11) * 0.4;
+        headTilt = Math.sin(t * 6) * 0.08 + this.pointerX * 0.15;
+        rightArmAngle = -1.7 + Math.sin(t * 11) * 0.45;
         eyeMorph = "OPEN";
         mouthMorph = "SMILE";
-        if (Math.random() < 0.12) this.emitParticles(1, "✨", "#fde047");
+        neonColor = "#38bdf8";
+        if (Math.random() < 0.12) this.emitParticles(1, "✨", "#38bdf8");
         break;
 
       case "LOVE_HEART":
-        headOffsetY = Math.sin(t * 5) * 3.5;
+        headOffsetY = Math.sin(t * 5) * 3.5 + this.pointerY * 2;
         eyeMorph = "HEART";
         mouthMorph = "SMILE";
+        neonColor = "#f43f5e";
         leftArmAngle = -1.15 + Math.sin(t * 4) * 0.08;
         rightArmAngle = 1.15 - Math.sin(t * 4) * 0.08;
         if (Math.random() < 0.16) this.emitParticles(1, "❤️", "#f43f5e");
         break;
 
       case "APOLOGY_BOW":
-        torsoTilt = 0.28 + Math.sin(t * 3) * 0.04;
-        headOffsetY = 12;
-        headTilt = 0.18;
+        torsoTilt = 0.25 + Math.sin(t * 3) * 0.04;
+        headOffsetY = 10;
+        headTilt = 0.15;
         eyeMorph = "CRY";
         mouthMorph = "POUT";
+        neonColor = "#06b6d4";
         leftArmAngle = 0.45;
         rightArmAngle = -0.45;
         if (Math.random() < 0.1) this.emitParticles(1, "💧", "#38bdf8");
@@ -414,9 +432,10 @@ export class AvatarRigDriver {
         headTilt = Math.sin(t * 8) * 0.1;
         eyeMorph = "SQUINT";
         mouthMorph = "OPEN_LAUGH";
+        neonColor = "#facc15";
         leftArmAngle = 0.5 + Math.sin(t * 12) * 0.18;
         rightArmAngle = -0.5 - Math.sin(t * 12) * 0.18;
-        if (Math.random() < 0.15) this.emitParticles(1, "🤣", "#facc15");
+        if (Math.random() < 0.15) this.emitParticles(1, "✨", "#facc15");
         break;
 
       case "GG_CLAP":
@@ -424,6 +443,7 @@ export class AvatarRigDriver {
         rightArmAngle = 1.0 - Math.sin(t * 14) * 0.3;
         eyeMorph = "OPEN";
         mouthMorph = "SMILE";
+        neonColor = "#a855f7";
         showCrown = true;
         if (Math.random() < 0.15) this.emitParticles(1, "🎉", "#a855f7");
         break;
@@ -432,6 +452,7 @@ export class AvatarRigDriver {
         headOffsetY = -5 + Math.sin(t * 8) * 1.5;
         eyeMorph = "SHOCKED";
         mouthMorph = "SHOCKED";
+        neonColor = "#ec4899";
         leftArmAngle = -1.5;
         rightArmAngle = 1.5;
         if (Math.random() < 0.2) this.emitParticles(1, "⚡", "#38bdf8");
@@ -443,6 +464,7 @@ export class AvatarRigDriver {
         rightArmAngle = 1.95 - Math.sin(t * 8) * 0.18;
         eyeMorph = "OPEN";
         mouthMorph = "OPEN_LAUGH";
+        neonColor = "#f97316";
         if (Math.random() < 0.25) this.emitParticles(2, "🔥", "#f97316");
         break;
 
@@ -450,272 +472,318 @@ export class AvatarRigDriver {
         break;
     }
 
-    // ── 1. Realistic 3D Torso & Cyber Jacket ─────────────────────────────────
+    // ── 1. BACKGROUND GLOW AURA ───────────────────────────────────────────────
+    const auraGrad = ctx.createRadialGradient(0, -10, 10, 0, -10, 85);
+    auraGrad.addColorStop(0, `${neonColor}22`);
+    auraGrad.addColorStop(0.7, `${neonColor}08`);
+    auraGrad.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = auraGrad;
+    ctx.beginPath();
+    ctx.arc(0, -10, 85, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ── 2. MINIATURE 3D ROBOTIC CHASSIS (TORSO) ───────────────────────────────
     ctx.save();
     ctx.rotate(torsoTilt);
 
-    // Torso Ambient Shadow
-    ctx.fillStyle = outfit.shadow;
-    ctx.beginPath();
-    ctx.roundRect(-30, 24, 60, 48, [14, 14, 6, 6]);
-    ctx.fill();
-
-    // Torso Front Plate with 3D Gradient
-    const torsoGrad = ctx.createLinearGradient(-30, 24, 30, 72);
+    // Torso Base Gradient (Metallic Cyber Shell)
+    const torsoGrad = ctx.createLinearGradient(-35, 30, 35, 75);
     torsoGrad.addColorStop(0, outfit.base);
-    torsoGrad.addColorStop(0.6, outfit.base);
-    torsoGrad.addColorStop(1, outfit.shadow);
+    torsoGrad.addColorStop(0.5, outfit.shadow);
+    torsoGrad.addColorStop(1, "#050507");
+
     ctx.fillStyle = torsoGrad;
+    ctx.strokeStyle = outfit.trim || "#ffffff";
+    ctx.lineWidth = 1.8;
+
+    // Cute rounded robot body
     ctx.beginPath();
-    ctx.roundRect(-28, 22, 56, 46, [12, 12, 4, 4]);
+    ctx.roundRect(-30, 32, 60, 42, [14, 14, 22, 22]);
     ctx.fill();
-    ctx.strokeStyle = outfit.trim;
-    ctx.lineWidth = 2;
     ctx.stroke();
 
-    // High Cyber Collar
-    ctx.fillStyle = outfit.shadow;
+    // Chest Panel Seam Line
+    ctx.strokeStyle = "rgba(255,255,255,0.15)";
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.roundRect(-16, 18, 32, 12, 4);
-    ctx.fill();
-    ctx.strokeStyle = outfit.trim;
-    ctx.lineWidth = 1.5;
+    ctx.moveTo(-24, 48);
+    ctx.lineTo(24, 48);
     ctx.stroke();
 
-    // Metallic Zipper & Cyber Trim
-    ctx.strokeStyle = outfit.trim;
-    ctx.lineWidth = 2;
+    // Glowing Central Arc Power Core
+    const coreGrad = ctx.createRadialGradient(0, 52, 1, 0, 52, 9);
+    coreGrad.addColorStop(0, "#ffffff");
+    coreGrad.addColorStop(0.4, neonColor);
+    coreGrad.addColorStop(1, "rgba(0,0,0,0.8)");
+    ctx.fillStyle = coreGrad;
     ctx.beginPath();
-    ctx.moveTo(0, 28);
-    ctx.lineTo(0, 68);
+    ctx.arc(0, 52, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 1.2;
     ctx.stroke();
 
-    // Cyber Chest Badge
-    ctx.fillStyle = outfit.trim;
-    ctx.beginPath();
-    ctx.roundRect(-18, 34, 10, 4, 1);
-    ctx.fill();
-
-    // ── 2. Realistic 3D Arms & Sculpted Hands ────────────────────────────────
-    // Left Arm
-    ctx.save();
-    ctx.translate(-26, 28);
-    ctx.rotate(leftArmAngle);
-    // Shoulder & Arm Sleeve
-    const lArmGrad = ctx.createLinearGradient(-6, 0, 6, 36);
-    lArmGrad.addColorStop(0, outfit.base);
-    lArmGrad.addColorStop(1, outfit.shadow);
-    ctx.fillStyle = lArmGrad;
-    ctx.strokeStyle = outfit.trim;
+    // Core pulsing ring
+    ctx.strokeStyle = `${neonColor}88`;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.roundRect(-6, 0, 12, 36, 5);
-    ctx.fill();
+    ctx.arc(0, 52, 11 + Math.sin(t * 6) * 1.5, 0, Math.PI * 2);
     ctx.stroke();
-    // Left Hand (Palm + Thumb)
-    ctx.fillStyle = skin.base;
-    ctx.beginPath();
-    ctx.arc(0, 39, 6.5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = skin.shadow;
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    ctx.restore();
 
-    // Right Arm
-    ctx.save();
-    ctx.translate(26, 28);
-    ctx.rotate(rightArmAngle);
-    // Shoulder & Arm Sleeve
-    const rArmGrad = ctx.createLinearGradient(-6, 0, 6, 36);
-    rArmGrad.addColorStop(0, outfit.base);
-    rArmGrad.addColorStop(1, outfit.shadow);
-    ctx.fillStyle = rArmGrad;
-    ctx.strokeStyle = outfit.trim;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.roundRect(-6, 0, 12, 36, 5);
-    ctx.fill();
-    ctx.stroke();
-    // Right Hand (Palm + Thumb)
-    ctx.fillStyle = skin.base;
-    ctx.beginPath();
-    ctx.arc(0, 39, 6.5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = skin.shadow;
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    ctx.restore();
+    // ── 3. ARTICULATED ROBOTIC HANDS ──────────────────────────────────────────
+    const drawRobotHand = (hx: number, hy: number, angle: number, isRight: boolean) => {
+      ctx.save();
+      ctx.translate(hx, hy);
+      ctx.rotate(angle);
 
-    ctx.restore(); // Restore Torso
+      // Arm Segment
+      ctx.strokeStyle = outfit.shadow;
+      ctx.lineWidth = 6;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(0, 18);
+      ctx.stroke();
 
-    // ── 3. Realistic 3D Head, Face & Skin Shading ────────────────────────────
+      // Arm Outline
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(0, 18);
+      ctx.stroke();
+
+      // Hand / Knuckle Sphere
+      const handGrad = ctx.createRadialGradient(0, 22, 1, 0, 22, 7);
+      handGrad.addColorStop(0, "#ffffff");
+      handGrad.addColorStop(0.6, outfit.base);
+      handGrad.addColorStop(1, "#09090b");
+      ctx.fillStyle = handGrad;
+      ctx.beginPath();
+      ctx.arc(0, 22, 6.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      // Glowing Palm Core
+      ctx.fillStyle = neonColor;
+      ctx.beginPath();
+      ctx.arc(0, 22, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    };
+
+    // Left & Right Hands
+    drawRobotHand(-30, 36, leftArmAngle, false);
+    drawRobotHand(30, 36, rightArmAngle, true);
+
+    ctx.restore(); // End Torso
+
+    // ── 4. CUTE 3D MINIATURE ROBOT HEAD & HELMET ──────────────────────────────
     ctx.save();
     ctx.translate(0, headOffsetY);
     ctx.rotate(headTilt);
 
-    // Neck with 3D Ambient Shadow
-    const neckGrad = ctx.createLinearGradient(-8, 12, 8, 24);
-    neckGrad.addColorStop(0, skin.shadow);
-    neckGrad.addColorStop(1, skin.base);
-    ctx.fillStyle = neckGrad;
-    ctx.beginPath();
-    ctx.roundRect(-8, 12, 16, 15, 3);
-    ctx.fill();
+    // Dynamic 3D Perspective Shift from Pointer
+    const pX = this.pointerX * 4;
+    const pY = this.pointerY * 3;
 
-    // 3D Spherical Head (Multi-stop Radial Lighting)
-    const headGrad = ctx.createRadialGradient(-7, -12, 6, 0, -4, 46);
-    headGrad.addColorStop(0, skin.highlight);
-    headGrad.addColorStop(0.55, skin.base);
-    headGrad.addColorStop(0.9, skin.shadow);
-    headGrad.addColorStop(1, skin.shadow);
-
-    ctx.fillStyle = headGrad;
+    // Top Antenna / Beacon
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 2.2;
     ctx.beginPath();
-    ctx.roundRect(-34, -40, 68, 62, 26);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(0,0,0,0.7)";
-    ctx.lineWidth = 2;
+    ctx.moveTo(0, -48);
+    ctx.lineTo(0, -66);
     ctx.stroke();
 
-    // Ears with Depth
-    const drawEar = (ex: number) => {
-      ctx.fillStyle = skin.base;
-      ctx.beginPath();
-      ctx.arc(ex, -8, 6.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = skin.shadow;
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-      // Inner Ear Cavity
-      ctx.fillStyle = skin.shadow;
-      ctx.beginPath();
-      ctx.arc(ex + (ex > 0 ? -1.5 : 1.5), -8, 3, 0, Math.PI * 2);
-      ctx.fill();
-    };
-    drawEar(-34);
-    drawEar(34);
-
-    // Subtle 3D Nose Bridge & Tip
-    ctx.fillStyle = skin.shadow;
+    // Antenna Glowing Status Beacon Orb
+    const beaconGrad = ctx.createRadialGradient(0, -68, 1, 0, -68, 8);
+    beaconGrad.addColorStop(0, "#ffffff");
+    beaconGrad.addColorStop(0.5, neonColor);
+    beaconGrad.addColorStop(1, "rgba(0,0,0,0.5)");
+    ctx.fillStyle = beaconGrad;
     ctx.beginPath();
-    ctx.moveTo(0, -5);
-    ctx.lineTo(-2, 3);
-    ctx.lineTo(2, 3);
-    ctx.closePath();
+    ctx.arc(0, -68, 6.5 + Math.sin(t * 8) * 1.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Ear Pods / Audio Fins (Left & Right)
+    const drawEarPod = (ex: number, isRight: boolean) => {
+      ctx.save();
+      ctx.translate(ex, -12);
+      const earGrad = ctx.createLinearGradient(-6, -16, 6, 16);
+      earGrad.addColorStop(0, outfit.base);
+      earGrad.addColorStop(1, "#050507");
+      ctx.fillStyle = earGrad;
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(isRight ? -2 : -10, -15, 12, 30, 5);
+      ctx.fill();
+      ctx.stroke();
+
+      // Glowing Neon Ring on Ear
+      ctx.strokeStyle = neonColor;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(isRight ? 4 : -4, 0, 5, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    };
+
+    drawEarPod(-44, false);
+    drawEarPod(44, true);
+
+    // 3D Cute Chibi Helmet Chassis (Outer Shell)
+    const helmetGrad = ctx.createRadialGradient(-12, -24, 8, 0, -10, 52);
+    helmetGrad.addColorStop(0, "#ffffff");
+    helmetGrad.addColorStop(0.3, outfit.base);
+    helmetGrad.addColorStop(0.8, outfit.shadow);
+    helmetGrad.addColorStop(1, "#09090b");
+
+    ctx.fillStyle = helmetGrad;
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.roundRect(-42, -50, 84, 76, [34, 34, 28, 28]);
+    ctx.fill();
+    ctx.stroke();
+
+    // ── 5. CURVED OLED / CRT VISOR SCREEN ─────────────────────────────────────
+    const visorGrad = ctx.createLinearGradient(0, -36, 0, 18);
+    visorGrad.addColorStop(0, "#050508");
+    visorGrad.addColorStop(0.6, "#090912");
+    visorGrad.addColorStop(1, "#020204");
+
+    ctx.fillStyle = visorGrad;
+    ctx.strokeStyle = "rgba(255,255,255,0.7)";
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.roundRect(-34 + pX * 0.5, -38 + pY * 0.5, 68, 56, [22, 22, 18, 18]);
+    ctx.fill();
+    ctx.stroke();
+
+    // Glass Visor 3D Specular Arc Reflection (Top Curvature Glare)
+    const glassGlare = ctx.createLinearGradient(-30, -36, 30, -15);
+    glassGlare.addColorStop(0, "rgba(255,255,255,0.45)");
+    glassGlare.addColorStop(0.4, "rgba(255,255,255,0.1)");
+    glassGlare.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = glassGlare;
+    ctx.beginPath();
+    ctx.ellipse(pX * 0.6, -26 + pY * 0.6, 26, 9, -0.12, 0, Math.PI * 2);
     ctx.fill();
 
-    // Blush Cheeks (Soft Gradient)
-    if (showBlush) {
-      ctx.fillStyle = skin.blush;
-      ctx.beginPath();
-      ctx.ellipse(-18, 4, 7.5, 4.5, 0, 0, Math.PI * 2);
-      ctx.ellipse(18, 4, 7.5, 4.5, 0, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    // ── 6. GLOWING EMOTIVE OLED EYES & MOUTH ──────────────────────────────────
+    ctx.save();
+    ctx.translate(pX, pY);
 
-    // ── 4. Realistic 3D Expressive Eyes ──────────────────────────────────────
-    if (eyeMorph === "HEART") {
-      // 3D Glowing Heart Eyes
-      const drawHeart = (hx: number, hy: number) => {
-        ctx.save();
-        ctx.fillStyle = "#f43f5e";
-        ctx.beginPath();
-        ctx.arc(hx - 3.5, hy - 2, 4.5, Math.PI, 0, false);
-        ctx.arc(hx + 3.5, hy - 2, 4.5, Math.PI, 0, false);
-        ctx.lineTo(hx, hy + 6.5);
-        ctx.closePath();
-        ctx.fill();
-        // Heart Specular Highlight
-        ctx.fillStyle = "#ffffff";
-        ctx.beginPath();
-        ctx.arc(hx - 3.5, hy - 2, 1.5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      };
-      drawHeart(-15, -10);
-      drawHeart(15, -10);
-    } else if (eyeMorph === "BLINK" || eyeMorph === "SQUINT") {
-      // Sleek Curved Eyelashes
-      ctx.strokeStyle = "#18181b";
-      ctx.lineWidth = 3.5;
+    const eyeColor = neonColor;
+
+    if (eyeMorph === "BLINK") {
+      // Sleek Horizontal Blinking Laser Line
+      ctx.strokeStyle = eyeColor;
+      ctx.lineWidth = 2.8;
       ctx.lineCap = "round";
       ctx.beginPath();
-      ctx.moveTo(-21, -9);
-      ctx.quadraticCurveTo(-15, -14, -9, -9);
-      ctx.moveTo(9, -9);
-      ctx.quadraticCurveTo(15, -14, 21, -9);
+      ctx.moveTo(-22, -10);
+      ctx.lineTo(-6, -10);
+      ctx.moveTo(6, -10);
+      ctx.lineTo(22, -10);
+      ctx.stroke();
+    } else if (eyeMorph === "HEART") {
+      // 💖 Glowing Neon Hearts for Love
+      const drawHeartEye = (hx: number) => {
+        ctx.save();
+        ctx.translate(hx, -10);
+        const beat = 1 + Math.sin(t * 12) * 0.15;
+        ctx.scale(beat, beat);
+        ctx.fillStyle = "#f43f5e";
+        ctx.beginPath();
+        ctx.moveTo(0, 2);
+        ctx.bezierCurveTo(-5, -4, -8, -1, -5, 4);
+        ctx.lineTo(0, 9);
+        ctx.lineTo(5, 4);
+        ctx.bezierCurveTo(8, -1, 5, -4, 0, 2);
+        ctx.fill();
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.restore();
+      };
+      drawHeartEye(-14);
+      drawHeartEye(14);
+    } else if (eyeMorph === "SQUINT") {
+      // 😆 Curved Joyful Laughing Arcs ( ^ _ ^ )
+      ctx.strokeStyle = eyeColor;
+      ctx.lineWidth = 3.2;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.arc(-14, -7, 6.5, Math.PI * 1.1, Math.PI * 1.9);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(14, -7, 6.5, Math.PI * 1.1, Math.PI * 1.9);
       ctx.stroke();
     } else if (eyeMorph === "CRY") {
-      // Tearful Anime Eyes
-      ctx.strokeStyle = "#18181b";
-      ctx.lineWidth = 2.5;
+      // 🥺 Droopy Sad Puppy Eyes with Tear Drip ( T _ T )
+      ctx.strokeStyle = eyeColor;
+      ctx.lineWidth = 2.8;
+      ctx.lineCap = "round";
       ctx.beginPath();
-      ctx.moveTo(-20, -8);
-      ctx.lineTo(-10, -11);
-      ctx.moveTo(20, -8);
-      ctx.lineTo(10, -11);
+      ctx.arc(-14, -13, 6, Math.PI * 0.1, Math.PI * 0.9);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(14, -13, 6, Math.PI * 0.1, Math.PI * 0.9);
       ctx.stroke();
 
-      // Shimmering Teardrops
+      // Animated Blue Tear Drop
+      const tearY = -5 + ((t * 22) % 20);
       ctx.fillStyle = "#38bdf8";
       ctx.beginPath();
-      ctx.arc(-15, 2, 4.5, 0, Math.PI * 2);
-      ctx.arc(15, 2, 4.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#ffffff";
-      ctx.beginPath();
-      ctx.arc(-16, 1, 1.5, 0, Math.PI * 2);
-      ctx.arc(14, 1, 1.5, 0, Math.PI * 2);
+      ctx.arc(14, tearY, 2.5, 0, Math.PI * 2);
       ctx.fill();
     } else if (eyeMorph === "SHOCKED") {
-      // Shocked Wide Eyes
+      // 🤯 Shocked Wide Glowing Concentric Rings
       const drawShockEye = (ex: number) => {
+        ctx.strokeStyle = eyeColor;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(ex, -10, 7.5, 0, Math.PI * 2);
+        ctx.stroke();
         ctx.fillStyle = "#ffffff";
         ctx.beginPath();
-        ctx.arc(ex, -10, 8.5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = "#000000";
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-        // Tiny Pupil
-        ctx.fillStyle = "#000000";
-        ctx.beginPath();
-        ctx.arc(ex, -10, 3, 0, Math.PI * 2);
+        ctx.arc(ex, -10, 2.5, 0, Math.PI * 2);
         ctx.fill();
       };
-      drawShockEye(-15);
-      drawShockEye(15);
+      drawShockEye(-14);
+      drawShockEye(14);
     } else {
-      // 🌟 Realistic Iris with Glass Specular Catchlights & 3D Cursor Eye Tracking
-      const drawRealisticEye = (ex: number) => {
-        // Sclera (White base with upper eyelid shadow)
-        ctx.fillStyle = "#ffffff";
+      // 🌟 Open Glowing Anime/Chibi Robot Eyes with 3D Pupil Tracking
+      const drawRobotEye = (ex: number) => {
+        // Glowing Background Sclera Capsule
+        ctx.fillStyle = "#0c0c16";
         ctx.beginPath();
-        ctx.ellipse(ex, -10, 7.5, 8.5, 0, 0, Math.PI * 2);
+        ctx.roundRect(ex - 8, -19, 16, 18, 7);
         ctx.fill();
-        ctx.strokeStyle = "rgba(0,0,0,0.8)";
-        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = "rgba(255,255,255,0.4)";
+        ctx.lineWidth = 1;
         ctx.stroke();
 
-        // Upper Eyelid Ambient Shadow
-        ctx.fillStyle = "rgba(0,0,0,0.12)";
-        ctx.beginPath();
-        ctx.arc(ex, -10, 7.5, Math.PI, 0);
-        ctx.fill();
-
-        // Dynamic 3D Iris & Pupil Offset based on Cursor
+        // 3D Iris Center Offset by Cursor
         const irisX = ex + this.pointerX * 2.5;
-        const irisY = -9.5 + this.pointerY * 2.0;
+        const irisY = -10 + this.pointerY * 2.0;
 
-        // Glowing Colored Iris (Radial Gradient)
-        const irisGrad = ctx.createRadialGradient(irisX, irisY, 1, irisX, irisY, 5);
-        irisGrad.addColorStop(0, skin.iris);
-        irisGrad.addColorStop(0.7, skin.iris);
-        irisGrad.addColorStop(1, "#09090b");
+        // Radiant Iris Gradient
+        const irisGrad = ctx.createRadialGradient(irisX, irisY, 1, irisX, irisY, 6.5);
+        irisGrad.addColorStop(0, "#ffffff");
+        irisGrad.addColorStop(0.5, eyeColor);
+        irisGrad.addColorStop(1, "#050508");
         ctx.fillStyle = irisGrad;
         ctx.beginPath();
-        ctx.arc(irisX, irisY, 4.8, 0, Math.PI * 2);
+        ctx.arc(irisX, irisY, 6, 0, Math.PI * 2);
         ctx.fill();
 
         // Deep Pupil
@@ -732,220 +800,83 @@ export class AvatarRigDriver {
         ctx.beginPath();
         ctx.arc(irisX + 1.5, irisY + 1.5, 1, 0, Math.PI * 2);
         ctx.fill();
-
-        // Upper Eyelash Line
-        ctx.strokeStyle = "#18181b";
-        ctx.lineWidth = 2.2;
-        ctx.lineCap = "round";
-        ctx.beginPath();
-        ctx.arc(ex, -10, 7.5, Math.PI * 1.15, Math.PI * 1.85);
-        ctx.stroke();
       };
-      drawRealisticEye(-15);
-      drawRealisticEye(15);
+
+      drawRobotEye(-14);
+      drawRobotEye(14);
     }
 
-    // Eyebrows
-    ctx.strokeStyle = hair.shadow;
-    ctx.lineWidth = 2.5;
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    ctx.moveTo(-21, -19);
-    ctx.quadraticCurveTo(-15, -21, -9, -19);
-    ctx.moveTo(9, -19);
-    ctx.quadraticCurveTo(15, -21, 21, -19);
-    ctx.stroke();
-
-    // ── 5. Realistic Mouth Morphs ────────────────────────────────────────────
-    ctx.strokeStyle = "#18181b";
+    // OLED Mouth
+    ctx.strokeStyle = eyeColor;
+    ctx.fillStyle = eyeColor;
     ctx.lineWidth = 2.2;
     ctx.lineCap = "round";
 
     if (mouthMorph === "OPEN_LAUGH") {
-      ctx.fillStyle = "#e11d48";
       ctx.beginPath();
-      ctx.arc(0, 6, 9.5, 0, Math.PI);
-      ctx.closePath();
+      ctx.arc(0, 3, 7, 0, Math.PI);
       ctx.fill();
+      ctx.strokeStyle = "#ffffff";
       ctx.stroke();
-      // White Teeth
-      ctx.fillStyle = "#ffffff";
-      ctx.beginPath();
-      ctx.rect(-6.5, 6, 13, 3.5);
-      ctx.fill();
     } else if (mouthMorph === "POUT") {
       ctx.beginPath();
-      ctx.arc(0, 11, 5.5, Math.PI, 0);
+      ctx.arc(0, 7, 4.5, Math.PI * 1.1, Math.PI * 1.9);
       ctx.stroke();
     } else if (mouthMorph === "SHOCKED") {
-      ctx.fillStyle = "#18181b";
       ctx.beginPath();
-      ctx.ellipse(0, 8, 4.5, 7, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 5, 3.5, 5, 0, 0, Math.PI * 2);
       ctx.fill();
     } else {
-      // Natural Smile
+      // Cute smiling arc
       ctx.beginPath();
-      ctx.arc(0, 4.5, 7.5, 0.25, Math.PI - 0.25);
+      ctx.arc(0, 2, 5.5, 0.15 * Math.PI, 0.85 * Math.PI);
       ctx.stroke();
     }
 
-    // ── 6. Realistic 3D Hair Styles with Specular Sheen ──────────────────────
-    ctx.fillStyle = hair.base;
-    ctx.strokeStyle = hair.shadow;
-    ctx.lineWidth = 1.8;
+    // LED Blushing Cheek Dots
+    ctx.fillStyle = "rgba(244, 114, 182, 0.65)";
+    ctx.beginPath();
+    ctx.arc(-22, -1, 3.5, 0, Math.PI * 2);
+    ctx.arc(22, -1, 3.5, 0, Math.PI * 2);
+    ctx.fill();
 
-    switch (this.config.hairStyle) {
-      case "CYBER_FADE":
-        // Textured Undercut Fade
-        ctx.beginPath();
-        ctx.roundRect(-35, -52, 70, 22, [14, 14, 0, 0]);
-        ctx.fill();
-        ctx.stroke();
-        // Glossy Sheen Highlight Across Crown
-        ctx.fillStyle = hair.sheen;
-        ctx.beginPath();
-        ctx.roundRect(-24, -49, 48, 4.5, 2);
-        ctx.fill();
-        break;
+    ctx.restore(); // End Visor contents
 
-      case "CURLY_AFRO":
-        ctx.beginPath();
-        ctx.arc(0, -30, 42, Math.PI * 0.8, Math.PI * 2.2);
-        ctx.fill();
-        ctx.stroke();
-        // Texture Rings
-        ctx.strokeStyle = hair.sheen;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(-14, -36, 8, 0, Math.PI);
-        ctx.arc(14, -36, 8, 0, Math.PI);
-        ctx.stroke();
-        break;
-
-      case "NEON_BOB":
-        ctx.beginPath();
-        ctx.roundRect(-38, -50, 76, 46, [18, 18, 10, 10]);
-        ctx.fill();
-        ctx.stroke();
-        // Hair Sheen Band
-        ctx.fillStyle = hair.sheen;
-        ctx.beginPath();
-        ctx.roundRect(-28, -44, 56, 4, 2);
-        ctx.fill();
-        break;
-
-      case "SPIKY_ANIME":
-        ctx.beginPath();
-        ctx.moveTo(-34, -36);
-        ctx.lineTo(-40, -56);
-        ctx.lineTo(-22, -45);
-        ctx.lineTo(-10, -64);
-        ctx.lineTo(5, -46);
-        ctx.lineTo(22, -62);
-        ctx.lineTo(34, -36);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-        // Spike Specular Highlights
-        ctx.strokeStyle = hair.sheen;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(-9, -60);
-        ctx.lineTo(-12, -48);
-        ctx.moveTo(20, -58);
-        ctx.lineTo(16, -48);
-        ctx.stroke();
-        break;
-
-      case "PUNK_DREADS":
-        ctx.beginPath();
-        ctx.roundRect(-35, -53, 70, 24, [14, 14, 4, 4]);
-        ctx.fill();
-        ctx.stroke();
-        // Dreadlocks Strands
-        ctx.beginPath();
-        ctx.roundRect(-39, -28, 9, 32, 4);
-        ctx.roundRect(30, -28, 9, 32, 4);
-        ctx.fill();
-        ctx.stroke();
-        break;
-
-      default:
-        break;
-    }
-
-    // ── 7. Eyewear & Cyber Accessories ───────────────────────────────────────
-    if (this.config.eyewear === "CYBER_VISOR") {
-      ctx.fillStyle = "rgba(6, 182, 212, 0.85)";
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.roundRect(-28, -16, 56, 13, 3.5);
-      ctx.fill();
-      ctx.stroke();
-
-      // Visor Neon Laser Beam
-      ctx.strokeStyle = "#a5f3fc";
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(-22, -9.5);
-      ctx.lineTo(22, -9.5);
-      ctx.stroke();
-    } else if (this.config.eyewear === "RETRO_SHADES") {
-      ctx.fillStyle = "#09090b";
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.roundRect(-24, -15, 20, 12, 3);
-      ctx.roundRect(4, -15, 20, 12, 3);
-      ctx.fill();
-      ctx.stroke();
-      // Glass Flare
-      ctx.strokeStyle = "rgba(255,255,255,0.6)";
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(-20, -12);
-      ctx.lineTo(-8, -6);
-      ctx.stroke();
-    } else if (this.config.eyewear === "WIREFRAME_GLASSES") {
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 1.8;
-      ctx.beginPath();
-      ctx.arc(-15, -10, 9, 0, Math.PI * 2);
-      ctx.arc(15, -10, 9, 0, Math.PI * 2);
-      ctx.moveTo(-6, -10);
-      ctx.lineTo(6, -10);
-      ctx.stroke();
-    }
-
-    // GG Crown Overlay
+    // ── 7. GOLDEN AURA CROWN (GG / WINNER) ───────────────────────────────────
     if (showCrown) {
-      ctx.fillStyle = "#facc15";
-      ctx.strokeStyle = "#a16207";
-      ctx.lineWidth = 2;
+      ctx.save();
+      ctx.translate(0, -62);
+      const crownGrad = ctx.createLinearGradient(-15, -12, 15, 12);
+      crownGrad.addColorStop(0, "#fde047");
+      crownGrad.addColorStop(0.5, "#eab308");
+      crownGrad.addColorStop(1, "#ca8a04");
+      ctx.fillStyle = crownGrad;
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 1.2;
       ctx.beginPath();
-      ctx.moveTo(-16, -44);
-      ctx.lineTo(-22, -60);
-      ctx.lineTo(-8, -52);
-      ctx.lineTo(0, -66);
-      ctx.lineTo(8, -52);
-      ctx.lineTo(22, -60);
-      ctx.lineTo(16, -44);
+      ctx.moveTo(-16, 6);
+      ctx.lineTo(-20, -10);
+      ctx.lineTo(-8, -3);
+      ctx.lineTo(0, -14);
+      ctx.lineTo(8, -3);
+      ctx.lineTo(20, -10);
+      ctx.lineTo(16, 6);
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
+      ctx.restore();
     }
 
-    ctx.restore(); // Restore Head
-    ctx.restore(); // Restore Root Scale
+    ctx.restore(); // End Head
+    ctx.restore(); // End Scaling
 
-    // ── 8. Render Floating Particles ─────────────────────────────────────────
-    this.updateParticles(1 / 60);
+    // ── 8. PARTICLES (HEARTS, SPARKS, TEARS, FLAMES) ──────────────────────────
+    this.updateParticles(0.016);
     for (const p of this.particles) {
       ctx.save();
       ctx.globalAlpha = p.alpha;
       if (p.char) {
-        ctx.font = `${p.size * 2}px sans-serif`;
+        ctx.font = `${p.size * 1.5}px monospace`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(p.char, p.x, p.y);

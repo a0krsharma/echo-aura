@@ -24,6 +24,16 @@ interface EmojiCategory {
 
 const EMOJI_CATEGORIES: EmojiCategory[] = [
   {
+    id: "ECHO_SPECIAL",
+    name: "⚡ Echo Cyber Exclusives",
+    icon: Sparkles,
+    emojis: [
+      "🤖", "⚡", "💎", "👑", "🔥", "🛸", "📻", "🎙️", "🎧", "💥",
+      "🎯", "🚀", "💀", "👾", "✨", "🦾", "🧬", "🏆", "🛡️", "🔮",
+      "❤️‍🔥", "💯", "🤯", "🥂", "🕶️", "👁️‍🗨️", "🌌", "🚨", "🧿", "💫",
+    ],
+  },
+  {
     id: "SMILEYS",
     name: "Smileys & Emotion",
     icon: Smile,
@@ -95,7 +105,7 @@ const EMOJI_CATEGORIES: EmojiCategory[] = [
   },
 ];
 
-const TOP_REACTIONS = ["👍", "❤️", "😂", "🔥", "👏", "🎉", "😮", "🙏", "💀", "💯"];
+const TOP_REACTIONS = ["🤖", "⚡", "🔥", "💎", "❤️", "😂", "👑", "🎙️", "🚀", "💀"];
 
 interface WorldClassEmojiPickerProps {
   isOpen: boolean;
