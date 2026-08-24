@@ -23,6 +23,7 @@ export interface EchoUser {
   arcadeTotalWins: number;
   badges:      string[];
   inventory:   string[];
+  friends?:    string[];
   tags:        string[];
   streak:      number;
   lastActiveDate: string | null;
@@ -115,7 +116,8 @@ export async function getOrCreateUserDoc(firebaseUser: FirebaseUser): Promise<Ec
     arcadeElo:   1000,
     arcadeTotalWins: 0,
     badges:      [],
-    inventory:   [],
+    inventory: [],
+      friends: [],
     tags:        [],
     streak:      0,
     lastActiveDate: null,
@@ -148,6 +150,7 @@ export async function getOrCreateUserDoc(firebaseUser: FirebaseUser): Promise<Ec
       lastActiveDate: null,
       tags: [],
       inventory: [],
+      friends: [],
       freqMap: {},
       signalStatus: "ONLINE",
       lastSignalChange: null,
@@ -603,6 +606,21 @@ export async function purchaseItem(uid: string, itemId: string, cost: number): P
     return success;
   } catch (err) {
     console.error("Failed to purchase item", err);
+    return false;
+  }
+}
+
+
+export async function addFriend(uid: string, friendUid: string): Promise<boolean> {
+  const db = getFirebaseDb();
+  const ref = doc(db, "users", uid);
+  try {
+    await updateDoc(ref, {
+      friends: arrayUnion(friendUid)
+    });
+    return true;
+  } catch (err) {
+    console.error("Failed to add friend", err);
     return false;
   }
 }

@@ -58,6 +58,7 @@ import ArcadeGameRulesModal from "@/app/components/arcade/ArcadeGameRulesModal";
 import ArcadeRevengeCardModal from "@/app/components/arcade/ArcadeRevengeCardModal";
 import ArcadeTournamentBracketModal from "@/app/components/arcade/ArcadeTournamentBracketModal";
 import ArcadeAuraStore from "@/app/components/arcade/ArcadeAuraStore";
+import { subscribeToChallengeNotifications, markNotificationRead, sendChallengeNotification, type AppNotification } from "@/lib/notifications";
 import ViralStoryGeneratorModal from "@/app/components/arcade/ViralStoryGeneratorModal";
 import LiveVoiceFilterDock from "@/app/components/arcade/LiveVoiceFilterDock";
 import MidnightGhostGrid from "@/app/components/arcade/MidnightGhostGrid";
@@ -227,6 +228,32 @@ function ArcadeContent() {
   const [activeVoiceFilter, setActiveVoiceFilter] = useState<VoiceFilterMode>("clean");
   const [wagerMenuOpen, setWagerMenuOpen] = useState(false);
   const [wagerAmount, setWagerAmount] = useState(500);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [challengeTargetUid, setChallengeTargetUid] = useState<string>("");
+  const [showChallengeModal, setShowChallengeModal] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    const unsub = subscribeToChallengeNotifications(user.uid, (notifs) => {
+      setNotifications(notifs);
+    });
+    return () => unsub();
+  }, [user]);
+
+  const handleSendChallenge = async (gameType: string) => {
+    if (!user || !challengeTargetUid.trim()) return;
+    const matchId = await createArcadeMatch({
+      gameType: gameType as any,
+      title: "CHALLENGE MATCH",
+      hostUid: user.uid,
+      hostHandle: user.handle,
+      stakes: 100,
+      maxPlayers: 2
+    });
+    await sendChallengeNotification(challengeTargetUid.trim(), user.uid, user.handle, matchId, gameType);
+    setShowChallengeModal(null);
+    setActiveMatchId(matchId);
+  };
   
   const handlePlaceWager = async (targetUid: string) => {
     if (!user || !activeMatch) return;

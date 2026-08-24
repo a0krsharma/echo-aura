@@ -15,7 +15,7 @@
 
 import {
   collection,
-  addDoc,
+  addDoc, setDoc,
   doc,
   query,
   orderBy,
@@ -318,5 +318,63 @@ export function notifyRoomStart(roomTitle: string, hostHandle: string) {
   showNotification("🎙 LIVE ROOM ACTIVE", {
     body: `${hostHandle} started a live room: "${roomTitle}"`,
     tag: `room-${Date.now()}`,
+  });
+}
+
+
+export interface AppNotification {
+  id: string;
+  toUid: string;
+  fromUid: string;
+  fromHandle: string;
+  type: string;
+  matchId?: string;
+  gameType?: string;
+  message: string;
+  createdAt: number;
+  read: boolean;
+}
+
+export async function sendChallengeNotification(
+  toUid: string,
+  fromUid: string,
+  fromHandle: string,
+  matchId: string,
+  gameType: string
+): Promise<void> {
+  const db = getFirebaseDb();
+  const ref = doc(collection(db, "notifications"));
+  
+  await setDoc(ref, {
+    id: ref.id,
+    toUid,
+    fromUid,
+    fromHandle,
+    type: "CHALLENGE",
+    matchId,
+    gameType,
+    message: `${fromHandle} has challenged you to ${gameType.toUpperCase()}!`,
+    createdAt: Date.now(),
+    read: false,
+  });
+}
+
+export function subscribeToChallengeNotifications(
+  uid: string,
+  onUpdate: (notifications: AppNotification[]) => void
+): () => void {
+  const db = getFirebaseDb();
+  const q = query(
+    collection(db, "notifications"),
+    where("toUid", "==", uid),
+    where("type", "==", "CHALLENGE"),
+    where("read", "==", false),
+    orderBy("createdAt", "desc")
+  );
+
+  return onSnapshot(q, (snap) => {
+    const notifs: AppNotification[] = [];
+    snap.forEach((doc) => notifs.push(doc.data() as AppNotification));
+    onUpdate(notifs);
   });
 }
