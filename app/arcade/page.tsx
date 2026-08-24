@@ -9,6 +9,7 @@ import {
   subscribeArcadeMatch,
   subscribeLobbyArcadeMatches,
   deleteArcadeMatch,
+  leaveArcadeMatch,
   type ArcadeMatch,
   type ArcadeGameType,
 } from "@/lib/arcade";
@@ -361,11 +362,42 @@ function ArcadeContent() {
   const handleDeleteMatch = async (matchId: string) => {
     if (!user) return;
     if (window.confirm("Are you sure you want to terminate and delete this arena lobby?")) {
-      await deleteArcadeMatch(matchId, user.uid);
+      await deleteArcadeMatch(matchId);
       setActiveMatchId(null);
       setActiveMatch(null);
     }
   };
+
+  const handleExitActiveMatch = async () => {
+    if (!activeMatch) {
+      setActiveMatchId(null);
+      setActiveMatch(null);
+      return;
+    }
+    const mId = activeMatch.id;
+    setActiveMatchId(null);
+    setActiveMatch(null);
+    if (user) {
+      try {
+        await leaveArcadeMatch(mId, user.uid);
+      } catch (e) {
+        console.warn("Failed to clean up match:", e);
+      }
+    }
+  };
+
+  // Auto-clean match if user closes tab or navigates away
+  useEffect(() => {
+    const handleUnload = () => {
+      if (activeMatchId && user) {
+        leaveArcadeMatch(activeMatchId, user.uid).catch(() => {});
+      }
+    };
+    window.addEventListener("beforeunload", handleUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleUnload);
+    };
+  }, [activeMatchId, user]);
 
   const filteredGames = MASTER_50_GAMES.filter((g) => {
     const matchesCategory = activeCategory === "ALL" || g.category === activeCategory;
@@ -383,10 +415,7 @@ function ArcadeContent() {
         <div className="flex items-center gap-3 min-w-0">
           {activeMatchId ? (
             <button
-              onClick={() => {
-                setActiveMatchId(null);
-                setActiveMatch(null);
-              }}
+              onClick={handleExitActiveMatch}
               className="px-2.5 py-1 border border-neutral-800 hover:border-white text-neutral-400 hover:text-white transition-colors cursor-pointer flex items-center gap-1 text-xs shrink-0"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
@@ -477,13 +506,23 @@ function ArcadeContent() {
           /* ── Active Game Arena View ── */
           <div className="space-y-4">
             <div className="flex items-center justify-between border-b border-neutral-800 pb-2 text-xs flex-wrap gap-2">
-              <span className="text-neutral-400 uppercase tracking-wider flex items-center gap-2">
-                <span>MATCH: {activeMatch.id.slice(0, 8)}</span>
-                <span>•</span>
-                <span>MODE: {activeMatch.mode === "VS_COMPUTER" ? "🤖 VS AI" : "👥 MULTIPLAYER"}</span>
-                <span>•</span>
-                <span>HOST: {activeMatch.hostHandle}</span>
-              </span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={handleExitActiveMatch}
+                  className="px-2.5 py-1 border border-red-900 bg-red-950/60 hover:bg-red-900 hover:text-white text-red-300 font-bold uppercase text-[10px] transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  <ArrowLeft className="w-3 h-3" />
+                  <span>[ ← EXIT ARENA ]</span>
+                </button>
+                <span className="text-neutral-400 uppercase tracking-wider flex items-center gap-2">
+                  <span>MATCH: {activeMatch.id.slice(0, 8)}</span>
+                  <span>•</span>
+                  <span>MODE: {activeMatch.mode === "VS_COMPUTER" ? "🤖 VS AI" : "👥 MULTIPLAYER"}</span>
+                  <span>•</span>
+                  <span>HOST: {activeMatch.hostHandle}</span>
+                </span>
+              </div>
               <div className="flex items-center gap-2 flex-wrap">
                 {activeMatch.status === "FINISHED" && (
                   <button

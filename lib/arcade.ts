@@ -1929,14 +1929,22 @@ export async function createArcadeMatch(params: {
 }
 
 // ── Delete / Terminate Arcade Match ──────────────────────────────────────────
-export async function deleteArcadeMatch(matchId: string, hostUid: string): Promise<void> {
-  const db = getFirebaseDb();
-  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
-  const snap = await getDoc(matchRef);
-  if (!snap.exists()) return;
-  const data = snap.data();
-  if (data.hostUid === hostUid) {
-    await deleteDoc(matchRef);
+export async function deleteArcadeMatch(matchId: string, hostUid?: string): Promise<void> {
+  try {
+    const db = getFirebaseDb();
+    const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+    if (hostUid) {
+      const snap = await getDoc(matchRef);
+      if (!snap.exists()) return;
+      const data = snap.data();
+      if (data.hostUid === hostUid) {
+        await deleteDoc(matchRef);
+      }
+    } else {
+      await deleteDoc(matchRef);
+    }
+  } catch (e) {
+    console.warn("[Arcade] Failed to delete match document:", e);
   }
 }
 
@@ -2005,20 +2013,42 @@ export async function leaveArcadeMatch(
   matchId: string,
   playerUid: string
 ): Promise<void> {
-  const db = getFirebaseDb();
-  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
-  const snap = await getDoc(matchRef);
-  if (!snap.exists()) return;
-  const match = snap.data() as ArcadeMatch;
-  if (!match.players || !match.players[playerUid]) return;
+  try {
+    const db = getFirebaseDb();
+    const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+    const snap = await getDoc(matchRef);
+    if (!snap.exists()) return;
+    const match = snap.data() as ArcadeMatch;
 
-  const players = { ...match.players };
-  delete players[playerUid];
+    // Auto-delete if host leaves, or if it's a Solo/VS_COMPUTER practice match
+    if (
+      match.hostUid === playerUid ||
+      match.mode === "VS_COMPUTER" ||
+      (match.title && match.title.includes("SOLO"))
+    ) {
+      await deleteDoc(matchRef);
+      return;
+    }
 
-  await updateDoc(matchRef, {
-    players,
-    updatedAt: serverTimestamp(),
-  });
+    if (!match.players || !match.players[playerUid]) return;
+
+    const players = { ...match.players };
+    delete players[playerUid];
+
+    // Auto-delete if no human players remain
+    const remainingHumans = Object.values(players).filter((p) => !p.isBot);
+    if (remainingHumans.length === 0) {
+      await deleteDoc(matchRef);
+      return;
+    }
+
+    await updateDoc(matchRef, {
+      players,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (err) {
+    console.warn("[Arcade] Error in leaveArcadeMatch:", err);
+  }
 }
 
 // ── Subscribe to Match ───────────────────────────────────────────────────────
@@ -2061,7 +2091,15 @@ export function subscribeLobbyArcadeMatches(
       const list: ArcadeMatch[] = [];
       snap.forEach((d) => {
         const data = d.data();
-        if ((data.isArcade || data.gameType) && data.gameType) {
+        // Garbage collect dead or solo bot practice rooms so they don't linger
+        if (data.mode === "VS_COMPUTER" || data.title?.includes("SOLO") || data.status === "FINISHED") {
+          // Asynchronously clean up stale practice/finished documents
+          deleteDoc(d.ref).catch(() => {});
+          return;
+        }
+
+        // Only show live Multiplayer PvP rooms for other humans
+        if ((data.isArcade || data.gameType) && data.gameType && data.mode === "MULTIPLAYER") {
           list.push({ id: d.id, ...data } as ArcadeMatch);
         }
       });
@@ -2074,7 +2112,11 @@ export function subscribeLobbyArcadeMatches(
         const list: ArcadeMatch[] = [];
         s.forEach((d) => {
           const data = d.data();
-          if ((data.isArcade || data.gameType) && data.gameType) {
+          if (data.mode === "VS_COMPUTER" || data.title?.includes("SOLO") || data.status === "FINISHED") {
+            deleteDoc(d.ref).catch(() => {});
+            return;
+          }
+          if ((data.isArcade || data.gameType) && data.gameType && data.mode === "MULTIPLAYER") {
             list.push({ id: d.id, ...data } as ArcadeMatch);
           }
         });
