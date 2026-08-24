@@ -59,6 +59,9 @@ import LiveVoiceFilterDock from "@/app/components/arcade/LiveVoiceFilterDock";
 import MidnightGhostGrid from "@/app/components/arcade/MidnightGhostGrid";
 import ChallengeLauncherModal from "@/app/components/arcade/ChallengeLauncherModal";
 import IncomingChallengeListener from "@/app/components/arcade/IncomingChallengeListener";
+import VoicePartyLounge from "@/app/components/arcade/VoicePartyLounge";
+import VoiceMechanicGames from "@/app/components/arcade/VoiceMechanicGames";
+import { TERMINAL_BADGES, getAllBadges } from "@/lib/terminalBadges";
 import { type VoiceFilterMode } from "@/lib/voiceModulator";
 import { type GhostLoungePreset } from "@/lib/midnightGhost";
 import {
@@ -82,6 +85,8 @@ import {
   Video,
   Moon,
   Volume2,
+  Activity,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { collection, query, limit, onSnapshot } from "firebase/firestore";
@@ -170,6 +175,9 @@ function ArcadeContent() {
 
   const [voiceDockOpen, setVoiceDockOpen] = useState(false);
   const [activeVoiceFilter, setActiveVoiceFilter] = useState<VoiceFilterMode>("clean");
+  const [voicePartyOpen, setVoicePartyOpen] = useState(false);
+  const [voiceMechanicOpen, setVoiceMechanicOpen] = useState(false);
+  const [badgesModalOpen, setBadgesModalOpen] = useState(false);
 
   const handleOpenChallenge = (gameType = "ludo", gameName = "Ludo Cyber Master", rId = "room_8912", mId = "match_8912") => {
     setChallengeParams({ gameType, gameName, roomId: rId, matchId: mId });
@@ -409,6 +417,44 @@ function ArcadeContent() {
           >
             <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
             <span>[ 🎙️ VOICE FX ]</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setVoicePartyOpen(!voicePartyOpen)}
+            className={`px-2.5 py-1 border font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer ${
+              voicePartyOpen
+                ? "border-purple-400 bg-purple-400 text-black"
+                : "border-purple-800 bg-purple-950/40 text-purple-300 hover:border-purple-400"
+            }`}
+            title="60s Roast Ring, Defend Absurd, Mimicry & Truth/Dare"
+          >
+            <Mic2 className="w-3.5 h-3.5 text-purple-400" />
+            <span className="hidden sm:inline">[ 🎙️ VOICE PARTY ]</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setVoiceMechanicOpen(!voiceMechanicOpen)}
+            className={`px-2.5 py-1 border font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer ${
+              voiceMechanicOpen
+                ? "border-cyan-400 bg-cyan-400 text-black"
+                : "border-cyan-800 bg-cyan-950/40 text-cyan-300 hover:border-cyan-400"
+            }`}
+            title="Decibel Limbo, Reverse Audio Echo, Pitch Match"
+          >
+            <Activity className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="hidden sm:inline">[ 🎚️ VOICE GAMES ]</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setBadgesModalOpen(true)}
+            className="px-2.5 py-1 border border-yellow-500/80 bg-yellow-950/40 text-yellow-300 hover:bg-yellow-400 hover:text-black font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
+            title="View Terminal Winner Badges & Profile Flairs"
+          >
+            <Crown className="w-3.5 h-3.5 text-yellow-400" />
+            <span className="hidden sm:inline">[ 👑 BADGES ]</span>
           </button>
 
           <button
@@ -683,6 +729,23 @@ function ArcadeContent() {
                 </button>
               </div>
             </div>
+
+            {/* Voice Party & Social Confession Lounges (Roast Ring, Defend Absurd, Mimicry, Truth/Dare) */}
+            {voicePartyOpen && (
+              <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+                <VoicePartyLounge
+                  currentUid={user?.uid || ""}
+                  userHandle={user?.handle || "@PLAYER"}
+                />
+              </div>
+            )}
+
+            {/* Innovative Voice-Mechanic Games (Decibel Limbo, Reverse Echo, Pitch Match) */}
+            {voiceMechanicOpen && (
+              <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+                <VoiceMechanicGames />
+              </div>
+            )}
 
             {/* The Midnight Ghost Grid (FOMO Time-Locked Lounges 11 PM - 4 AM) */}
             <MidnightGhostGrid onJoinGhostLounge={handleJoinGhostLounge} />
@@ -1053,6 +1116,51 @@ function ArcadeContent() {
           setActiveMatchId(challenge.roomId);
         }}
       />
+
+      {/* Terminal Winner Badges & Profile Flairs Modal */}
+      {badgesModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/90 backdrop-blur-md animate-in fade-in select-none">
+          <div className="relative w-full max-w-2xl bg-black border-2 border-yellow-400 p-4 sm:p-6 font-mono text-white shadow-[0_0_60px_rgba(250,204,21,0.2)] max-h-[90vh] overflow-y-auto space-y-4">
+            <button
+              onClick={() => setBadgesModalOpen(false)}
+              className="absolute top-4 right-4 p-1.5 border border-neutral-700 hover:border-white text-neutral-400 hover:text-white transition-all cursor-pointer rounded"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="space-y-1 border-b border-neutral-800 pb-3">
+              <div className="flex items-center gap-2 text-yellow-400 text-xs font-black uppercase tracking-widest">
+                <Crown className="w-4 h-4 text-yellow-400 animate-bounce" />
+                <span>// TERMINAL WINNER BADGES & PROFILE FLAIRS</span>
+              </div>
+              <h2 className="text-base sm:text-lg font-black uppercase text-white">
+                Glowing Neon Elite Accolades
+              </h2>
+              <p className="text-xs text-neutral-400">
+                Unlock glowing neon badges by dominating matches and displaying flairs on handles & rooms.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {getAllBadges().map((badge) => (
+                <div
+                  key={badge.code}
+                  className={`p-3.5 border-2 rounded-xl space-y-2 ${badge.borderColor} ${badge.bgGlow}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xl">{badge.icon}</span>
+                    <span className={`text-[10px] font-black uppercase font-mono ${badge.color}`}>
+                      {badge.tag}
+                    </span>
+                  </div>
+                  <h4 className="text-xs font-black uppercase text-white">{badge.title}</h4>
+                  <p className="text-[10px] text-neutral-300">{badge.unlockCondition}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
