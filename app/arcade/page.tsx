@@ -16,10 +16,10 @@ import {
 import LudoGame from "@/app/components/arcade/LudoGame";
 import ChessGame from "@/app/components/arcade/ChessGame";
 import Connect4Game from "@/app/components/arcade/Connect4Game";
-import BattleshipGame from "@/app/components/arcade/BattleshipGame";
 import SudokuGame from "@/app/components/arcade/SudokuGame";
 import Game2048 from "@/app/components/arcade/Game2048";
 import WordleGame from "@/app/components/arcade/WordleGame";
+import SnakeGame from "@/app/components/arcade/SnakeGame";
 import PoolGame from "@/app/components/arcade/PoolGame";
 import CarromGame from "@/app/components/arcade/CarromGame";
 import GlowHockeyGame from "@/app/components/arcade/GlowHockeyGame";
@@ -32,12 +32,8 @@ import UnoGame from "@/app/components/arcade/UnoGame";
 import RummyGame from "@/app/components/arcade/RummyGame";
 import CallBreakGame from "@/app/components/arcade/CallBreakGame";
 import TeenPattiGame from "@/app/components/arcade/TeenPattiGame";
-import SattePeSattaGame from "@/app/components/arcade/SattePeSattaGame";
 import CheatBluffGame from "@/app/components/arcade/CheatBluffGame";
-import LiarsDiceGame from "@/app/components/arcade/LiarsDiceGame";
-import CodenamesGame from "@/app/components/arcade/CodenamesGame";
 import SkribblGame from "@/app/components/arcade/SkribblGame";
-import YahtzeeGame from "@/app/components/arcade/YahtzeeGame";
 import MelodyBuzzerGame from "@/app/components/arcade/MelodyBuzzerGame";
 import TabooGame from "@/app/components/arcade/TabooGame";
 import PitchArenaGame from "@/app/components/arcade/PitchArenaGame";
@@ -106,49 +102,44 @@ interface MasterRankedGame {
 }
 
 const MASTER_50_GAMES: MasterRankedGame[] = [
-  // ── ♠️ Card & Bluffing ──
-  { id: "rummy", name: "Indian Rummy", category: "CARD", icon: "🃏", isPlayable: true },
-  { id: "call_break", name: "Call Break", category: "CARD", icon: "♠️", isPlayable: true },
-  { id: "teen_patti", name: "Teen Patti", category: "CARD", icon: "🔥", isPlayable: true },
+  // ── 🔥 Most Popular & Essential Classics (Top Tier) ──
+  { id: "ludo", name: "Ludo", category: "TACTICAL", icon: "🎲", isPlayable: true },
   { id: "uno", name: "Uno", category: "CARD", icon: "🎴", isPlayable: true },
-  { id: "cheat_bluff", name: "Cheat / Bluff", category: "CARD", icon: "🚨", isPlayable: true },
-  { id: "poker", name: "Texas Hold'em Poker", category: "CARD", icon: "♦️", isPlayable: true },
-  { id: "blackjack", name: "Blackjack 21", category: "CARD", icon: "♣️", isPlayable: true },
-
-  // ── 👑 Nostalgic Paper & Desi ──
+  { id: "glow_hockey", name: "Glow Hockey", category: "PHYSICS", icon: "⚡", isPlayable: true },
+  { id: "snake", name: "Retro Snake", category: "PUZZLE", icon: "🐍", isPlayable: true },
+  { id: "teen_patti", name: "Teen Patti", category: "CARD", icon: "🔥", isPlayable: true },
   { id: "raja_mantri", name: "Raja Mantri Chor Sipahi", category: "PAPER", icon: "👑", isPlayable: true },
-  { id: "hand_cricket", name: "Hand Cricket", category: "PAPER", icon: "🏏", isPlayable: true },
   { id: "book_cricket", name: "Book Cricket", category: "PAPER", icon: "📖", isPlayable: true },
-  { id: "bingo", name: "Bingo", category: "PAPER", icon: "🔢", isPlayable: true },
-  { id: "npat", name: "Name Place Animal Thing", category: "PAPER", icon: "📝", isPlayable: true },
-  { id: "hangman", name: "Hangman", category: "PAPER", icon: "🔤", isPlayable: true },
-
-  // ── 🎱 2D Physics & Tabletop ──
+  { id: "hand_cricket", name: "Hand Cricket", category: "PAPER", icon: "🏏", isPlayable: true },
   { id: "pool", name: "8-Ball Pool", category: "PHYSICS", icon: "🎱", isPlayable: true },
   { id: "carrom", name: "Carrom", category: "PHYSICS", icon: "⚪", isPlayable: true },
-  { id: "glow_hockey", name: "Glow Hockey", category: "PHYSICS", icon: "⚡", isPlayable: true },
-
-  // ── ♟️ Tactical Boards & Grids ──
-  { id: "ludo", name: "Ludo", category: "TACTICAL", icon: "🎲", isPlayable: true },
+  { id: "rummy", name: "Indian Rummy", category: "CARD", icon: "🃏", isPlayable: true },
   { id: "chess", name: "Chess", category: "TACTICAL", icon: "♟️", isPlayable: true },
   { id: "connect4", name: "Connect 4", category: "TACTICAL", icon: "🔴", isPlayable: true },
+  { id: "call_break", name: "Call Break", category: "CARD", icon: "♠️", isPlayable: true },
+  { id: "bingo", name: "Bingo", category: "PAPER", icon: "🔢", isPlayable: true },
   { id: "snakes_and_ladders", name: "Snakes & Ladders", category: "TACTICAL", icon: "🪜", isPlayable: true },
   { id: "dots_and_boxes", name: "Dots and Boxes", category: "TACTICAL", icon: "🕸️", isPlayable: true },
 
-  // ── 🎙️ Voice Party & Deduction ──
+  // ── 📝 Word, Deduction & Solo Logic ──
+  { id: "npat", name: "Name Place Animal Thing", category: "PAPER", icon: "📝", isPlayable: true },
+  { id: "hangman", name: "Hangman", category: "PAPER", icon: "🔤", isPlayable: true },
   { id: "skribbl", name: "Skribbl", category: "PARTY", icon: "🎨", isPlayable: true },
+  { id: "2048", name: "2048", category: "PUZZLE", icon: "🔢", isPlayable: true },
+  { id: "wordle", name: "Wordle", category: "PUZZLE", icon: "🔐", isPlayable: true },
+  { id: "sudoku", name: "Sudoku", category: "PUZZLE", icon: "🧩", isPlayable: true },
+  { id: "puzzle15", name: "15 Puzzle", category: "PUZZLE", icon: "🔢", isPlayable: true },
+  { id: "math_blitz", name: "Math Blitz", category: "PUZZLE", icon: "⚡", isPlayable: true },
+
+  // ── ♠️ Card, Wagering & Voice Party ──
+  { id: "poker", name: "Texas Hold'em Poker", category: "CARD", icon: "♦️", isPlayable: true },
+  { id: "blackjack", name: "Blackjack 21", category: "CARD", icon: "♣️", isPlayable: true },
+  { id: "cheat_bluff", name: "Cheat / Bluff", category: "CARD", icon: "🚨", isPlayable: true },
   { id: "twenty_questions", name: "20 Questions", category: "PARTY", icon: "❓", isPlayable: true },
   { id: "melody_buzzer", name: "Melody Relay", category: "PARTY", icon: "🎵", isPlayable: true },
   { id: "two_truths", name: "Two Truths & a Lie", category: "PARTY", icon: "🎭", isPlayable: true },
   { id: "taboo", name: "Taboo", category: "PARTY", icon: "🚫", isPlayable: true },
   { id: "pitch_arena", name: "Pitch Arena", category: "PARTY", icon: "🎙️", isPlayable: true },
-
-  // ── 🧩 Solo Logic & Puzzles ──
-  { id: "sudoku", name: "Sudoku", category: "PUZZLE", icon: "🧩", isPlayable: true },
-  { id: "2048", name: "2048", category: "PUZZLE", icon: "🔢", isPlayable: true },
-  { id: "wordle", name: "Wordle", category: "PUZZLE", icon: "🔐", isPlayable: true },
-  { id: "math_blitz", name: "Math Blitz", category: "PUZZLE", icon: "⚡", isPlayable: true },
-  { id: "puzzle15", name: "15 Puzzle", category: "PUZZLE", icon: "🔢", isPlayable: true },
 ];
 
 function ArcadeContent() {
@@ -595,9 +586,6 @@ function ArcadeContent() {
             {activeMatch.gameType === "teen_patti" && (
               <TeenPattiGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
             )}
-            {activeMatch.gameType === "satte_pe_satta" && (
-              <SattePeSattaGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
-            )}
             {activeMatch.gameType === "cheat_bluff" && (
               <CheatBluffGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
             )}
@@ -610,17 +598,8 @@ function ArcadeContent() {
             {activeMatch.gameType === "uno" && (
               <UnoGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
             )}
-            {activeMatch.gameType === "liars_dice" && (
-              <LiarsDiceGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
-            )}
-            {activeMatch.gameType === "codenames" && (
-              <CodenamesGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
-            )}
             {activeMatch.gameType === "skribbl" && (
               <SkribblGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
-            )}
-            {activeMatch.gameType === "yahtzee" && (
-              <YahtzeeGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
             )}
             {activeMatch.gameType === "taboo" && (
               <TabooGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
@@ -670,6 +649,9 @@ function ArcadeContent() {
             {activeMatch.gameType === "glow_hockey" && (
               <GlowHockeyGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
             )}
+            {activeMatch.gameType === "snake" && (
+              <SnakeGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+            )}
             {activeMatch.gameType === "chess" && (
               <ChessGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
             )}
@@ -681,9 +663,6 @@ function ArcadeContent() {
             )}
             {activeMatch.gameType === "connect4" && (
               <Connect4Game match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
-            )}
-            {activeMatch.gameType === "battleship" && (
-              <BattleshipGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
             )}
             {activeMatch.gameType === "sudoku" && (
               <SudokuGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />

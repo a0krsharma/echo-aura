@@ -2063,14 +2063,12 @@ export function subscribeArcadeMatch(
     matchRef,
     (snap) => {
       if (!snap.exists()) {
-        callback(null);
         return;
       }
       callback({ id: snap.id, ...snap.data() } as ArcadeMatch);
     },
     (err) => {
       console.error("[Arcade] subscribe error:", err);
-      callback(null);
     }
   );
 }
