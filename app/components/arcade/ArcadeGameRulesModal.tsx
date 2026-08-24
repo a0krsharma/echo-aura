@@ -73,24 +73,6 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
     scoring: "Winner takes entire accumulated coin pot + Aura bonus.",
     proTip: "Playing Blind exerts psychological pressure and cuts betting costs in half!"
   },
-  satte_pe_satta: {
-    id: "satte_pe_satta",
-    name: "Satte Pe Satta (7 of Hearts)",
-    rank: 7,
-    category: "Card & Bluffing",
-    icon: "❤️",
-    overview: "Fast-paced card shedding race. The player holding the 7 of Hearts opens the table. Players then expand suits upward (8->K) and downward (6->A) or open other 7s.",
-    howToPlay: [
-      "The entire deck is dealt out evenly among players.",
-      "The player holding the 7 of Hearts (7♥) must place it face-up in the center to start.",
-      "On your turn, play any other 7 to open a new suit, or extend an existing suit up (8->9->10->J->Q->K) or down (6->5->4->3->2->A).",
-      "If you have no legal connecting card, you must pass your turn.",
-      "The first player to shed all cards from their hand wins."
-    ],
-    voiceGuide: "Laugh and tease opponents when blocking high cards or forcing them to pass on mic.",
-    scoring: "First to empty hand wins +180 Aura; remaining players receive penalty points per leftover card.",
-    proTip: "Hold onto connecting 6s and 8s to block opponents from shedding their Kings and Aces!"
-  },
   bhabhi_thulla: {
     id: "bhabhi_thulla",
     name: "Bhabhi / Thulla (Get Away)",
@@ -234,24 +216,6 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
     voiceGuide: "Work through tough logic corners cooperatively with listeners on the voice channel.",
     scoring: "+150 Aura for complete error-free matrix resolution.",
     proTip: "Use candidate elimination: scan for rows that only have one missing number first."
-  },
-  codenames: {
-    id: "codenames",
-    name: "Mafia & Codenames Decryption",
-    rank: 8,
-    category: "Voice Party & Social Deduction",
-    icon: "🎭",
-    overview: "5x5 word matrix deduction. Spymasters view secret role keys and give one-word clues with a number. Operatives tap grid cards to reveal agents while avoiding the Assassin!",
-    howToPlay: [
-      "5x5 grid contains 25 word cards.",
-      "Spymasters see the color key (Red, Blue, Neutral, Assassin).",
-      "Spymaster gives a clue on voice (e.g. 'Ocean 2').",
-      "Operatives tap cards to reveal their team's agents.",
-      "Revealing the black Assassin card causes instant round defeat!"
-    ],
-    voiceGuide: "Spymasters must maintain a completely neutral vocal tone to avoid giving illegal audio hints.",
-    scoring: "+200 Aura for the winning team.",
-    proTip: "Link multiple words with conceptual categories (e.g., 'Physics 3' for Wave, Laser, Energy)."
   },
   raja_mantri: {
     id: "raja_mantri",
@@ -410,23 +374,6 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
     scoring: "+40 Aura per successful round.",
     proTip: "Think of uncommon obscure geographic places to ensure unique answers!"
   },
-  battleship: {
-    id: "battleship",
-    name: "Battleship Radar Command",
-    rank: 19,
-    category: "Tactical Boards & Grids",
-    icon: "🚢",
-    overview: "10x10 naval sub-grid deduction. Call out grid coordinates (A1 to J10) to locate and sink enemy hidden carriers, destroyers, and submarines.",
-    howToPlay: [
-      "Place your fleet of 5 ships on your private 10x10 coordinate grid.",
-      "Take turns calling coordinate strikes on the opponent's radar grid.",
-      "Hits reveal ship segments; Misses show splash markers.",
-      "First player to sink all 17 ship segments wins."
-    ],
-    voiceGuide: "Act surprised or bluff relief when opponents strike near your Carrier!",
-    scoring: "+180 Aura to the commanding Admiral.",
-    proTip: "Use a checkerboard firing pattern (every alternate square) to locate large ships with 50% fewer shots!"
-  },
   minesweeper: {
     id: "minesweeper",
     name: "Minesweeper Clear",
@@ -532,23 +479,6 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
     scoring: "+150 Aura for decrypting the word.",
     proTip: "Always test common vowels (E, A, I, O) and frequent consonants (R, S, T, N) first!"
   },
-  liars_dice: {
-    id: "liars_dice",
-    name: "Liar's Dice / Perudo",
-    rank: 30,
-    category: "Card & Bluffing",
-    icon: "🎲",
-    overview: "High-stakes dice bluffing. Players roll 5 dice in secret trays. Bid consecutively on the total global count of a specific face value until someone calls 'BLUFF!'",
-    howToPlay: [
-      "Roll 5 secret dice hidden in your tray.",
-      "Make a bid on the total number of dice showing a specific face (e.g. 'Four 5s').",
-      "Next player must raise the quantity or higher face value, or tap [ CALL BLUFF! ].",
-      "Showdown reveals all dice: if the bid was true, challenger loses; if false, bidder loses."
-    ],
-    voiceGuide: "Listen closely to voice inflections, hesitations, and confidence levels when bids escalate.",
-    scoring: "+180 Aura to the surviving master bluff.",
-    proTip: "1s (Aces) are wild, meaning they count as any called face value!"
-  },
   gomoku: {
     id: "gomoku",
     name: "Gomoku (Five in a Row)",
@@ -582,23 +512,6 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
     voiceGuide: "Call out corner flips and board edge control on voice.",
     scoring: "+160 Aura to the player with the most disks.",
     proTip: "Corners are permanent and cannot be flipped back! Control the 4 corner squares at all costs."
-  },
-  yahtzee: {
-    id: "yahtzee",
-    name: "Yahtzee / Yacht Dice",
-    rank: 40,
-    category: "Card & Bluffing",
-    icon: "🎲",
-    overview: "5-dice probability optimization. Roll dice up to 3 times per turn, locking desired faces to complete scoring combinations (Full House, Straights, Yahtzee 5-of-a-kind).",
-    howToPlay: [
-      "Roll 5 dice on your turn.",
-      "Tap dice to lock/unlock them, and re-roll the rest up to 2 additional times.",
-      "Select a scorecard category (e.g. Fives, Three-of-a-kind, Large Straight, Yahtzee).",
-      "Accumulate the highest total points across all 13 scorecard rounds."
-    ],
-    voiceGuide: "Cheer for high-stakes 5-of-a-kind Yahtzee rolls on stage.",
-    scoring: "+200 Aura for highest final scorecard total.",
-    proTip: "If rolling 3-of-a-kind early, prioritize going for a Full House or 4-of-a-kind!"
   },
   math_blitz: {
     id: "math_blitz",

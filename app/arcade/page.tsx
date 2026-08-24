@@ -111,11 +111,9 @@ const MASTER_50_GAMES: MasterRankedGame[] = [
   { id: "call_break", name: "Call Break", category: "CARD", icon: "♠️", isPlayable: true },
   { id: "teen_patti", name: "Teen Patti", category: "CARD", icon: "🔥", isPlayable: true },
   { id: "uno", name: "Uno", category: "CARD", icon: "🎴", isPlayable: true },
-  { id: "satte_pe_satta", name: "Satte Pe Satta", category: "CARD", icon: "❤️", isPlayable: true },
   { id: "cheat_bluff", name: "Cheat / Bluff", category: "CARD", icon: "🚨", isPlayable: true },
   { id: "poker", name: "Texas Hold'em Poker", category: "CARD", icon: "♦️", isPlayable: true },
   { id: "blackjack", name: "Blackjack 21", category: "CARD", icon: "♣️", isPlayable: true },
-  { id: "liars_dice", name: "Liar's Dice", category: "CARD", icon: "🎲", isPlayable: true },
 
   // ── 👑 Nostalgic Paper & Desi ──
   { id: "raja_mantri", name: "Raja Mantri Chor Sipahi", category: "PAPER", icon: "👑", isPlayable: true },
@@ -136,11 +134,9 @@ const MASTER_50_GAMES: MasterRankedGame[] = [
   { id: "connect4", name: "Connect 4", category: "TACTICAL", icon: "🔴", isPlayable: true },
   { id: "snakes_and_ladders", name: "Snakes & Ladders", category: "TACTICAL", icon: "🪜", isPlayable: true },
   { id: "dots_and_boxes", name: "Dots and Boxes", category: "TACTICAL", icon: "🕸️", isPlayable: true },
-  { id: "battleship", name: "Battleship", category: "TACTICAL", icon: "🚢", isPlayable: true },
 
   // ── 🎙️ Voice Party & Deduction ──
   { id: "skribbl", name: "Skribbl", category: "PARTY", icon: "🎨", isPlayable: true },
-  { id: "codenames", name: "Codenames", category: "PARTY", icon: "🕵️", isPlayable: true },
   { id: "twenty_questions", name: "20 Questions", category: "PARTY", icon: "❓", isPlayable: true },
   { id: "melody_buzzer", name: "Melody Relay", category: "PARTY", icon: "🎵", isPlayable: true },
   { id: "two_truths", name: "Two Truths & a Lie", category: "PARTY", icon: "🎭", isPlayable: true },
@@ -153,7 +149,6 @@ const MASTER_50_GAMES: MasterRankedGame[] = [
   { id: "wordle", name: "Wordle", category: "PUZZLE", icon: "🔐", isPlayable: true },
   { id: "math_blitz", name: "Math Blitz", category: "PUZZLE", icon: "⚡", isPlayable: true },
   { id: "puzzle15", name: "15 Puzzle", category: "PUZZLE", icon: "🔢", isPlayable: true },
-  { id: "yahtzee", name: "Yahtzee", category: "PUZZLE", icon: "🎲", isPlayable: true },
 ];
 
 function ArcadeContent() {
