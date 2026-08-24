@@ -634,6 +634,174 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
     scoring: "+180 Aura to the winning runner.",
     proTip: "Save at least 3 walls for the endgame to block opponent final sprints!"
   },
+  chess: {
+    id: "chess",
+    name: "Cyber Chess Grandmaster",
+    rank: 5,
+    category: "Tactical Boards & Grids",
+    icon: "♟️",
+    overview: "8x8 timed checkmate battle. Standard FIDE movement rules with timed turns and check/checkmate verification.",
+    howToPlay: [
+      "White moves first. Players alternate turns moving one piece per legal movement rules.",
+      "Pawns move forward 1 square (or 2 on initial move) and capture diagonally.",
+      "Knights move in an L-shape and can jump over other pieces.",
+      "Bishops move diagonally; Rooks move horizontally and vertically; Queen combines both.",
+      "King moves 1 square in any direction. Place the enemy King in inescapable check to win by Checkmate."
+    ],
+    voiceGuide: "Analyze positional blunders, offer draws, and discuss tactics over live audio.",
+    scoring: "+250 Aura for Checkmate victory.",
+    proTip: "Control the 4 central squares (e4, d4, e5, d5) early to dominate piece mobility!"
+  },
+  carrom: {
+    id: "carrom",
+    name: "Cyber Carrom Strike Arena",
+    rank: 6,
+    category: "2D Physics & Tabletop",
+    icon: "⚪",
+    overview: "2D physics carrom strike arena. Drag and aim the striker along the baseline to pocket carrom men into 4 corner pockets.",
+    howToPlay: [
+      "Place striker on your baseline and drag backward to aim angle and release power.",
+      "Pocket White carrom men (+10 pts) or Black men (+5 pts).",
+      "Pocket the Red Queen (+25 pts) followed immediately by a cover carrom man on the next shot.",
+      "Pocketing your own striker incurs a penalty foul."
+    ],
+    voiceGuide: "Banter with opponents on rebound bank shots and corner defense.",
+    scoring: "+200 Aura for highest score upon board clearance.",
+    proTip: "Use gentle bank angles off side cushions rather than maximum force!"
+  },
+  pool: {
+    id: "pool",
+    name: "8-Ball Pool Matrix",
+    rank: 8,
+    category: "2D Physics & Tabletop",
+    icon: "🎱",
+    overview: "2D physics billiards table. Break the rack, pocket Solids (1-7) or Stripes (9-15), and legally pocket the 8-Ball to claim victory.",
+    howToPlay: [
+      "Drag cue stick backward to adjust strike power and line up trajectory.",
+      "After the break, the first pocketed group assigns your target set (Solids or Stripes).",
+      "Clear all balls in your designated group before pocketing the 8-Ball (Black).",
+      "Pocketing the 8-Ball prematurely results in an immediate loss."
+    ],
+    voiceGuide: "Call your pocket shots and strategize table control on mic.",
+    scoring: "+220 Aura for legally potting the 8-Ball.",
+    proTip: "Plan 2 shots ahead: position the cue ball where your next shot is unobstructed!"
+  },
+  "2048": {
+    id: "2048",
+    name: "2048 Binary Merge",
+    rank: 18,
+    category: "Solo Logic & Puzzles",
+    icon: "🔢",
+    overview: "4x4 sliding tile merge matrix. Slide tiles up, down, left, or right to combine matching numbers and create the legendary 2048 tile!",
+    howToPlay: [
+      "Swipe or press Arrow keys to slide all tiles in that direction.",
+      "When two tiles with the same number collide, they merge into one (2+2=4, 4+4=8, etc.).",
+      "A new tile (2 or 4) spawns after every move.",
+      "Game ends when the grid fills with no valid merges remaining."
+    ],
+    voiceGuide: "Share your high scores and celebrate merge streaks with spectators.",
+    scoring: "+150 Aura for reaching 2048.",
+    proTip: "Keep your highest number tile locked in a single corner (e.g. bottom-right)!"
+  },
+  puzzle15: {
+    id: "puzzle15",
+    name: "15-Puzzle Sliding Matrix",
+    rank: 32,
+    category: "Solo Logic & Puzzles",
+    icon: "🧩",
+    overview: "4x4 grid of 15 numbered tiles and 1 empty slot. Slide tiles into numerical sequence 1 through 15.",
+    howToPlay: [
+      "Tap any tile adjacent to the empty slot to slide it into the space.",
+      "Arrange the top row first (1-2-3-4), followed by the second row (5-6-7-8).",
+      "Solve the bottom two rows systematically until tiles 1 to 15 are ordered."
+    ],
+    voiceGuide: "Race friends on fastest completion time over live audio.",
+    scoring: "+120 Aura for completing the 15-slider.",
+    proTip: "Solve row by row from top to bottom rather than column by column!"
+  },
+  taboo: {
+    id: "taboo",
+    name: "Taboo Word Shield",
+    rank: 30,
+    category: "Voice Party & Social Deduction",
+    icon: "🚫",
+    overview: "Voice vocabulary challenge. Describe the secret keyword to your team without uttering any of the 4 forbidden taboo words!",
+    howToPlay: [
+      "The speaker sees a secret keyword and 4 forbidden taboo words.",
+      "Describe the keyword using voice clues before the 60s buzzer sounds.",
+      "If you accidentally say a taboo word, the opposing team hits the BUZZER for a penalty.",
+      "Team with the most correctly guessed words wins."
+    ],
+    voiceGuide: "High-energy fast-talking voice descriptions on open microphone.",
+    scoring: "+200 Aura for highest team score.",
+    proTip: "Use antonyms, metaphors, and real-life scenarios rather than direct synonyms!"
+  },
+  melody_buzzer: {
+    id: "melody_buzzer",
+    name: "Antakshari / Melody Hummer",
+    rank: 28,
+    category: "Voice Party & Social Deduction",
+    icon: "🎵",
+    overview: "Voice singing and music relay. Hum or sing melodies on mic; opponents hit the speed buzzer to guess song title and artist.",
+    howToPlay: [
+      "Speaker hums or sings a tune without saying the song lyrics.",
+      "Room participants hit the BUZZER to claim a 5-second guess window.",
+      "Correct guess earns +10 pts; wrong guess passes the turn."
+    ],
+    voiceGuide: "Humming and vocal melody relay across the voice lounge.",
+    scoring: "+150 Aura to the music master.",
+    proTip: "Focus on the song's most iconic chorus hook rather than the intro!"
+  },
+  twenty_questions: {
+    id: "twenty_questions",
+    name: "20 Questions / Decryption",
+    rank: 26,
+    category: "Voice Party & Social Deduction",
+    icon: "❓",
+    overview: "Verbal deduction interrogation. Players ask up to 20 Yes/No questions to identify the secret entity chosen by the host.",
+    howToPlay: [
+      "Host chooses a secret entity (Person, Place, Object, or Concept).",
+      "Participants take turns asking Yes/No questions on mic.",
+      "Host answers strictly 'Yes', 'No', or 'Irrelevant'.",
+      "Guess the secret entity before question #20 to win."
+    ],
+    voiceGuide: "Cross-examine and narrow down categories through group voice debate.",
+    scoring: "+160 Aura for cracking the entity in under 15 questions.",
+    proTip: "Start with broad binary filters ('Is it alive?', 'Is it manufactured?') before specifics!"
+  },
+  two_truths: {
+    id: "two_truths",
+    name: "Two Truths & a Lie",
+    rank: 29,
+    category: "Voice Party & Social Deduction",
+    icon: "🎭",
+    overview: "Social bluffing and audio tell deduction. Speak 2 genuine truths and 1 fabricated lie; room votes on the falsehood.",
+    howToPlay: [
+      "The speaker states 3 personal statements on mic (2 true, 1 lie).",
+      "Room participants cross-examine the speaker's voice inflections and confidence.",
+      "Audience votes on which statement is the lie.",
+      "Speaker wins points for every player they successfully fool."
+    ],
+    voiceGuide: "Detect subtle vocal hesitation and micro-bluffs on open mic.",
+    scoring: "+140 Aura for successful deception.",
+    proTip: "Make your lie simple and believable, and make your true statements surprisingly wild!"
+  },
+  pitch_arena: {
+    id: "pitch_arena",
+    name: "Pitch Arena (Absurd Defense)",
+    rank: 31,
+    category: "Voice Party & Social Deduction",
+    icon: "🎙️",
+    overview: "60-second rapid absurd defense debate. Deliver an impromptu deadpan presentation defending an absurd product or stance.",
+    howToPlay: [
+      "Terminal assigns an absurd concept (e.g. 'Edible Keyboards').",
+      "Speaker delivers a 60-second high-energy startup elevator pitch.",
+      "Audience tips virtual Volt chips to crown the best presenter."
+    ],
+    voiceGuide: "Charismatic comedic speeches and live audience cheer reactions.",
+    scoring: "+180 Aura for the top-voted pitch.",
+    proTip: "Adopt a deadpan serious tone as if pitching a multi-billion dollar enterprise!"
+  },
 };
 
 interface ArcadeGameRulesModalProps {
@@ -650,6 +818,20 @@ export default function ArcadeGameRulesModal({
   const [selectedId, setSelectedId] = useState<string>(initialGameType);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<string>("ALL");
+
+  // Sync selectedId whenever initialGameType changes or modal opens
+  React.useEffect(() => {
+    if (initialGameType) {
+      const normalized = initialGameType.toLowerCase();
+      // Support aliases
+      const match = ARCADE_GAME_RULES[normalized] ? normalized : (normalized === "game2048" ? "2048" : normalized);
+      if (ARCADE_GAME_RULES[match]) {
+        setSelectedId(match);
+      } else {
+        setSelectedId(initialGameType);
+      }
+    }
+  }, [initialGameType, isOpen]);
 
   if (!isOpen) return null;
 

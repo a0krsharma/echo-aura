@@ -438,13 +438,14 @@ function ArcadeContent() {
             onClick={() => setVoiceMechanicOpen(!voiceMechanicOpen)}
             className={`px-2.5 py-1 border font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer ${
               voiceMechanicOpen
-                ? "border-cyan-400 bg-cyan-400 text-black"
-                : "border-cyan-800 bg-cyan-950/40 text-cyan-300 hover:border-cyan-400"
+                ? "border-amber-400 bg-amber-400 text-black"
+                : "border-amber-800 bg-amber-950/40 text-amber-300 hover:border-amber-400"
             }`}
-            title="Decibel Limbo, Reverse Audio Echo, Pitch Match"
+            title="1v1 Tongue Twister Faceoff with Friend"
           >
-            <Activity className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="hidden sm:inline">[ 🎚️ VOICE GAMES ]</span>
+            <Flame className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">[ 👅 TONGUE TWISTERS ]</span>
+            <span className="sm:hidden">[ 👅 TWISTERS ]</span>
           </button>
 
           <button
@@ -740,10 +741,13 @@ function ArcadeContent() {
               </div>
             )}
 
-            {/* Innovative Voice-Mechanic Games (Decibel Limbo, Reverse Echo, Pitch Match) */}
+            {/* 1v1 Tongue Twister Faceoff with Friend */}
             {voiceMechanicOpen && (
               <div className="animate-in fade-in slide-in-from-top-4 duration-300">
-                <VoiceMechanicGames />
+                <VoiceMechanicGames
+                  userHandle={user?.handle || "@YOU"}
+                  friendHandle="@FRIEND"
+                />
               </div>
             )}
 
