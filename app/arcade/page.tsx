@@ -17,7 +17,6 @@ import ChessGame from "@/app/components/arcade/ChessGame";
 import Connect4Game from "@/app/components/arcade/Connect4Game";
 import BattleshipGame from "@/app/components/arcade/BattleshipGame";
 import SudokuGame from "@/app/components/arcade/SudokuGame";
-import MinesweeperGame from "@/app/components/arcade/MinesweeperGame";
 import Game2048 from "@/app/components/arcade/Game2048";
 import WordleGame from "@/app/components/arcade/WordleGame";
 import PoolGame from "@/app/components/arcade/PoolGame";
@@ -35,14 +34,10 @@ import RummyGame from "@/app/components/arcade/RummyGame";
 import CallBreakGame from "@/app/components/arcade/CallBreakGame";
 import TeenPattiGame from "@/app/components/arcade/TeenPattiGame";
 import SattePeSattaGame from "@/app/components/arcade/SattePeSattaGame";
-import BhabhiThullaGame from "@/app/components/arcade/BhabhiThullaGame";
-import MendicotGame from "@/app/components/arcade/MendicotGame";
 import CheatBluffGame from "@/app/components/arcade/CheatBluffGame";
-import SolitaireGame from "@/app/components/arcade/SolitaireGame";
 import LiarsDiceGame from "@/app/components/arcade/LiarsDiceGame";
 import CodenamesGame from "@/app/components/arcade/CodenamesGame";
 import SkribblGame from "@/app/components/arcade/SkribblGame";
-import QuoridorGame from "@/app/components/arcade/QuoridorGame";
 import YahtzeeGame from "@/app/components/arcade/YahtzeeGame";
 import MelodyBuzzerGame from "@/app/components/arcade/MelodyBuzzerGame";
 import TabooGame from "@/app/components/arcade/TabooGame";
@@ -105,38 +100,33 @@ const MASTER_50_GAMES: MasterRankedGame[] = [
   { rank: 5, id: "chess", name: "Chess (Grid Protocol)", category: "TACTICAL", categoryLabel: "Tactical Board", icon: "♟️", mechanic: "Pure black & white grandmaster mastery with FIDE rule validation.", isPlayable: true },
   { rank: 6, id: "uno", name: "Uno / Crazy Eights", category: "CARD", categoryLabel: "Card & Discard", icon: "🎴", mechanic: "Color, number, and action card matching with turn reversals.", isPlayable: true },
   { rank: 7, id: "satte_pe_satta", name: "Satte Pe Satta (7 of Hearts)", category: "CARD", categoryLabel: "Card Shedding", icon: "❤️", mechanic: "7 of Hearts opening table, extending 8->K and 6->A across four suits.", isPlayable: true },
-  { rank: 8, id: "bhabhi_thulla", name: "Bhabhi / Thulla (Get Away)", category: "CARD", categoryLabel: "Desi Card Escape", icon: "🛡️", mechanic: "Ace of Spades lead, follow suit or throw penalty Thulla to escape being Bhabhi.", isPlayable: true },
-  { rank: 9, id: "mendicot", name: "Mendicot / Dehla Pakad", category: "CARD", categoryLabel: "2v2 Partnership", icon: "👥", mechanic: "Partnership trick-taking capturing all four 10s for a whitewash (Kot).", isPlayable: true },
-  { rank: 10, id: "cheat_bluff", name: "Cheat / Bluff (I Doubt It)", category: "CARD", categoryLabel: "Card Bluffing", icon: "🚨", mechanic: "Sequential face-down discards with high-stakes 'Cheat!' challenge callouts.", isPlayable: true },
-  { rank: 11, id: "poker", name: "Texas Hold'em Poker", category: "CARD", categoryLabel: "Card Bluffing", icon: "♦️", mechanic: "2-card hole, community flop/turn/river betting, and pot calculation.", isPlayable: true },
-  { rank: 12, id: "blackjack", name: "Blackjack 21", category: "CARD", categoryLabel: "Card Probability", icon: "♣️", mechanic: "Hitting, standing, doubling to beat dealer hand total without exceeding 21.", isPlayable: true },
-  { rank: 13, id: "solitaire", name: "Klondike Solitaire", category: "CARD", categoryLabel: "Solo Strategy", icon: "🂠", mechanic: "7-column tableau with alternating red/black builds and 4 foundation piles.", isPlayable: true },
-  { rank: 14, id: "snakes_and_ladders", name: "Snakes & Ladders (Circuit)", category: "TACTICAL", categoryLabel: "Board Race", icon: "🪜", mechanic: "100-tile boustrophedon track with 3D dice rolls and live player tickers.", isPlayable: true },
-  { rank: 15, id: "raja_mantri", name: "Raja Mantri Chor Sipahi", category: "PAPER", categoryLabel: "Paper Chit", icon: "👑", mechanic: "4-chit role distribution with voice cross-examination and micro-bluffing.", isPlayable: true },
-  { rank: 16, id: "hand_cricket", name: "Hand Cricket (Odd-Even)", category: "PAPER", categoryLabel: "Schoolyard Mind", icon: "🏏", mechanic: "1–6 number throws with run accumulation and wicket sniping.", isPlayable: true },
-  { rank: 17, id: "book_cricket", name: "Book Cricket", category: "PAPER", categoryLabel: "Classroom Paper", icon: "📖", mechanic: "Page-flipping run scoring based on even/odd digits.", isPlayable: true },
-  { rank: 18, id: "bingo", name: "Bingo / 25-Cross", category: "PAPER", categoryLabel: "Classroom Grid", icon: "🔢", mechanic: "Crossing off 1–25 called numbers to complete 5 linear lines.", isPlayable: true },
-  { rank: 19, id: "connect4", name: "Connect Four Matrix", category: "TACTICAL", categoryLabel: "Grid Alignment", icon: "🔴", mechanic: "Dropping colored tokens into a 7x6 vertical matrix.", isPlayable: true },
-  { rank: 20, id: "sudoku", name: "Sudoku Data Matrix", category: "PUZZLE", categoryLabel: "Solo Logic", icon: "🧩", mechanic: "9x9 number-placement puzzle with zero calculation errors.", isPlayable: true },
-  { rank: 21, id: "minesweeper", name: "Minesweeper Clear", category: "PUZZLE", categoryLabel: "Solo Logic Grid", icon: "💣", mechanic: "Uncovering numerical grid nodes while isolating logic bombs.", isPlayable: true },
-  { rank: 22, id: "2048", name: "2048 Binary Merge", category: "PUZZLE", categoryLabel: "Tile Merge", icon: "🔢", mechanic: "Merging powers-of-two tiles along a 4x4 sliding grid.", isPlayable: true },
-  { rank: 23, id: "glow_hockey", name: "Glow Hockey", category: "PHYSICS", categoryLabel: "Fast 2D Physics", icon: "⚡", mechanic: "Neon paddle deflection and puck striking duels.", isPlayable: true },
-  { rank: 24, id: "gomoku", name: "Gomoku (5 in a Row)", category: "TACTICAL", categoryLabel: "15x15 Matrix", icon: "⬛", mechanic: "Connecting five consecutive stones on grid intersections.", isPlayable: true },
-  { rank: 25, id: "reversi", name: "Reversi / Othello", category: "TACTICAL", categoryLabel: "Disk Flipping", icon: "🔄", mechanic: "Flanking opponent disks to flip them to your color.", isPlayable: true },
-  { rank: 26, id: "dots_and_boxes", name: "Dots and Boxes (Dabba)", category: "TACTICAL", categoryLabel: "Territory Grid", icon: "🕸️", mechanic: "Drawing lines between nodes to complete 4-sided captured boxes.", isPlayable: true },
-  { rank: 27, id: "quoridor", name: "Quoridor Firewall Runner", category: "TACTICAL", categoryLabel: "Maze Wall Placement", icon: "🧱", mechanic: "Racing pawns across a 9x9 grid while dropping blocking fences.", isPlayable: true },
-  { rank: 28, id: "hangman", name: "Hangman Word Scaffold", category: "PAPER", categoryLabel: "Word Deduction", icon: "🔤", mechanic: "Guessing secret phrase letters before gallows limbs appear.", isPlayable: true },
-  { rank: 29, id: "math_blitz", name: "Arithmetic Math Blitz", category: "PUZZLE", categoryLabel: "Math Speed Duel", icon: "⚡", mechanic: "Rapid 1v1 mental math speed battle with 3s timers.", isPlayable: true },
-  { rank: 30, id: "wordle", name: "Wordle / Cipher", category: "PUZZLE", categoryLabel: "Linguistic Strategy", icon: "🔐", mechanic: "Deduce 5-letter cipher with color feedback.", isPlayable: true },
-  { rank: 31, id: "skribbl", name: "Skribbl / Pictionary", category: "PARTY", categoryLabel: "Vector Canvas", icon: "🎨", mechanic: "Vector path drawing with live open-mic guessing.", isPlayable: true },
-  { rank: 32, id: "codenames", name: "Codenames Decryption", category: "PARTY", categoryLabel: "Deduction Grid", icon: "🕵️", mechanic: "5x5 operative word grid decryption via one-word clues.", isPlayable: true },
-  { rank: 33, id: "twenty_questions", name: "20 Questions / Decryption", category: "PARTY", categoryLabel: "Verbal Deduction", icon: "❓", mechanic: "Yes/No interrogations to identify a hidden entity.", isPlayable: true },
-  { rank: 34, id: "npat", name: "Name, Place, Animal, Thing", category: "PAPER", categoryLabel: "Rapid Vocabulary", icon: "📝", mechanic: "30-second timed round naming categories for a specific letter.", isPlayable: true },
-  { rank: 35, id: "melody_buzzer", name: "Antakshari / Melody Relay", category: "PARTY", categoryLabel: "Voice Music Relay", icon: "🎵", mechanic: "Singing/reciting poetry starting with previous ending verse.", isPlayable: true },
-  { rank: 36, id: "two_truths", name: "Two Truths & a Lie", category: "PARTY", categoryLabel: "Voice Bluffing", icon: "🎭", mechanic: "Audio deduction identifying 1 fabricate lie amongst truths.", isPlayable: true },
-  { rank: 37, id: "taboo", name: "Taboo Word Shield", category: "PARTY", categoryLabel: "Voice Vocabulary", icon: "🚫", mechanic: "Describing keywords without uttering forbidden taboo terms.", isPlayable: true },
-  { rank: 38, id: "pitch_arena", name: "Pitch Arena (Absurd Defense)", category: "PARTY", categoryLabel: "Voice Debate", icon: "🎙️", mechanic: "60-second rapid absurd pitch with audience tip voting.", isPlayable: true },
-  { rank: 39, id: "puzzle15", name: "15-Puzzle Sliding Matrix", category: "PUZZLE", categoryLabel: "Tile Sliding", icon: "🔢", mechanic: "Sliding numbered square tiles into 1-15 numerical order.", isPlayable: true },
+  { rank: 8, id: "cheat_bluff", name: "Cheat / Bluff (I Doubt It)", category: "CARD", categoryLabel: "Card Bluffing", icon: "🚨", mechanic: "Sequential face-down discards with high-stakes 'Cheat!' challenge callouts.", isPlayable: true },
+  { rank: 9, id: "poker", name: "Texas Hold'em Poker", category: "CARD", categoryLabel: "Card Bluffing", icon: "♦️", mechanic: "2-card hole, community flop/turn/river betting, and pot calculation.", isPlayable: true },
+  { rank: 10, id: "blackjack", name: "Blackjack 21", category: "CARD", categoryLabel: "Card Probability", icon: "♣️", mechanic: "Hitting, standing, doubling to beat dealer hand total without exceeding 21.", isPlayable: true },
+  { rank: 11, id: "snakes_and_ladders", name: "Snakes & Ladders (Circuit)", category: "TACTICAL", categoryLabel: "Board Race", icon: "🪜", mechanic: "100-tile boustrophedon track with 3D dice rolls and live player tickers.", isPlayable: true },
+  { rank: 12, id: "raja_mantri", name: "Raja Mantri Chor Sipahi", category: "PAPER", categoryLabel: "Paper Chit", icon: "👑", mechanic: "4-chit role distribution with voice cross-examination and micro-bluffing.", isPlayable: true },
+  { rank: 13, id: "hand_cricket", name: "Hand Cricket (Odd-Even)", category: "PAPER", categoryLabel: "Schoolyard Mind", icon: "🏏", mechanic: "1–6 number throws with run accumulation and wicket sniping.", isPlayable: true },
+  { rank: 14, id: "book_cricket", name: "Book Cricket", category: "PAPER", categoryLabel: "Classroom Paper", icon: "📖", mechanic: "Page-flipping run scoring based on even/odd digits.", isPlayable: true },
+  { rank: 15, id: "bingo", name: "Bingo / 25-Cross", category: "PAPER", categoryLabel: "Classroom Grid", icon: "🔢", mechanic: "Crossing off 1–25 called numbers to complete 5 linear lines.", isPlayable: true },
+  { rank: 16, id: "connect4", name: "Connect Four Matrix", category: "TACTICAL", categoryLabel: "Grid Alignment", icon: "🔴", mechanic: "Dropping colored tokens into a 7x6 vertical matrix.", isPlayable: true },
+  { rank: 17, id: "sudoku", name: "Sudoku Data Matrix", category: "PUZZLE", categoryLabel: "Solo Logic", icon: "🧩", mechanic: "9x9 number-placement puzzle with zero calculation errors.", isPlayable: true },
+  { rank: 18, id: "2048", name: "2048 Binary Merge", category: "PUZZLE", categoryLabel: "Tile Merge", icon: "🔢", mechanic: "Merging powers-of-two tiles along a 4x4 sliding grid.", isPlayable: true },
+  { rank: 19, id: "glow_hockey", name: "Glow Hockey", category: "PHYSICS", categoryLabel: "Fast 2D Physics", icon: "⚡", mechanic: "Neon paddle deflection and puck striking duels.", isPlayable: true },
+  { rank: 20, id: "gomoku", name: "Gomoku (5 in a Row)", category: "TACTICAL", categoryLabel: "15x15 Matrix", icon: "⬛", mechanic: "Connecting five consecutive stones on grid intersections.", isPlayable: true },
+  { rank: 21, id: "reversi", name: "Reversi / Othello", category: "TACTICAL", categoryLabel: "Disk Flipping", icon: "🔄", mechanic: "Flanking opponent disks to flip them to your color.", isPlayable: true },
+  { rank: 22, id: "dots_and_boxes", name: "Dots and Boxes (Dabba)", category: "TACTICAL", categoryLabel: "Territory Grid", icon: "🕸️", mechanic: "Drawing lines between nodes to complete 4-sided captured boxes.", isPlayable: true },
+  { rank: 23, id: "hangman", name: "Hangman Word Scaffold", category: "PAPER", categoryLabel: "Word Deduction", icon: "🔤", mechanic: "Guessing secret phrase letters before gallows limbs appear.", isPlayable: true },
+  { rank: 24, id: "math_blitz", name: "Arithmetic Math Blitz", category: "PUZZLE", categoryLabel: "Math Speed Duel", icon: "⚡", mechanic: "Rapid 1v1 mental math speed battle with 3s timers.", isPlayable: true },
+  { rank: 25, id: "wordle", name: "Wordle / Cipher", category: "PUZZLE", categoryLabel: "Linguistic Strategy", icon: "🔐", mechanic: "Deduce 5-letter cipher with color feedback.", isPlayable: true },
+  { rank: 26, id: "skribbl", name: "Skribbl / Pictionary", category: "PARTY", categoryLabel: "Vector Canvas", icon: "🎨", mechanic: "Vector path drawing with live open-mic guessing.", isPlayable: true },
+  { rank: 27, id: "codenames", name: "Codenames Decryption", category: "PARTY", categoryLabel: "Deduction Grid", icon: "🕵️", mechanic: "5x5 operative word grid decryption via one-word clues.", isPlayable: true },
+  { rank: 28, id: "twenty_questions", name: "20 Questions / Decryption", category: "PARTY", categoryLabel: "Verbal Deduction", icon: "❓", mechanic: "Yes/No interrogations to identify a hidden entity.", isPlayable: true },
+  { rank: 29, id: "npat", name: "Name, Place, Animal, Thing", category: "PAPER", categoryLabel: "Rapid Vocabulary", icon: "📝", mechanic: "30-second timed round naming categories for a specific letter.", isPlayable: true },
+  { rank: 30, id: "melody_buzzer", name: "Antakshari / Melody Relay", category: "PARTY", categoryLabel: "Voice Music Relay", icon: "🎵", mechanic: "Singing/reciting poetry starting with previous ending verse.", isPlayable: true },
+  { rank: 31, id: "two_truths", name: "Two Truths & a Lie", category: "PARTY", categoryLabel: "Voice Bluffing", icon: "🎭", mechanic: "Audio deduction identifying 1 fabricate lie amongst truths.", isPlayable: true },
+  { rank: 32, id: "taboo", name: "Taboo Word Shield", category: "PARTY", categoryLabel: "Voice Vocabulary", icon: "🚫", mechanic: "Describing keywords without uttering forbidden taboo terms.", isPlayable: true },
+  { rank: 33, id: "pitch_arena", name: "Pitch Arena (Absurd Defense)", category: "PARTY", categoryLabel: "Voice Debate", icon: "🎙️", mechanic: "60-second rapid absurd pitch with audience tip voting.", isPlayable: true },
+  { rank: 34, id: "puzzle15", name: "15-Puzzle Sliding Matrix", category: "PUZZLE", categoryLabel: "Tile Sliding", icon: "🔢", mechanic: "Sliding numbered square tiles into 1-15 numerical order.", isPlayable: true },
 ];
 
 function ArcadeContent() {
@@ -424,17 +414,8 @@ function ArcadeContent() {
             {activeMatch.gameType === "satte_pe_satta" && (
               <SattePeSattaGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
             )}
-            {activeMatch.gameType === "bhabhi_thulla" && (
-              <BhabhiThullaGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
-            )}
-            {activeMatch.gameType === "mendicot" && (
-              <MendicotGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
-            )}
             {activeMatch.gameType === "cheat_bluff" && (
               <CheatBluffGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
-            )}
-            {activeMatch.gameType === "solitaire" && (
-              <SolitaireGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
             )}
             {activeMatch.gameType === "poker" && (
               <PokerGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
@@ -453,9 +434,6 @@ function ArcadeContent() {
             )}
             {activeMatch.gameType === "skribbl" && (
               <SkribblGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
-            )}
-            {activeMatch.gameType === "quoridor" && (
-              <QuoridorGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
             )}
             {activeMatch.gameType === "yahtzee" && (
               <YahtzeeGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
@@ -531,9 +509,6 @@ function ArcadeContent() {
             )}
             {activeMatch.gameType === "sudoku" && (
               <SudokuGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
-            )}
-            {activeMatch.gameType === "minesweeper" && (
-              <MinesweeperGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
             )}
             {activeMatch.gameType === "2048" && (
               <Game2048 match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />

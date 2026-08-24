@@ -14,9 +14,7 @@ import ChessGame from "./ChessGame";
 import Connect4Game from "./Connect4Game";
 import BattleshipGame from "./BattleshipGame";
 import SudokuGame from "./SudokuGame";
-import MinesweeperGame from "./MinesweeperGame";
 import Game2048 from "./Game2048";
-import SnakeGame from "./SnakeGame";
 import WordleGame from "./WordleGame";
 import PoolGame from "./PoolGame";
 import CarromGame from "./CarromGame";
@@ -26,15 +24,12 @@ import ReversiGame from "./ReversiGame";
 import DotsAndBoxesGame from "./DotsAndBoxesGame";
 import SnakesLaddersGame from "./SnakesLaddersGame";
 import Puzzle15Game from "./Puzzle15Game";
-import MastermindGame from "./MastermindGame";
 import PokerGame from "./PokerGame";
 import BlackjackGame from "./BlackjackGame";
 import UnoGame from "./UnoGame";
 import LiarsDiceGame from "./LiarsDiceGame";
 import CodenamesGame from "./CodenamesGame";
 import SkribblGame from "./SkribblGame";
-import TriviaGame from "./TriviaGame";
-import QuoridorGame from "./QuoridorGame";
 import YahtzeeGame from "./YahtzeeGame";
 import MelodyBuzzerGame from "./MelodyBuzzerGame";
 import TabooGame from "./TabooGame";
@@ -309,12 +304,6 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
           {match.gameType === "skribbl" && (
             <SkribblGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
           )}
-          {match.gameType === "trivia" && (
-            <TriviaGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
-          )}
-          {match.gameType === "quoridor" && (
-            <QuoridorGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
-          )}
           {match.gameType === "yahtzee" && (
             <YahtzeeGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
           )}
@@ -390,23 +379,14 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
           {match.gameType === "sudoku" && (
             <SudokuGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
           )}
-          {match.gameType === "minesweeper" && (
-            <MinesweeperGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
-          )}
           {match.gameType === "2048" && (
             <Game2048 match={match} currentUid={user?.uid || ""} isHost={isHost} />
-          )}
-          {match.gameType === "snake" && (
-            <SnakeGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
           )}
           {match.gameType === "wordle" && (
             <WordleGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
           )}
           {match.gameType === "puzzle15" && (
             <Puzzle15Game match={match} currentUid={user?.uid || ""} isHost={isHost} />
-          )}
-          {match.gameType === "mastermind" && (
-            <MastermindGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
           )}
 
           {/* Join button if spectator */}
