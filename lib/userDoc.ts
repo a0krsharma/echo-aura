@@ -20,6 +20,7 @@ export interface EchoUser {
   bio?:        string;
   auraScore:   number;
   badges:      string[];
+  inventory:   string[];
   tags:        string[];
   streak:      number;
   lastActiveDate: string | null;
@@ -110,6 +111,7 @@ export async function getOrCreateUserDoc(firebaseUser: FirebaseUser): Promise<Ec
     photoUrl:    firebaseUser.photoURL ?? "",
     auraScore:   0,
     badges:      [],
+    inventory:   [],
     tags:        [],
     streak:      0,
     lastActiveDate: null,
@@ -141,6 +143,7 @@ export async function getOrCreateUserDoc(firebaseUser: FirebaseUser): Promise<Ec
       streak: 0,
       lastActiveDate: null,
       tags: [],
+      inventory: [],
       freqMap: {},
       signalStatus: "ONLINE",
       lastSignalChange: null,
@@ -517,5 +520,33 @@ export async function awardAura(uid: string, amount: number): Promise<void> {
     });
   } catch (err) {
     console.warn("[awardAura] Non-critical aura score update skipped:", err);
+  }
+}
+
+export async function purchaseStoreItem(uid: string, itemId: string, cost: number): Promise<boolean> {
+  const db = getFirebaseDb();
+  const ref = doc(db, "users", uid);
+
+  try {
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return false;
+
+    const data = snap.data() as EchoUser;
+    if ((data.auraScore || 0) < cost) {
+      return false; // Not enough aura
+    }
+
+    if (data.inventory?.includes(itemId)) {
+      return false; // Already owns item
+    }
+
+    await updateDoc(ref, {
+      auraScore: increment(-cost),
+      inventory: arrayUnion(itemId)
+    });
+    return true;
+  } catch (err) {
+    console.error("Failed to purchase item:", err);
+    return false;
   }
 }

@@ -42,6 +42,7 @@ import {
   Cpu,
   Sparkles,
   Gamepad2,
+  ShoppingCart,
 } from "lucide-react";
 
 // ─── Inner shell (needs AuthProvider above it) ───────────────────
@@ -144,6 +145,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
     { label: "[ FREQUENCY ]",  href: "/",               icon: Radio      },
     { label: "[ WAVES ]",      href: "/waves",          icon: Waves      },
     { label: "[ ARCADE ]",     href: "/arcade",         icon: Gamepad2   },
+    { label: "[ SHOP ]",       href: "/shop",           icon: ShoppingCart },
     { label: "[ STUDIO ]",     href: "/studio",         icon: Mic2       },
     { label: "[ STAGE ]",      href: "/clash",          icon: Swords     },
     { label: "[ ROOMS ]",      href: "/rooms",          icon: Users      },
