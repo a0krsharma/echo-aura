@@ -2091,15 +2091,14 @@ export function subscribeLobbyArcadeMatches(
       const list: ArcadeMatch[] = [];
       snap.forEach((d) => {
         const data = d.data();
-        // Garbage collect dead or solo bot practice rooms so they don't linger
-        if (data.mode === "VS_COMPUTER" || data.title?.includes("SOLO") || data.status === "FINISHED") {
-          // Asynchronously clean up stale practice/finished documents
-          deleteDoc(d.ref).catch(() => {});
-          return;
-        }
-
-        // Only show live Multiplayer PvP rooms for other humans
-        if ((data.isArcade || data.gameType) && data.gameType && data.mode === "MULTIPLAYER") {
+        // Only show live Multiplayer PvP rooms for other humans in the public lobby
+        if (
+          (data.isArcade || data.gameType) &&
+          data.gameType &&
+          data.mode === "MULTIPLAYER" &&
+          data.status !== "FINISHED" &&
+          !data.title?.includes("SOLO")
+        ) {
           list.push({ id: d.id, ...data } as ArcadeMatch);
         }
       });
@@ -2112,11 +2111,13 @@ export function subscribeLobbyArcadeMatches(
         const list: ArcadeMatch[] = [];
         s.forEach((d) => {
           const data = d.data();
-          if (data.mode === "VS_COMPUTER" || data.title?.includes("SOLO") || data.status === "FINISHED") {
-            deleteDoc(d.ref).catch(() => {});
-            return;
-          }
-          if ((data.isArcade || data.gameType) && data.gameType && data.mode === "MULTIPLAYER") {
+          if (
+            (data.isArcade || data.gameType) &&
+            data.gameType &&
+            data.mode === "MULTIPLAYER" &&
+            data.status !== "FINISHED" &&
+            !data.title?.includes("SOLO")
+          ) {
             list.push({ id: d.id, ...data } as ArcadeMatch);
           }
         });
