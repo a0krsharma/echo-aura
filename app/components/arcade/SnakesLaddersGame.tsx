@@ -7,7 +7,7 @@ import { executeSnakesLaddersBotTurn } from "@/lib/arcadeBots";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
 import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
-import { Trophy, Share2, Sparkles, Dices, HelpCircle } from "lucide-react";
+import { Trophy, Share2, Sparkles, Dices, HelpCircle, Users } from "lucide-react";
 
 interface SnakesLaddersGameProps {
   match: ArcadeMatch;
@@ -94,6 +94,8 @@ export default function SnakesLaddersGame({ match, currentUid }: SnakesLaddersGa
 
   const positions: Record<string, number> = JSON.parse(sl.positionsStr || "{}");
   const isMyTurn = sl.currentTurnUid === currentUid && match.status === "PLAYING";
+  const playersList = Object.values(match.players || {});
+  const maxSeats = match.maxPlayers || 4;
 
   const handleRoll = async () => {
     if (!isMyTurn || rolling || match.status === "FINISHED") return;
@@ -148,6 +150,40 @@ export default function SnakesLaddersGame({ match, currentUid }: SnakesLaddersGa
           </span>
         </div>
       </div>
+
+      {/* ── 1-Tap Empty Seat Availability Banner ── */}
+      {!match.players[currentUid] && playersList.length < maxSeats && match.status !== "FINISHED" && (
+        <div className="w-full bg-gradient-to-r from-emerald-950 via-emerald-900 to-emerald-950 border-2 border-emerald-400 p-3 rounded-xl flex items-center justify-between gap-2 shadow-[0_0_25px_rgba(16,185,129,0.3)] animate-in fade-in">
+          <div className="flex items-center gap-2.5 text-xs truncate">
+            <Users className="w-4 h-4 text-emerald-400 shrink-0 animate-pulse" />
+            <span className="font-black uppercase text-emerald-200 truncate">
+              🪑 SEAT OPEN ({playersList.length}/{maxSeats} PLAYERS) • TAKE A SEAT TO PLAY & TALK ON LIVE MIC
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={async () => {
+              if (!currentUid) return;
+              try {
+                const { joinArcadeMatch } = await import("@/lib/arcade");
+                await joinArcadeMatch(match.id, {
+                  uid: currentUid,
+                  handle: `@PLAYER_${currentUid.slice(0, 4)}`,
+                });
+                if (match.roomId) {
+                  const { promoteToSpeaker } = await import("@/lib/rooms");
+                  await promoteToSpeaker(match.roomId, currentUid);
+                }
+              } catch (e) {
+                console.error("Failed to take seat in Snakes & Ladders:", e);
+              }
+            }}
+            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs uppercase cursor-pointer rounded-lg transition-all active:scale-95 shrink-0 shadow-lg"
+          >
+            [ 🪑 TAKE A SEAT ]
+          </button>
+        </div>
+      )}
 
       {/* Position Telemetry Ticker */}
       <div className="grid grid-cols-2 gap-2 text-xs bg-neutral-950 p-2.5 border border-neutral-800 rounded">

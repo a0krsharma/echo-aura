@@ -2635,7 +2635,15 @@ export async function firePoolShot(
   playerUid: string,
   impulseX: number,
   impulseY: number,
-  updatedBalls: PoolBall[]
+  updatedBalls: PoolBall[],
+  options?: {
+    nextTurnUid?: string;
+    p1Score?: number;
+    p2Score?: number;
+    actionLog?: string;
+    isGameOver?: boolean;
+    winnerUid?: string;
+  }
 ): Promise<void> {
   const db = getFirebaseDb();
   const matchRef = doc(db, ARCADE_COLLECTION, matchId);
@@ -2645,7 +2653,8 @@ export async function firePoolShot(
   if (!match.poolState) return;
 
   const playerUids = Object.keys(match.players || {});
-  const nextTurnUid = playerUids.find((id) => id !== playerUid) || playerUid;
+  const calculatedNext = playerUids.find((id) => id !== playerUid) || playerUid;
+  const nextTurnUid = options?.nextTurnUid ?? calculatedNext;
   const eightBall = updatedBalls.find((b) => b.type === "8ball");
   const isEightBallSunk = eightBall?.isPocketed;
 
@@ -2653,15 +2662,19 @@ export async function firePoolShot(
     "poolState.ballsStr": JSON.stringify(updatedBalls),
     "poolState.lastShotStr": JSON.stringify({ impulseX, impulseY, timestamp: Date.now() }),
     "poolState.currentTurnUid": nextTurnUid,
-    "poolState.lastActionLog": `${match.players[playerUid]?.handle || "Player"} struck the cue ball!`,
+    "poolState.lastActionLog": options?.actionLog || `${match.players[playerUid]?.handle || "Player"} struck the cue ball!`,
     updatedAt: serverTimestamp(),
   };
 
-  if (isEightBallSunk) {
+  if (options?.p1Score !== undefined) updates["poolState.p1Score"] = options.p1Score;
+  if (options?.p2Score !== undefined) updates["poolState.p2Score"] = options.p2Score;
+
+  if (options?.isGameOver || isEightBallSunk) {
+    const winnerUid = options?.winnerUid || playerUid;
     updates.status = "FINISHED";
-    updates.winnerUid = playerUid;
-    updates.winnerHandle = match.players[playerUid]?.handle || "@ANON";
-    await awardAura(playerUid, match.stakes * 2 || 100);
+    updates.winnerUid = winnerUid;
+    updates.winnerHandle = match.players[winnerUid]?.handle || "@ANON";
+    await awardAura(winnerUid, match.stakes * 2 || 100);
   }
 
   await updateDoc(matchRef, updates);

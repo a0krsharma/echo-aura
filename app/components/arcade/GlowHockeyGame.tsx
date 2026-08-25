@@ -7,7 +7,7 @@ import { updateGlowHockeyScore, syncGlowHockeyState, type ArcadeMatch } from "@/
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
 import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
-import { Trophy, Share2, Zap, HelpCircle } from "lucide-react";
+import { Trophy, Share2, Zap, HelpCircle, Users, Sparkles, Flame, Crown } from "lucide-react";
 
 interface GlowHockeyGameProps {
   match: ArcadeMatch;
@@ -75,10 +75,10 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
     
     // Create Puck
     const puck = Matter.Bodies.circle(WIDTH / 2, HEIGHT / 2, PUCK_RADIUS, {
-      restitution: 0.95, // Bouncy
+      restitution: 0.95,
       friction: 0.001,
       frictionAir: 0.01,
-      density: 0.04, // Very light
+      density: 0.04,
       label: "puck"
     });
     Matter.Body.setVelocity(puck, { x: (Math.random() - 0.5) * 4, y: 4 });
@@ -88,7 +88,7 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
       restitution: 0.5,
       friction: 0,
       frictionAir: 0.1,
-      density: 1, // Heavy mallet
+      density: 1,
       label: "paddle1"
     });
     const p2Paddle = Matter.Bodies.circle(WIDTH / 2, 60, PADDLE_RADIUS, {
@@ -104,7 +104,6 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
     const leftWall = Matter.Bodies.rectangle(-WALL_THICKNESS/2, HEIGHT/2, WALL_THICKNESS, HEIGHT + WALL_THICKNESS*2, wallOptions);
     const rightWall = Matter.Bodies.rectangle(WIDTH + WALL_THICKNESS/2, HEIGHT/2, WALL_THICKNESS, HEIGHT + WALL_THICKNESS*2, wallOptions);
     
-    // Top and Bottom walls need gaps for goals
     const sideWallWidth = (WIDTH - GOAL_WIDTH) / 2;
     const topLeft = Matter.Bodies.rectangle(sideWallWidth/2, -WALL_THICKNESS/2, sideWallWidth, WALL_THICKNESS, wallOptions);
     const topRight = Matter.Bodies.rectangle(WIDTH - sideWallWidth/2, -WALL_THICKNESS/2, sideWallWidth, WALL_THICKNESS, wallOptions);
@@ -132,7 +131,6 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
             emitSparks(impactX, impactY, padLabel === "paddle1" ? "#00ffcc" : "#ff0055", Math.min(speed, 10));
             if (speed > 4) soundSynth.playSnare();
           } else {
-            // Hit wall
             if (speed > 2) {
                emitSparks(impactX, impactY, "#38bdf8", 3);
                soundSynth.playSubtlePop();
@@ -152,242 +150,185 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
     };
 
     let animId: number;
+    let lastTime = performance.now();
 
-    const update = () => {
-      // Player 1 Paddle Velocity Control (Towards target)
-      const p1Target = p1TargetRef.current;
-      const dx1 = p1Target.x - p1Paddle.position.x;
-      const dy1 = p1Target.y - p1Paddle.position.y;
-      Matter.Body.setVelocity(p1Paddle, { x: dx1 * 0.3, y: dy1 * 0.3 });
+    const loop = (currentTime: number) => {
+      const dt = Math.min((currentTime - lastTime) / 1000, 0.033);
+      lastTime = currentTime;
 
-      // --- SYNC LOGIC ---
-      const now = Date.now();
-      if (!isVsBot) {
-        // Read from Firebase if it exists
-        if (gh?.puckStr && !isHost) {
-           try {
-             const p = JSON.parse(gh.puckStr);
-             // Soft interpolate or snap
-             Matter.Body.setPosition(puck, { x: p.x, y: p.y });
-             Matter.Body.setVelocity(puck, { x: p.vx, y: p.vy });
-           } catch (e) {}
-        }
-        if (gh?.p2PaddleStr && isHost) {
-           try {
-             const p2 = JSON.parse(gh.p2PaddleStr);
-             p2TargetRef.current.x = p2.x;
-             p2TargetRef.current.y = p2.y;
-           } catch(e) {}
-        }
-        if (gh?.p1PaddleStr && !isHost) {
-           try {
-             const p1 = JSON.parse(gh.p1PaddleStr);
-             p1TargetRef.current.x = p1.x;
-             p1TargetRef.current.y = p1.y;
-           } catch(e) {}
-        }
-        
-        // Write to Firebase
-        if (now - lastSyncRef.current > 100) {
-          lastSyncRef.current = now;
-          if (isHost) {
-             syncGlowHockeyState(match.id, {
-               puckStr: JSON.stringify({ x: puck.position.x, y: puck.position.y, vx: puck.velocity.x, vy: puck.velocity.y }),
-               p1PaddleStr: JSON.stringify({ x: p1TargetRef.current.x, y: p1TargetRef.current.y })
-             });
-          } else {
-             syncGlowHockeyState(match.id, {
-               p2PaddleStr: JSON.stringify({ x: p2TargetRef.current.x, y: p2TargetRef.current.y })
-             });
-          }
-        }
-      }
+      // 1. Update Paddle Positions smoothly
+      const p1Pos = p1Paddle.position;
+      const targetP1 = p1TargetRef.current;
+      Matter.Body.setVelocity(p1Paddle, {
+        x: (targetP1.x - p1Pos.x) * 15,
+        y: (targetP1.y - p1Pos.y) * 15,
+      });
 
-      // Player 2 Bot Logic
       if (isVsBot) {
-        let p2TargetX = puck.position.x;
-        let p2TargetY = puck.position.y < HEIGHT / 2 ? Math.max(60, puck.position.y - 30) : 60;
-        
-        // Clamp to top half
-        p2TargetX = Math.max(PADDLE_RADIUS, Math.min(WIDTH - PADDLE_RADIUS, p2TargetX));
-        p2TargetY = Math.max(PADDLE_RADIUS, Math.min(HEIGHT / 2 - PADDLE_RADIUS, p2TargetY));
-
-        const dx2 = p2TargetX - p2Paddle.position.x;
-        const dy2 = p2TargetY - p2Paddle.position.y;
-        Matter.Body.setVelocity(p2Paddle, { x: dx2 * 0.12, y: dy2 * 0.12 });
-      } else {
-        const dx2 = p2TargetRef.current.x - p2Paddle.position.x;
-        const dy2 = p2TargetRef.current.y - p2Paddle.position.y;
-        Matter.Body.setVelocity(p2Paddle, { x: dx2 * 0.3, y: dy2 * 0.3 });
+        const puckPos = puck.position;
+        const targetX = puckPos.x;
+        const targetY = Math.min(HEIGHT / 2 - 40, Math.max(50, puckPos.y - 30));
+        p2TargetRef.current = { x: targetX, y: targetY };
       }
 
-      // Step Physics Engine (Only Host or Bot Mode runs physics authoritative)
-      if (isHost || isVsBot) {
-        Matter.Engine.update(engine, 1000 / 60);
-      }
+      const p2Pos = p2Paddle.position;
+      const targetP2 = p2TargetRef.current;
+      Matter.Body.setVelocity(p2Paddle, {
+        x: (targetP2.x - p2Pos.x) * (isVsBot ? 6 : 15),
+        y: (targetP2.y - p2Pos.y) * (isVsBot ? 6 : 15),
+      });
 
-      // Clamp puck velocity to prevent crazy clipping
-      const speed = Math.hypot(puck.velocity.x, puck.velocity.y);
-      if (speed > 25) {
-        Matter.Body.setVelocity(puck, { 
-          x: (puck.velocity.x / speed) * 25, 
-          y: (puck.velocity.y / speed) * 25 
+      // 2. Step Physics Engine
+      Matter.Engine.update(engine, dt * 1000);
+
+      // Clamp puck speed
+      const pVel = puck.velocity;
+      const currentSpeed = Math.hypot(pVel.x, pVel.y);
+      const maxSpeed = 16;
+      if (currentSpeed > maxSpeed) {
+        Matter.Body.setVelocity(puck, {
+          x: (pVel.x / currentSpeed) * maxSpeed,
+          y: (pVel.y / currentSpeed) * maxSpeed,
         });
       }
 
-      // Goal Checks
-      const inGoalX = puck.position.x > (WIDTH - GOAL_WIDTH) / 2 && puck.position.x < (WIDTH + GOAL_WIDTH) / 2;
-      
-      if (puck.position.y < -PUCK_RADIUS) {
-        if (inGoalX) {
-          soundSynth.playFanfare();
-          emitSparks(puck.position.x, 10, "#22c55e", 30);
-          setP1Score((s) => {
-            const next = s + 1;
-            updateGlowHockeyScore(match.id, currentUid, next, p2Score);
-            return next;
-          });
-          resetPuck(true);
-        }
-      } else if (puck.position.y > HEIGHT + PUCK_RADIUS) {
-        if (inGoalX) {
-          soundSynth.playBuzzer();
-          emitSparks(puck.position.x, HEIGHT - 10, "#ef4444", 30);
-          setP2Score((s) => {
-            const next = s + 1;
-            updateGlowHockeyScore(match.id, Object.keys(match.players || {}).find(u => u !== currentUid) || currentUid, p1Score, next);
-            return next;
-          });
-          resetPuck(false);
-        }
+      // 3. Goal Checking
+      const puckY = puck.position.y;
+      const puckX = puck.position.x;
+      const goalLeft = (WIDTH - GOAL_WIDTH) / 2;
+      const goalRight = goalLeft + GOAL_WIDTH;
+
+      if (puckY < -PUCK_RADIUS && puckX >= goalLeft && puckX <= goalRight) {
+        // P1 Scored (Bottom player into top goal)
+        soundSynth.playFanfare();
+        emitSparks(WIDTH / 2, 20, "#00ffcc", 20);
+        setP1Score((s) => {
+          const next = s + 1;
+          if (isHost) updateGlowHockeyScore(match.id, currentUid, next, p2Score);
+          return next;
+        });
+        resetPuck(true);
+      } else if (puckY > HEIGHT + PUCK_RADIUS && puckX >= goalLeft && puckX <= goalRight) {
+        // P2 Scored (Top player into bottom goal)
+        soundSynth.playAirhorn();
+        emitSparks(WIDTH / 2, HEIGHT - 20, "#ff0055", 20);
+        setP2Score((s) => {
+          const next = s + 1;
+          if (isHost) updateGlowHockeyScore(match.id, currentUid, p1Score, next);
+          return next;
+        });
+        resetPuck(false);
       }
 
-      // Keep paddles in their halves
-      if (p1Paddle.position.y < HEIGHT / 2 + PADDLE_RADIUS) {
-        Matter.Body.setPosition(p1Paddle, { x: p1Paddle.position.x, y: HEIGHT / 2 + PADDLE_RADIUS });
-        Matter.Body.setVelocity(p1Paddle, { x: p1Paddle.velocity.x, y: Math.max(0, p1Paddle.velocity.y) });
-      }
-      if (p2Paddle.position.y > HEIGHT / 2 - PADDLE_RADIUS) {
-        Matter.Body.setPosition(p2Paddle, { x: p2Paddle.position.x, y: HEIGHT / 2 - PADDLE_RADIUS });
-        Matter.Body.setVelocity(p2Paddle, { x: p2Paddle.velocity.x, y: Math.min(0, p2Paddle.velocity.y) });
+      // Reset if stuck out of bounds
+      if (puck.position.x < 0 || puck.position.x > WIDTH || puck.position.y < -50 || puck.position.y > HEIGHT + 50) {
+        resetPuck(true);
       }
 
-      // Update Sparks
-      const sparks = sparksRef.current;
-      for (let i = sparks.length - 1; i >= 0; i--) {
-        const sp = sparks[i];
-        sp.life += 0.016;
-        sp.x += sp.vx;
-        sp.y += sp.vy;
-        if (sp.life >= sp.maxLife) {
-          sparks.splice(i, 1);
-        }
-      }
+      // 4. Render Photorealistic Neon Cyberpunk Table
+      ctx.clearRect(0, 0, WIDTH, HEIGHT);
 
-      // --- Rendering (Canvas) ---
-      ctx.fillStyle = "#040914"; 
+      // Rink Surface Gradient
+      const rinkGrad = ctx.createLinearGradient(0, 0, 0, HEIGHT);
+      rinkGrad.addColorStop(0, "#030712");
+      rinkGrad.addColorStop(0.5, "#0b0f19");
+      rinkGrad.addColorStop(1, "#030712");
+      ctx.fillStyle = rinkGrad;
       ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-      // Table Glow Lines
-      ctx.strokeStyle = "rgba(16, 200, 255, 0.6)";
-      ctx.lineWidth = 4;
-      ctx.shadowColor = "#0ea5e9";
+      // Center Dividing Line & Glowing Circle
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, HEIGHT / 2);
+      ctx.lineTo(WIDTH, HEIGHT / 2);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(WIDTH / 2, HEIGHT / 2, 45, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(6, 182, 212, 0.4)";
+      ctx.lineWidth = 2;
+      ctx.shadowColor = "#06b6d4";
       ctx.shadowBlur = 10;
-      ctx.strokeRect(4, 4, WIDTH - 8, HEIGHT - 8);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
 
-      // Center Line and Circle
-      ctx.strokeStyle = "rgba(16, 200, 255, 0.4)";
+      // Goal Areas (Top & Bottom)
+      ctx.fillStyle = "rgba(255, 0, 85, 0.25)";
+      ctx.fillRect(goalLeft, 0, GOAL_WIDTH, 12);
+      ctx.fillStyle = "rgba(0, 255, 204, 0.25)";
+      ctx.fillRect(goalLeft, HEIGHT - 12, GOAL_WIDTH, 12);
+
+      // Render Sparks
+      for (let i = sparksRef.current.length - 1; i >= 0; i--) {
+        const s = sparksRef.current[i];
+        s.x += s.vx;
+        s.y += s.vy;
+        s.life += dt;
+        if (s.life >= s.maxLife) {
+          sparksRef.current.splice(i, 1);
+          continue;
+        }
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, 2, 0, Math.PI * 2);
+        ctx.fillStyle = s.color;
+        ctx.shadowColor = s.color;
+        ctx.shadowBlur = 6;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+
+      // Render 3D Neon Puck
+      const pPos = puck.position;
+      ctx.beginPath();
+      ctx.arc(pPos.x, pPos.y, PUCK_RADIUS, 0, Math.PI * 2);
+      ctx.fillStyle = "#ffffff";
+      ctx.shadowColor = "#38bdf8";
+      ctx.shadowBlur = 15;
+      ctx.fill();
+      ctx.strokeStyle = "#38bdf8";
       ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(4, HEIGHT / 2);
-      ctx.lineTo(WIDTH - 4, HEIGHT / 2);
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.arc(WIDTH / 2, HEIGHT / 2, 50, 0, Math.PI * 2);
       ctx.stroke();
       ctx.shadowBlur = 0;
 
-      // Goals (Top & Bottom Slots with Neon Glow)
-      ctx.fillStyle = "#ff0055"; 
-      ctx.shadowColor = "#ff0055";
-      ctx.shadowBlur = 20;
-      ctx.fillRect((WIDTH - GOAL_WIDTH) / 2, 0, GOAL_WIDTH, 8);
-
-      ctx.fillStyle = "#00ffcc";
-      ctx.shadowColor = "#00ffcc";
-      ctx.shadowBlur = 20;
-      ctx.fillRect((WIDTH - GOAL_WIDTH) / 2, HEIGHT - 8, GOAL_WIDTH, 8);
-      ctx.shadowBlur = 0;
-
-      // Render P2 Paddle
-      ctx.beginPath();
-      ctx.arc(p2Paddle.position.x, p2Paddle.position.y, PADDLE_RADIUS, 0, Math.PI * 2);
-      ctx.fillStyle = "#ff0055";
-      ctx.shadowColor = "#ff0055";
-      ctx.shadowBlur = 20;
-      ctx.fill();
-      ctx.fillStyle = "#330011"; 
-      ctx.beginPath();
-      ctx.arc(p2Paddle.position.x, p2Paddle.position.y, PADDLE_RADIUS - 6, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.shadowBlur = 0;
-
-      // Render P1 Paddle
+      // Render P1 Paddle (Cyan Striker)
       ctx.beginPath();
       ctx.arc(p1Paddle.position.x, p1Paddle.position.y, PADDLE_RADIUS, 0, Math.PI * 2);
       ctx.fillStyle = "#00ffcc";
       ctx.shadowColor = "#00ffcc";
       ctx.shadowBlur = 20;
       ctx.fill();
-      ctx.fillStyle = "#002211"; 
-      ctx.beginPath();
-      ctx.arc(p1Paddle.position.x, p1Paddle.position.y, PADDLE_RADIUS - 6, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = "rgba(0, 255, 204, 0.5)";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      // Render Puck
-      ctx.beginPath();
-      ctx.arc(puck.position.x, puck.position.y, PUCK_RADIUS, 0, Math.PI * 2);
-      ctx.fillStyle = "#ffcc00";
-      ctx.shadowColor = "#ffcc00";
-      ctx.shadowBlur = 18;
-      ctx.fill();
-      ctx.shadowBlur = 0;
       ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 3;
       ctx.stroke();
+      ctx.shadowBlur = 0;
 
-      // Render Collision Sparks
-      for (const sp of sparks) {
-        ctx.fillStyle = sp.color;
-        ctx.globalAlpha = Math.max(0, 1 - sp.life / sp.maxLife);
-        ctx.beginPath();
-        ctx.arc(sp.x, sp.y, 2, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
+      // Render P2 Paddle (Magenta Striker)
+      ctx.beginPath();
+      ctx.arc(p2Paddle.position.x, p2Paddle.position.y, PADDLE_RADIUS, 0, Math.PI * 2);
+      ctx.fillStyle = "#ff0055";
+      ctx.shadowColor = "#ff0055";
+      ctx.shadowBlur = 20;
+      ctx.fill();
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
 
-      animId = requestAnimationFrame(update);
+      animId = requestAnimationFrame(loop);
     };
 
-    animId = requestAnimationFrame(update);
-    
+    animId = requestAnimationFrame(loop);
     return () => {
       cancelAnimationFrame(animId);
       Matter.Engine.clear(engine);
     };
-  }, [isVsBot, match.id, currentUid, p2Score, p1Score]);
+  }, [currentUid, isHost, isVsBot, match.id, p1Score, p2Score]);
 
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
-
     const scaleX = WIDTH / rect.width;
     const scaleY = HEIGHT / rect.height;
     const x = (e.clientX - rect.left) * scaleX;
@@ -406,77 +347,125 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
     }
   };
 
+  const playersList = Object.values(match.players || {});
+  const maxSeats = match.maxPlayers || 2;
+
   return (
-    <div className="w-full max-w-md mx-auto bg-black border-2 border-white p-4 font-mono text-white space-y-3 select-none shadow-[0_0_40px_rgba(255,255,255,0.1)]">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b-2 border-white pb-2 text-xs">
-        <span className="font-extrabold uppercase tracking-widest text-white flex items-center gap-1.5">
-          <Zap className="w-4 h-4 text-emerald-400 animate-pulse" />
-          // GLOW HOCKEY [ NEON AIR ARENA ]
-        </span>
+    <div className="w-full max-w-md mx-auto bg-gradient-to-b from-neutral-950 via-neutral-900 to-black border-2 border-cyan-500/60 p-3 sm:p-5 font-mono text-white space-y-4 select-none shadow-[0_0_80px_rgba(6,182,212,0.15)] rounded-2xl">
+      {/* ── Top Match Control Header ── */}
+      <div className="flex items-center justify-between border-b border-cyan-500/30 pb-3 text-xs flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 text-black flex items-center justify-center font-black shadow-[0_0_15px_rgba(6,182,212,0.5)]">
+            ⚡
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-black uppercase text-cyan-400 tracking-wider">
+                GLOW HOCKEY PRO
+              </span>
+              <span className="px-1.5 py-0.2 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-[9px] font-bold rounded">
+                NEON 3D
+              </span>
+            </div>
+            <p className="text-[10px] text-neutral-400">
+              Score: <span className="text-cyan-300 font-bold">{p1Score}</span> - <span className="text-pink-400 font-bold">{p2Score}</span> (FIRST TO 7)
+            </p>
+          </div>
+        </div>
+
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setInviteOpen(true)}
-            className="px-2 py-0.5 border border-white hover:bg-white hover:text-black font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
+            onClick={() => setRulesOpen(true)}
+            className="px-2.5 py-1.5 border border-neutral-700 bg-black hover:border-white text-neutral-300 font-bold text-[10px] uppercase rounded transition-all cursor-pointer flex items-center gap-1"
+          >
+            <HelpCircle className="w-3 h-3" />
+            <span>RULES</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              soundSynth.playSubtlePop();
+              setInviteOpen(true);
+            }}
+            className="px-3 py-1.5 bg-gradient-to-r from-cyan-500 to-blue-500 text-black font-black text-[10px] uppercase rounded transition-all hover:brightness-110 flex items-center gap-1.5 cursor-pointer shadow-[0_0_15px_rgba(6,182,212,0.4)] active:scale-95"
           >
             <Share2 className="w-3 h-3" />
-            <span>[ INVITE 🎙️ ]</span>
+            <span>[ 🔗 INVITE & TALK 🎙️ ]</span>
           </button>
-          <span className="px-2 py-0.5 border border-white bg-white text-black font-extrabold text-[10px]">
-            SCORE: {p1Score} - {p2Score} (FIRST TO 7)
-          </span>
         </div>
       </div>
 
-      {/* Glow Hockey Canvas */}
-      <div className="relative border-2 border-neutral-700 bg-black flex justify-center shadow-2xl">
+      <ArcadeInviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} match={match} />
+      <ArcadeGameRulesModal isOpen={rulesOpen} onClose={() => setRulesOpen(false)} initialGameType="glow_hockey" />
+
+      {/* ── 1-Tap Empty Seat Availability Banner ── */}
+      {!match.players[currentUid] && playersList.length < maxSeats && match.status !== "FINISHED" && (
+        <div className="w-full bg-gradient-to-r from-emerald-950 via-emerald-900 to-emerald-950 border-2 border-emerald-400 p-3 rounded-xl flex items-center justify-between gap-2 shadow-[0_0_25px_rgba(16,185,129,0.3)] animate-in fade-in">
+          <div className="flex items-center gap-2.5 text-xs truncate">
+            <Users className="w-4 h-4 text-emerald-400 shrink-0 animate-pulse" />
+            <span className="font-black uppercase text-emerald-200 truncate">
+              🪑 SEAT OPEN ({playersList.length}/{maxSeats} PLAYERS) • TAKE A SEAT TO PLAY & TALK ON LIVE MIC
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={async () => {
+              if (!currentUid) return;
+              try {
+                const { joinArcadeMatch } = await import("@/lib/arcade");
+                await joinArcadeMatch(match.id, {
+                  uid: currentUid,
+                  handle: `@PLAYER_${currentUid.slice(0, 4)}`,
+                });
+                if (match.roomId) {
+                  const { promoteToSpeaker } = await import("@/lib/rooms");
+                  await promoteToSpeaker(match.roomId, currentUid);
+                }
+              } catch (e) {
+                console.error("Failed to take seat in GlowHockey:", e);
+              }
+            }}
+            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs uppercase cursor-pointer rounded-lg transition-all active:scale-95 shrink-0 shadow-lg"
+          >
+            [ 🪑 TAKE A SEAT ]
+          </button>
+        </div>
+      )}
+
+      {/* ── 3D Cyberpunk Neon Arena Canvas ── */}
+      <div className="relative aspect-[340/460] max-w-[340px] sm:max-w-[380px] mx-auto p-2 rounded-2xl bg-gradient-to-br from-neutral-950 via-cyan-950/40 to-neutral-950 border-4 border-cyan-500/60 shadow-[0_20px_50px_rgba(6,182,212,0.3)]">
         <canvas
           ref={canvasRef}
           width={WIDTH}
           height={HEIGHT}
           onPointerMove={handlePointerMove}
           onPointerDown={handlePointerMove}
-          className="touch-none cursor-grab max-w-full" style={{ transform: (!isHost && !isVsBot) ? 'rotate(180deg)' : 'none' }}
+          className="touch-none cursor-grab w-full h-full rounded-xl"
+          style={{ transform: (!isHost && !isVsBot) ? "rotate(180deg)" : "none" }}
         />
       </div>
 
-      <p className="text-[10px] text-neutral-400 text-center uppercase tracking-wider">
+      <p className="text-[11px] text-cyan-300 text-center font-mono uppercase tracking-wider">
         DRAG YOUR CYAN MALLET TO SMASH THE PUCK INTO THE OPPONENT'S GOAL!
       </p>
 
-      {/* Victory Declaration */}
+      {/* ── Victory Celebration Overlay ── */}
       {match.status === "FINISHED" && (
-        <div className="border-4 border-white bg-black p-5 text-center space-y-2 animate-bounce">
-          <Trophy className="w-8 h-8 text-white mx-auto" />
-          <h2 className="font-extrabold text-base uppercase tracking-widest text-white">
-            🏆 {match.winnerHandle} WON THE GLOW HOCKEY CLASH!
+        <div className="border-2 border-cyan-400 bg-gradient-to-b from-cyan-950/90 via-black to-black p-6 rounded-2xl text-center space-y-3 shadow-[0_0_60px_rgba(6,182,212,0.6)] animate-in fade-in zoom-in-95">
+          <Trophy className="w-14 h-14 text-cyan-400 mx-auto animate-bounce drop-shadow-[0_0_20px_#06b6d4]" />
+          <h2 className="text-xl font-black text-cyan-300 uppercase tracking-widest">
+            🏆 GLOW HOCKEY CHAMPIONSHIP WON!
           </h2>
-          <p className="text-xs text-neutral-400 uppercase font-bold">
-            AWARDED +{match.stakes * 2} AURA POINTS
+          <p className="text-xs text-neutral-300 font-mono">
+            {match.winnerUid === currentUid
+              ? `VICTORY! You dominated the arena and scored +${match.stakes * 2} Aura Points!`
+              : `Match concluded! Winner: ${match.winnerHandle || "@PLAYER"}`}
           </p>
         </div>
       )}
 
-      {/* Floating Bottom-Right [ ❓ RULES ] Button for In-Game Help */}
-      <div className="fixed bottom-4 right-4 z-40">
-        <button
-          type="button"
-          onClick={() => setRulesOpen(true)}
-          className="px-3.5 py-2 bg-black border-2 border-cyan-400 text-cyan-300 hover:bg-cyan-400 hover:text-black font-black text-xs uppercase transition-all shadow-[0_0_20px_rgba(6,182,212,0.3)] flex items-center gap-1.5 rounded-full cursor-pointer hover:scale-105"
-        >
-          <HelpCircle className="w-4 h-4" />
-          <span>[ ❓ GLOW HOCKEY RULES ]</span>
-        </button>
-      </div>
-
-      <ArcadeGameRulesModal
-        isOpen={rulesOpen}
-        onClose={() => setRulesOpen(false)}
-        initialGameType="glow_hockey"
-      />
-
-      <ArcadeInviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} match={match} />
+      {/* ── Decoupled Social Audio & Reaction Bar ── */}
       <ArcadeSocialDeck match={match} currentUid={currentUid} />
     </div>
   );

@@ -11,7 +11,18 @@ import { executeChessBotTurn } from "@/lib/arcadeBots";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
 import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
-import { Trophy, Swords, Share2, Sparkles, HelpCircle, Shield, RotateCcw } from "lucide-react";
+import {
+  Trophy,
+  Swords,
+  Share2,
+  Sparkles,
+  HelpCircle,
+  Shield,
+  RotateCcw,
+  Users,
+  Crown,
+  Zap,
+} from "lucide-react";
 
 interface ChessGameProps {
   match: ArcadeMatch;
@@ -155,148 +166,183 @@ export default function ChessGame({ match, currentUid, isHost }: ChessGameProps)
 
   const handleCellClick = async (r: number, c: number) => {
     if (!isMyTurn || match.status === "FINISHED") return;
-    const piece = board[r][c];
 
+    const clickedPiece = board[r][c];
+
+    // 1. Select our piece
+    if (clickedPiece && clickedPiece.color === myColor) {
+      soundSynth.playSubtlePop();
+      setSelectedPos([r, c]);
+      return;
+    }
+
+    // 2. Move to destination if valid
     if (selectedPos) {
-      if (selectedPos[0] === r && selectedPos[1] === c) {
+      const isValid = legalDestinations.some(([tr, tc]) => tr === r && tc === c);
+      if (isValid) {
+        soundSynth.playSnare();
+        try {
+          const result = await makeChessMove(
+            match.id,
+            currentUid,
+            [selectedPos[0], selectedPos[1]],
+            [r, c]
+          );
+          if (result.won) {
+            soundSynth.playFanfare();
+          }
+        } catch (e) {
+          soundSynth.playBuzzer();
+        } finally {
+          setSelectedPos(null);
+        }
+      } else {
         setSelectedPos(null);
-        return;
-      }
-      // If clicking own piece, switch selection
-      if (piece && piece.color === myColor) {
-        setSelectedPos([r, c]);
-        soundSynth.playSubtlePop();
-        return;
-      }
-
-      // Check if clicked cell is in legal destinations
-      const isLegal = legalDestinations.some(([dr, dc]) => dr === r && dc === c);
-      if (!isLegal) {
-        soundSynth.playBuzzer();
-        return;
-      }
-
-      // Execute move
-      const from = selectedPos;
-      const to: [number, number] = [r, c];
-      setSelectedPos(null);
-      soundSynth.playSnare();
-      try {
-        const result = await makeChessMove(match.id, currentUid, from, to);
-        if (result.won) soundSynth.playFanfare();
-      } catch (err) {
-        soundSynth.playBuzzer();
-      }
-    } else {
-      if (piece && piece.color === myColor) {
-        setSelectedPos([r, c]);
-        soundSynth.playSubtlePop();
       }
     }
   };
 
-  const files = ["A", "B", "C", "D", "E", "F", "G", "H"];
-  const ranks = ["8", "7", "6", "5", "4", "3", "2", "1"];
+  const playersList = Object.values(match.players || {});
+  const maxSeats = match.maxPlayers || 2;
 
   return (
-    <div className="w-full max-w-xl mx-auto bg-black border-2 border-white p-3 sm:p-5 font-mono text-white space-y-4 select-none shadow-[0_0_40px_rgba(255,255,255,0.15)] relative">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b-2 border-white pb-2 text-[10px] sm:text-xs">
+    <div className="w-full max-w-xl mx-auto bg-gradient-to-b from-neutral-950 via-neutral-900 to-black border-2 border-amber-500/60 p-3 sm:p-5 font-mono text-white space-y-4 select-none shadow-[0_0_80px_rgba(245,158,11,0.15)] rounded-2xl">
+      {/* ── Top Match Control Header ── */}
+      <div className="flex items-center justify-between border-b border-amber-500/30 pb-3 text-xs flex-wrap gap-2">
         <div className="flex items-center gap-2">
-          <Swords className="w-4 h-4 text-white animate-pulse" />
-          <span className="font-black uppercase tracking-widest text-white">
-            // CHESS PROTOCOL [ GRANDMASTER TERMINAL ]
-          </span>
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 text-black flex items-center justify-center font-black shadow-[0_0_15px_rgba(245,158,11,0.5)]">
+            ♟️
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-black uppercase text-amber-400 tracking-wider">
+                GRANDMASTER CHESS
+              </span>
+              <span className="px-1.5 py-0.2 bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[9px] font-bold rounded">
+                DELUXE 3D
+              </span>
+            </div>
+            <p className="text-[10px] text-neutral-400">
+              Turn: <span className="text-white font-bold">{chessState.currentTurn === "w" ? "White (♔)" : "Black (♚)"}</span> • {isMyTurn ? "YOUR MOVE" : "OPPONENT'S MOVE"}
+            </p>
+          </div>
         </div>
+
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setRulesOpen(true)}
-            className="px-2.5 py-1 border border-white bg-black hover:bg-white hover:text-black font-black uppercase text-[10px] transition-all flex items-center gap-1 cursor-pointer"
+            className="px-2.5 py-1.5 border border-neutral-700 bg-black hover:border-white text-neutral-300 font-bold text-[10px] uppercase rounded transition-all cursor-pointer flex items-center gap-1"
           >
             <HelpCircle className="w-3 h-3" />
-            <span>[ ❓ RULES ]</span>
+            <span>RULES</span>
           </button>
           <button
             type="button"
-            onClick={() => setInviteOpen(true)}
-            className="px-2.5 py-1 border border-white bg-black hover:bg-white hover:text-black font-extrabold uppercase text-[10px] transition-all flex items-center gap-1 cursor-pointer"
+            onClick={() => {
+              soundSynth.playSubtlePop();
+              setInviteOpen(true);
+            }}
+            className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-yellow-400 text-black font-black text-[10px] uppercase rounded transition-all hover:brightness-110 flex items-center gap-1.5 cursor-pointer shadow-[0_0_15px_rgba(245,158,11,0.4)] active:scale-95"
           >
             <Share2 className="w-3 h-3" />
-            <span>[ 🔗 INVITE 🎙️ ]</span>
+            <span>[ 🔗 INVITE & TALK 🎙️ ]</span>
           </button>
-          <span className={`px-2.5 py-1 border-2 font-black uppercase text-[10px] ${
-            isMyTurn ? "border-white bg-white text-black animate-pulse" : "border-neutral-700 bg-black text-neutral-400"
-          }`}>
-            {isMyTurn ? "● YOUR TURN (WHITE)" : "OPPONENT'S TURN (BLACK)"}
-          </span>
         </div>
       </div>
 
-      {/* Captured Trays HUD */}
-      <div className="flex justify-between items-center text-xs bg-neutral-950 p-2.5 border border-neutral-800 rounded">
-        <div className="flex items-center gap-1 text-neutral-400">
-          <span className="text-[10px] uppercase font-bold text-white">CAPTURED BLACK:</span>
-          <span className="text-white font-black text-sm">{chessState.capturedB.map(t => PIECE_GLYPHS[`${t}b`]).join(" ") || "NONE"}</span>
-        </div>
-        <div className="flex items-center gap-1 text-neutral-400">
-          <span className="text-[10px] uppercase font-bold text-white">CAPTURED WHITE:</span>
-          <span className="text-white font-black text-sm">{chessState.capturedW.map(t => PIECE_GLYPHS[`${t}w`]).join(" ") || "NONE"}</span>
-        </div>
-      </div>
+      <ArcadeInviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} match={match} />
+      <ArcadeGameRulesModal isOpen={rulesOpen} onClose={() => setRulesOpen(false)} initialGameType="chess" />
 
-      {/* 8x8 Pure Monochromatic Chess Board */}
-      <div className="relative max-w-[420px] mx-auto border-4 border-white bg-black p-2 shadow-2xl">
-        <div className="w-full aspect-square grid grid-cols-8 grid-rows-8 border-2 border-white relative">
+      {/* ── 1-Tap Empty Seat Availability Banner ── */}
+      {!match.players[currentUid] && playersList.length < maxSeats && match.status !== "FINISHED" && (
+        <div className="w-full bg-gradient-to-r from-emerald-950 via-emerald-900 to-emerald-950 border-2 border-emerald-400 p-3 rounded-xl flex items-center justify-between gap-2 shadow-[0_0_25px_rgba(16,185,129,0.3)] animate-in fade-in">
+          <div className="flex items-center gap-2.5 text-xs truncate">
+            <Users className="w-4 h-4 text-emerald-400 shrink-0 animate-pulse" />
+            <span className="font-black uppercase text-emerald-200 truncate">
+              🪑 SEAT OPEN ({playersList.length}/{maxSeats} PLAYERS) • TAKE A SEAT TO PLAY & TALK ON LIVE MIC
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={async () => {
+              if (!currentUid) return;
+              try {
+                const { joinArcadeMatch } = await import("@/lib/arcade");
+                await joinArcadeMatch(match.id, {
+                  uid: currentUid,
+                  handle: `@PLAYER_${currentUid.slice(0, 4)}`,
+                });
+                if (match.roomId) {
+                  const { promoteToSpeaker } = await import("@/lib/rooms");
+                  await promoteToSpeaker(match.roomId, currentUid);
+                }
+              } catch (e) {
+                console.error("Failed to take seat in Chess:", e);
+              }
+            }}
+            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs uppercase cursor-pointer rounded-lg transition-all active:scale-95 shrink-0 shadow-lg"
+          >
+            [ 🪑 TAKE A SEAT ]
+          </button>
+        </div>
+      )}
+
+      {/* ── Action Telemetry Log ── */}
+      {chessState.lastActionLog && (
+        <div className="border border-amber-500/30 bg-neutral-950/80 px-3.5 py-2 rounded-lg text-xs text-amber-200 flex items-center gap-2 shadow-inner">
+          <Sparkles className="w-4 h-4 text-amber-400 shrink-0 animate-pulse" />
+          <span className="truncate font-bold tracking-wide">{chessState.lastActionLog}</span>
+        </div>
+      )}
+
+      {/* ── 3D Deluxe Handcrafted Walnut & Maple Chess Board ── */}
+      <div className="relative aspect-square max-w-[420px] sm:max-w-[460px] mx-auto p-3 rounded-2xl bg-gradient-to-br from-[#2b1307] via-[#45220c] to-[#1a0b04] border-4 border-[#6e3713] shadow-[0_20px_50px_rgba(0,0,0,0.9),_inset_0_2px_10px_rgba(255,255,255,0.2)]">
+        {/* 8x8 Board Grid */}
+        <div className="w-full h-full grid grid-cols-8 grid-rows-8 border-2 border-[#3d200e] rounded-xl overflow-hidden shadow-inner">
           {board.map((row, r) =>
-            row.map((cell, c) => {
-              const isDark = (r + c) % 2 === 1;
+            row.map((piece, c) => {
+              const isLight = (r + c) % 2 === 0;
               const isSelected = selectedPos && selectedPos[0] === r && selectedPos[1] === c;
-              const isLegalDest = legalDestinations.some(([dr, dc]) => dr === r && dc === c);
-              const pieceGlyph = cell ? PIECE_GLYPHS[`${cell.type}${cell.color}`] : null;
+              const isLegal = legalDestinations.some(([tr, tc]) => tr === r && tc === c);
+              const pieceKey = piece ? `${piece.type}${piece.color}` : "";
+              const glyph = pieceKey ? PIECE_GLYPHS[pieceKey] : "";
 
               return (
                 <button
                   key={`${r}-${c}`}
                   type="button"
                   onClick={() => handleCellClick(r, c)}
-                  className={`relative flex items-center justify-center font-black transition-all cursor-pointer ${
+                  className={`w-full h-full flex items-center justify-center relative transition-all cursor-pointer ${
+                    isLight ? "bg-[#f4ebd0] text-black" : "bg-[#b88b4a] text-black"
+                  } ${
                     isSelected
-                      ? "bg-amber-300 ring-4 ring-amber-500 z-10 scale-105"
-                      : isDark
-                      ? "bg-[#b58863] text-black hover:bg-[#a37955]"
-                      : "bg-[#f0d9b5] text-black hover:bg-[#e0c8a3]"
+                      ? "ring-4 ring-amber-400 bg-amber-200/80 z-20 shadow-[inset_0_0_15px_#f59e0b]"
+                      : ""
                   }`}
                 >
-                  {/* Coordinate labels */}
-                  {c === 0 && (
-                    <span className={`absolute left-1 top-0.5 text-[8px] font-mono pointer-events-none ${isDark ? "text-[#f0d9b5]" : "text-[#b58863]"}`}>
-                      {ranks[r]}
-                    </span>
-                  )}
-                  {r === 7 && (
-                    <span className={`absolute right-1 bottom-0.5 text-[8px] font-mono pointer-events-none ${isDark ? "text-[#f0d9b5]" : "text-[#b58863]"}`}>
-                      {files[c]}
-                    </span>
-                  )}
-
-                  {/* Piece Representation */}
-                  {pieceGlyph && (
-                    <span
-                      className={`text-2xl sm:text-3xl transition-transform ${
-                        cell?.color === "w" ? "text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]" : "text-black drop-shadow-[0_1px_1px_rgba(255,255,255,0.3)]"
+                  {/* Legal Destination Highlight */}
+                  {isLegal && (
+                    <div
+                      className={`absolute rounded-full z-10 ${
+                        piece
+                          ? "w-full h-full border-4 border-red-500/80 bg-red-500/20 animate-pulse"
+                          : "w-3.5 h-3.5 bg-emerald-500/80 ring-2 ring-emerald-300 shadow-[0_0_8px_#10b981]"
                       }`}
-                    >
-                      {pieceGlyph}
-                    </span>
+                    />
                   )}
 
-                  {/* Valid Move Indicator Dot / Ring */}
-                  {isLegalDest && !cell && (
-                    <div className="w-3.5 h-3.5 bg-white rounded-full animate-pulse shadow-[0_0_8px_rgba(255,255,255,0.9)]" />
-                  )}
-                  {isLegalDest && cell && (
-                    <div className="absolute inset-0 border-2 border-white bg-white/20 rounded animate-pulse" />
+                  {/* 3D Realistic Piece Glyph */}
+                  {glyph && (
+                    <span
+                      className={`text-2xl sm:text-3xl font-bold select-none transition-transform ${
+                        piece?.color === "w"
+                          ? "text-[#fafafa] drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] filter"
+                          : "text-[#18181b] drop-shadow-[0_2px_3px_rgba(255,255,255,0.4)]"
+                      } ${isSelected ? "scale-125 animate-bounce" : ""}`}
+                    >
+                      {glyph}
+                    </span>
                   )}
                 </button>
               );
@@ -305,46 +351,22 @@ export default function ChessGame({ match, currentUid, isHost }: ChessGameProps)
         </div>
       </div>
 
-      {/* Move History / Action Telemetry */}
-      {chessState.lastActionLog && (
-        <div className="border border-neutral-800 bg-neutral-950 px-3 py-2 text-xs text-white flex items-center gap-2">
-          <Sparkles className="w-3.5 h-3.5 text-white" />
-          <span className="truncate uppercase font-black">{chessState.lastActionLog}</span>
-        </div>
-      )}
-
-      {/* Victory Declaration */}
+      {/* ── Victory Celebration Overlay ── */}
       {match.status === "FINISHED" && (
-        <div className="border-4 border-white bg-black p-6 text-center space-y-2 animate-bounce shadow-2xl">
-          <Trophy className="w-8 h-8 text-white mx-auto animate-pulse" />
-          <h2 className="font-black text-base uppercase tracking-widest text-white">
-            🏆 {match.winnerHandle} DELIVERED CHECKMATE!
+        <div className="border-2 border-amber-400 bg-gradient-to-b from-amber-950/90 via-black to-black p-6 rounded-2xl text-center space-y-3 shadow-[0_0_60px_rgba(245,158,11,0.6)] animate-in fade-in zoom-in-95">
+          <Trophy className="w-14 h-14 text-amber-400 mx-auto animate-bounce drop-shadow-[0_0_20px_#f59e0b]" />
+          <h2 className="text-xl font-black text-amber-300 uppercase tracking-widest">
+            🏆 CHECKMATE! GRANDMASTER VICTORY!
           </h2>
-          <p className="text-xs text-neutral-300 uppercase font-bold">
-            AWARDED +{match.stakes * 2 || 100} AURA POINTS
+          <p className="text-xs text-neutral-300 font-mono">
+            {match.winnerUid === currentUid
+              ? `VICTORY! You delivered checkmate and won +${match.stakes * 2} Aura Points!`
+              : `Match concluded! Winner: ${match.winnerHandle || "@PLAYER"}`}
           </p>
         </div>
       )}
 
-      {/* Floating Bottom-Right [ ❓ RULES ] Button for In-Game Help */}
-      <div className="fixed bottom-4 right-4 z-40">
-        <button
-          type="button"
-          onClick={() => setRulesOpen(true)}
-          className="px-3.5 py-2 bg-black border-2 border-white text-white hover:bg-white hover:text-black font-black text-xs uppercase transition-all shadow-[0_0_20px_rgba(255,255,255,0.4)] flex items-center gap-1.5 rounded-full cursor-pointer hover:scale-105"
-        >
-          <HelpCircle className="w-4 h-4" />
-          <span>[ ❓ CHESS RULES ]</span>
-        </button>
-      </div>
-
-      <ArcadeGameRulesModal
-        isOpen={rulesOpen}
-        onClose={() => setRulesOpen(false)}
-        initialGameType="chess"
-      />
-
-      <ArcadeInviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} match={match} />
+      {/* ── Decoupled Social Audio & Reaction Bar ── */}
       <ArcadeSocialDeck match={match} currentUid={currentUid} />
     </div>
   );
