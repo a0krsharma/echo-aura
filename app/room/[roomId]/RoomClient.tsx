@@ -459,6 +459,60 @@ export default function RoomClient({ roomId }: RoomClientProps) {
           />
         )}
 
+        {/* Active Stage Game 1-Tap 'Take a Seat' Banner */}
+        {room.activeGame && room.activeGame.status !== "FINISHED" && (
+          <div className="w-full bg-gradient-to-r from-neutral-950 via-neutral-900 to-neutral-950 border-2 border-emerald-400 p-3.5 sm:p-4 rounded-none flex flex-col sm:flex-row items-center justify-between gap-3 shadow-[0_0_30px_rgba(16,185,129,0.2)] animate-in fade-in slide-in-from-top-2 select-none">
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <div className="w-10 h-10 bg-emerald-500 text-black font-black rounded-none flex items-center justify-center text-xl shrink-0 shadow-[0_0_15px_rgba(16,185,129,0.5)]">
+                {room.activeGame.gameType === "ludo" ? "🎲" : room.activeGame.gameType === "uno" ? "🎴" : room.activeGame.gameType === "chess" ? "♟️" : room.activeGame.gameType === "carrom" ? "⚪" : room.activeGame.gameType === "pool" ? "🎱" : "🎮"}
+              </div>
+              <div className="truncate">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black uppercase text-white tracking-widest truncate">
+                    // {room.activeGame.gameTitle || room.activeGame.gameType.toUpperCase()} ON STAGE
+                  </span>
+                  <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9px] font-black uppercase rounded-full shrink-0">
+                    LIVE MATCH
+                  </span>
+                </div>
+                <p className="text-[11px] text-neutral-300 font-mono">
+                  Host: <span className="text-white font-bold">{room.activeGame.hostHandle}</span> • <span className="text-emerald-400 font-bold">{room.activeGame.playerCount}/{room.activeGame.maxPlayers} SEATS OCCUPIED</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+              {user && room.activeGame.playerCount < room.activeGame.maxPlayers && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!user || !room.activeGame) return;
+                    try {
+                      const { joinArcadeMatch } = await import("@/lib/arcade");
+                      await joinArcadeMatch(room.activeGame.matchId, {
+                        uid: user.uid,
+                        handle: user.handle || "@ANON",
+                        avatar: user.photoUrl || user.photoURL,
+                      });
+                      await promoteToSpeaker(roomId, user.uid);
+                      if (isMuted) {
+                        try {
+                          await toggleMic();
+                        } catch {}
+                      }
+                    } catch (e) {
+                      console.error("Failed to take seat:", e);
+                    }
+                  }}
+                  className="w-full sm:w-auto px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs uppercase transition-all shadow-[0_0_20px_rgba(16,185,129,0.4)] active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <span>🪑 TAKE A SEAT & TALK</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Live Social Gaming Lounge: Sudoku & Ludo */}
         <ArcadeRoomDock roomId={room.id} isHost={isHost} />
 

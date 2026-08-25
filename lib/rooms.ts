@@ -56,6 +56,18 @@ export interface NeuralQueueState {
   voltsMinedTotal?: number;
 }
 
+export interface RoomActiveGame {
+  matchId: string;
+  gameType: string;
+  gameTitle: string;
+  hostUid: string;
+  hostHandle: string;
+  maxPlayers: number;
+  playerCount: number;
+  status: "WAITING" | "PLAYING" | "FINISHED";
+  updatedAt?: number;
+}
+
 export interface Room {
   id: string;
   name: string;
@@ -75,6 +87,8 @@ export interface Room {
   agoraChannel: string;
   scheduledFor: Timestamp | null;
   openMic: boolean;
+  // [ STAGE GAMING ] - Active Arcade Match on Room Stage
+  activeGame?: RoomActiveGame | null;
   // [ PARTY MODE ] - Broadcast Engine & Co-Listening Synchronizer
   broadcastEngine?: "STAGE" | "SPOTIFY" | "NEURAL_RADIO";
   spotifySyncState?: SpotifySyncState | null;
@@ -1603,4 +1617,57 @@ export async function advanceNeuralTrack(roomId: string, nextIndex: number): Pro
     updatedAt: serverTimestamp(),
   });
 }
+
+// ── Stage Gaming Helpers ───────────────────────────────────────────────────
+export async function setRoomActiveGame(roomId: string, gameData: RoomActiveGame): Promise<void> {
+  try {
+    const db = getFirebaseDb();
+    const roomRef = doc(db, ROOMS_COLLECTION, roomId);
+    await updateDoc(roomRef, {
+      activeGame: {
+        ...gameData,
+        updatedAt: Date.now(),
+      },
+      updatedAt: serverTimestamp(),
+    });
+  } catch (err) {
+    console.error("[setRoomActiveGame] Error:", err);
+  }
+}
+
+export async function clearRoomActiveGame(roomId: string): Promise<void> {
+  try {
+    const db = getFirebaseDb();
+    const roomRef = doc(db, ROOMS_COLLECTION, roomId);
+    await updateDoc(roomRef, {
+      activeGame: null,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (err) {
+    console.error("[clearRoomActiveGame] Error:", err);
+  }
+}
+
+export async function updateRoomActiveGamePlayerCount(
+  roomId: string,
+  playerCount: number,
+  status?: "WAITING" | "PLAYING" | "FINISHED"
+): Promise<void> {
+  try {
+    const db = getFirebaseDb();
+    const roomRef = doc(db, ROOMS_COLLECTION, roomId);
+    const updates: Record<string, any> = {
+      "activeGame.playerCount": playerCount,
+      "activeGame.updatedAt": Date.now(),
+      updatedAt: serverTimestamp(),
+    };
+    if (status) {
+      updates["activeGame.status"] = status;
+    }
+    await updateDoc(roomRef, updates);
+  } catch (err) {
+    console.error("[updateRoomActiveGamePlayerCount] Error:", err);
+  }
+}
+
 

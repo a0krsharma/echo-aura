@@ -57,6 +57,8 @@ import ArcadeTournamentBracketModal from "./ArcadeTournamentBracketModal";
 import ChallengeLauncherModal from "./ChallengeLauncherModal";
 import LiveVoiceFilterDock from "./LiveVoiceFilterDock";
 import { soundSynth } from "@/lib/soundSynthesizer";
+import { useRoomAudio } from "@/lib/context/RoomAudioContext";
+import { promoteToSpeaker, demoteFromSpeaker, subscribeToRoom, type Room } from "@/lib/rooms";
 import {
   Gamepad2,
   X,
@@ -65,6 +67,8 @@ import {
   Play,
   Sparkles,
   Share2,
+  Mic,
+  MicOff,
   Mic2,
   HelpCircle,
   Swords,
@@ -104,10 +108,12 @@ const CATEGORIZED_GAMES = [
 
 export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) {
   const { user } = useAuth();
+  const { isMuted, toggleMic, role, speakingUids } = useRoomAudio();
   const searchParams = useSearchParams();
   const [isOpen, setIsOpen] = useState(false);
   const [activeMatchId, setActiveMatchId] = useState<string | null>(null);
   const [match, setMatch] = useState<ArcadeMatch | null>(null);
+  const [roomData, setRoomData] = useState<Room | null>(null);
   const [selectedGameType, setSelectedGameType] = useState<ArcadeGameType>("ludo");
   const [activeCategoryTab, setActiveCategoryTab] = useState<string>("ALL");
 
@@ -137,6 +143,21 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
     }
   }, [searchParams]);
 
+  // Subscribe to parent room to detect when host launches a game
+  useEffect(() => {
+    if (!roomId) return;
+    const unsub = subscribeToRoom(roomId, (data) => {
+      if (data) {
+        setRoomData(data);
+        if (data.activeGame?.matchId && data.activeGame.status !== "FINISHED") {
+          setActiveMatchId(data.activeGame.matchId);
+          setIsOpen(true);
+        }
+      }
+    });
+    return () => unsub();
+  }, [roomId]);
+
   // Subscribe to match if matchId is set
   useEffect(() => {
     if (!activeMatchId) return;
@@ -155,6 +176,13 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
         handle: user.handle || "@ANON",
         avatar: user.photoUrl || user.photoURL,
       });
+      // Promote user to speaker in the room so their microphone is activated immediately!
+      await promoteToSpeaker(roomId, user.uid);
+      if (isMuted) {
+        try {
+          await toggleMic();
+        } catch {}
+      }
     } catch (e) {
       console.error("Failed to take chair:", e);
     }
@@ -165,6 +193,11 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
     soundSynth.playSubtlePop();
     try {
       await leaveArcadeMatch(activeMatchId, user.uid);
+      if (!isHost) {
+        try {
+          await demoteFromSpeaker(roomId, user.uid);
+        } catch {}
+      }
     } catch (e) {
       console.error("Failed to leave chair:", e);
     }
@@ -196,6 +229,7 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
   const isUserSeated = user && match?.players && !!match.players[user.uid];
   const playersList = Object.values(match?.players || {});
   const maxSeats = match?.maxPlayers || 4;
+  const isMeSpeaking = user && speakingUids.has(user.uid);
 
   if (!isOpen) {
     return (
@@ -205,17 +239,36 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
           <span className="font-extrabold uppercase tracking-widest text-white">
             // STAGE GAMING & VOICE PARTY DOCK
           </span>
+          {match && (
+            <span className="px-2 py-0.5 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-[10px] font-black uppercase rounded">
+              {match.title || match.gameType.toUpperCase()} ({playersList.length}/{maxSeats})
+            </span>
+          )}
           <span className="text-[10px] text-neutral-400 hidden sm:inline">
             • HOST MATCHES, TAKE SEATS, SPECTATE & VOTE LIVE ON STAGE
           </span>
         </div>
-        <button
-          type="button"
-          onClick={() => setIsOpen(true)}
-          className="px-4 py-1.5 border-2 border-white bg-white text-black hover:bg-black hover:text-white font-extrabold font-mono text-xs uppercase transition-all active:scale-95 cursor-pointer shadow-md"
-        >
-          [ 🎮 LAUNCH STAGE GAMES ]
-        </button>
+        <div className="flex items-center gap-2">
+          {!isUserSeated && match && playersList.length < maxSeats && (
+            <button
+              type="button"
+              onClick={() => {
+                setIsOpen(true);
+                handleTakeChair();
+              }}
+              className="px-3 py-1.5 border border-emerald-400 bg-emerald-500 hover:bg-emerald-400 text-black font-black font-mono text-xs uppercase transition-all active:scale-95 cursor-pointer shadow-md flex items-center gap-1.5"
+            >
+              <span>🪑 TAKE A SEAT</span>
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setIsOpen(true)}
+            className="px-4 py-1.5 border-2 border-white bg-white text-black hover:bg-black hover:text-white font-extrabold font-mono text-xs uppercase transition-all active:scale-95 cursor-pointer shadow-md"
+          >
+            [ 🎮 {match ? "OPEN GAME TABLE" : "LAUNCH STAGE GAMES"} ]
+          </button>
+        </div>
       </div>
     );
   }
@@ -234,10 +287,35 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
               {match.title || match.gameType.toUpperCase()}
             </span>
           )}
-          <span className="text-[10px] text-emerald-400 border border-emerald-800 bg-emerald-950/40 px-1.5 py-0.5 hidden sm:inline flex items-center gap-1">
-            <Mic2 className="w-2.5 h-2.5" />
-            <span>VOICE CONNECTED</span>
-          </span>
+          {/* Live Seated Mic Status Indicator & Toggle */}
+          {isUserSeated ? (
+            <button
+              type="button"
+              onClick={toggleMic}
+              className={`px-2 py-0.5 text-[10px] font-black uppercase rounded flex items-center gap-1 cursor-pointer transition-all active:scale-95 ${
+                isMuted
+                  ? "border border-red-700 bg-red-950/60 text-red-300 hover:bg-red-900"
+                  : "border border-emerald-400 bg-emerald-500 text-black hover:bg-emerald-400"
+              }`}
+            >
+              {isMuted ? (
+                <>
+                  <MicOff className="w-3 h-3 text-red-400" />
+                  <span>[ MIC MUTED • TAP TO TALK ]</span>
+                </>
+              ) : (
+                <>
+                  <Mic className="w-3 h-3 text-black animate-pulse" />
+                  <span>[ 🎙️ MIC ON • TALKING LIVE ]</span>
+                </>
+              )}
+            </button>
+          ) : (
+            <span className="text-[10px] text-emerald-400 border border-emerald-800 bg-emerald-950/40 px-1.5 py-0.5 hidden sm:inline flex items-center gap-1">
+              <Mic2 className="w-2.5 h-2.5" />
+              <span>ROOM VOICE LIVE</span>
+            </span>
+          )}
         </div>
 
         {/* Action Controls Bar */}

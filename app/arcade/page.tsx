@@ -715,50 +715,57 @@ function ArcadeContent() {
             </div>
 
             {/* In-Match Live Voice Filters & Reaction Soundboard */}
-            {user && !activeMatch.players?.[user?.uid] ? (
-              <div className="w-full bg-neutral-950 border-2 border-dashed border-neutral-700 p-3 mb-4 rounded-lg flex items-center justify-between shadow-[0_0_15px_rgba(0,0,0,0.5)]">
-                <div className="flex items-center gap-2">
-                  <span className="relative flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                  </span>
-                  <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest">
-                    LIVE SPECTATOR MODE
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => sendSpectatorEvent(activeMatch.id, user.handle, "AIRHORN")}
-                    className="px-3 py-1.5 bg-neutral-900 border border-blue-900 hover:bg-blue-900 hover:border-blue-500 text-blue-400 font-bold text-[10px] uppercase rounded transition-all"
-                  >
-                    📢 AIRHORN
-                  </button>
-                  <button
-                    onClick={() => sendSpectatorEvent(activeMatch.id, user.handle, "APPLAUSE")}
-                    className="px-3 py-1.5 bg-neutral-900 border border-emerald-900 hover:bg-emerald-900 hover:border-emerald-500 text-emerald-400 font-bold text-[10px] uppercase rounded transition-all"
-                  >
-                    👏 APPLAUSE
-                  </button>
-                  <button
-                    onClick={() => sendSpectatorEvent(activeMatch.id, user.handle, "BOING")}
-                    className="px-3 py-1.5 bg-neutral-900 border border-amber-900 hover:bg-amber-900 hover:border-amber-500 text-amber-400 font-bold text-[10px] uppercase rounded transition-all"
-                  >
-                    🤪 BOING
-                  </button>
-                </div>
-              </div>
-            ) : (
+            {activeMatch.enableVoice !== false && (
               <AgoraRTCProvider client={rtcClient}>
-                <div className="flex flex-col gap-2">
-                  <LiveVoiceFilterDock
-                    currentFilter={activeVoiceFilter}
-                    onFilterChange={(f) => setActiveVoiceFilter(f)}
-                    rawMediaStream={rawMicStream}
-                    onProcessedStream={setProcessedMicStream}
-                  />
-                  {activeMatch.enableVoice && (
-                    <ArcadeVoiceChannel matchId={activeMatch.id} processedStream={processedMicStream} />
+                <div className="flex flex-col gap-2 mb-4">
+                  {user && !activeMatch.players?.[user?.uid] ? (
+                    <div className="w-full bg-neutral-950 border-2 border-dashed border-neutral-700 p-3 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-3 shadow-[0_0_15px_rgba(0,0,0,0.5)]">
+                      <div className="flex items-center gap-2">
+                        <span className="relative flex h-3 w-3">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                        </span>
+                        <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest">
+                          LIVE SPECTATOR MODE
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => sendSpectatorEvent(activeMatch.id, user.handle, "AIRHORN")}
+                          className="px-3 py-1.5 bg-neutral-900 border border-blue-900 hover:bg-blue-900 hover:border-blue-500 text-blue-400 font-bold text-[10px] uppercase rounded transition-all cursor-pointer"
+                        >
+                          📢 AIRHORN
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => sendSpectatorEvent(activeMatch.id, user.handle, "APPLAUSE")}
+                          className="px-3 py-1.5 bg-neutral-900 border border-emerald-900 hover:bg-emerald-900 hover:border-emerald-500 text-emerald-400 font-bold text-[10px] uppercase rounded transition-all cursor-pointer"
+                        >
+                          👏 APPLAUSE
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => sendSpectatorEvent(activeMatch.id, user.handle, "BOING")}
+                          className="px-3 py-1.5 bg-neutral-900 border border-amber-900 hover:bg-amber-900 hover:border-amber-500 text-amber-400 font-bold text-[10px] uppercase rounded transition-all cursor-pointer"
+                        >
+                          🤪 BOING
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <LiveVoiceFilterDock
+                      currentFilter={activeVoiceFilter}
+                      onFilterChange={(f) => setActiveVoiceFilter(f)}
+                      rawMediaStream={rawMicStream}
+                      onProcessedStream={setProcessedMicStream}
+                    />
                   )}
+                  <ArcadeVoiceChannel
+                    matchId={activeMatch.id}
+                    isSpectator={Boolean(user && !activeMatch.players?.[user?.uid])}
+                    processedStream={processedMicStream}
+                  />
                 </div>
               </AgoraRTCProvider>
             )}

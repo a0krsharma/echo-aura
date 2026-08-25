@@ -330,6 +330,40 @@ export default function UnoGame({ match, currentUid }: UnoGameProps) {
         </div>
       </div>
 
+      {/* ── 1-Tap Empty Seat Availability Banner ── */}
+      {!match.players?.[currentUid] && Object.keys(match.players || {}).length < (match.maxPlayers || 4) && match.status !== "FINISHED" && (
+        <div className="w-full bg-emerald-950/80 border-2 border-emerald-400 p-2.5 flex items-center justify-between gap-2 shadow-lg animate-in fade-in">
+          <div className="flex items-center gap-2 text-xs truncate">
+            <Users className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span className="font-black uppercase text-emerald-200 truncate">
+              🪑 SEAT OPEN ({Object.keys(match.players || {}).length}/{match.maxPlayers || 4} SEATED) • TAKE A SEAT TO PLAY & TALK
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={async () => {
+              if (!currentUid) return;
+              try {
+                const { joinArcadeMatch } = await import("@/lib/arcade");
+                await joinArcadeMatch(match.id, {
+                  uid: currentUid,
+                  handle: `@PLAYER_${currentUid.slice(0, 4)}`,
+                });
+                if (match.roomId) {
+                  const { promoteToSpeaker } = await import("@/lib/rooms");
+                  await promoteToSpeaker(match.roomId, currentUid);
+                }
+              } catch (e) {
+                console.error("Failed to take seat in Uno:", e);
+              }
+            }}
+            className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs uppercase cursor-pointer rounded transition-all active:scale-95 shrink-0 shadow-md"
+          >
+            [ 🪑 TAKE A SEAT ]
+          </button>
+        </div>
+      )}
+
       {/* Opponents Radar & Rotation Direction HUD */}
       <div className="flex items-center justify-between bg-neutral-950 p-2.5 border border-neutral-800 rounded-lg flex-wrap gap-2">
         <div className="flex items-center gap-2 flex-wrap">

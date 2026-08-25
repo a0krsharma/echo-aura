@@ -273,6 +273,9 @@ export interface CarromState {
   p1Score: number;
   p2Score: number;
   hasQueen: string | null;
+  queenPendingUid?: string | null;
+  playerColors?: Record<string, "WHITE" | "BLACK">;
+  foulCount?: Record<string, number>;
   lastShotStr?: string;
   lastActionLog?: string;
 }
@@ -1196,23 +1199,72 @@ export async function createArcadeMatch(params: {
       lastActionLog: "8-Ball Table active. Break the rack!",
     };
   } else if (params.gameType === "carrom") {
+        // Official 19-Piece Tournament Carrom Rack
+    const cx = 200, cy = 200, r = 11.5;
     const carromPieces: CarromPiece[] = [
-      { id: "queen", x: 200, y: 200, vx: 0, vy: 0, radius: 11, color: "#ef4444", type: "queen", isPocketed: false },
-      { id: "w1", x: 200, y: 178, vx: 0, vy: 0, radius: 11, color: "#ffffff", type: "white", isPocketed: false },
-      { id: "b1", x: 200, y: 222, vx: 0, vy: 0, radius: 11, color: "#262626", type: "black", isPocketed: false },
-      { id: "w2", x: 181, y: 189, vx: 0, vy: 0, radius: 11, color: "#ffffff", type: "white", isPocketed: false },
-      { id: "b2", x: 219, y: 189, vx: 0, vy: 0, radius: 11, color: "#262626", type: "black", isPocketed: false },
-      { id: "w3", x: 181, y: 211, vx: 0, vy: 0, radius: 11, color: "#ffffff", type: "white", isPocketed: false },
-      { id: "b3", x: 219, y: 211, vx: 0, vy: 0, radius: 11, color: "#262626", type: "black", isPocketed: false },
-      { id: "striker", x: 200, y: 325, vx: 0, vy: 0, radius: 16, color: "#10b981", type: "striker", isPocketed: false },
+      { id: "queen", x: cx, y: cy, vx: 0, vy: 0, radius: r, color: "#dc2626", type: "queen", isPocketed: false }
     ];
+
+    // Inner Ring: 6 pieces (3 White, 3 Black alternating) at distance 2r = 23
+    const r1 = 23;
+    for (let i = 0; i < 6; i++) {
+      const angle = (i * 60) * (Math.PI / 180);
+      const isWhite = i % 2 === 0;
+      carromPieces.push({
+        id: isWhite ? `w${Math.floor(i / 2) + 1}` : `b${Math.floor(i / 2) + 1}`,
+        x: Math.round((cx + r1 * Math.cos(angle)) * 10) / 10,
+        y: Math.round((cy + r1 * Math.sin(angle)) * 10) / 10,
+        vx: 0, vy: 0, radius: r,
+        color: isWhite ? "#ffffff" : "#1f2937",
+        type: isWhite ? "white" : "black",
+        isPocketed: false
+      });
+    }
+
+    // Outer Ring: 12 pieces (6 White, 6 Black alternating)
+    const r2A = 46;      // Vertex distance
+    const r2B = 39.84;   // Edge distance
+    for (let i = 0; i < 12; i++) {
+      const angle = (i * 30) * (Math.PI / 180);
+      const dist = i % 2 === 0 ? r2A : r2B;
+      const isWhite = i % 2 === 1; // Alternating
+      const countIndex = Math.floor(i / 2) + 4;
+      carromPieces.push({
+        id: isWhite ? `w${countIndex}` : `b${countIndex}`,
+        x: Math.round((cx + dist * Math.cos(angle)) * 10) / 10,
+        y: Math.round((cy + dist * Math.sin(angle)) * 10) / 10,
+        vx: 0, vy: 0, radius: r,
+        color: isWhite ? "#ffffff" : "#1f2937",
+        type: isWhite ? "white" : "black",
+        isPocketed: false
+      });
+    }
+
+    // Deluxe Heavyweight Ivory Striker on player baseline
+    carromPieces.push({
+      id: "striker",
+      x: 200,
+      y: 335,
+      vx: 0,
+      vy: 0,
+      radius: 17,
+      color: "#10b981",
+      type: "striker",
+      isPocketed: false
+    });
+
     matchData.carromState = {
       piecesStr: JSON.stringify(carromPieces),
       currentTurnUid: params.hostUid,
       p1Score: 0,
       p2Score: 0,
       hasQueen: null,
-      lastActionLog: "Carrom Board set. Line up your striker & shoot!",
+      queenPendingUid: null,
+      playerColors: {
+        [params.hostUid]: "WHITE",
+      },
+      foulCount: {},
+      lastActionLog: "Tournament Carrom Board ready! White breaks first.",
     };
   } else if (params.gameType === "glow_hockey") {
     matchData.glowHockeyState = {
@@ -2623,7 +2675,17 @@ export async function fireCarromShot(
   impulseY: number,
   strikerX: number,
   strikerY: number,
-  updatedPieces: CarromPiece[]
+  updatedPieces: CarromPiece[],
+  options?: {
+    nextTurnUid?: string;
+    p1Score?: number;
+    p2Score?: number;
+    hasQueen?: string | null;
+    queenPendingUid?: string | null;
+    actionLog?: string;
+    isGameOver?: boolean;
+    winnerUid?: string;
+  }
 ): Promise<void> {
   const db = getFirebaseDb();
   const matchRef = doc(db, ARCADE_COLLECTION, matchId);
@@ -2633,22 +2695,29 @@ export async function fireCarromShot(
   if (!match.carromState) return;
 
   const playerUids = Object.keys(match.players || {});
-  const nextTurnUid = playerUids.find((id) => id !== playerUid) || playerUid;
+  const calculatedNextTurn = playerUids.find((id) => id !== playerUid) || playerUid;
+  const nextTurnUid = options?.nextTurnUid ?? calculatedNextTurn;
   const remainingTargets = updatedPieces.filter((p) => p.type !== "striker" && !p.isPocketed);
 
   const updates: any = {
     "carromState.piecesStr": JSON.stringify(updatedPieces),
     "carromState.lastShotStr": JSON.stringify({ impulseX, impulseY, strikerX, strikerY, timestamp: Date.now() }),
     "carromState.currentTurnUid": nextTurnUid,
-    "carromState.lastActionLog": `${match.players[playerUid]?.handle || "Player"} released the striker!`,
+    "carromState.lastActionLog": options?.actionLog || `${match.players[playerUid]?.handle || "Player"} struck the carrom piece!`,
     updatedAt: serverTimestamp(),
   };
 
-  if (remainingTargets.length === 0) {
+  if (options?.p1Score !== undefined) updates["carromState.p1Score"] = options.p1Score;
+  if (options?.p2Score !== undefined) updates["carromState.p2Score"] = options.p2Score;
+  if (options?.hasQueen !== undefined) updates["carromState.hasQueen"] = options.hasQueen;
+  if (options?.queenPendingUid !== undefined) updates["carromState.queenPendingUid"] = options.queenPendingUid;
+
+  if (options?.isGameOver || remainingTargets.length === 0) {
+    const winnerUid = options?.winnerUid || playerUid;
     updates.status = "FINISHED";
-    updates.winnerUid = playerUid;
-    updates.winnerHandle = match.players[playerUid]?.handle || "@ANON";
-    await awardAura(playerUid, match.stakes * 2 || 100);
+    updates.winnerUid = winnerUid;
+    updates.winnerHandle = match.players[winnerUid]?.handle || "@ANON";
+    await awardAura(winnerUid, match.stakes * 2 || 100);
   }
 
   await updateDoc(matchRef, updates);
