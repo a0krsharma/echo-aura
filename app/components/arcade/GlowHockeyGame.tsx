@@ -22,9 +22,6 @@ import {
   ChevronDown,
   ChevronUp,
   RotateCcw,
-  Magnet,
-  Layers,
-  Crosshair,
   Volume2,
 } from "lucide-react";
 
@@ -43,15 +40,16 @@ const WALL_THICKNESS = 18;
 const PLAYABLE_MIN_X = WALL_THICKNESS + PUCK_RADIUS;
 const PLAYABLE_MAX_X = WIDTH - WALL_THICKNESS - PUCK_RADIUS;
 
-// USAA & Physics Constants
-const RESTITUTION_RAIL = 0.90;
-const RESTITUTION_MALLET = 0.95;
-const DRAG_FACTOR = 0.993; // Aerostatic suspension drag
-const MAX_PUCK_SPEED = 24;
+// USAA & World-Class Physics Constants
+const RESTITUTION_RAIL = 0.92;
+const RESTITUTION_MALLET = 0.96;
+const DRAG_FACTOR = 0.995; // Aerostatic suspension drag (smooth low friction glide)
+const MAX_PUCK_SPEED = 28;
+const MAX_MALLET_SPEED = 32;
 const POSSESSION_LIMIT_SEC = 7;
 
 export type AIDifficulty = "AMATEUR" | "SEMI_PRO" | "USAA_PRO" | "IMPOSSIBLE_TAS";
-export type PowerUpType = "NONE" | "MULTI_PUCK" | "TITAN_SHIELD" | "HYPER_BOOST" | "MAGNET";
+export type PowerUpType = "NONE" | "MULTI_PUCK" | "TITAN_SHIELD" | "HYPER_BOOST";
 
 interface PuckEntity {
   id: string;
@@ -78,27 +76,27 @@ interface Spark {
 function playProceduralHit(audioCtx: AudioContext | null, impactSpeed: number) {
   if (!audioCtx) return;
   try {
-    const normVel = Math.min(impactSpeed / 20, 1.0);
+    const normVel = Math.min(impactSpeed / 22, 1.0);
     const now = audioCtx.currentTime;
 
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
 
-    const baseFreq = 180 + normVel * 600;
+    const baseFreq = 200 + normVel * 750;
     osc.type = "sine";
     osc.frequency.setValueAtTime(baseFreq, now);
-    osc.frequency.exponentialRampToValueAtTime(70, now + 0.07);
+    osc.frequency.exponentialRampToValueAtTime(70, now + 0.08);
 
-    gain.gain.setValueAtTime(normVel * 0.7, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+    gain.gain.setValueAtTime(normVel * 0.8, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
 
     osc.connect(gain);
     gain.connect(audioCtx.destination);
     osc.start(now);
-    osc.stop(now + 0.08);
+    osc.stop(now + 0.09);
 
     if (typeof navigator !== "undefined" && navigator.vibrate) {
-      navigator.vibrate(Math.round(8 + normVel * 22));
+      navigator.vibrate(Math.round(10 + normVel * 25));
     }
   } catch (_) {}
 }
@@ -114,6 +112,7 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
   const [possessionTimer, setPossessionTimer] = useState<number>(POSSESSION_LIMIT_SEC);
   const [possessionSide, setPossessionSide] = useState<"P1" | "P2" | "NEUTRAL">("NEUTRAL");
   const [foulAlert, setFoulAlert] = useState<string | null>(null);
+  const [screenShake, setScreenShake] = useState<number>(0);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -129,8 +128,8 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
       id: "main_puck",
       x: WIDTH / 2,
       y: HEIGHT / 2,
-      vx: 0,
-      vy: 0,
+      vx: (Math.random() - 0.5) * 6,
+      vy: 6,
       radius: PUCK_RADIUS,
       trail: [],
     },
@@ -138,9 +137,9 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
 
   const p1PaddleRef = useRef({
     x: WIDTH / 2,
-    y: HEIGHT - 70,
+    y: HEIGHT - 75,
     prevX: WIDTH / 2,
-    prevY: HEIGHT - 70,
+    prevY: HEIGHT - 75,
     vx: 0,
     vy: 0,
     radius: BASE_PADDLE_RADIUS,
@@ -148,16 +147,17 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
 
   const p2PaddleRef = useRef({
     x: WIDTH / 2,
-    y: 70,
+    y: 75,
     prevX: WIDTH / 2,
-    prevY: 70,
+    prevY: 75,
     vx: 0,
     vy: 0,
     radius: BASE_PADDLE_RADIUS,
   });
 
-  const p1TargetRef = useRef({ x: WIDTH / 2, y: HEIGHT - 70 });
-  const p2TargetRef = useRef({ x: WIDTH / 2, y: 70 });
+  const p1TargetRef = useRef({ x: WIDTH / 2, y: HEIGHT - 75 });
+  const p2TargetRef = useRef({ x: WIDTH / 2, y: 75 });
+  const pointerHistoryRef = useRef<{ x: number; y: number; time: number }[]>([]);
   const sparksRef = useRef<Spark[]>([]);
   const lastPossessionCheckRef = useRef<number>(Date.now());
   const matchRef = useRef(match);
@@ -173,10 +173,10 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
     } catch (_) {}
   }, []);
 
-  const emitSparks = useCallback((x: number, y: number, color: string, count = 12) => {
+  const emitSparks = useCallback((x: number, y: number, color: string, count = 16) => {
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const speed = Math.random() * 7 + 2;
+      const speed = Math.random() * 8 + 3;
       sparksRef.current.push({
         x,
         y,
@@ -204,7 +204,7 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
     if (type === "MULTI_PUCK") {
       const main = pucksRef.current[0];
       if (main) {
-        const speed = Math.hypot(main.vx, main.vy) || 6;
+        const speed = Math.hypot(main.vx, main.vy) || 8;
         const angle1 = Math.PI / 6; // +30 deg
         const angle2 = -Math.PI / 6; // -30 deg
 
@@ -235,8 +235,8 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
     } else if (type === "HYPER_BOOST") {
       const main = pucksRef.current[0];
       if (main) {
-        main.vx *= 1.6;
-        main.vy *= 1.6;
+        main.vx *= 1.8;
+        main.vy *= 1.8;
       }
     }
   }, []);
@@ -248,22 +248,22 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
         id: "main_puck",
         x: WIDTH / 2,
         y: scoredOnP1 ? HEIGHT / 2 + 60 : HEIGHT / 2 - 60,
-        vx: (Math.random() - 0.5) * 4,
-        vy: scoredOnP1 ? 5 : -5,
+        vx: (Math.random() - 0.5) * 6,
+        vy: scoredOnP1 ? 7 : -7,
         radius: PUCK_RADIUS,
         trail: [],
       },
     ];
 
     p1PaddleRef.current.x = WIDTH / 2;
-    p1PaddleRef.current.y = HEIGHT - 70;
+    p1PaddleRef.current.y = HEIGHT - 75;
     p1PaddleRef.current.radius = BASE_PADDLE_RADIUS;
-    p1TargetRef.current = { x: WIDTH / 2, y: HEIGHT - 70 };
+    p1TargetRef.current = { x: WIDTH / 2, y: HEIGHT - 75 };
 
     p2PaddleRef.current.x = WIDTH / 2;
-    p2PaddleRef.current.y = 70;
+    p2PaddleRef.current.y = 75;
     p2PaddleRef.current.radius = BASE_PADDLE_RADIUS;
-    p2TargetRef.current = { x: WIDTH / 2, y: 70 };
+    p2TargetRef.current = { x: WIDTH / 2, y: 75 };
 
     setActivePowerUp("NONE");
     setPowerUpTimer(0);
@@ -301,7 +301,7 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
       const p1 = p1PaddleRef.current;
       const p2 = p2PaddleRef.current;
 
-      // ── 1. Update Player 1 Paddle with Strict Centerline Boundary ──
+      // ── 1. Update Player 1 Paddle with Responsive 1:1 Tracking & Strict Centerline ──
       p1.prevX = p1.x;
       p1.prevY = p1.y;
       const targetP1 = p1TargetRef.current;
@@ -309,10 +309,11 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
       const clampedP1X = Math.max(WALL_THICKNESS + p1.radius, Math.min(WIDTH - WALL_THICKNESS - p1.radius, targetP1.x));
       const clampedP1Y = Math.max(HEIGHT / 2 + p1.radius + 4, Math.min(HEIGHT - WALL_THICKNESS - p1.radius, targetP1.y));
 
-      p1.x += (clampedP1X - p1.x) * 0.45;
-      p1.y += (clampedP1Y - p1.y) * 0.45;
-      p1.vx = (p1.x - p1.prevX) / (dt || 0.016);
-      p1.vy = (p1.y - p1.prevY) / (dt || 0.016);
+      // Direct responsive tracking without sluggish lag
+      p1.x = clampedP1X;
+      p1.y = clampedP1Y;
+      p1.vx = (p1.x - p1.prevX);
+      p1.vy = (p1.y - p1.prevY);
 
       // ── 2. Predictive AI Bot Trajectory Raycasting & Parabolic Crease Arc ──
       p2.prevX = p2.x;
@@ -320,27 +321,27 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
 
       if (isVsBot) {
         const primaryPuck = pucksRef.current[0];
-        let aiReactionSpeed = 0.22;
+        let aiFollowSpeed = 0.35;
         let predictionDepth = 1;
 
         if (aiDifficulty === "AMATEUR") {
-          aiReactionSpeed = 0.12;
+          aiFollowSpeed = 0.18;
           predictionDepth = 0;
         } else if (aiDifficulty === "USAA_PRO") {
-          aiReactionSpeed = 0.38;
+          aiFollowSpeed = 0.65;
           predictionDepth = 2;
         } else if (aiDifficulty === "IMPOSSIBLE_TAS") {
-          aiReactionSpeed = 0.85;
+          aiFollowSpeed = 0.95;
           predictionDepth = 4;
         }
 
         let aiTargetX = WIDTH / 2;
-        let aiTargetY = 70;
+        let aiTargetY = 75;
 
         if (primaryPuck) {
           // A. Predictive Modular Table Folding Raycasting
           if (primaryPuck.vy < 0 && predictionDepth > 0) {
-            const defY = 70;
+            const defY = 75;
             const tPlane = Math.max(0.01, (defY - primaryPuck.y) / primaryPuck.vy);
             const xVirtual = primaryPuck.x + primaryPuck.vx * tPlane;
             const wEffective = WIDTH - 2 * PUCK_RADIUS - 2 * WALL_THICKNESS;
@@ -357,45 +358,52 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
             aiTargetX = primaryPuck.x;
           }
 
-          // B. Parabolic Defensive Crease Arc Equation: y_AI(x) = y_goal + h_crease * [1 - ((x - center)/(W_goal/2))^2]
-          const hCrease = 26;
+          // B. Parabolic Defensive Crease Arc Equation
+          const hCrease = 28;
           const xOffset = (aiTargetX - WIDTH / 2) / (GOAL_WIDTH / 2 + 10);
           const arcOffset = hCrease * (1 - Math.min(1, xOffset * xOffset));
 
           if (primaryPuck.y < HEIGHT / 2 - 20 && primaryPuck.vy >= 0) {
-            // ATTACK_STRIKE: Strike forward through puck
-            aiTargetY = Math.min(HEIGHT / 2 - p2.radius - 6, Math.max(WALL_THICKNESS + p2.radius + 10, primaryPuck.y - 10));
+            // ATTACK_STRIKE: Strike forward aggressively through puck
+            aiTargetY = Math.min(HEIGHT / 2 - p2.radius - 6, Math.max(WALL_THICKNESS + p2.radius + 10, primaryPuck.y - 12));
           } else {
-            // DEFEND_CREASE: Move along Parabolic Crease Arc
+            // DEFEND_CREASE: Step along Parabolic Crease Arc
             aiTargetY = 55 + arcOffset;
           }
         }
 
-        p2TargetRef.current = { x: aiTargetX, y: aiTargetY };
+        const clampedP2X = Math.max(WALL_THICKNESS + p2.radius, Math.min(WIDTH - WALL_THICKNESS - p2.radius, aiTargetX));
+        const clampedP2Y = Math.max(WALL_THICKNESS + p2.radius, Math.min(HEIGHT / 2 - p2.radius - 4, aiTargetY));
+
+        p2.x += (clampedP2X - p2.x) * aiFollowSpeed;
+        p2.y += (clampedP2Y - p2.y) * aiFollowSpeed;
+        p2.vx = (p2.x - p2.prevX);
+        p2.vy = (p2.y - p2.prevY);
+      } else {
+        const targetP2 = p2TargetRef.current;
+        const clampedP2X = Math.max(WALL_THICKNESS + p2.radius, Math.min(WIDTH - WALL_THICKNESS - p2.radius, targetP2.x));
+        const clampedP2Y = Math.max(WALL_THICKNESS + p2.radius, Math.min(HEIGHT / 2 - p2.radius - 4, targetP2.y));
+
+        p2.x = clampedP2X;
+        p2.y = clampedP2Y;
+        p2.vx = (p2.x - p2.prevX);
+        p2.vy = (p2.y - p2.prevY);
       }
 
-      const targetP2 = p2TargetRef.current;
-      const clampedP2X = Math.max(WALL_THICKNESS + p2.radius, Math.min(WIDTH - WALL_THICKNESS - p2.radius, targetP2.x));
-      const clampedP2Y = Math.max(WALL_THICKNESS + p2.radius, Math.min(HEIGHT / 2 - p2.radius - 4, targetP2.y));
-
-      p2.x += (clampedP2X - p2.x) * 0.35;
-      p2.y += (clampedP2Y - p2.y) * 0.35;
-      p2.vx = (p2.x - p2.prevX) / (dt || 0.016);
-      p2.vy = (p2.y - p2.prevY) / (dt || 0.016);
-
-      // ── 3. Continuous Collision Detection (CCD) Sub-Stepping for All Pucks ──
+      // ── 3. High-Accuracy Continuous Collision Detection (CCD) Sub-Stepping ──
       const subSteps = 6;
-      const stepDt = dt / subSteps;
+      const speedScale = dt * 60;
 
       for (let s = 0; s < subSteps; s++) {
         pucksRef.current.forEach((puck) => {
-          puck.x += (puck.vx * stepDt * 60) / subSteps;
-          puck.y += (puck.vy * stepDt * 60) / subSteps;
+          // Add velocity incrementally per sub-step
+          puck.x += (puck.vx * speedScale) / subSteps;
+          puck.y += (puck.vy * speedScale) / subSteps;
 
           puck.vx *= Math.pow(DRAG_FACTOR, 1 / subSteps);
           puck.vy *= Math.pow(DRAG_FACTOR, 1 / subSteps);
 
-          // A. Circle-to-Circle Elastic Collision with P1 Mallet
+          // A. Circle-to-Circle Elastic Collision with P1 Mallet (Kinematic Impulse)
           const dx1 = puck.x - p1.x;
           const dy1 = puck.y - p1.y;
           const dist1 = Math.hypot(dx1, dy1);
@@ -405,21 +413,28 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
             const nx = dx1 / dist1;
             const ny = dy1 / dist1;
 
+            // Penetration resolution
             puck.x = p1.x + nx * minDist1;
             puck.y = p1.y + ny * minDist1;
 
-            const relVx = puck.vx - p1.vx * 0.05;
-            const relVy = puck.vy - p1.vy * 0.05;
+            // Mallet strike velocity relative to puck
+            const relVx = puck.vx - p1.vx;
+            const relVy = puck.vy - p1.vy;
             const normalVel = relVx * nx + relVy * ny;
 
             if (normalVel < 0) {
               const impulse = -(1 + RESTITUTION_MALLET) * normalVel;
-              puck.vx += impulse * nx + p1.vx * 0.04;
-              puck.vy += impulse * ny + p1.vy * 0.04;
+              puck.vx += impulse * nx + p1.vx * 0.8;
+              puck.vy += impulse * ny + p1.vy * 0.8;
 
               const hitSpeed = Math.hypot(puck.vx, puck.vy);
               playProceduralHit(audioCtxRef.current, hitSpeed);
-              emitSparks(puck.x, puck.y, "#00ffcc", 16);
+              emitSparks(puck.x, puck.y, "#00ffcc", 20);
+
+              if (hitSpeed > 16) {
+                setScreenShake(6);
+                setTimeout(() => setScreenShake(0), 120);
+              }
             }
           }
 
@@ -436,18 +451,23 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
             puck.x = p2.x + nx * minDist2;
             puck.y = p2.y + ny * minDist2;
 
-            const relVx = puck.vx - p2.vx * 0.05;
-            const relVy = puck.vy - p2.vy * 0.05;
+            const relVx = puck.vx - p2.vx;
+            const relVy = puck.vy - p2.vy;
             const normalVel = relVx * nx + relVy * ny;
 
             if (normalVel < 0) {
               const impulse = -(1 + RESTITUTION_MALLET) * normalVel;
-              puck.vx += impulse * nx + p2.vx * 0.04;
-              puck.vy += impulse * ny + p2.vy * 0.04;
+              puck.vx += impulse * nx + p2.vx * 0.8;
+              puck.vy += impulse * ny + p2.vy * 0.8;
 
               const hitSpeed = Math.hypot(puck.vx, puck.vy);
               playProceduralHit(audioCtxRef.current, hitSpeed);
-              emitSparks(puck.x, puck.y, "#ff0055", 16);
+              emitSparks(puck.x, puck.y, "#ff0055", 20);
+
+              if (hitSpeed > 16) {
+                setScreenShake(6);
+                setTimeout(() => setScreenShake(0), 120);
+              }
             }
           }
 
@@ -455,12 +475,12 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
           if (puck.x < PLAYABLE_MIN_X) {
             puck.x = PLAYABLE_MIN_X;
             puck.vx = -puck.vx * RESTITUTION_RAIL;
-            emitSparks(puck.x, puck.y, "#38bdf8", 6);
+            emitSparks(puck.x, puck.y, "#38bdf8", 8);
             soundSynth.playSubtlePop();
           } else if (puck.x > PLAYABLE_MAX_X) {
             puck.x = PLAYABLE_MAX_X;
             puck.vx = -puck.vx * RESTITUTION_RAIL;
-            emitSparks(puck.x, puck.y, "#38bdf8", 6);
+            emitSparks(puck.x, puck.y, "#38bdf8", 8);
             soundSynth.playSubtlePop();
           }
 
@@ -472,16 +492,16 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
           if (puck.y < WALL_THICKNESS + puck.radius && !isWithinGoalX) {
             puck.y = WALL_THICKNESS + puck.radius;
             puck.vy = -puck.vy * RESTITUTION_RAIL;
-            emitSparks(puck.x, puck.y, "#ff0055", 6);
+            emitSparks(puck.x, puck.y, "#ff0055", 8);
             soundSynth.playSubtlePop();
           } else if (puck.y > HEIGHT - WALL_THICKNESS - puck.radius && !isWithinGoalX) {
             puck.y = HEIGHT - WALL_THICKNESS - puck.radius;
             puck.vy = -puck.vy * RESTITUTION_RAIL;
-            emitSparks(puck.x, puck.y, "#00ffcc", 6);
+            emitSparks(puck.x, puck.y, "#00ffcc", 8);
             soundSynth.playSubtlePop();
           }
 
-          // Clamp Puck Speed
+          // Clamp Max Speed
           const curSpeed = Math.hypot(puck.vx, puck.vy);
           if (curSpeed > MAX_PUCK_SPEED) {
             puck.vx = (puck.vx / curSpeed) * MAX_PUCK_SPEED;
@@ -501,7 +521,7 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
         if (puck.y < 4 && puck.x >= goalLeft && puck.x <= goalRight) {
           goalScored = true;
           soundSynth.playFanfare();
-          emitSparks(WIDTH / 2, 20, "#00ffcc", 35);
+          emitSparks(WIDTH / 2, 20, "#00ffcc", 40);
           setP1Score((s) => {
             const next = s + 1;
             if (isHost) updateGlowHockeyScore(matchRef.current.id, currentUid, next, p2Score);
@@ -511,7 +531,7 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
         } else if (puck.y > HEIGHT - 4 && puck.x >= goalLeft && puck.x <= goalRight) {
           goalScored = true;
           soundSynth.playAirhorn();
-          emitSparks(WIDTH / 2, HEIGHT - 20, "#ff0055", 35);
+          emitSparks(WIDTH / 2, HEIGHT - 20, "#ff0055", 40);
           setP2Score((s) => {
             const next = s + 1;
             if (isHost) updateGlowHockeyScore(matchRef.current.id, currentUid, p1Score, next);
@@ -546,15 +566,15 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
 
       // Update puck trails
       pucksRef.current.forEach((puck) => {
-        puck.trail.unshift({ x: puck.x, y: puck.y, alpha: 0.7 });
+        puck.trail.unshift({ x: puck.x, y: puck.y, alpha: 0.75 });
         if (puck.trail.length > 10) puck.trail.pop();
-        puck.trail.forEach((pt) => (pt.alpha *= 0.85));
+        puck.trail.forEach((pt) => (pt.alpha *= 0.82));
       });
 
       // ── 6. Render Multi-Pass Additive Bloom Cyberpunk Rink ──
       ctx.clearRect(0, 0, WIDTH, HEIGHT);
 
-      // A. Rink Background
+      // A. Rink Background Surface
       const rinkGrad = ctx.createLinearGradient(0, 0, 0, HEIGHT);
       rinkGrad.addColorStop(0, "#030712");
       rinkGrad.addColorStop(0.5, "#0b0f19");
@@ -568,7 +588,7 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
       ctx.strokeRect(WALL_THICKNESS / 2, WALL_THICKNESS / 2, WIDTH - WALL_THICKNESS, HEIGHT - WALL_THICKNESS);
 
       // C. Strict Centerline Barrier & Center Circle
-      ctx.strokeStyle = "rgba(239, 68, 68, 0.6)";
+      ctx.strokeStyle = "rgba(239, 68, 68, 0.7)";
       ctx.lineWidth = 2.5;
       ctx.setLineDash([8, 6]);
       ctx.beginPath();
@@ -610,14 +630,14 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
         ctx.beginPath();
         ctx.arc(x, y, radius + 14, 0, Math.PI * 2);
         ctx.fillStyle = glowColor;
-        ctx.globalAlpha = 0.15;
+        ctx.globalAlpha = 0.18;
         ctx.fill();
 
-        // Pass 2: Mid Glow
+        // Pass 2: Mid Bloom
         ctx.beginPath();
         ctx.arc(x, y, radius + 5, 0, Math.PI * 2);
         ctx.fillStyle = glowColor;
-        ctx.globalAlpha = 0.45;
+        ctx.globalAlpha = 0.5;
         ctx.fill();
 
         // Pass 3: White-Hot Core
@@ -634,7 +654,7 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
       pucksRef.current.forEach((puck) => {
         puck.trail.forEach((pt) => {
           ctx.beginPath();
-          ctx.arc(pt.x, pt.y, puck.radius * 0.8, 0, Math.PI * 2);
+          ctx.arc(pt.x, pt.y, puck.radius * 0.85, 0, Math.PI * 2);
           ctx.fillStyle = `rgba(56, 189, 248, ${pt.alpha})`;
           ctx.fill();
         });
@@ -671,8 +691,25 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
     return () => cancelAnimationFrame(animId);
   }, [aiDifficulty, currentUid, emitSparks, isHost, isVsBot, p2Score, p1Score, resetPucks, triggerFoul]);
 
-  // Pointer Movement Handlers
+  // Pointer Movement Handlers with Pointer Capture
+  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    try {
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    } catch (_) {}
+    updatePointerPosition(e);
+  };
+
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    updatePointerPosition(e);
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    try {
+      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch (_) {}
+  };
+
+  const updatePointerPosition = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
@@ -698,7 +735,13 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
   const winnerUid = p1Score >= targetScore ? Object.keys(match.players || {})[0] : Object.keys(match.players || {})[1];
 
   return (
-    <div className="w-full max-w-xl mx-auto bg-gradient-to-b from-neutral-950 via-neutral-900 to-black border-2 border-cyan-500/60 p-3 sm:p-5 font-mono text-white space-y-4 select-none shadow-[0_0_80px_rgba(6,182,212,0.15)] rounded-2xl">
+    <div
+      style={{
+        transform: screenShake > 0 ? `translate(${(Math.random() - 0.5) * screenShake}px, ${(Math.random() - 0.5) * screenShake}px)` : "none",
+        transition: "transform 0.05s ease-out",
+      }}
+      className="w-full max-w-xl mx-auto bg-gradient-to-b from-neutral-950 via-neutral-900 to-black border-2 border-cyan-500/60 p-3 sm:p-5 font-mono text-white space-y-4 select-none shadow-[0_0_80px_rgba(6,182,212,0.15)] rounded-2xl"
+    >
       {/* ── Top Match Control Header ── */}
       <div className="flex items-center justify-between border-b border-cyan-500/30 pb-3 text-xs flex-wrap gap-2">
         <div className="flex items-center gap-2">
@@ -877,7 +920,9 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
           ref={canvasRef}
           width={WIDTH}
           height={HEIGHT}
+          onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
           className="touch-none cursor-crosshair w-full h-full rounded-xl"
         />
       </div>
