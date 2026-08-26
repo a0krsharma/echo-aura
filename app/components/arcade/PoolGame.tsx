@@ -1058,6 +1058,18 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
               <span className="text-emerald-400 font-bold block mb-0.5">6. 🔀 THE RENVERSE (REVERSE CORNER SYSTEM):</span>
               Aim = (Origin &times; Target) / 100 (Max Reverse English). 90° corner turn transforms reverse spin into Super-Running propulsion!
             </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">7. ⚡ GRAND TRAVERSE (DOUBLE-CHECK ZIG-ZAG):</span>
+              Aim = Origin + (Distance / 2) with 3 tips reverse English across parallel long rails for a tight symmetric Z-path.
+            </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">8. ☂️ UMBRELLA SHOT (PARAPLUIE):</span>
+              Aim = Arrival_3 - Origin. High follow curves into 2nd rail; running English expands canopy across long rails.
+            </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">9. 🦋 BUTTERFLY SYSTEM (LE PAPILLON 5-CUSHION):</span>
+              Aim = (Origin + Target_4) / 2. Figure-8 double-crossing trajectory connecting diagonally opposite corners!
+            </div>
           </div>
         )}
       </div>

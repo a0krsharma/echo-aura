@@ -596,11 +596,11 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
       "TURN CONTINUATION & PUSH-OUT: Your turn continues as long as you legally pocket assigned balls. An optional Push-Out is allowed on Shot #2 immediately following the break.",
       "STANDARD FOULS & BALL-IN-HAND: Scratching the cue ball, hitting wrong suit first, or failing to drive a ball to a cushion yields Ball-in-Hand anywhere on the table for the opponent.",
       "INSTANT LOSS CONDITIONS: Pocketing the 8-ball while scratching/fouling, or pocketing the 8-ball before clearing all 7 of your suit balls results in an immediate frame loss.",
-      "DIAMOND KICKING & RENVERSE: Use 1-Rail midpoint projections, 2-Rail Plus (Aim = Target - Origin), 3-Rail Corner-5 (Aim = Origin - Arrival), and Renverse Reverse Corner (Aim = Origin x Target / 100)!"
+      "DIAMOND & CAROM MASTER SYSTEMS: 1-Rail midpoint, 2-Rail Plus, 3-Rail Corner-5, Renverse Reverse Corner, Grand Traverse Z-path, Umbrella Parapluie, and Butterfly figure-8 caroms!"
     ],
     voiceGuide: "Call pockets, declare bank shots, and engage in psychological banter over the mic.",
     scoring: "+250 Aura for legally pocketing the 8-Ball to win the match.",
-    proTip: "Master the Renverse System (Aim = Origin x Target / 100 with max reverse spin) to convert braking spin into Super-Running English across the corner!"
+    proTip: "Master the Grand Traverse (Aim = Origin + Distance / 2 with 3 tips reverse English) for tight symmetric Z-path caroms across parallel rails!"
   },
   "2048": {
     id: "2048",
