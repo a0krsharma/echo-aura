@@ -32,6 +32,8 @@ import {
   Volume2,
   Sparkles,
   ChevronDown,
+  ShoppingBag,
+  User,
 } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
 import { useSearchParams } from "next/navigation";
@@ -1125,39 +1127,47 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* Utilitarian Action Deck */}
-          <div className="flex items-center gap-2 pt-1 flex-wrap sm:flex-nowrap">
+          {/* Professional Action Deck */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-2.5 pt-2">
             <button
               onClick={() => setEditProfileOpen(true)}
-              className="flex-1 py-2 px-3 border border-neutral-800 bg-neutral-950 hover:border-white text-white font-mono text-xs tracking-wider uppercase transition-colors cursor-pointer text-center rounded-xl"
+              className="py-2.5 px-3.5 border border-neutral-800 bg-neutral-950/90 hover:bg-neutral-900 hover:border-neutral-600 text-neutral-200 hover:text-white font-mono text-xs font-bold tracking-wider uppercase transition-all duration-200 cursor-pointer text-center rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] shadow-sm hover:shadow-[0_0_15px_rgba(255,255,255,0.06)]"
             >
-              [ EDIT PROFILE ]
+              <Edit3 className="w-3.5 h-3.5 text-neutral-400" />
+              <span>Edit Profile</span>
             </button>
+
             <button
               onClick={() => setAvatarStudioOpen(true)}
-              className="flex-1 py-2 px-3 border border-cyan-500/60 bg-cyan-950/20 hover:border-cyan-400 text-cyan-300 hover:text-white font-mono text-xs tracking-wider uppercase transition-colors cursor-pointer text-center flex items-center justify-center gap-1.5 rounded-xl shadow-[0_0_15px_rgba(6,182,212,0.15)]"
+              className="py-2.5 px-3.5 border border-cyan-500/40 bg-gradient-to-r from-cyan-950/30 to-blue-950/20 hover:border-cyan-400 text-cyan-300 hover:text-white font-mono text-xs font-bold tracking-wider uppercase transition-all duration-200 cursor-pointer text-center flex items-center justify-center gap-2 rounded-xl shadow-[0_0_15px_rgba(6,182,212,0.12)] hover:shadow-[0_0_20px_rgba(6,182,212,0.25)] active:scale-[0.98]"
             >
               <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-              <span>[ 👤 3D AVATAR ]</span>
+              <span>3D Avatar</span>
             </button>
+
             <Link
               href="/shop"
-              className="flex-1 py-2 px-3 border border-amber-500/60 bg-amber-950/20 hover:border-amber-400 text-amber-300 hover:text-white font-mono text-xs tracking-wider uppercase transition-colors cursor-pointer text-center flex items-center justify-center gap-1.5 rounded-xl shadow-[0_0_15px_rgba(245,158,11,0.15)]"
+              className="py-2.5 px-3.5 border border-amber-500/40 bg-gradient-to-r from-amber-950/30 to-yellow-950/20 hover:border-amber-400 text-amber-300 hover:text-white font-mono text-xs font-bold tracking-wider uppercase transition-all duration-200 cursor-pointer text-center flex items-center justify-center gap-2 rounded-xl shadow-[0_0_15px_rgba(245,158,11,0.12)] hover:shadow-[0_0_20px_rgba(245,158,11,0.25)] active:scale-[0.98]"
             >
-              <span>[ 🛍️ STORE ]</span>
+              <ShoppingBag className="w-3.5 h-3.5 text-amber-400" />
+              <span>Store</span>
             </Link>
+
             <button
               onClick={() => setShareModalOpen(true)}
-              className="flex-1 py-2 px-3 border border-neutral-800 bg-neutral-950 hover:border-white text-white font-mono text-xs tracking-wider uppercase transition-colors cursor-pointer text-center rounded-xl"
+              className="py-2.5 px-3.5 border border-neutral-800 bg-neutral-950/90 hover:bg-neutral-900 hover:border-neutral-600 text-neutral-200 hover:text-white font-mono text-xs font-bold tracking-wider uppercase transition-all duration-200 cursor-pointer text-center flex items-center justify-center gap-2 rounded-xl active:scale-[0.98] shadow-sm hover:shadow-[0_0_15px_rgba(255,255,255,0.06)]"
             >
-              [ SHARE SIGNAL ]
+              <Share2 className="w-3.5 h-3.5 text-neutral-400" />
+              <span>Share Signal</span>
             </button>
+
             <Link
               href="/terminal"
-              className="p-2 border border-neutral-800 bg-neutral-950 hover:border-white text-white transition-colors cursor-pointer shrink-0 flex items-center justify-center rounded-xl"
+              className="col-span-2 sm:col-span-4 lg:col-span-1 py-2.5 px-3.5 border border-neutral-800 bg-neutral-950/90 hover:bg-neutral-900 hover:border-neutral-600 text-neutral-300 hover:text-white font-mono text-xs font-bold uppercase transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 rounded-xl active:scale-[0.98] shadow-sm hover:shadow-[0_0_15px_rgba(255,255,255,0.06)]"
               title="System Terminal Console"
             >
-              <Terminal className="w-4 h-4" />
+              <Terminal className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="lg:hidden">Terminal</span>
             </Link>
           </div>
         </div>
