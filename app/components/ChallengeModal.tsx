@@ -20,6 +20,7 @@ interface ChallengeModalProps {
 
 const ARCADE_GAMES: { type: ArcadeGameType; name: string; icon: string; desc: string }[] = [
   { type: "ludo", name: "15X15 CYBER LUDO", icon: "🎲", desc: "1v1 high-stakes board race & captures" },
+  { type: "monopoly", name: "MONOPOLY TYCOON", icon: "🎩", desc: "Official 40-tile real estate & 32-house lock" },
   { type: "poker", name: "TEXAS HOLD'EM", icon: "♠️", desc: "1v1 heads-up poker duel & voice tells" },
   { type: "blackjack", name: "BLACKJACK 21", icon: "🃏", desc: "Target 21 vs data dealer clash" },
   { type: "uno", name: "FLOW OVERRIDE (UNO)", icon: "🎴", desc: "Action card match showdown" },

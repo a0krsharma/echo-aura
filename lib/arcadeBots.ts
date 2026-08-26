@@ -65,6 +65,13 @@ import {
   playBhabhiCard,
   playMendicotCard,
   discardCheatBluff,
+  rollMonopolyDice,
+  buyMonopolyProperty,
+  buildMonopolyHouse,
+  endMonopolyTurn,
+  payJailFine,
+  MONOPOLY_TILES,
+  type MonopolyPropertyState,
   LUDO_CONFIG,
   type ArcadeMatch,
   type LudoToken,
@@ -1171,4 +1178,68 @@ export async function tryBotTrashTalk(matchId: string, botPlayer: any, chance = 
     // ignore
   }
 }
+
+export async function executeMonopolyBotTurn(match: ArcadeMatch, botUid: string): Promise<void> {
+  const ms = match.monopolyState;
+  if (!ms || ms.currentTurnUid !== botUid || match.status === "FINISHED") return;
+
+  const positions: Record<string, number> = JSON.parse(ms.positionsStr || "{}");
+  const cash: Record<string, number> = JSON.parse(ms.cashStr || "{}");
+  const properties: Record<number, MonopolyPropertyState> = JSON.parse(ms.propertiesStr || "{}");
+  const inJailTurns: Record<string, number> = JSON.parse(ms.inJailTurnsStr || "{}");
+
+  // If in jail and has cash, pay fine
+  if ((inJailTurns[botUid] || 0) > 0 && (cash[botUid] || 0) > 300 && Math.random() > 0.4) {
+    try {
+      await payJailFine(match.id, botUid);
+    } catch (_) {}
+  }
+
+  // 1. Roll if not yet rolled
+  if (!ms.hasRolledThisTurn) {
+    await new Promise((r) => setTimeout(r, 600));
+    try {
+      await rollMonopolyDice(match.id, botUid);
+    } catch (_) {}
+    return;
+  }
+
+  // 2. Buy property if landed on unowned property and has cash reserve
+  const botPos = positions[botUid] || 0;
+  const tile = MONOPOLY_TILES[botPos];
+  if (tile && tile.price > 0 && !properties[botPos]?.ownerUid) {
+    const safetyBuffer = 250;
+    if ((cash[botUid] || 0) - tile.price >= safetyBuffer) {
+      await new Promise((r) => setTimeout(r, 500));
+      try {
+        await buyMonopolyProperty(match.id, botUid, botPos);
+      } catch (_) {}
+    }
+  }
+
+  // 3. Build house if has complete monopoly
+  const botOwned = Object.entries(properties)
+    .filter(([_, p]) => p.ownerUid === botUid && p.houses < 4)
+    .map(([id]) => Number(id));
+  for (const propId of botOwned) {
+    const pTile = MONOPOLY_TILES[propId];
+    if (pTile && pTile.houseCost > 0 && (cash[botUid] || 0) - pTile.houseCost > 300) {
+      const groupProps = MONOPOLY_TILES.filter((t) => t.group === pTile.group);
+      const hasMonopoly = groupProps.every((gp) => properties[gp.id]?.ownerUid === botUid);
+      if (hasMonopoly) {
+        try {
+          await buildMonopolyHouse(match.id, botUid, propId);
+        } catch (_) {}
+        break;
+      }
+    }
+  }
+
+  // 4. End turn
+  await new Promise((r) => setTimeout(r, 700));
+  try {
+    await endMonopolyTurn(match.id, botUid);
+  } catch (_) {}
+}
+
 

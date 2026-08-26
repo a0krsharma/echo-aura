@@ -104,7 +104,8 @@ export type ArcadeGameType =
   | "liars_dice"
   | "battleship"
   | "yahtzee"
-  | "pen_fight";
+  | "pen_fight"
+  | "monopoly";
 
 export type ArcadeMatchMode = "MULTIPLAYER" | "VS_COMPUTER";
 
@@ -651,6 +652,83 @@ export interface MathBlitzState {
   lastActionLog?: string;
 }
 
+export interface MonopolyPropertyMeta {
+  id: number;
+  name: string;
+  group: "BROWN" | "LIGHT_BLUE" | "PINK" | "ORANGE" | "RED" | "YELLOW" | "GREEN" | "DARK_BLUE" | "RAILROAD" | "UTILITY" | "SPECIAL";
+  price: number;
+  houseCost: number;
+  rent: number[]; // [base, 1h, 2h, 3h, 4h, hotel]
+}
+
+export const MONOPOLY_TILES: MonopolyPropertyMeta[] = [
+  { id: 0, name: "GO", group: "SPECIAL", price: 0, houseCost: 0, rent: [200] },
+  { id: 1, name: "Mediterranean Ave", group: "BROWN", price: 60, houseCost: 50, rent: [2, 10, 30, 90, 160, 250] },
+  { id: 2, name: "Community Chest", group: "SPECIAL", price: 0, houseCost: 0, rent: [0] },
+  { id: 3, name: "Baltic Ave", group: "BROWN", price: 60, houseCost: 50, rent: [4, 20, 60, 180, 320, 450] },
+  { id: 4, name: "Income Tax", group: "SPECIAL", price: 0, houseCost: 0, rent: [200] },
+  { id: 5, name: "Reading Railroad", group: "RAILROAD", price: 200, houseCost: 0, rent: [25, 50, 100, 200] },
+  { id: 6, name: "Oriental Ave", group: "LIGHT_BLUE", price: 100, houseCost: 50, rent: [6, 30, 90, 270, 400, 550] },
+  { id: 7, name: "Chance", group: "SPECIAL", price: 0, houseCost: 0, rent: [0] },
+  { id: 8, name: "Vermont Ave", group: "LIGHT_BLUE", price: 100, houseCost: 50, rent: [6, 30, 90, 270, 400, 550] },
+  { id: 9, name: "Connecticut Ave", group: "LIGHT_BLUE", price: 120, houseCost: 50, rent: [8, 40, 100, 300, 450, 600] },
+  { id: 10, name: "Jail / Visiting", group: "SPECIAL", price: 0, houseCost: 0, rent: [0] },
+  { id: 11, name: "St. Charles Place", group: "PINK", price: 140, houseCost: 100, rent: [10, 50, 150, 450, 625, 750] },
+  { id: 12, name: "Electric Company", group: "UTILITY", price: 150, houseCost: 0, rent: [4, 10] },
+  { id: 13, name: "States Ave", group: "PINK", price: 140, houseCost: 100, rent: [10, 50, 150, 450, 625, 750] },
+  { id: 14, name: "Virginia Ave", group: "PINK", price: 160, houseCost: 100, rent: [12, 60, 180, 500, 700, 900] },
+  { id: 15, name: "Pennsylvania RR", group: "RAILROAD", price: 200, houseCost: 0, rent: [25, 50, 100, 200] },
+  { id: 16, name: "St. James Place", group: "ORANGE", price: 180, houseCost: 100, rent: [14, 70, 200, 550, 750, 950] },
+  { id: 17, name: "Community Chest", group: "SPECIAL", price: 0, houseCost: 0, rent: [0] },
+  { id: 18, name: "Tennessee Ave", group: "ORANGE", price: 180, houseCost: 100, rent: [14, 70, 200, 550, 750, 950] },
+  { id: 19, name: "New York Ave", group: "ORANGE", price: 200, houseCost: 100, rent: [16, 80, 220, 600, 800, 1000] },
+  { id: 20, name: "Free Parking", group: "SPECIAL", price: 0, houseCost: 0, rent: [0] },
+  { id: 21, name: "Kentucky Ave", group: "RED", price: 220, houseCost: 150, rent: [18, 90, 250, 700, 875, 1050] },
+  { id: 22, name: "Chance", group: "SPECIAL", price: 0, houseCost: 0, rent: [0] },
+  { id: 23, name: "Indiana Ave", group: "RED", price: 220, houseCost: 150, rent: [18, 90, 250, 700, 875, 1050] },
+  { id: 24, name: "Illinois Ave", group: "RED", price: 240, houseCost: 150, rent: [20, 100, 300, 750, 925, 1100] },
+  { id: 25, name: "B&O Railroad", group: "RAILROAD", price: 200, houseCost: 0, rent: [25, 50, 100, 200] },
+  { id: 26, name: "Atlantic Ave", group: "YELLOW", price: 260, houseCost: 150, rent: [22, 110, 330, 800, 975, 1150] },
+  { id: 27, name: "Ventnor Ave", group: "YELLOW", price: 260, houseCost: 150, rent: [22, 110, 330, 800, 975, 1150] },
+  { id: 28, name: "Water Works", group: "UTILITY", price: 150, houseCost: 0, rent: [4, 10] },
+  { id: 29, name: "Marvin Gardens", group: "YELLOW", price: 280, houseCost: 150, rent: [24, 120, 360, 850, 1025, 1200] },
+  { id: 30, name: "Go To Jail", group: "SPECIAL", price: 0, houseCost: 0, rent: [0] },
+  { id: 31, name: "Pacific Ave", group: "GREEN", price: 300, houseCost: 200, rent: [26, 130, 390, 900, 1100, 1275] },
+  { id: 32, name: "North Carolina Ave", group: "GREEN", price: 300, houseCost: 200, rent: [26, 130, 390, 900, 1100, 1275] },
+  { id: 33, name: "Community Chest", group: "SPECIAL", price: 0, houseCost: 0, rent: [0] },
+  { id: 34, name: "Pennsylvania Ave", group: "GREEN", price: 320, houseCost: 200, rent: [28, 150, 450, 1000, 1200, 1400] },
+  { id: 35, name: "Short Line RR", group: "RAILROAD", price: 200, houseCost: 0, rent: [25, 50, 100, 200] },
+  { id: 36, name: "Chance", group: "SPECIAL", price: 0, houseCost: 0, rent: [0] },
+  { id: 37, name: "Park Place", group: "DARK_BLUE", price: 350, houseCost: 200, rent: [35, 175, 500, 1100, 1300, 1500] },
+  { id: 38, name: "Luxury Tax", group: "SPECIAL", price: 0, houseCost: 0, rent: [100] },
+  { id: 39, name: "Boardwalk", group: "DARK_BLUE", price: 400, houseCost: 200, rent: [50, 200, 600, 1400, 1700, 2000] },
+];
+
+export interface MonopolyPropertyState {
+  ownerUid: string | null;
+  houses: number; // 0-4 houses, 5 = hotel
+  isMortgaged: boolean;
+}
+
+export interface MonopolyState {
+  currentTurnUid: string;
+  positionsStr: string; // Record<string, number> (0-39)
+  cashStr: string; // Record<string, number> (default $1500)
+  propertiesStr: string; // Record<number, MonopolyPropertyState>
+  inJailTurnsStr: string; // Record<string, number>
+  lastDiceRoll: [number, number]; // [d1, d2]
+  consecutiveDoubles: number;
+  hasRolledThisTurn: boolean;
+  isBankruptStr: string; // Record<string, boolean>
+  lastActionLog?: string;
+  pendingTileAction?: {
+    tileIndex: number;
+    type: "UNOWNED_PROPERTY" | "RENT_PAID" | "TAX" | "WARP" | "JAIL" | "GO";
+    amount?: number;
+    propId?: number;
+  } | null;
+}
+
 export interface RummyState {
   currentTurnUid: string;
   wildJoker: string; // e.g. "8♠"
@@ -855,6 +933,7 @@ export interface ArcadeMatch {
   dilemmaDebateState?: DilemmaDebateState;
   hangmanState?: HangmanState;
   mathBlitzState?: MathBlitzState;
+  monopolyState?: MonopolyState;
   chatMessages?: ArcadeChatMessage[];
   recentReaction?: ArcadeReaction;
   createdAt: any;
@@ -2030,6 +2109,27 @@ export async function createArcadeMatch(params: {
       p2Score: 0,
       currentProblem: { num1, op: "+", num2, answer: num1 + num2 },
       lastActionLog: "Matrix Math Duel active! Solve the arithmetic problem fast.",
+    };
+  } else if (params.gameType === "monopoly") {
+    const botUid = `bot_${matchId}_ai`;
+    const initialPositions: Record<string, number> = { [params.hostUid]: 0 };
+    const initialCash: Record<string, number> = { [params.hostUid]: 1500 };
+    if (mode === "VS_COMPUTER") {
+      initialPositions[botUid] = 0;
+      initialCash[botUid] = 1500;
+    }
+    matchData.monopolyState = {
+      currentTurnUid: params.hostUid,
+      positionsStr: JSON.stringify(initialPositions),
+      cashStr: JSON.stringify(initialCash),
+      propertiesStr: JSON.stringify({}),
+      inJailTurnsStr: JSON.stringify({}),
+      lastDiceRoll: [1, 2],
+      consecutiveDoubles: 0,
+      hasRolledThisTurn: false,
+      isBankruptStr: JSON.stringify({}),
+      lastActionLog: "Tournament Monopoly Arena initialized! $1,500 bankroll allotted. Roll dice to start!",
+      pendingTileAction: null,
     };
   }
 
@@ -5315,6 +5415,380 @@ export async function passAntakshariTurn(
     "antakshariState.currentLetter": nextLetter,
     "antakshariState.currentTurnUid": nextTurnUid,
     "antakshariState.lastActionLog": `Turn passed! Next letter is [${nextLetter}].`,
+    updatedAt: serverTimestamp(),
+  };
+
+  await updateDoc(matchRef, updates);
+}
+
+// ── MONOPOLY GAME ACTIONS ──────────────────────────────────────────────────
+export async function rollMonopolyDice(matchId: string, playerUid: string): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) return;
+  const match = snap.data() as ArcadeMatch;
+  const ms = match.monopolyState;
+  if (!ms || ms.currentTurnUid !== playerUid || ms.hasRolledThisTurn) return;
+
+  const positions: Record<string, number> = JSON.parse(ms.positionsStr || "{}");
+  const cash: Record<string, number> = JSON.parse(ms.cashStr || "{}");
+  const properties: Record<number, MonopolyPropertyState> = JSON.parse(ms.propertiesStr || "{}");
+  const inJailTurns: Record<string, number> = JSON.parse(ms.inJailTurnsStr || "{}");
+  const bankrupt: Record<string, boolean> = JSON.parse(ms.isBankruptStr || "{}");
+
+  const d1 = Math.floor(Math.random() * 6) + 1;
+  const d2 = Math.floor(Math.random() * 6) + 1;
+  const isDouble = d1 === d2;
+  const rollSum = d1 + d2;
+  const newDoubles = isDouble ? (ms.consecutiveDoubles || 0) + 1 : 0;
+
+  let currentPos = positions[playerUid] || 0;
+  let inJail = (inJailTurns[playerUid] || 0) > 0;
+  let log = "";
+  let pendingAction: any = null;
+
+  // Handle Jail Escape
+  if (inJail) {
+    if (isDouble) {
+      inJail = false;
+      inJailTurns[playerUid] = 0;
+      currentPos = 10;
+      log = `${match.players[playerUid]?.handle || "Player"} rolled doubles (${d1}-${d2}) and escaped Jail!`;
+    } else {
+      inJailTurns[playerUid] = (inJailTurns[playerUid] || 0) + 1;
+      if (inJailTurns[playerUid] >= 3) {
+        cash[playerUid] = Math.max(0, (cash[playerUid] || 1500) - 50);
+        inJail = false;
+        inJailTurns[playerUid] = 0;
+        log = `${match.players[playerUid]?.handle || "Player"} served 3 turns in Jail, paid $50 fine, and is released.`;
+      } else {
+        log = `${match.players[playerUid]?.handle || "Player"} rolled ${d1}-${d2} (no doubles) and remains in Jail (Turn ${inJailTurns[playerUid]}/3).`;
+        const updates: any = {
+          "monopolyState.lastDiceRoll": [d1, d2],
+          "monopolyState.consecutiveDoubles": 0,
+          "monopolyState.hasRolledThisTurn": true,
+          "monopolyState.inJailTurnsStr": JSON.stringify(inJailTurns),
+          "monopolyState.cashStr": JSON.stringify(cash),
+          "monopolyState.lastActionLog": log,
+          "monopolyState.pendingTileAction": null,
+          updatedAt: serverTimestamp(),
+        };
+        await updateDoc(matchRef, updates);
+        return;
+      }
+    }
+  }
+
+  // 3 Consecutive Doubles Penalty -> Go to Jail
+  if (newDoubles >= 3) {
+    positions[playerUid] = 10;
+    inJailTurns[playerUid] = 1;
+    log = `🚨 Speeding! ${match.players[playerUid]?.handle || "Player"} rolled 3 consecutive doubles and was sent directly to JAIL!`;
+    const updates: any = {
+      "monopolyState.positionsStr": JSON.stringify(positions),
+      "monopolyState.lastDiceRoll": [d1, d2],
+      "monopolyState.consecutiveDoubles": 0,
+      "monopolyState.hasRolledThisTurn": true,
+      "monopolyState.inJailTurnsStr": JSON.stringify(inJailTurns),
+      "monopolyState.lastActionLog": log,
+      "monopolyState.pendingTileAction": { tileIndex: 10, type: "JAIL" },
+      updatedAt: serverTimestamp(),
+    };
+    await updateDoc(matchRef, updates);
+    return;
+  }
+
+  // Normal Board Movement
+  const oldPos = currentPos;
+  const nextPos = (currentPos + rollSum) % 40;
+  // Pass GO Bonus (Collect $200)
+  if (nextPos < oldPos && oldPos !== 0) {
+    cash[playerUid] = (cash[playerUid] || 1500) + 200;
+  }
+  positions[playerUid] = nextPos;
+  const tile = MONOPOLY_TILES[nextPos];
+
+  // Tile Action Resolution
+  if (tile.id === 30) {
+    positions[playerUid] = 10;
+    inJailTurns[playerUid] = 1;
+    log = `${match.players[playerUid]?.handle || "Player"} rolled ${rollSum} (${d1}+${d2}) ➔ Landed on 'GO TO JAIL'!`;
+    pendingAction = { tileIndex: 10, type: "JAIL" };
+  } else if (tile.group === "SPECIAL") {
+    if (tile.name === "GO") {
+      log = `${match.players[playerUid]?.handle || "Player"} rolled ${rollSum} (${d1}+${d2}) and landed on GO (+ $200)!`;
+      pendingAction = { tileIndex: 0, type: "GO", amount: 200 };
+    } else if (tile.name === "Income Tax") {
+      cash[playerUid] = Math.max(0, (cash[playerUid] || 1500) - 200);
+      log = `${match.players[playerUid]?.handle || "Player"} landed on Income Tax and paid $200.`;
+      pendingAction = { tileIndex: 4, type: "TAX", amount: 200 };
+    } else if (tile.name === "Luxury Tax") {
+      cash[playerUid] = Math.max(0, (cash[playerUid] || 1500) - 100);
+      log = `${match.players[playerUid]?.handle || "Player"} landed on Luxury Tax and paid $100.`;
+      pendingAction = { tileIndex: 38, type: "TAX", amount: 100 };
+    } else if (tile.name === "Chance" || tile.name === "Community Chest") {
+      const rewards = [50, 100, 150, -50, 200];
+      const reward = rewards[Math.floor(Math.random() * rewards.length)];
+      cash[playerUid] = Math.max(0, (cash[playerUid] || 1500) + reward);
+      log = `${match.players[playerUid]?.handle || "Player"} opened a ${tile.name} card: ${reward >= 0 ? `Collected +$${reward}` : `Paid -$${Math.abs(reward)}`}!`;
+      pendingAction = { tileIndex: nextPos, type: "WARP", amount: reward };
+    } else {
+      log = `${match.players[playerUid]?.handle || "Player"} rolled ${rollSum} (${d1}+${d2}) and visited ${tile.name}.`;
+    }
+  } else {
+    // Property Tile
+    const propState = properties[nextPos];
+    if (!propState || !propState.ownerUid) {
+      log = `${match.players[playerUid]?.handle || "Player"} landed on unowned ${tile.name} ($${tile.price}).`;
+      pendingAction = { tileIndex: nextPos, type: "UNOWNED_PROPERTY", propId: nextPos, amount: tile.price };
+    } else if (propState.ownerUid === playerUid) {
+      log = `${match.players[playerUid]?.handle || "Player"} landed on their own property (${tile.name}).`;
+    } else if (!propState.isMortgaged) {
+      // Calculate Rent
+      let rentOwed = 0;
+      if (tile.group === "RAILROAD") {
+        const ownedRRs = Object.entries(properties).filter(
+          ([id, p]) => p.ownerUid === propState.ownerUid && MONOPOLY_TILES[Number(id)]?.group === "RAILROAD"
+        ).length;
+        rentOwed = 25 * Math.pow(2, Math.max(0, ownedRRs - 1));
+      } else if (tile.group === "UTILITY") {
+        const ownedUtils = Object.entries(properties).filter(
+          ([id, p]) => p.ownerUid === propState.ownerUid && MONOPOLY_TILES[Number(id)]?.group === "UTILITY"
+        ).length;
+        rentOwed = ownedUtils === 2 ? rollSum * 10 : rollSum * 4;
+      } else {
+        const h = propState.houses || 0;
+        if (h > 0) {
+          rentOwed = tile.rent[h] || tile.rent[0];
+        } else {
+          const groupProps = MONOPOLY_TILES.filter((t) => t.group === tile.group);
+          const hasMonopoly = groupProps.every((gp) => properties[gp.id]?.ownerUid === propState.ownerUid);
+          rentOwed = hasMonopoly ? tile.rent[0] * 2 : tile.rent[0];
+        }
+      }
+
+      const actualPaid = Math.min(cash[playerUid] || 0, rentOwed);
+      cash[playerUid] = (cash[playerUid] || 0) - actualPaid;
+      cash[propState.ownerUid] = (cash[propState.ownerUid] || 0) + actualPaid;
+
+      if ((cash[playerUid] || 0) <= 0) {
+        bankrupt[playerUid] = true;
+        log = `💥 BANKRUPTCY! ${match.players[playerUid]?.handle || "Player"} owed $${rentOwed} rent on ${tile.name} to ${match.players[propState.ownerUid]?.handle || "Owner"} and went bankrupt!`;
+      } else {
+        log = `${match.players[playerUid]?.handle || "Player"} landed on ${tile.name} and paid $${actualPaid} rent to ${match.players[propState.ownerUid]?.handle || "Owner"}.`;
+      }
+      pendingAction = { tileIndex: nextPos, type: "RENT_PAID", propId: nextPos, amount: rentOwed };
+    }
+  }
+
+  let winnerUid = match.winnerUid;
+  let winnerHandle = match.winnerHandle;
+  let status = match.status;
+  const activePlayers = Object.keys(match.players || {}).filter((uid) => !bankrupt[uid]);
+  if (activePlayers.length === 1 && Object.keys(match.players || {}).length > 1) {
+    winnerUid = activePlayers[0];
+    winnerHandle = match.players[winnerUid]?.handle || "Champion";
+    status = "FINISHED";
+  }
+
+  const updates: any = {
+    "monopolyState.positionsStr": JSON.stringify(positions),
+    "monopolyState.cashStr": JSON.stringify(cash),
+    "monopolyState.propertiesStr": JSON.stringify(properties),
+    "monopolyState.inJailTurnsStr": JSON.stringify(inJailTurns),
+    "monopolyState.lastDiceRoll": [d1, d2],
+    "monopolyState.consecutiveDoubles": newDoubles,
+    "monopolyState.hasRolledThisTurn": true,
+    "monopolyState.isBankruptStr": JSON.stringify(bankrupt),
+    "monopolyState.lastActionLog": log,
+    "monopolyState.pendingTileAction": pendingAction,
+    updatedAt: serverTimestamp(),
+  };
+
+  if (winnerUid) {
+    updates.winnerUid = winnerUid;
+    updates.winnerHandle = winnerHandle;
+    updates.status = status;
+  }
+
+  await updateDoc(matchRef, updates);
+}
+
+export async function buyMonopolyProperty(matchId: string, playerUid: string, propId: number): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) return;
+  const match = snap.data() as ArcadeMatch;
+  const ms = match.monopolyState;
+  if (!ms || ms.currentTurnUid !== playerUid) return;
+
+  const tile = MONOPOLY_TILES[propId];
+  if (!tile || tile.price <= 0) return;
+
+  const cash: Record<string, number> = JSON.parse(ms.cashStr || "{}");
+  const properties: Record<number, MonopolyPropertyState> = JSON.parse(ms.propertiesStr || "{}");
+
+  if (properties[propId]?.ownerUid || (cash[playerUid] || 0) < tile.price) return;
+
+  cash[playerUid] = (cash[playerUid] || 1500) - tile.price;
+  properties[propId] = {
+    ownerUid: playerUid,
+    houses: 0,
+    isMortgaged: false,
+  };
+
+  const log = `🎩 ${match.players[playerUid]?.handle || "Player"} purchased ${tile.name} for $${tile.price}!`;
+
+  await updateDoc(matchRef, {
+    "monopolyState.cashStr": JSON.stringify(cash),
+    "monopolyState.propertiesStr": JSON.stringify(properties),
+    "monopolyState.lastActionLog": log,
+    "monopolyState.pendingTileAction": null,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function buildMonopolyHouse(matchId: string, playerUid: string, propId: number): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) return;
+  const match = snap.data() as ArcadeMatch;
+  const ms = match.monopolyState;
+  if (!ms) return;
+
+  const tile = MONOPOLY_TILES[propId];
+  if (!tile || tile.houseCost <= 0) return;
+
+  const cash: Record<string, number> = JSON.parse(ms.cashStr || "{}");
+  const properties: Record<number, MonopolyPropertyState> = JSON.parse(ms.propertiesStr || "{}");
+  const prop = properties[propId];
+  if (!prop || prop.ownerUid !== playerUid || prop.houses >= 5 || (cash[playerUid] || 0) < tile.houseCost) return;
+
+  const groupProps = MONOPOLY_TILES.filter((t) => t.group === tile.group);
+  const hasMonopoly = groupProps.every((gp) => properties[gp.id]?.ownerUid === playerUid);
+  if (!hasMonopoly) return;
+
+  const minHouses = Math.min(...groupProps.map((gp) => properties[gp.id]?.houses || 0));
+  if (prop.houses > minHouses) return;
+
+  cash[playerUid] = (cash[playerUid] || 1500) - tile.houseCost;
+  prop.houses += 1;
+  properties[propId] = prop;
+
+  const tierLabel = prop.houses === 5 ? "Hotel 🏨" : `${prop.houses} Houses 🏠`;
+  const log = `🏗️ ${match.players[playerUid]?.handle || "Player"} built on ${tile.name} (Now: ${tierLabel}) for $${tile.houseCost}!`;
+
+  await updateDoc(matchRef, {
+    "monopolyState.cashStr": JSON.stringify(cash),
+    "monopolyState.propertiesStr": JSON.stringify(properties),
+    "monopolyState.lastActionLog": log,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function mortgageMonopolyProperty(matchId: string, playerUid: string, propId: number): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) return;
+  const match = snap.data() as ArcadeMatch;
+  const ms = match.monopolyState;
+  if (!ms) return;
+
+  const tile = MONOPOLY_TILES[propId];
+  if (!tile || tile.price <= 0) return;
+
+  const cash: Record<string, number> = JSON.parse(ms.cashStr || "{}");
+  const properties: Record<number, MonopolyPropertyState> = JSON.parse(ms.propertiesStr || "{}");
+  const prop = properties[propId];
+  if (!prop || prop.ownerUid !== playerUid || prop.houses > 0) return;
+
+  const mortgageVal = Math.round(tile.price / 2);
+
+  if (!prop.isMortgaged) {
+    prop.isMortgaged = true;
+    cash[playerUid] = (cash[playerUid] || 0) + mortgageVal;
+    properties[propId] = prop;
+    const log = `💳 ${match.players[playerUid]?.handle || "Player"} mortgaged ${tile.name} and received +$${mortgageVal}.`;
+    await updateDoc(matchRef, {
+      "monopolyState.cashStr": JSON.stringify(cash),
+      "monopolyState.propertiesStr": JSON.stringify(properties),
+      "monopolyState.lastActionLog": log,
+      updatedAt: serverTimestamp(),
+    });
+  } else {
+    const costToUnmortgage = Math.round(mortgageVal * 1.10);
+    if ((cash[playerUid] || 0) < costToUnmortgage) return;
+    prop.isMortgaged = false;
+    cash[playerUid] = (cash[playerUid] || 0) - costToUnmortgage;
+    properties[propId] = prop;
+    const log = `💎 ${match.players[playerUid]?.handle || "Player"} unmortgaged ${tile.name} for $${costToUnmortgage}.`;
+    await updateDoc(matchRef, {
+      "monopolyState.cashStr": JSON.stringify(cash),
+      "monopolyState.propertiesStr": JSON.stringify(properties),
+      "monopolyState.lastActionLog": log,
+      updatedAt: serverTimestamp(),
+    });
+  }
+}
+
+export async function payJailFine(matchId: string, playerUid: string): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) return;
+  const match = snap.data() as ArcadeMatch;
+  const ms = match.monopolyState;
+  if (!ms || ms.currentTurnUid !== playerUid || ms.hasRolledThisTurn) return;
+
+  const cash: Record<string, number> = JSON.parse(ms.cashStr || "{}");
+  const inJailTurns: Record<string, number> = JSON.parse(ms.inJailTurnsStr || "{}");
+
+  if ((inJailTurns[playerUid] || 0) <= 0 || (cash[playerUid] || 0) < 50) return;
+
+  cash[playerUid] = (cash[playerUid] || 1500) - 50;
+  inJailTurns[playerUid] = 0;
+
+  const log = `🔓 ${match.players[playerUid]?.handle || "Player"} paid $50 Jail Bail fine and is free to roll!`;
+
+  await updateDoc(matchRef, {
+    "monopolyState.cashStr": JSON.stringify(cash),
+    "monopolyState.inJailTurnsStr": JSON.stringify(inJailTurns),
+    "monopolyState.lastActionLog": log,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function endMonopolyTurn(matchId: string, playerUid: string): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) return;
+  const match = snap.data() as ArcadeMatch;
+  const ms = match.monopolyState;
+  if (!ms || ms.currentTurnUid !== playerUid) return;
+
+  const playerUids = Object.keys(match.players || {});
+  const bankrupt: Record<string, boolean> = JSON.parse(ms.isBankruptStr || "{}");
+  const activeUids = playerUids.filter((id) => !bankrupt[id]);
+  const currentIdx = activeUids.indexOf(playerUid);
+  const nextTurnUid = activeUids[(currentIdx + 1) % activeUids.length] || playerUid;
+
+  const inJailTurns: Record<string, number> = JSON.parse(ms.inJailTurnsStr || "{}");
+  const inJail = (inJailTurns[playerUid] || 0) > 0;
+  const isDouble = ms.lastDiceRoll && ms.lastDiceRoll[0] === ms.lastDiceRoll[1];
+  const canRollAgain = isDouble && !inJail && (ms.consecutiveDoubles || 0) < 3;
+
+  const updates: any = {
+    "monopolyState.currentTurnUid": canRollAgain ? playerUid : nextTurnUid,
+    "monopolyState.hasRolledThisTurn": false,
+    "monopolyState.pendingTileAction": null,
+    "monopolyState.lastActionLog": canRollAgain
+      ? `🎲 Rolled doubles! ${match.players[playerUid]?.handle || "Player"} rolls again.`
+      : `Turn passed to ${match.players[nextTurnUid]?.handle || "Next Player"}.`,
     updatedAt: serverTimestamp(),
   };
 
