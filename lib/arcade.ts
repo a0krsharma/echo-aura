@@ -1206,18 +1206,24 @@ export async function createArcadeMatch(params: {
       isGameOver: false,
     };
   } else if (params.gameType === "pool") {
+    const apexX = 190, apexY = 140, r = 10, spacingY = 17, spacingX = 20;
     const poolBalls: PoolBall[] = [
-      { id: "cue", x: 200, y: 320, vx: 0, vy: 0, radius: 10, color: "#ffffff", type: "cue", isPocketed: false },
-      { id: "b1", x: 200, y: 150, vx: 0, vy: 0, radius: 10, color: "#eab308", number: 1, type: "solid", isPocketed: false },
-      { id: "b2", x: 190, y: 133, vx: 0, vy: 0, radius: 10, color: "#3b82f6", number: 2, type: "solid", isPocketed: false },
-      { id: "b3", x: 210, y: 133, vx: 0, vy: 0, radius: 10, color: "#ef4444", number: 3, type: "solid", isPocketed: false },
-      { id: "b8", x: 200, y: 116, vx: 0, vy: 0, radius: 10, color: "#000000", number: 8, type: "8ball", isPocketed: false },
-      { id: "b9", x: 180, y: 116, vx: 0, vy: 0, radius: 10, color: "#eab308", number: 9, type: "stripe", isPocketed: false },
-      { id: "b10", x: 220, y: 116, vx: 0, vy: 0, radius: 10, color: "#3b82f6", number: 10, type: "stripe", isPocketed: false },
-      { id: "b11", x: 170, y: 99, vx: 0, vy: 0, radius: 10, color: "#ef4444", number: 11, type: "stripe", isPocketed: false },
-      { id: "b4", x: 190, y: 99, vx: 0, vy: 0, radius: 10, color: "#8b5cf6", number: 4, type: "solid", isPocketed: false },
-      { id: "b5", x: 210, y: 99, vx: 0, vy: 0, radius: 10, color: "#f97316", number: 5, type: "solid", isPocketed: false },
-      { id: "b12", x: 230, y: 99, vx: 0, vy: 0, radius: 10, color: "#8b5cf6", number: 12, type: "stripe", isPocketed: false },
+      { id: "cue", x: 190, y: 360, vx: 0, vy: 0, radius: r, color: "#ffffff", type: "cue", isPocketed: false },
+      { id: "b1", x: apexX, y: apexY, vx: 0, vy: 0, radius: r, color: "#eab308", number: 1, type: "solid", isPocketed: false },
+      { id: "b2", x: apexX - spacingX / 2, y: apexY - spacingY, vx: 0, vy: 0, radius: r, color: "#2563eb", number: 2, type: "solid", isPocketed: false },
+      { id: "b9", x: apexX + spacingX / 2, y: apexY - spacingY, vx: 0, vy: 0, radius: r, color: "#eab308", number: 9, type: "stripe", isPocketed: false },
+      { id: "b3", x: apexX - spacingX, y: apexY - spacingY * 2, vx: 0, vy: 0, radius: r, color: "#dc2626", number: 3, type: "solid", isPocketed: false },
+      { id: "b8", x: apexX, y: apexY - spacingY * 2, vx: 0, vy: 0, radius: r, color: "#09090b", number: 8, type: "8ball", isPocketed: false },
+      { id: "b10", x: apexX + spacingX, y: apexY - spacingY * 2, vx: 0, vy: 0, radius: r, color: "#2563eb", number: 10, type: "stripe", isPocketed: false },
+      { id: "b4", x: apexX - 1.5 * spacingX, y: apexY - spacingY * 3, vx: 0, vy: 0, radius: r, color: "#7c3aed", number: 4, type: "solid", isPocketed: false },
+      { id: "b11", x: apexX - 0.5 * spacingX, y: apexY - spacingY * 3, vx: 0, vy: 0, radius: r, color: "#dc2626", number: 11, type: "stripe", isPocketed: false },
+      { id: "b5", x: apexX + 0.5 * spacingX, y: apexY - spacingY * 3, vx: 0, vy: 0, radius: r, color: "#ea580c", number: 5, type: "solid", isPocketed: false },
+      { id: "b12", x: apexX + 1.5 * spacingX, y: apexY - spacingY * 3, vx: 0, vy: 0, radius: r, color: "#7c3aed", number: 12, type: "stripe", isPocketed: false },
+      { id: "b6", x: apexX - 2 * spacingX, y: apexY - spacingY * 4, vx: 0, vy: 0, radius: r, color: "#16a34a", number: 6, type: "solid", isPocketed: false },
+      { id: "b13", x: apexX - 1 * spacingX, y: apexY - spacingY * 4, vx: 0, vy: 0, radius: r, color: "#ea580c", number: 13, type: "stripe", isPocketed: false },
+      { id: "b7", x: apexX, y: apexY - spacingY * 4, vx: 0, vy: 0, radius: r, color: "#7f1d1d", number: 7, type: "solid", isPocketed: false },
+      { id: "b14", x: apexX + 1 * spacingX, y: apexY - spacingY * 4, vx: 0, vy: 0, radius: r, color: "#16a34a", number: 14, type: "stripe", isPocketed: false },
+      { id: "b15", x: apexX + 2 * spacingX, y: apexY - spacingY * 4, vx: 0, vy: 0, radius: r, color: "#7f1d1d", number: 15, type: "stripe", isPocketed: false },
     ];
     matchData.poolState = {
       ballsStr: JSON.stringify(poolBalls),
@@ -2671,7 +2677,7 @@ export async function submitSudokuCell(
   return { correct: isCorrect, isComplete };
 }
 
-// ── 8-Ball Pool Actions ───────────────────────────────────────────────────────
+// ── 8-Ball / 5-Discipline Pool Actions ────────────────────────────────────────
 export async function firePoolShot(
   matchId: string,
   playerUid: string,
@@ -2680,6 +2686,8 @@ export async function firePoolShot(
   updatedBalls: PoolBall[],
   options?: {
     nextTurnUid?: string;
+    p1Type?: "SOLIDS" | "STRIPES" | null;
+    p2Type?: "SOLIDS" | "STRIPES" | null;
     p1Score?: number;
     p2Score?: number;
     actionLog?: string;
@@ -2697,8 +2705,6 @@ export async function firePoolShot(
   const playerUids = Object.keys(match.players || {});
   const calculatedNext = playerUids.find((id) => id !== playerUid) || playerUid;
   const nextTurnUid = options?.nextTurnUid ?? calculatedNext;
-  const eightBall = updatedBalls.find((b) => b.type === "8ball");
-  const isEightBallSunk = eightBall?.isPocketed;
 
   const updates: any = {
     "poolState.ballsStr": JSON.stringify(updatedBalls),
@@ -2708,10 +2714,12 @@ export async function firePoolShot(
     updatedAt: serverTimestamp(),
   };
 
+  if (options?.p1Type !== undefined) updates["poolState.p1Type"] = options.p1Type;
+  if (options?.p2Type !== undefined) updates["poolState.p2Type"] = options.p2Type;
   if (options?.p1Score !== undefined) updates["poolState.p1Score"] = options.p1Score;
   if (options?.p2Score !== undefined) updates["poolState.p2Score"] = options.p2Score;
 
-  if (options?.isGameOver || isEightBallSunk) {
+  if (options?.isGameOver) {
     const winnerUid = options?.winnerUid || playerUid;
     updates.status = "FINISHED";
     updates.winnerUid = winnerUid;

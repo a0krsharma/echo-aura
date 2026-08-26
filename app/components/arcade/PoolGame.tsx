@@ -36,17 +36,17 @@ const PLAYABLE_MAX_X = TABLE_WIDTH - CUSHION - 2;
 const PLAYABLE_MIN_Y = CUSHION + 2;
 const PLAYABLE_MAX_Y = TABLE_HEIGHT - CUSHION - 2;
 
-const FRICTION = 0.986;
-const RESTITUTION = 0.89;
+const FRICTION = 0.985;
+const RESTITUTION = 0.88;
 
-// 6 Official Tournament Pocket Positions
+// 6 Official Drop Pockets with Optimal Entry Zones
 const POCKETS = [
-  { x: CUSHION, y: CUSHION, name: "TOP_LEFT" },
+  { x: CUSHION + 2, y: CUSHION + 2, name: "TOP_LEFT" },
   { x: TABLE_WIDTH / 2, y: CUSHION - 4, name: "TOP_MID" },
-  { x: TABLE_WIDTH - CUSHION, y: CUSHION, name: "TOP_RIGHT" },
-  { x: CUSHION, y: TABLE_HEIGHT - CUSHION, name: "BOT_LEFT" },
+  { x: TABLE_WIDTH - CUSHION - 2, y: CUSHION + 2, name: "TOP_RIGHT" },
+  { x: CUSHION + 2, y: TABLE_HEIGHT - CUSHION - 2, name: "BOT_LEFT" },
   { x: TABLE_WIDTH / 2, y: TABLE_HEIGHT - CUSHION + 4, name: "BOT_MID" },
-  { x: TABLE_WIDTH - CUSHION, y: TABLE_HEIGHT - CUSHION, name: "BOT_RIGHT" },
+  { x: TABLE_WIDTH - CUSHION - 2, y: TABLE_HEIGHT - CUSHION - 2, name: "BOT_RIGHT" },
 ];
 const POCKET_RADIUS = 24;
 const POCKET_DEPTH_RADIUS = 16;
@@ -202,7 +202,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const ps = match.poolState;
-  const isMyTurn = ps?.currentTurnUid === currentUid && match.status === "PLAYING";
+  const isMyTurn = (ps?.currentTurnUid === currentUid || !ps?.currentTurnUid) && match.status === "PLAYING";
   const playerUids = Object.keys(match.players || {});
   const isPlayer1 = playerUids[0] === currentUid;
 
@@ -226,7 +226,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
   const isBreakShotRef = useRef(false);
   const pocketLocationsThisShotRef = useRef<{ ball: PoolBall; pocketName: string }[]>([]);
 
-  // Start Safety Watchdog Timer (Forces settlement if balls jitter past 4.5 seconds)
+  // Start Safety Watchdog Timer (Forces settlement if balls jitter past 4 seconds)
   const startWatchdog = useCallback(() => {
     if (watchdogTimerRef.current) clearTimeout(watchdogTimerRef.current);
     watchdogTimerRef.current = setTimeout(() => {
@@ -239,7 +239,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         setIsSimulating(false);
         finalizeShotTurn();
       }
-    }, 4500);
+    }, 4000);
   }, []);
 
   // Initialize or Sync balls from match state
@@ -247,11 +247,13 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
     if (ps?.ballsStr && !isSimulatingRef.current) {
       try {
         const parsed = JSON.parse(ps.ballsStr);
-        ballsRef.current = parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          ballsRef.current = parsed;
+        }
       } catch (e) {
         console.error("Failed to parse pool balls:", e);
       }
-    } else if (!ps?.ballsStr) {
+    } else if (!ps?.ballsStr && ballsRef.current.length === 0) {
       ballsRef.current = createDisciplineRack("8_BALL");
     }
   }, [ps?.ballsStr]);
@@ -279,6 +281,8 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
           nextTurnUid: currentUid,
           p1Score: 0,
           p2Score: 0,
+          p1Type: null,
+          p2Type: null,
           actionLog: `🎯 Switched discipline to ${POOL_DISCIPLINES[newDiscipline].name}. Rack set!`,
         }
       );
@@ -298,7 +302,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
     return unpocketed.reduce((min, b) => ((b.number || 99) < (min.number || 99) ? b : min), unpocketed[0]);
   }, [ballsRef.current, ps?.ballsStr]);
 
-  // Trigger AI Bot Shot in VS_COMPUTER mode
+  // Intelligent AI Bot Shot in VS_COMPUTER mode
   useEffect(() => {
     if (!ps || match.status !== "PLAYING" || match.mode !== "VS_COMPUTER") return;
     const botPlayer = Object.values(match.players || {}).find(
@@ -312,23 +316,55 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         const targets = balls.filter((b) => b.type !== "cue" && !b.isPocketed);
         if (!cueBall || targets.length === 0) return;
 
-        // Mark bot as the active shooter
+        // Mark bot as active shooter
         activeShooterUidRef.current = botPlayer.uid;
 
-        // Pick target according to discipline
+        // 1. Pick target ball based on active discipline
         let target = targets[0];
         if ((discipline === "9_BALL" || discipline === "10_BALL") && lowestBallOnTable) {
           target = lowestBallOnTable;
+        } else if (discipline === "8_BALL") {
+          const botIsP1 = playerUids[0] === botPlayer.uid;
+          const botSuit = botIsP1 ? ps.p1Type : ps.p2Type;
+          const suitTargets = targets.filter((b) => (botSuit === "SOLIDS" ? b.type === "solid" : botSuit === "STRIPES" ? b.type === "stripe" : b.type !== "8ball"));
+          if (suitTargets.length > 0) {
+            target = suitTargets[Math.floor(Math.random() * suitTargets.length)];
+          } else {
+            const eight = targets.find((b) => b.type === "8ball");
+            target = eight || targets[0];
+          }
         } else {
           target = targets[Math.floor(Math.random() * targets.length)];
         }
 
-        const dx = target.x - cueBall.x;
-        const dy = target.y - cueBall.y;
-        const dist = Math.hypot(dx, dy) || 1;
-        const speed = 11 + Math.random() * 5;
-        const impulseX = (dx / dist) * speed + (Math.random() - 0.5) * 1.0;
-        const impulseY = (dy / dist) * speed + (Math.random() - 0.5) * 1.0;
+        // 2. Intelligent Ghost-Ball Aiming toward best pocket
+        let bestPocket = POCKETS[0];
+        let minPktDist = 9999;
+        POCKETS.forEach((pkt) => {
+          const d = Math.hypot(pkt.x - target.x, pkt.y - target.y);
+          if (d < minPktDist) {
+            minPktDist = d;
+            bestPocket = pkt;
+          }
+        });
+
+        const toPktX = bestPocket.x - target.x;
+        const toPktY = bestPocket.y - target.y;
+        const toPktDist = Math.hypot(toPktX, toPktY) || 1;
+        const normPktX = toPktX / toPktDist;
+        const normPktY = toPktY / toPktDist;
+
+        // Position of cue ball at moment of impact to send target toward pocket
+        const ghostX = target.x - normPktX * (target.radius + cueBall.radius);
+        const ghostY = target.y - normPktY * (target.radius + cueBall.radius);
+
+        const aimDx = ghostX - cueBall.x;
+        const aimDy = ghostY - cueBall.y;
+        const aimDist = Math.hypot(aimDx, aimDy) || 1;
+
+        const speed = 10 + Math.random() * 4;
+        const impulseX = (aimDx / aimDist) * speed + (Math.random() - 0.5) * 0.7;
+        const impulseY = (aimDy / aimDist) * speed + (Math.random() - 0.5) * 0.7;
 
         cueBall.vx = impulseX;
         cueBall.vy = impulseY;
@@ -345,11 +381,11 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         isSimulatingRef.current = true;
         setIsSimulating(true);
         startWatchdog();
-      }, 1200);
+      }, 1000);
 
       return () => clearTimeout(timer);
     }
-  }, [match, ps?.currentTurnUid, isSimulating, discipline, lowestBallOnTable, startWatchdog]);
+  }, [match, ps?.currentTurnUid, isSimulating, discipline, lowestBallOnTable, playerUids, ps, startWatchdog]);
 
   // Main Canvas & Continuous Physics Render Loop
   useEffect(() => {
@@ -371,7 +407,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
           if (b.isPocketed) return;
 
           const speed = Math.hypot(b.vx, b.vy);
-          // Sleep threshold to prevent perpetual micro-vibration
+          // Strict sleep threshold prevents infinite micro-creep
           if (speed > 0.08) {
             anyMoving = true;
             b.x += b.vx / subSteps;
@@ -380,7 +416,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
             b.vx *= Math.pow(FRICTION, 1 / subSteps);
             b.vy *= Math.pow(FRICTION, 1 / subSteps);
 
-            // Cushion Rebounds with Cushion Restitution & Rail Grip
+            // Cushion Rebounds with Rail Grip
             if (b.x - b.radius < PLAYABLE_MIN_X) {
               b.x = PLAYABLE_MIN_X + b.radius;
               b.vx = -b.vx * RESTITUTION;
@@ -401,11 +437,11 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
               if (speed > 1.2) soundSynth.playSubtlePop();
             }
 
-            // Pocket Gravity & Pocketing Check
+            // Pocket Gravity & Dropping
             POCKETS.forEach((pkt) => {
               const dToPocket = Math.hypot(b.x - pkt.x, b.y - pkt.y);
               if (dToPocket < POCKET_RADIUS) {
-                const pullForce = 0.38;
+                const pullForce = 0.45;
                 b.vx += ((pkt.x - b.x) / dToPocket) * pullForce;
                 b.vy += ((pkt.y - b.y) / dToPocket) * pullForce;
 
@@ -466,7 +502,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
               const ky = b1.vy - b2.vy;
               const hitSpeed = Math.hypot(kx, ky);
 
-              // Only transfer momentum if at least one ball has moving energy
+              // Only transfer momentum if at least one ball is moving
               if (hitSpeed > 0.05) {
                 const p = 2 * (nx * kx + ny * ky) / 2;
                 b1.vx -= p * nx * 0.96;
@@ -489,19 +525,18 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         finalizeShotTurn();
       }
 
-      // ── Render Luxury Pool Arena Canvas ──
+      // ── Render Pool Arena Canvas ──
       ctx.clearRect(0, 0, TABLE_WIDTH, TABLE_HEIGHT);
 
-      // A. Polished Hardwood Outer Bevel Rails & Corner Brass Plates
+      // A. Polished Hardwood Outer Rails
       ctx.fillStyle = "#1e1008";
       ctx.fillRect(0, 0, TABLE_WIDTH, TABLE_HEIGHT);
 
-      // Inlaid Diamond Reference Markers
+      // Inlaid Diamond Markers
       ctx.fillStyle = "#fef08a";
       const diamondsX = [CUSHION + 45, CUSHION + 115, CUSHION + 185, CUSHION + 255, CUSHION + 325];
       const diamondsY = [CUSHION + 60, CUSHION + 140, CUSHION + 220, CUSHION + 300, CUSHION + 380];
 
-      // Top & Bottom Rails Diamonds
       diamondsX.forEach((dx) => {
         if (dx > CUSHION && dx < TABLE_WIDTH - CUSHION) {
           ctx.beginPath();
@@ -513,7 +548,6 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         }
       });
 
-      // Left & Right Rails Diamonds
       diamondsY.forEach((dy) => {
         if (dy > CUSHION && dy < TABLE_HEIGHT - CUSHION) {
           ctx.beginPath();
@@ -541,12 +575,11 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
       ctx.fillStyle = feltGrad;
       ctx.fillRect(CUSHION, CUSHION, TABLE_WIDTH - CUSHION * 2, TABLE_HEIGHT - CUSHION * 2);
 
-      // Felt Texture Subtle Shadow Borders
       ctx.strokeStyle = "rgba(0, 0, 0, 0.45)";
       ctx.lineWidth = 3;
       ctx.strokeRect(CUSHION, CUSHION, TABLE_WIDTH - CUSHION * 2, TABLE_HEIGHT - CUSHION * 2);
 
-      // Head String Line (Kitchen)
+      // Head String Line
       ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
       ctx.lineWidth = 1;
       ctx.setLineDash([4, 4]);
@@ -556,7 +589,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Foot Spot Dot (Apex Spot)
+      // Foot Spot Dot
       ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
       ctx.beginPath();
       ctx.arc(190, 140, 3, 0, Math.PI * 2);
@@ -582,21 +615,19 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
       // Highlight Designated Pockets in ONE POCKET mode
       if (discipline === "ONE_POCKET") {
         ctx.save();
-        // P1 Pocket: BOT_LEFT
         ctx.strokeStyle = "#34d399";
         ctx.lineWidth = 2.5;
         ctx.setLineDash([3, 2]);
         ctx.beginPath();
-        ctx.arc(CUSHION, TABLE_HEIGHT - CUSHION, POCKET_RADIUS + 4, 0, Math.PI * 2);
+        ctx.arc(CUSHION + 2, TABLE_HEIGHT - CUSHION - 2, POCKET_RADIUS + 4, 0, Math.PI * 2);
         ctx.stroke();
         ctx.fillStyle = "#34d399";
         ctx.font = "bold 8px monospace";
         ctx.fillText("P1 GOAL", CUSHION + 14, TABLE_HEIGHT - CUSHION - 16);
 
-        // P2 Pocket: BOT_RIGHT
         ctx.strokeStyle = "#60a5fa";
         ctx.beginPath();
-        ctx.arc(TABLE_WIDTH - CUSHION, TABLE_HEIGHT - CUSHION, POCKET_RADIUS + 4, 0, Math.PI * 2);
+        ctx.arc(TABLE_WIDTH - CUSHION - 2, TABLE_HEIGHT - CUSHION - 2, POCKET_RADIUS + 4, 0, Math.PI * 2);
         ctx.stroke();
         ctx.fillStyle = "#60a5fa";
         ctx.fillText("P2 GOAL", TABLE_WIDTH - CUSHION - 20, TABLE_HEIGHT - CUSHION - 16);
@@ -843,12 +874,16 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
     };
   }, [discipline, isAiming, dragStart, dragCurrent, power, lowestBallOnTable]);
 
-  // Pointer Interaction Handlers
+  // Pointer Interaction Handlers with Touch Capture
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!isMyTurn || isSimulating) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
+    try {
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    } catch (_) {}
+
     const rect = canvas.getBoundingClientRect();
     const scaleX = TABLE_WIDTH / rect.width;
     const scaleY = TABLE_HEIGHT / rect.height;
@@ -901,7 +936,11 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
     setPower(calculatedPower);
   };
 
-  const handlePointerUp = () => {
+  const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    try {
+      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch (_) {}
+
     if (!isAiming || !dragStart || !dragCurrent) {
       setIsAiming(false);
       return;
@@ -943,7 +982,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
     setPower(0);
   };
 
-  // Finalize Shot and Apply Official Discipline Rules with Strict Turn Continuation / Alternation
+  // Finalize Shot and Apply Official Rules with Strict Turn Continuation & Alternation
   const finalizeShotTurn = useCallback(async () => {
     const pocketed = pocketedThisShotRef.current;
     const pocketLocations = pocketLocationsThisShotRef.current;
@@ -957,7 +996,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
     const otherPlayerUid = playerUids.find((id) => id !== shooterUid) || currentUid;
     const shooterHandle = match.players[shooterUid]?.handle || "Shooter";
 
-    let nextTurnUid = otherPlayerUid; // Default: pass turn if missed/fouled
+    let nextTurnUid = otherPlayerUid;
     let newP1Score = ps?.p1Score || 0;
     let newP2Score = ps?.p2Score || 0;
     let newP1Type = ps?.p1Type || null;
@@ -981,7 +1020,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
       }
     }
 
-    // ── DISCIPLINE SPECIFIC RULES ──
+    // ── DISCIPLINE RULES RESOLUTION ──
 
     if (discipline === "8_BALL") {
       const eightBallPocketed = pocketed.some((b) => b.type === "8ball");
@@ -1046,21 +1085,20 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         const assignedTargetPocketed =
           (currentShooterSuit === "SOLIDS" && solidsPocketed > 0) ||
           (currentShooterSuit === "STRIPES" && stripesPocketed > 0) ||
-          (!currentShooterSuit); // Open Table
+          (!currentShooterSuit);
 
         if (assignedTargetPocketed) {
           const count = solidsPocketed + stripesPocketed;
           if (isShooterP1) newP1Score += count * 10;
           else newP2Score += count * 10;
           actionLog = `${shooterHandle} pocketed ${count} ball(s)! Turn continues!`;
-          nextTurnUid = shooterUid; // SHOOTER GOALED -> PLAYS AGAIN!
+          nextTurnUid = shooterUid; // GOALED -> KEEPS SHOOTING!
         } else {
           actionLog = `${shooterHandle} pocketed opponent's ball. Turn passes.`;
           nextTurnUid = otherPlayerUid;
         }
       } else {
-        // Missed shot -> Turn passes to other player
-        nextTurnUid = otherPlayerUid;
+        nextTurnUid = otherPlayerUid; // MISSED -> PASSES TURN!
         actionLog = isPushOutDeclared ? `✋ PUSH-OUT EXECUTED by ${shooterHandle}! Opponent may accept table.` : `${shooterHandle} missed. Turn passes.`;
         setIsPushOutDeclared(false);
       }
@@ -1082,9 +1120,9 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         if (isShooterP1) newP1Score += count * 10;
         else newP2Score += count * 10;
         actionLog = `${shooterHandle} legally pocketed ${count} ball(s)! Turn continues!`;
-        nextTurnUid = shooterUid; // GOALED -> PLAYS AGAIN!
+        nextTurnUid = shooterUid;
       } else {
-        nextTurnUid = otherPlayerUid; // MISSED -> PASSES TO OTHER PLAYER!
+        nextTurnUid = otherPlayerUid;
         actionLog = `${shooterHandle} missed. Turn passes.`;
       }
     } else if (discipline === "10_BALL") {
@@ -1105,9 +1143,9 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         if (isShooterP1) newP1Score += count * 10;
         else newP2Score += count * 10;
         actionLog = `${shooterHandle} legally pocketed ${count} ball(s)! Turn continues!`;
-        nextTurnUid = shooterUid; // GOALED -> PLAYS AGAIN!
+        nextTurnUid = shooterUid;
       } else {
-        nextTurnUid = otherPlayerUid; // MISSED -> PASSES TO OTHER PLAYER!
+        nextTurnUid = otherPlayerUid;
         actionLog = `${shooterHandle} missed. Turn passes.`;
       }
     } else if (discipline === "STRAIGHT_POOL") {
@@ -1122,7 +1160,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         if (isShooterP1) newP1Score += count;
         else newP2Score += count;
         actionLog = `${shooterHandle} scored +${count} pt(s)! High run continues!`;
-        nextTurnUid = shooterUid; // GOALED -> PLAYS AGAIN!
+        nextTurnUid = shooterUid;
 
         const remainingCount = balls.filter((b) => b.type !== "cue" && !b.isPocketed).length;
         if (remainingCount <= 1 || newP1Score >= 15 || newP2Score >= 15) {
@@ -1132,7 +1170,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
           soundSynth.playFanfare();
         }
       } else {
-        nextTurnUid = otherPlayerUid; // MISSED -> PASSES TO OTHER PLAYER!
+        nextTurnUid = otherPlayerUid;
         actionLog = `${shooterHandle} missed. Turn passes.`;
       }
     } else if (discipline === "ONE_POCKET") {
@@ -1147,7 +1185,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         if (isShooterP1) newP1Score += legalScored;
         else newP2Score += legalScored;
         actionLog = `${shooterHandle} scored +${legalScored} ball(s) in designated pocket!`;
-        nextTurnUid = shooterUid; // GOALED IN OWN POCKET -> PLAYS AGAIN!
+        nextTurnUid = shooterUid;
 
         const currentScore = isShooterP1 ? newP1Score : newP2Score;
         if (currentScore >= 8) {
@@ -1157,7 +1195,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
           soundSynth.playFanfare();
         }
       } else {
-        nextTurnUid = otherPlayerUid; // MISSED OR SANK IN WRONG POCKET -> PASSES TO OTHER PLAYER!
+        nextTurnUid = otherPlayerUid;
         actionLog = `${shooterHandle} did not score in designated pocket. Turn passes.`;
       }
     }
@@ -1173,6 +1211,8 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
           nextTurnUid,
           p1Score: newP1Score,
           p2Score: newP2Score,
+          p1Type: newP1Type,
+          p2Type: newP2Type,
           actionLog,
           isGameOver,
           winnerUid,
