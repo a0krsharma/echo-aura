@@ -586,21 +586,21 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
   },
   pool: {
     id: "pool",
-    name: "8-Ball Pool Pro (Official WPA Tournament Rules)",
+    name: "World Pool Championship (Top 5 Disciplines)",
     rank: 8,
     category: "2D Physics & Tabletop",
     icon: "🎱",
-    overview: "Official World Pool-Billiard Association (WPA) tournament rules. 15 object balls (Solids 1-7, Stripes 9-15, and the Black 8-Ball) racked with the apex on Foot Spot and 8-Ball in center. Break from behind the head string. Clear all 7 balls of your assigned group before pocketing the 8-Ball for victory.",
+    overview: "Choose and play the top 5 most popular pool disciplines globally: 8-Ball, 9-Ball, 10-Ball, Straight Pool (14.1 Continuous), and One Pocket with authentic tournament racking and official WPA rules.",
     howToPlay: [
-      "BREAK & THREE-POINT RULE: Sinking balls does not claim suits (Open Table). A legal break requires Break Score = Pocketed + Crossed >= 3. Soft breaks allow opponent to accept table or pass back.",
-      "TURN CONTINUATION & PUSH-OUT: Your turn continues as long as you legally pocket assigned balls. Shot #2 Push-Out operates on Cake-Cutting game theory (I cut, you choose) where EV_Opponent = EV_Shooter.",
-      "STANDARD FOULS & BALL-IN-HAND: Scratching the cue ball, hitting wrong suit first, or failing to drive a ball to a cushion yields Ball-in-Hand anywhere on the table for the opponent.",
-      "INSTANT LOSS CONDITIONS: Pocketing the 8-ball while scratching/fouling, or pocketing the 8-ball before clearing all 7 of your suit balls results in an immediate frame loss.",
-      "TABLE CALIBRATION & BENCHMARKS: Test tables using 50-to-20 Corner-5 benchmark (Origin 50 -> Aim 30 -> Arrival 20). Adjust for long (+Delta) or short (-Delta) cloth conditions: Aim = (Origin - Arrival) - Delta!"
+      "1. 8-BALL: 15 balls divided into Solids (1-7) and Stripes (9-15). Clear all 7 balls of your group, then legally pocket the 8-Ball to win.",
+      "2. 9-BALL: Rotation discipline (balls 1-9). Cue ball must strike lowest-numbered ball first. Legally sinking the 9-ball on any shot instantly wins the rack.",
+      "3. 10-BALL: Call-shot rotation discipline (balls 1-10). Hit lowest ball first; call ball and pocket on every shot. Sinking the 10-ball wins the frame.",
+      "4. STRAIGHT POOL (14.1): Continuous high-run game (+1 pt per ball). Re-racked at 14 balls with apex empty, using 15th as break ball.",
+      "5. ONE POCKET: Tactical chess on green felt. P1 assigned Bot-Left foot pocket, P2 assigned Bot-Right. First player to legally score 8 balls in their designated pocket wins!"
     ],
-    voiceGuide: "Call pockets, declare bank shots, and engage in psychological banter over the mic.",
-    scoring: "+250 Aura for legally pocketing the 8-Ball to win the match.",
-    proTip: "On fast/slick cloth (plays long), reduce running English to 1.0-1.5 tips; on humid/worn cloth (plays short), increase spin to 2.5 tips with slight follow (+0.5 tips)!"
+    voiceGuide: "Call pockets, declare rotation hits, and discuss safety strategies over live voice chat.",
+    scoring: "+250 Aura for winning a pool match across any of the 5 popular disciplines.",
+    proTip: "Use the top discipline selector to switch between 8-Ball, 9-Ball, 10-Ball, 14.1 Continuous, and One Pocket anytime to practice rotation, bank shots, or tactical safeties!"
   },
   "2048": {
     id: "2048",
