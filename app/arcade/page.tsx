@@ -392,151 +392,147 @@ function ArcadeContent() {
   return (
     <div className="min-h-screen bg-black text-white font-mono pb-24 relative">
       {/* ── Top Clean Navigation Bar ── */}
-      <header className="sticky top-0 z-30 bg-neutral-950/95 backdrop-blur-md border-b border-neutral-800 px-3 sm:px-6 py-3 flex items-center justify-between shadow-lg">
-        <div className="flex items-center gap-3 min-w-0">
-          {activeMatchId ? (
-            <button
-              onClick={handleExitActiveMatch}
-              className="px-3 py-1.5 border border-neutral-700 bg-neutral-900 hover:border-white text-neutral-300 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5 text-xs rounded-lg font-bold"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>[ LEAVE ARENA ]</span>
-            </button>
-          ) : (
-            <Link
-              href="/"
-              className="px-3 py-1.5 border border-neutral-700 bg-neutral-900 hover:border-white text-neutral-300 hover:text-white transition-colors flex items-center gap-1.5 text-xs rounded-lg font-bold"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>[ ECHO ]</span>
-            </Link>
-          )}
+      {/* ── Top Unified Clean Header ── */}
+      <header className="sticky top-0 z-30 bg-neutral-950/95 backdrop-blur-md border-b border-neutral-800 px-3 sm:px-6 py-2.5 flex items-center justify-between shadow-lg">
+        {activeMatch ? (
+          /* ── In-Match Header Mode ── */
+          <>
+            <div className="flex items-center gap-2.5 min-w-0">
+              <button
+                type="button"
+                onClick={handleExitActiveMatch}
+                className="px-2.5 py-1.5 border border-neutral-700 bg-neutral-900 hover:border-white text-neutral-200 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5 text-xs rounded-lg font-bold"
+                title="Exit to Echo Club Lobby"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>EXIT</span>
+              </button>
 
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="w-7 h-7 bg-white text-black rounded-lg flex items-center justify-center font-black shadow-md">
-              <Gamepad2 className="w-4 h-4" />
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-base sm:text-lg">
+                  {CLEAN_GAMES.find((g) => g.id === activeMatch.gameType)?.icon || "🎮"}
+                </span>
+                <span className="font-black text-xs sm:text-sm uppercase tracking-wide text-white truncate">
+                  {CLEAN_GAMES.find((g) => g.id === activeMatch.gameType)?.name || activeMatch.gameType.toUpperCase()}
+                </span>
+                <span className="hidden sm:inline-block text-[10px] px-2 py-0.5 rounded-full bg-neutral-900 border border-neutral-700 text-neutral-300 font-bold">
+                  {activeMatch.mode === "VS_COMPUTER" ? "🤖 VS BOT" : "👥 MULTI"}
+                </span>
+              </div>
             </div>
-            <div>
-              <h1 className="font-black text-xs sm:text-sm tracking-wider uppercase text-white truncate">
-                ECHO CLUB
-              </h1>
-              <p className="text-[10px] text-neutral-400 font-bold hidden sm:block">
-                PREMIER REAL-TIME &amp; VOICE GAMING LOUNGE
-              </p>
+
+            <div className="flex items-center gap-1.5 sm:gap-2 text-xs shrink-0">
+              {/* Rematch Button */}
+              <button
+                type="button"
+                onClick={handleRematch}
+                disabled={isRematching}
+                className={`px-3 py-1.5 border font-black uppercase text-xs transition-all flex items-center gap-1.5 cursor-pointer rounded-lg shadow-sm active:scale-95 ${
+                  activeMatch.status === "FINISHED"
+                    ? "border-emerald-400 bg-emerald-400 text-black hover:bg-emerald-300 animate-pulse"
+                    : "border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-white hover:text-white"
+                }`}
+                title="Play Again with same players"
+              >
+                <RotateCcw className={`w-3.5 h-3.5 ${isRematching ? "animate-spin" : ""}`} />
+                <span className="hidden sm:inline">{isRematching ? "REMATCHING..." : "REMATCH"}</span>
+              </button>
+
+              {/* Single Rules Button */}
+              <button
+                type="button"
+                onClick={() => handleOpenRules(activeMatch.gameType)}
+                className="px-2.5 sm:px-3 py-1.5 border border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-white hover:text-white font-bold uppercase text-xs transition-all flex items-center gap-1 cursor-pointer rounded-lg shadow-sm"
+                title="View Rules & Guide"
+              >
+                <HelpCircle className="w-3.5 h-3.5 text-emerald-400" />
+                <span>RULES</span>
+              </button>
+
+              {/* Invite Button for Multiplayer */}
+              {activeMatch.mode !== "VS_COMPUTER" && (
+                <button
+                  type="button"
+                  onClick={() => setInviteModalMatch(activeMatch)}
+                  className="px-3 py-1.5 border-2 border-white bg-white text-black hover:bg-neutral-200 font-black uppercase text-xs transition-all flex items-center gap-1.5 cursor-pointer rounded-lg shadow-sm active:scale-95"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">INVITE</span>
+                </button>
+              )}
+
+              {user?.uid === activeMatch.hostUid && (
+                <button
+                  type="button"
+                  onClick={() => handleDeleteMatch(activeMatch.id)}
+                  className="p-1.5 border border-red-900 bg-red-950 text-red-400 hover:bg-red-900 hover:text-white transition-colors cursor-pointer rounded-lg"
+                  title="Delete Match"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
-          </div>
-        </div>
+          </>
+        ) : (
+          /* ── Lobby Header Mode ── */
+          <>
+            <div className="flex items-center gap-3 min-w-0">
+              <Link
+                href="/"
+                className="px-2.5 py-1.5 border border-neutral-700 bg-neutral-900 hover:border-white text-neutral-300 hover:text-white transition-colors flex items-center gap-1 text-xs rounded-lg font-bold"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>ECHO</span>
+              </Link>
 
-        {/* Clean Header Controls */}
-        <div className="flex items-center gap-2 text-xs shrink-0">
-          <Link
-            href="/shop"
-            className="p-2 border border-neutral-700 bg-neutral-900 text-white hover:border-white transition-all flex items-center justify-center cursor-pointer rounded-lg shadow-sm"
-            aria-label="Aura Shop"
-            title="Aura Shop"
-          >
-            <ShoppingCart className="w-4 h-4 text-white" />
-          </Link>
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-7 h-7 bg-white text-black rounded-lg flex items-center justify-center font-black shadow-md">
+                  <Gamepad2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h1 className="font-black text-xs sm:text-sm tracking-wider uppercase text-white truncate">
+                    ECHO CLUB
+                  </h1>
+                </div>
+              </div>
+            </div>
 
-          <button
-            type="button"
-            onClick={() => setTournamentModalOpen(true)}
-            className="px-3 py-1.5 border border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-yellow-400 hover:text-yellow-300 font-bold text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer rounded-lg shadow-sm"
-          >
-            <Trophy className="w-3.5 h-3.5 text-yellow-400" />
-            <span className="hidden md:inline">TOURNAMENT</span>
-          </button>
+            <div className="flex items-center gap-2 text-xs shrink-0">
+              <button
+                type="button"
+                onClick={() => setTournamentModalOpen(true)}
+                className="px-2.5 sm:px-3 py-1.5 border border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-yellow-400 hover:text-yellow-300 font-bold text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer rounded-lg shadow-sm"
+              >
+                <Trophy className="w-3.5 h-3.5 text-yellow-400" />
+                <span className="hidden md:inline">TOURNAMENT</span>
+              </button>
 
-          <button
-            type="button"
-            onClick={() => handleOpenRules("antakshari")}
-            className="px-3 py-1.5 border border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-white hover:text-white font-bold text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer rounded-lg shadow-sm"
-          >
-            <HelpCircle className="w-3.5 h-3.5 text-emerald-400" />
-            <span>RULES</span>
-          </button>
+              <button
+                type="button"
+                onClick={() => handleOpenRules("antakshari")}
+                className="px-2.5 sm:px-3 py-1.5 border border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-white hover:text-white font-bold text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer rounded-lg shadow-sm"
+              >
+                <HelpCircle className="w-3.5 h-3.5 text-emerald-400" />
+                <span>RULES</span>
+              </button>
 
-          <button
-            type="button"
-            onClick={() => handleOpenCreate("antakshari")}
-            className="px-3.5 py-1.5 border-2 border-white bg-white text-black hover:bg-neutral-200 font-black text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer rounded-lg shadow-md active:scale-95"
-          >
-            <Zap className="w-3.5 h-3.5 fill-black" />
-            <span>[ ➕ CREATE MATCH ]</span>
-          </button>
-        </div>
+              <button
+                type="button"
+                onClick={() => handleOpenCreate("antakshari")}
+                className="px-3 sm:px-3.5 py-1.5 border-2 border-white bg-white text-black hover:bg-neutral-200 font-black text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer rounded-lg shadow-md active:scale-95"
+              >
+                <Zap className="w-3.5 h-3.5 fill-black" />
+                <span>CREATE</span>
+              </button>
+            </div>
+          </>
+        )}
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
         {activeMatch ? (
           /* ── Active Game Arena View ── */
           <div className="space-y-4">
-            <div className="flex items-center justify-between border-b border-neutral-800 pb-3 text-xs flex-wrap gap-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={handleExitActiveMatch}
-                  className="px-3 py-1.5 border border-red-800 bg-red-950/60 hover:bg-red-800 hover:text-white text-red-300 font-bold uppercase text-xs transition-all flex items-center gap-1.5 cursor-pointer rounded-lg"
-                >
-                  <ArrowLeft className="w-3.5 h-3.5" />
-                  <span>[ ← EXIT ARENA ]</span>
-                </button>
-                <span className="text-neutral-400 uppercase tracking-wider flex items-center gap-2 font-bold text-[11px]">
-                  <span>MATCH: {activeMatch.id.slice(0, 8)}</span>
-                  <span>•</span>
-                  <span>MODE: {activeMatch.mode === "VS_COMPUTER" ? "🤖 VS BOT" : "👥 MULTIPLAYER"}</span>
-                  <span>•</span>
-                  <span>HOST: {activeMatch.hostHandle}</span>
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2 flex-wrap">
-                {/* Rematch Button */}
-                <button
-                  type="button"
-                  onClick={handleRematch}
-                  disabled={isRematching}
-                  className={`px-3 py-1.5 border font-black uppercase text-xs transition-all flex items-center gap-1.5 cursor-pointer rounded-lg shadow-md active:scale-95 ${
-                    activeMatch.status === "FINISHED"
-                      ? "border-emerald-400 bg-emerald-400 text-black hover:bg-emerald-300 animate-pulse"
-                      : "border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-white hover:text-white"
-                  }`}
-                  title="Trigger Immediate Rematch"
-                >
-                  <RotateCcw className={`w-3.5 h-3.5 ${isRematching ? "animate-spin" : ""}`} />
-                  <span>{isRematching ? "REMATCHING..." : "[ 🔄 REMATCH ]"}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleOpenRules(activeMatch.gameType)}
-                  className="px-3 py-1.5 border border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-white hover:text-white font-bold uppercase text-xs transition-all flex items-center gap-1 cursor-pointer rounded-lg"
-                >
-                  <HelpCircle className="w-3.5 h-3.5" />
-                  <span>RULES</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setInviteModalMatch(activeMatch)}
-                  className="px-3.5 py-1.5 border-2 border-white bg-white text-black hover:bg-neutral-200 font-black uppercase text-xs transition-all flex items-center gap-1.5 cursor-pointer rounded-lg shadow-md active:scale-95"
-                >
-                  <Share2 className="w-3.5 h-3.5" />
-                  <span>[ 🔗 INVITE &amp; TALK 🎙️ ]</span>
-                </button>
-
-                {user?.uid === activeMatch.hostUid && (
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteMatch(activeMatch.id)}
-                    className="p-2 border border-red-900 bg-red-950 text-red-400 hover:bg-red-900 hover:text-white transition-colors cursor-pointer rounded-lg"
-                    title="Delete / Terminate Arena"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-            </div>
 
             {/* Universal Match Finished & Rematch Bar */}
             {activeMatch.status === "FINISHED" && (
