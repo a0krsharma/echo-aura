@@ -570,22 +570,23 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
   },
   carrom: {
     id: "carrom",
-    name: "Championship Carrom (Official ICF Tournament Laws)",
+    name: "Championship Carrom (4 Game Types & Doubles Dynamics)",
     rank: 6,
     category: "2D Physics & Tabletop",
     icon: "⚪",
-    overview: "Official International Carrom Federation (ICF) tournament rules and laws. 19 pieces (9 White, 9 Black, 1 Red Queen) on 74x74 cm lacquered board with 4 corner drop pockets. Breaker plays White. Features White/Black Slam adjudication, 4 striking grips, powder dynamics (Boric vs Disco), and tactical defense.",
+    overview: "Official International Carrom Federation (ICF) laws, 4 global game variants (ICF Tournament, Freestyle, Points, and Duboo), plus 2v2 doubles tactical team systems (feeding, pocket choking & immediate opponent freezing). 19 pieces (9 White, 9 Black, 1 Red Queen) on 74x74 cm lacquered board with 4 corner drop pockets.",
     howToPlay: [
-      "1. STRIKER PLACEMENT & STRIKING: Striker must touch both front and rear baseline edges (or fully cover a base circle). Single forward flick using finger/thumb; dragging or pushing is a foul.",
-      "2. 4 CORE STRIKING GRIPS: Index Finger Flick (direct accuracy & push pots), Middle Straight (+25% kinetic impulse for breaks & pack splitting), Scissors / Kainchi (sharp 60°+ tangent slices), Thumb Flick (reverse & baseline edge shots).",
-      "3. THE QUEEN & MANDATORY COVER: Queen (3 pts) can be pocketed anytime after first pot. Must be covered by pocketing own color on the same or immediate next stroke. If cover fails, Queen returns to center circle.",
-      "4. LAST PIECE SEQUENCE: You cannot pocket the Queen as your last piece. Clearing all 9 pieces while Queen remains on the board results in an immediate automatic frame loss!",
-      "5. WHITE SLAM & BLACK SLAM (INNING 1 RUNOUT): White Slam = Breaker clears all 9 White + Queen in Turn 1 (+12 pts). Black Slam = Non-breaker clears all 9 Black + Queen in Turn 1 (+12 pts). Recorded as 'WS' / 'BS' on official ICF scorecards.",
-      "6. FOULS & DUE MATRIX: Pocketing striker (scratch) ends turn + 1 piece returned to center as Due penalty. Pocketing striker + own piece = 2 pieces returned (potted + 1 Due).",
-      "7. 22-POINT QUEEN CAP RULE (ICF LAW 25.4): Once cumulative match score reaches 22+ pts, the 3-pt Queen bonus is no longer added. Single board max score is 12 pts (9 pieces + 3 Queen). Match won at 25 pts."
+      "1. 4 GLOBAL GAME TYPES: (A) ICF Classical: Strict color-lock (White vs Black), Queen=3 pts (mandatory cover), 25-pt match cap. (B) Freestyle Carrom: Open potting (White=10, Black=5, Queen=25/50), race to 100/150 pts. (C) Points Carrom: Color-locked race to 21/29 pts (White=2, Black=1, Queen=3/5). (D) Duboo Fast Carrom: Heavy striker, open potting, Queen=50 pts.",
+      "2. 4 CORE STRIKING GRIPS: Index Finger (high precision straight pots), Middle Straight (+25% power for breaks & pack splitting), Scissors / Kainchi (sharp 60°+ tangent slices), Thumb Flick (reverse edge cuts).",
+      "3. 2v2 DOUBLES & SEATING HIERARCHY: Teammates sit opposite (South A1 & North A2 vs East B1 & West B2). Turn rotates clockwise (A1 -> B1 -> A2 -> B2). Every shot directly sets up or denies the immediate opponent to the left.",
+      "4. TEAMMATE FEEDING TACTICS: Baseline Push (nudging friendly pieces toward partner's baseline box for easy 0° pots) and Pocket Lip Rest (drifting piece into partner's corner pocket throat).",
+      "5. DEFENSIVE ZONE CONTROL: Immediate Opponent Freeze (driving opponent piece flat against the next shooter's side rail to eliminate cut angles) and Pocket Choking / Gardi (blocking partner's threat pocket).",
+      "6. WHITE SLAM & BLACK SLAM (INNING 1 RUNOUT): White Slam = Breaker clears all 9 White + Queen in Turn 1 (+12 pts). Black Slam = Non-breaker clears all 9 Black + Queen in Turn 1 (+12 pts).",
+      "7. QUEEN COVERING & 22-PT CAP: Queen must be covered by pocketing own color (or any piece in Freestyle) on immediate next stroke. In ICF play, once a player reaches 22+ pts, the 3-pt Queen bonus is zeroed out.",
+      "8. FOULS & DUE PENALTIES: Pocketing striker (scratch) ends turn + 1 piece returned to center as Due penalty. Pocketing striker + own piece = 2 pieces returned."
     ],
-    voiceGuide: "Call shots, announce 'Covered' / 'Due' umpire codes, and coordinate defensive locks on live voice chat.",
-    scoring: "Board Pts = Remaining Opponent Pieces + (3 pts for Queen if covered and score < 22). Slams award 12 pts.",
+    voiceGuide: "Call shots, announce 'Covered' / 'Due' umpire commands, and coordinate teammate feeds or opponent freezes over live voice chat.",
+    scoring: "ICF: Remaining opponent pieces + (3 Queen if score < 22). Freestyle: White=10, Black=5, Queen=25/50. Slams award 12 pts.",
     proTip: "Use the top Grip selector (Index, Middle, Kainchi, Thumb) and Powder Chemistry selector (Boric Acid vs Disco Super-Glide) to fine-tune kinetic power and acute tangent slices!"
   },
   pool: {

@@ -1393,20 +1393,25 @@ export default function CarromGame({ match, currentUid }: CarromGameProps) {
         {showProTips && (
           <div className="p-3 border-t border-neutral-800 space-y-2.5 text-xs text-neutral-400 font-mono bg-black/50">
             <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
-              <span className="text-amber-400 font-bold block mb-0.5">1. ⚡ THE WHITE &amp; BLACK SLAM (INNING 1 RUNOUT):</span>
-              White Slam: Breaker clears all 9 White + Queen on Turn 1 (+12 pts). Black Slam: Non-breaker clears all 9 Black + Queen on Turn 1 (+12 pts).
+              <span className="text-amber-400 font-bold block mb-0.5">1. ⚡ 4 GLOBAL GAME TYPES:</span>
+              • ICF Classical: Strict color-lock, Queen=3 pts (cover required), 25-pt cap.<br/>
+              • Freestyle: Open potting (White=10, Black=5, Queen=25/50), race to 100/150 pts.<br/>
+              • Points: Color-locked race to 21/29 pts (White=2, Black=1, Queen=3/5).<br/>
+              • Duboo Fast: Heavy striker (18-25g), open potting, Queen=50 pts.
             </div>
             <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
-              <span className="text-amber-400 font-bold block mb-0.5">2. ☝️ 4 CORE STRIKING GRIPS:</span>
+              <span className="text-amber-400 font-bold block mb-0.5">2. 👥 2v2 DOUBLES &amp; FEEDING MECHANICS:</span>
+              • Seating: Teammates sit opposite (South A1 &amp; North A2); clockwise rotation.<br/>
+              • Baseline Feed: Nudge pieces toward partner's baseline box for an unmissable 0° pot.<br/>
+              • Immediate Opponent Freeze: Drive opponent pieces flat against the next shooter's side rail (0mm gap) to kill their cut angles!
+            </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-amber-400 font-bold block mb-0.5">3. ☝️ 4 CORE STRIKING GRIPS:</span>
               Index (Direct accuracy), Middle Straight (100% kinetic break power), Scissors/Kainchi (Sharp 60°+ tangent slices), Thumb (Reverse baseline shots).
             </div>
             <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
-              <span className="text-amber-400 font-bold block mb-0.5">3. 🧪 POWDER CHEMISTRY (BORIC ACID VS DISCO):</span>
+              <span className="text-amber-400 font-bold block mb-0.5">4. 🧪 POWDER CHEMISTRY (BORIC ACID VS DISCO):</span>
               Boric Acid (H3BO3) forms crystalline slip planes (μk ≈ 0.08–0.12) for tactile cut control; Disco polymer spheres roll with μk &lt; 0.04.
-            </div>
-            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
-              <span className="text-amber-400 font-bold block mb-0.5">4. 🛡️ 3 PRO DEFENSIVE STRATEGIES:</span>
-              1. Frame-Freeze Lock (push opponent piece flush against rail, 0mm gap). 2. Pocket-Mouth Choke (Gardi). 3. Queen Shielding!
             </div>
             <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
               <span className="text-amber-400 font-bold block mb-0.5">5. 👑 QUEEN COVERING &amp; 22-POINT CAP RULE:</span>
