@@ -23,6 +23,7 @@ import {
   ChevronUp,
   RotateCcw,
   Volume2,
+  CircleDot,
 } from "lucide-react";
 
 interface GlowHockeyGameProps {
@@ -45,7 +46,6 @@ const RESTITUTION_RAIL = 0.92;
 const RESTITUTION_MALLET = 0.96;
 const DRAG_FACTOR = 0.995; // Aerostatic suspension drag (smooth low friction glide)
 const MAX_PUCK_SPEED = 28;
-const MAX_MALLET_SPEED = 32;
 const POSSESSION_LIMIT_SEC = 7;
 
 export type AIDifficulty = "AMATEUR" | "SEMI_PRO" | "USAA_PRO" | "IMPOSSIBLE_TAS";
@@ -157,7 +157,6 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
 
   const p1TargetRef = useRef({ x: WIDTH / 2, y: HEIGHT - 75 });
   const p2TargetRef = useRef({ x: WIDTH / 2, y: 75 });
-  const pointerHistoryRef = useRef<{ x: number; y: number; time: number }[]>([]);
   const sparksRef = useRef<Spark[]>([]);
   const lastPossessionCheckRef = useRef<number>(Date.now());
   const matchRef = useRef(match);
@@ -284,7 +283,7 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
     return () => clearInterval(timer);
   }, [powerUpTimer, activePowerUp]);
 
-  // Main 60FPS CCD Physics & Multi-Pass Additive Bloom Loop
+  // Main 60FPS CCD Physics & Monochrome Render Loop
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -301,7 +300,7 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
       const p1 = p1PaddleRef.current;
       const p2 = p2PaddleRef.current;
 
-      // ── 1. Update Player 1 Paddle with Responsive 1:1 Tracking & Strict Centerline ──
+      // ── 1. Update Player 1 Paddle (White Striker) with 1:1 Zero-Lag Tracking ──
       p1.prevX = p1.x;
       p1.prevY = p1.y;
       const targetP1 = p1TargetRef.current;
@@ -309,7 +308,6 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
       const clampedP1X = Math.max(WALL_THICKNESS + p1.radius, Math.min(WIDTH - WALL_THICKNESS - p1.radius, targetP1.x));
       const clampedP1Y = Math.max(HEIGHT / 2 + p1.radius + 4, Math.min(HEIGHT - WALL_THICKNESS - p1.radius, targetP1.y));
 
-      // Direct responsive tracking without sluggish lag
       p1.x = clampedP1X;
       p1.y = clampedP1Y;
       p1.vx = (p1.x - p1.prevX);
@@ -364,10 +362,8 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
           const arcOffset = hCrease * (1 - Math.min(1, xOffset * xOffset));
 
           if (primaryPuck.y < HEIGHT / 2 - 20 && primaryPuck.vy >= 0) {
-            // ATTACK_STRIKE: Strike forward aggressively through puck
             aiTargetY = Math.min(HEIGHT / 2 - p2.radius - 6, Math.max(WALL_THICKNESS + p2.radius + 10, primaryPuck.y - 12));
           } else {
-            // DEFEND_CREASE: Step along Parabolic Crease Arc
             aiTargetY = 55 + arcOffset;
           }
         }
@@ -396,14 +392,13 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
 
       for (let s = 0; s < subSteps; s++) {
         pucksRef.current.forEach((puck) => {
-          // Add velocity incrementally per sub-step
           puck.x += (puck.vx * speedScale) / subSteps;
           puck.y += (puck.vy * speedScale) / subSteps;
 
           puck.vx *= Math.pow(DRAG_FACTOR, 1 / subSteps);
           puck.vy *= Math.pow(DRAG_FACTOR, 1 / subSteps);
 
-          // A. Circle-to-Circle Elastic Collision with P1 Mallet (Kinematic Impulse)
+          // A. Circle-to-Circle Elastic Collision with P1 Mallet (White Striker)
           const dx1 = puck.x - p1.x;
           const dy1 = puck.y - p1.y;
           const dist1 = Math.hypot(dx1, dy1);
@@ -413,11 +408,9 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
             const nx = dx1 / dist1;
             const ny = dy1 / dist1;
 
-            // Penetration resolution
             puck.x = p1.x + nx * minDist1;
             puck.y = p1.y + ny * minDist1;
 
-            // Mallet strike velocity relative to puck
             const relVx = puck.vx - p1.vx;
             const relVy = puck.vy - p1.vy;
             const normalVel = relVx * nx + relVy * ny;
@@ -429,7 +422,7 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
 
               const hitSpeed = Math.hypot(puck.vx, puck.vy);
               playProceduralHit(audioCtxRef.current, hitSpeed);
-              emitSparks(puck.x, puck.y, "#00ffcc", 20);
+              emitSparks(puck.x, puck.y, "#ffffff", 20);
 
               if (hitSpeed > 16) {
                 setScreenShake(6);
@@ -438,7 +431,7 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
             }
           }
 
-          // B. Circle-to-Circle Elastic Collision with P2 Mallet
+          // B. Circle-to-Circle Elastic Collision with P2 Mallet (Black Striker)
           const dx2 = puck.x - p2.x;
           const dy2 = puck.y - p2.y;
           const dist2 = Math.hypot(dx2, dy2);
@@ -462,7 +455,7 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
 
               const hitSpeed = Math.hypot(puck.vx, puck.vy);
               playProceduralHit(audioCtxRef.current, hitSpeed);
-              emitSparks(puck.x, puck.y, "#ff0055", 20);
+              emitSparks(puck.x, puck.y, "#a1a1aa", 20);
 
               if (hitSpeed > 16) {
                 setScreenShake(6);
@@ -471,16 +464,16 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
             }
           }
 
-          // C. Left and Right Rail Specular Reflections
+          // C. Left and Right Rail Specular Reflections (Pure White Impact)
           if (puck.x < PLAYABLE_MIN_X) {
             puck.x = PLAYABLE_MIN_X;
             puck.vx = -puck.vx * RESTITUTION_RAIL;
-            emitSparks(puck.x, puck.y, "#38bdf8", 8);
+            emitSparks(puck.x, puck.y, "#ffffff", 8);
             soundSynth.playSubtlePop();
           } else if (puck.x > PLAYABLE_MAX_X) {
             puck.x = PLAYABLE_MAX_X;
             puck.vx = -puck.vx * RESTITUTION_RAIL;
-            emitSparks(puck.x, puck.y, "#38bdf8", 8);
+            emitSparks(puck.x, puck.y, "#ffffff", 8);
             soundSynth.playSubtlePop();
           }
 
@@ -492,12 +485,12 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
           if (puck.y < WALL_THICKNESS + puck.radius && !isWithinGoalX) {
             puck.y = WALL_THICKNESS + puck.radius;
             puck.vy = -puck.vy * RESTITUTION_RAIL;
-            emitSparks(puck.x, puck.y, "#ff0055", 8);
+            emitSparks(puck.x, puck.y, "#e4e4e7", 8);
             soundSynth.playSubtlePop();
           } else if (puck.y > HEIGHT - WALL_THICKNESS - puck.radius && !isWithinGoalX) {
             puck.y = HEIGHT - WALL_THICKNESS - puck.radius;
             puck.vy = -puck.vy * RESTITUTION_RAIL;
-            emitSparks(puck.x, puck.y, "#00ffcc", 8);
+            emitSparks(puck.x, puck.y, "#ffffff", 8);
             soundSynth.playSubtlePop();
           }
 
@@ -521,7 +514,7 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
         if (puck.y < 4 && puck.x >= goalLeft && puck.x <= goalRight) {
           goalScored = true;
           soundSynth.playFanfare();
-          emitSparks(WIDTH / 2, 20, "#00ffcc", 40);
+          emitSparks(WIDTH / 2, 20, "#ffffff", 40);
           setP1Score((s) => {
             const next = s + 1;
             if (isHost) updateGlowHockeyScore(matchRef.current.id, currentUid, next, p2Score);
@@ -531,7 +524,7 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
         } else if (puck.y > HEIGHT - 4 && puck.x >= goalLeft && puck.x <= goalRight) {
           goalScored = true;
           soundSynth.playAirhorn();
-          emitSparks(WIDTH / 2, HEIGHT - 20, "#ff0055", 40);
+          emitSparks(WIDTH / 2, HEIGHT - 20, "#a1a1aa", 40);
           setP2Score((s) => {
             const next = s + 1;
             if (isHost) updateGlowHockeyScore(matchRef.current.id, currentUid, p1Score, next);
@@ -571,24 +564,29 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
         puck.trail.forEach((pt) => (pt.alpha *= 0.82));
       });
 
-      // ── 6. Render Multi-Pass Additive Bloom Cyberpunk Rink ──
+      // ── 6. Render High-Contrast White & Black (Monochrome Noir) Rink ──
       ctx.clearRect(0, 0, WIDTH, HEIGHT);
 
-      // A. Rink Background Surface
+      // A. Deep Obsidian / Noir Table Surface
       const rinkGrad = ctx.createLinearGradient(0, 0, 0, HEIGHT);
-      rinkGrad.addColorStop(0, "#030712");
-      rinkGrad.addColorStop(0.5, "#0b0f19");
-      rinkGrad.addColorStop(1, "#030712");
+      rinkGrad.addColorStop(0, "#050505");
+      rinkGrad.addColorStop(0.5, "#0d0d0d");
+      rinkGrad.addColorStop(1, "#050505");
       ctx.fillStyle = rinkGrad;
       ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-      // B. Neon Boundary Rails
-      ctx.strokeStyle = "rgba(56, 189, 248, 0.4)";
+      // B. Crisp White Boundary Rails with Chrome Accent
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
       ctx.lineWidth = WALL_THICKNESS;
       ctx.strokeRect(WALL_THICKNESS / 2, WALL_THICKNESS / 2, WIDTH - WALL_THICKNESS, HEIGHT - WALL_THICKNESS);
 
-      // C. Strict Centerline Barrier & Center Circle
-      ctx.strokeStyle = "rgba(239, 68, 68, 0.7)";
+      // Inner Platinum Bevel Inset Line
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(WALL_THICKNESS, WALL_THICKNESS, WIDTH - WALL_THICKNESS * 2, HEIGHT - WALL_THICKNESS * 2);
+
+      // C. Strict Centerline Divider & Center Circle
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.75)";
       ctx.lineWidth = 2.5;
       ctx.setLineDash([8, 6]);
       ctx.beginPath();
@@ -597,26 +595,30 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
       ctx.stroke();
       ctx.setLineDash([]);
 
+      // Center Circle with Inner Dot
       ctx.beginPath();
       ctx.arc(WIDTH / 2, HEIGHT / 2, 48, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(6, 182, 212, 0.5)";
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      // D. Goal Creases
-      ctx.fillStyle = "rgba(255, 0, 85, 0.35)";
+      ctx.beginPath();
+      ctx.arc(WIDTH / 2, HEIGHT / 2, 5, 0, Math.PI * 2);
+      ctx.fillStyle = "#ffffff";
+      ctx.fill();
+
+      // D. Goal Creases (Top & Bottom High-Contrast Slots)
+      ctx.fillStyle = "rgba(255, 255, 255, 0.2)";
       ctx.fillRect(goalLeft, 0, GOAL_WIDTH, WALL_THICKNESS + 4);
-      ctx.fillStyle = "rgba(0, 255, 204, 0.35)";
       ctx.fillRect(goalLeft, HEIGHT - WALL_THICKNESS - 4, GOAL_WIDTH, WALL_THICKNESS + 4);
 
-      // Goal Nets Neon Lines
-      ctx.strokeStyle = "#ff0055";
+      // Goal Nets Chrome Lines
+      ctx.strokeStyle = "#ffffff";
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.arc(WIDTH / 2, 0, GOAL_WIDTH / 2, 0, Math.PI);
       ctx.stroke();
 
-      ctx.strokeStyle = "#00ffcc";
       ctx.beginPath();
       ctx.arc(WIDTH / 2, HEIGHT, GOAL_WIDTH / 2, Math.PI, Math.PI * 2);
       ctx.stroke();
@@ -650,19 +652,28 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
         ctx.restore();
       };
 
-      // F. Render Puck Trails & Pucks
+      // F. Render Puck Trails & Pucks (Brilliant White Glow)
       pucksRef.current.forEach((puck) => {
         puck.trail.forEach((pt) => {
           ctx.beginPath();
           ctx.arc(pt.x, pt.y, puck.radius * 0.85, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(56, 189, 248, ${pt.alpha})`;
+          ctx.fillStyle = `rgba(255, 255, 255, ${pt.alpha * 0.6})`;
           ctx.fill();
         });
 
-        drawBloomCircle(puck.x, puck.y, puck.radius, "#ffffff", puck.isAuxiliary ? "#f59e0b" : "#38bdf8");
+        // 3D Metallic Puck with Engraved Concentric Rings
+        ctx.save();
+        drawBloomCircle(puck.x, puck.y, puck.radius, "#ffffff", "rgba(255, 255, 255, 0.4)");
+        
+        ctx.beginPath();
+        ctx.arc(puck.x, puck.y, puck.radius * 0.55, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.6)";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.restore();
       });
 
-      // G. Render Sparks Particles
+      // G. Render Sparks Particles (White & Platinum)
       for (let i = sparksRef.current.length - 1; i >= 0; i--) {
         const s = sparksRef.current[i];
         s.x += s.vx;
@@ -678,11 +689,49 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
         ctx.fill();
       }
 
-      // H. Render P1 Mallet (Cyan Heavy Striker)
-      drawBloomCircle(p1.x, p1.y, p1.radius, "#00ffcc", "#059669");
+      // H. Render P1 Mallet (Bottom: Pure Ivory White & Chrome Striker)
+      ctx.save();
+      drawBloomCircle(p1.x, p1.y, p1.radius, "#ffffff", "rgba(255, 255, 255, 0.45)");
 
-      // I. Render P2 Mallet (Magenta Heavy Striker)
-      drawBloomCircle(p2.x, p2.y, p2.radius, "#ff0055", "#be185d");
+      ctx.beginPath();
+      ctx.arc(p1.x, p1.y, p1.radius * 0.6, 0, Math.PI * 2);
+      ctx.fillStyle = "#e4e4e7";
+      ctx.fill();
+      ctx.strokeStyle = "#18181b";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(p1.x, p1.y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = "#09090b";
+      ctx.fill();
+      ctx.restore();
+
+      // I. Render P2 Mallet (Top: Polished Onyx Black & Platinum Rim)
+      ctx.save();
+      // Outer Platinum Rim
+      ctx.beginPath();
+      ctx.arc(p2.x, p2.y, p2.radius, 0, Math.PI * 2);
+      ctx.fillStyle = "#18181b";
+      ctx.fill();
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // Inner Shadow & Core
+      ctx.beginPath();
+      ctx.arc(p2.x, p2.y, p2.radius * 0.6, 0, Math.PI * 2);
+      ctx.fillStyle = "#09090b";
+      ctx.fill();
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(p2.x, p2.y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = "#ffffff";
+      ctx.fill();
+      ctx.restore();
 
       animId = requestAnimationFrame(loop);
     };
@@ -740,21 +789,21 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
         transform: screenShake > 0 ? `translate(${(Math.random() - 0.5) * screenShake}px, ${(Math.random() - 0.5) * screenShake}px)` : "none",
         transition: "transform 0.05s ease-out",
       }}
-      className="w-full max-w-xl mx-auto bg-gradient-to-b from-neutral-950 via-neutral-900 to-black border-2 border-cyan-500/60 p-3 sm:p-5 font-mono text-white space-y-4 select-none shadow-[0_0_80px_rgba(6,182,212,0.15)] rounded-2xl"
+      className="w-full max-w-xl mx-auto bg-black border-2 border-white/80 p-3 sm:p-5 font-mono text-white space-y-4 select-none shadow-[0_0_80px_rgba(255,255,255,0.12)] rounded-2xl"
     >
       {/* ── Top Match Control Header ── */}
-      <div className="flex items-center justify-between border-b border-cyan-500/30 pb-3 text-xs flex-wrap gap-2">
+      <div className="flex items-center justify-between border-b border-white/20 pb-3 text-xs flex-wrap gap-2">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 text-black flex items-center justify-center font-black shadow-[0_0_15px_rgba(6,182,212,0.5)] text-lg">
-            ⚡
+          <div className="w-8 h-8 rounded-lg bg-white text-black flex items-center justify-center font-black shadow-[0_0_15px_rgba(255,255,255,0.5)] text-lg">
+            ⚪
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="text-sm font-black uppercase text-cyan-300 tracking-wider">
-                GLOW HOCKEY CLASH
+              <span className="text-sm font-black uppercase text-white tracking-wider">
+                GLOW HOCKEY NOIR
               </span>
-              <span className="px-1.5 py-0.2 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-[9px] font-bold rounded">
-                USAA STANDARD
+              <span className="px-1.5 py-0.2 bg-white text-black text-[9px] font-bold rounded">
+                BLACK &amp; WHITE
               </span>
             </div>
             <p className="text-[10px] text-neutral-400">
@@ -792,9 +841,9 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
 
       {/* ── Foul Alert Banner ── */}
       {foulAlert && (
-        <div className="border-2 border-red-500 bg-red-950/90 p-2.5 rounded-xl flex items-center justify-between gap-2 shadow-[0_0_30px_rgba(239,68,68,0.7)] animate-bounce text-xs font-bold text-red-200">
+        <div className="border-2 border-white bg-neutral-900 p-2.5 rounded-xl flex items-center justify-between gap-2 shadow-[0_0_30px_rgba(255,255,255,0.4)] animate-bounce text-xs font-bold text-white">
           <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4 text-red-400 animate-pulse" />
+            <Zap className="w-4 h-4 text-white animate-pulse" />
             <span>{foulAlert}</span>
           </div>
         </div>
@@ -805,10 +854,10 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
         {/* 7-Second Possession Clock */}
         <div className="flex items-center justify-between p-2.5 rounded-xl bg-neutral-950 border border-neutral-800">
           <div className="flex items-center gap-2">
-            <Timer className={`w-4 h-4 ${possessionTimer <= 2 ? "text-red-400 animate-spin" : "text-cyan-400"}`} />
+            <Timer className={`w-4 h-4 ${possessionTimer <= 2 ? "text-white animate-spin" : "text-neutral-400"}`} />
             <span className="text-[10px] text-neutral-400 font-bold uppercase">7-SEC CLOCK:</span>
           </div>
-          <span className={`text-sm font-black font-mono ${possessionTimer <= 2 ? "text-red-400 animate-pulse" : "text-white"}`}>
+          <span className={`text-sm font-black font-mono ${possessionTimer <= 2 ? "text-white animate-pulse underline" : "text-white"}`}>
             {possessionTimer}S ({possessionSide})
           </span>
         </div>
@@ -828,7 +877,7 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
                   }}
                   className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase transition-all cursor-pointer border ${
                     aiDifficulty === mode
-                      ? "bg-cyan-400 text-black border-cyan-300 font-black"
+                      ? "bg-white text-black border-white font-black"
                       : "bg-neutral-900 text-neutral-400 border-neutral-800 hover:text-white"
                   }`}
                   title={mode === "IMPOSSIBLE_TAS" ? "0ms Instant Raycast Interception" : undefined}
@@ -841,7 +890,7 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
         ) : (
           <div className="flex items-center justify-between p-2.5 rounded-xl bg-neutral-950 border border-neutral-800">
             <span className="text-[10px] text-neutral-400 font-bold uppercase">MODE:</span>
-            <span className="text-xs font-black text-cyan-300">PVP LIVE DUEL</span>
+            <span className="text-xs font-black text-white">PVP LIVE DUEL</span>
           </div>
         )}
       </div>
@@ -849,7 +898,7 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
       {/* ── Dynamic Tactical Power-Ups Bar ── */}
       <div className="flex items-center justify-between bg-neutral-950 p-2 rounded-xl border border-neutral-800 text-xs">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-cyan-400" />
+          <Sparkles className="w-4 h-4 text-white" />
           <span className="text-neutral-400 font-bold uppercase text-[10px]">POWER-UP:</span>
         </div>
         <div className="flex items-center gap-1.5">
@@ -858,18 +907,18 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
             onClick={() => activatePowerUp("MULTI_PUCK")}
             className={`px-2 py-1 rounded text-[9px] font-black uppercase transition-all cursor-pointer border ${
               activePowerUp === "MULTI_PUCK"
-                ? "bg-amber-400 text-black border-amber-300 shadow-md"
+                ? "bg-white text-black border-white shadow-md font-black"
                 : "bg-neutral-900 text-neutral-400 border-neutral-800 hover:text-white"
             }`}
           >
-            🟡 MULTI-PUCK
+            ⚪ MULTI-PUCK
           </button>
           <button
             type="button"
             onClick={() => activatePowerUp("TITAN_SHIELD")}
             className={`px-2 py-1 rounded text-[9px] font-black uppercase transition-all cursor-pointer border ${
               activePowerUp === "TITAN_SHIELD"
-                ? "bg-emerald-400 text-black border-emerald-300 shadow-md"
+                ? "bg-white text-black border-white shadow-md font-black"
                 : "bg-neutral-900 text-neutral-400 border-neutral-800 hover:text-white"
             }`}
           >
@@ -880,7 +929,7 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
             onClick={() => activatePowerUp("HYPER_BOOST")}
             className={`px-2 py-1 rounded text-[9px] font-black uppercase transition-all cursor-pointer border ${
               activePowerUp === "HYPER_BOOST"
-                ? "bg-purple-400 text-black border-purple-300 shadow-md"
+                ? "bg-white text-black border-white shadow-md font-black"
                 : "bg-neutral-900 text-neutral-400 border-neutral-800 hover:text-white"
             }`}
           >
@@ -889,33 +938,33 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
         </div>
       </div>
 
-      {/* ── Scoreboard HUD ── */}
+      {/* ── Monochrome Scoreboard HUD (Black vs White) ── */}
       <div className="grid grid-cols-2 gap-3 text-center">
-        {/* P2 (Top - Magenta) */}
-        <div className="bg-gradient-to-br from-pink-950/40 via-neutral-950 to-black p-3 rounded-xl border border-pink-500/40 shadow-md flex items-center justify-between px-4">
+        {/* P2 (Top - Onyx Black) */}
+        <div className="bg-neutral-950 p-3 rounded-xl border border-neutral-700 shadow-md flex items-center justify-between px-4">
           <div className="text-left">
-            <span className="text-[10px] text-pink-400 font-bold uppercase block">
-              🔴 {match.players[Object.keys(match.players || {})[1]]?.handle || (isVsBot ? "AI BOT" : "PLAYER 2")}
+            <span className="text-[10px] text-neutral-300 font-bold uppercase block">
+              ⚫ {match.players[Object.keys(match.players || {})[1]]?.handle || (isVsBot ? "AI BOT" : "PLAYER 2")}
             </span>
-            <span className="text-[9px] text-neutral-500">TOP DEFENSE CREASE</span>
+            <span className="text-[9px] text-neutral-500">TOP DEFENSE (BLACK)</span>
           </div>
-          <span className="text-2xl font-black text-pink-400 font-mono drop-shadow-[0_0_10px_#ff0055]">{p2Score}</span>
+          <span className="text-2xl font-black text-neutral-200 font-mono drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">{p2Score}</span>
         </div>
 
-        {/* P1 (Bottom - Cyan) */}
-        <div className="bg-gradient-to-br from-cyan-950/40 via-neutral-950 to-black p-3 rounded-xl border border-cyan-500/40 shadow-md flex items-center justify-between px-4">
+        {/* P1 (Bottom - Pure White) */}
+        <div className="bg-neutral-950 p-3 rounded-xl border border-white/60 shadow-md flex items-center justify-between px-4">
           <div className="text-left">
-            <span className="text-[10px] text-cyan-400 font-bold uppercase block">
-              🔵 {match.players[Object.keys(match.players || {})[0]]?.handle || "YOU (P1)"}
+            <span className="text-[10px] text-white font-bold uppercase block">
+              ⚪ {match.players[Object.keys(match.players || {})[0]]?.handle || "YOU (P1)"}
             </span>
-            <span className="text-[9px] text-neutral-500">BOTTOM DEFENSE CREASE</span>
+            <span className="text-[9px] text-neutral-500">BOTTOM DEFENSE (WHITE)</span>
           </div>
-          <span className="text-2xl font-black text-cyan-400 font-mono drop-shadow-[0_0_10px_#00ffcc]">{p1Score}</span>
+          <span className="text-2xl font-black text-white font-mono drop-shadow-[0_0_12px_rgba(255,255,255,0.6)]">{p1Score}</span>
         </div>
       </div>
 
-      {/* ── 3D Neon Air Hockey Table Canvas ── */}
-      <div className="relative aspect-[340/480] max-w-[340px] mx-auto p-1.5 rounded-2xl bg-gradient-to-b from-[#020617] via-[#0b0f19] to-[#020617] border-4 border-cyan-900 shadow-[0_20px_50px_rgba(0,0,0,0.9),_inset_0_2px_15px_rgba(6,182,212,0.3)]">
+      {/* ── 3D Monochrome Air Hockey Table Canvas ── */}
+      <div className="relative aspect-[340/480] max-w-[340px] mx-auto p-1.5 rounded-2xl bg-black border-4 border-white/80 shadow-[0_20px_50px_rgba(0,0,0,0.9),_inset_0_2px_15px_rgba(255,255,255,0.2)]">
         <canvas
           ref={canvasRef}
           width={WIDTH}
@@ -935,8 +984,8 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
           className="w-full p-3 flex items-center justify-between text-xs font-bold text-neutral-300 hover:text-white transition-colors cursor-pointer"
         >
           <span className="flex items-center gap-1.5 uppercase">
-            <Compass className="w-4 h-4 text-cyan-400" />
-            🏆 USAA PRO MASTERIES (RAYCASTING, SHOTS &amp; FM AUDIO)
+            <Compass className="w-4 h-4 text-white" />
+            🏆 USAA PRO MASTERIES (NOIR EDITION • SHOTS &amp; RAYCASTING)
           </span>
           {showProTips ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </button>
@@ -944,19 +993,19 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
         {showProTips && (
           <div className="p-3 border-t border-neutral-800 space-y-2.5 text-xs text-neutral-400 font-mono bg-black/50">
             <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
-              <span className="text-cyan-400 font-bold block mb-0.5">1. 🤖 PREDICTIVE RAYCASTING &amp; PARABOLIC CREASE:</span>
+              <span className="text-white font-bold block mb-0.5">1. 🤖 PREDICTIVE RAYCASTING &amp; PARABOLIC CREASE:</span>
               AI computes modular table-folding reflections and steps along a parabolic crease arc to cut down high-velocity shooting angles.
             </div>
             <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
-              <span className="text-cyan-400 font-bold block mb-0.5">2. 🚀 THE OVER-UNDER &amp; CUT SHOTS:</span>
+              <span className="text-white font-bold block mb-0.5">2. 🚀 THE OVER-UNDER &amp; CUT SHOTS:</span>
               Over-Under: Feint right, strike far left bank. Cut Shot: 45°–60° acute side-rail slice past centerline.
             </div>
             <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
-              <span className="text-cyan-400 font-bold block mb-0.5">3. 🔊 PROCEDURAL FM AUDIO &amp; HAPTICS:</span>
+              <span className="text-white font-bold block mb-0.5">3. 🔊 PROCEDURAL FM AUDIO &amp; HAPTICS:</span>
               Kinetic tone oscillators scale frequency dynamically and trigger hardware vibration pulses with impact speed.
             </div>
             <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
-              <span className="text-cyan-400 font-bold block mb-0.5">4. ⚡ DYNAMIC POWER-UPS &amp; MITOSIS:</span>
+              <span className="text-white font-bold block mb-0.5">4. ⚡ DYNAMIC POWER-UPS &amp; MITOSIS:</span>
               Multi-Puck (±30° Mitosis tri-puck replication), Titan Shield (+60% mallet defense radius), and Hyper-Boost overdrive.
             </div>
           </div>
@@ -965,14 +1014,14 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
 
       {/* ── Victory Celebration Declaration ── */}
       {isMatchOver && (
-        <div className="border-2 border-cyan-400 bg-gradient-to-b from-cyan-950/90 via-black to-black p-6 rounded-2xl text-center space-y-3 shadow-[0_0_60px_rgba(6,182,212,0.6)] animate-in fade-in zoom-in-95">
-          <Trophy className="w-14 h-14 text-cyan-400 mx-auto animate-bounce drop-shadow-[0_0_20px_#06b6d4]" />
-          <h2 className="text-xl font-black text-cyan-300 uppercase tracking-widest">
-            🏆 GLOW HOCKEY CHAMPION!
+        <div className="border-2 border-white bg-gradient-to-b from-neutral-900 via-black to-black p-6 rounded-2xl text-center space-y-3 shadow-[0_0_60px_rgba(255,255,255,0.4)] animate-in fade-in zoom-in-95">
+          <Trophy className="w-14 h-14 text-white mx-auto animate-bounce drop-shadow-[0_0_20px_#ffffff]" />
+          <h2 className="text-xl font-black text-white uppercase tracking-widest">
+            🏆 GLOW HOCKEY NOIR CHAMPION!
           </h2>
           <p className="text-xs text-neutral-300 font-mono">
             {winnerUid === currentUid
-              ? `VICTORY! You dominated the neon rink with ${targetScore} points and earned +${match.stakes * 2} Aura!`
+              ? `VICTORY! You dominated the table with ${targetScore} points and earned +${match.stakes * 2} Aura!`
               : `Match concluded! Final Score: ${p1Score} - ${p2Score}`}
           </p>
         </div>
