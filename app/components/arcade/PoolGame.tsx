@@ -1094,6 +1094,14 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
               <span className="text-emerald-400 font-bold block mb-0.5">15. 🪞 SARDA SYSTEM (LONG-RAIL REVERSE WRAP):</span>
               Aim (Long Rail) = Origin - (Arrival_3 &times; 1.5). Long ➔ Short ➔ Long carom with max reverse English.
             </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">16. 🔄 SARDA VS RENVERSE TACTICAL MATRIX:</span>
+              Sarda (Long-First) for OB1 along rails &amp; deep linear track (10-30). Renverse (Short-First) for wide sweeping center arcs (20-55).
+            </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">17. 🛡️ CUSHION-FIRST BRICOLE REVERSE CAROM:</span>
+              Aim = ((Origin + Projection_OB1) / 2) - C_rev. Reverse spin checks 1st rail to pocket or carom blocked, tucked balls!
+            </div>
           </div>
         )}
       </div>
