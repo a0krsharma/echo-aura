@@ -1130,6 +1130,14 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
               <span className="text-emerald-400 font-bold block mb-0.5">24. 🔬 PHENOLIC JUMP ENGINEERING &amp; DWELL TIME:</span>
               Phenolic tips (95+ Shore D, e&approx;0.90) cut dwell time to &le; 1.8ms to prevent double-hits. Conical 14mm taper resists buckling.
             </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">25. ⚡ CARBON FIBER VS WOOD BREAK SHAFTS:</span>
+              Carbon fiber (E=130-230 GPa, low end-mass 12-16g) yields 92-96% energy transfer efficiency and low squirt vs maple (22-28g).
+            </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">26. 💥 10-BALL BREAK CONTROL DYNAMICS:</span>
+              Controlled 19.5-22.5 mph speed with 3°-5.5° cut angle transfers 92-96% energy, parking the cue ball center while potting the 1-ball side!
+            </div>
           </div>
         )}
       </div>
