@@ -518,13 +518,21 @@ export function getThoughtRemainingHours(user: any): number {
 }
 
 export async function awardAura(uid: string, amount: number): Promise<void> {
-  if (!uid || uid.startsWith("bot_") || uid === "bot") return;
+  if (!uid || uid.startsWith("bot_") || uid === "bot" || amount <= 0) return;
   try {
     const db = getFirebaseDb();
     const userRef = doc(db, "users", uid);
-    await updateDoc(userRef, {
-      auraScore: increment(amount),
-    });
+    await setDoc(
+      userRef,
+      {
+        auraScore: increment(amount),
+        arcadeTotalWins: increment(1),
+        arcadeElo: increment(25),
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+    console.log(`[awardAura] Successfully awarded +${amount} Aura, +1 Win, +25 Elo to ${uid}!`);
   } catch (err) {
     console.warn("[awardAura] Non-critical aura score update skipped:", err);
   }
