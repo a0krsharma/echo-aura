@@ -51,7 +51,7 @@ const POCKETS = [
 const POCKET_RADIUS = 24;
 const POCKET_DEPTH_RADIUS = 16;
 
-// Ball Color Palette (Official Tournament Balls)
+// Ball Color Palette
 const BALL_COLORS: Record<string, string> = {
   "1": "#eab308", // Solid Yellow
   "2": "#2563eb", // Solid Blue
@@ -218,6 +218,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
   // Local physics pieces state
   const ballsRef = useRef<PoolBall[]>([]);
   const isSimulatingRef = useRef(false);
+  const activeShooterUidRef = useRef<string>(currentUid);
   const watchdogTimerRef = useRef<any>(null);
   const pocketedThisShotRef = useRef<PoolBall[]>([]);
   const cueScratchRef = useRef(false);
@@ -225,7 +226,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
   const isBreakShotRef = useRef(false);
   const pocketLocationsThisShotRef = useRef<{ ball: PoolBall; pocketName: string }[]>([]);
 
-  // Start Safety Watchdog Timer (Forces settlement if balls jitter past 5 seconds)
+  // Start Safety Watchdog Timer (Forces settlement if balls jitter past 4.5 seconds)
   const startWatchdog = useCallback(() => {
     if (watchdogTimerRef.current) clearTimeout(watchdogTimerRef.current);
     watchdogTimerRef.current = setTimeout(() => {
@@ -289,7 +290,6 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
   // Determine assigned suit for active players (8-Ball)
   const p1Suit = ps?.p1Type || null;
   const p2Suit = ps?.p2Type || null;
-  const myAssignedSuit = isPlayer1 ? p1Suit : p2Suit;
 
   // Find lowest-numbered ball on table for rotation games (9-Ball & 10-Ball)
   const lowestBallOnTable = useMemo(() => {
@@ -311,6 +311,9 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         const cueBall = balls.find((b) => b.type === "cue" && !b.isPocketed);
         const targets = balls.filter((b) => b.type !== "cue" && !b.isPocketed);
         if (!cueBall || targets.length === 0) return;
+
+        // Mark bot as the active shooter
+        activeShooterUidRef.current = botPlayer.uid;
 
         // Pick target according to discipline
         let target = targets[0];
@@ -342,7 +345,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         isSimulatingRef.current = true;
         setIsSimulating(true);
         startWatchdog();
-      }, 1100);
+      }, 1200);
 
       return () => clearTimeout(timer);
     }
@@ -425,7 +428,6 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
               }
             });
           } else {
-            // Strict velocity zeroing to prevent micro-creep
             b.vx = 0;
             b.vy = 0;
           }
@@ -873,6 +875,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
     if (cueBall && !cueBall.isPocketed) {
       cueBall.vx = 0;
       cueBall.vy = 0;
+      activeShooterUidRef.current = currentUid;
       setIsAiming(true);
       setDragStart({ x: clickX, y: clickY });
       setDragCurrent({ x: clickX, y: clickY });
@@ -915,6 +918,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         const impulseX = pullDx * forceMultiplier;
         const impulseY = pullDy * forceMultiplier;
 
+        activeShooterUidRef.current = currentUid;
         cueBall.vx = impulseX;
         cueBall.vy = impulseY;
 
@@ -939,7 +943,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
     setPower(0);
   };
 
-  // Finalize Shot and Apply Official Discipline Rules
+  // Finalize Shot and Apply Official Discipline Rules with Strict Turn Continuation / Alternation
   const finalizeShotTurn = useCallback(async () => {
     const pocketed = pocketedThisShotRef.current;
     const pocketLocations = pocketLocationsThisShotRef.current;
@@ -948,15 +952,19 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
     const isBreak = isBreakShotRef.current;
     const firstHit = firstContactBallRef.current;
 
-    let nextTurnUid = ps?.currentTurnUid || currentUid;
+    const shooterUid = activeShooterUidRef.current || ps?.currentTurnUid || currentUid;
+    const isShooterP1 = playerUids[0] === shooterUid;
+    const otherPlayerUid = playerUids.find((id) => id !== shooterUid) || currentUid;
+    const shooterHandle = match.players[shooterUid]?.handle || "Shooter";
+
+    let nextTurnUid = otherPlayerUid; // Default: pass turn if missed/fouled
     let newP1Score = ps?.p1Score || 0;
     let newP2Score = ps?.p2Score || 0;
     let newP1Type = ps?.p1Type || null;
     let newP2Type = ps?.p2Type || null;
     let actionLog = "";
     let isGameOver = false;
-    let winnerUid = currentUid;
-    const opponentUid = playerUids.find((id) => id !== currentUid) || currentUid;
+    let winnerUid = shooterUid;
 
     // Reset Cue Ball if Scratched
     const cueBall = balls.find((b) => b.type === "cue");
@@ -967,11 +975,13 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
       if (isScratch) {
         cueBall.x = TABLE_WIDTH / 2;
         cueBall.y = TABLE_HEIGHT - 110;
-        setIsBallInHand(true);
+        if (otherPlayerUid === currentUid) {
+          setIsBallInHand(true);
+        }
       }
     }
 
-    // ── DISCIPLINE SPECIFIC RESOLUTION ──
+    // ── DISCIPLINE SPECIFIC RULES ──
 
     if (discipline === "8_BALL") {
       const eightBallPocketed = pocketed.some((b) => b.type === "8ball");
@@ -979,8 +989,9 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
       const stripesPocketed = pocketed.filter((b) => b.type === "stripe").length;
       const remainingSolids = balls.filter((b) => b.type === "solid" && !b.isPocketed).length;
       const remainingStripes = balls.filter((b) => b.type === "stripe" && !b.isPocketed).length;
-      const myCurrentSuit = isPlayer1 ? newP1Type : newP2Type;
-      const myRemainingGroupCount = myCurrentSuit === "SOLIDS" ? remainingSolids : myCurrentSuit === "STRIPES" ? remainingStripes : remainingSolids + remainingStripes;
+
+      const shooterSuit = isShooterP1 ? newP1Type : newP2Type;
+      const shooterRemainingGroup = shooterSuit === "SOLIDS" ? remainingSolids : shooterSuit === "STRIPES" ? remainingStripes : remainingSolids + remainingStripes;
 
       if (isBreak) {
         const totalPocketedOnBreak = solidsPocketed + stripesPocketed + (eightBallPocketed ? 1 : 0);
@@ -989,65 +1000,68 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         if (breakScore >= 3 && !isScratch) {
           actionLog = `⚡ THREE-POINT BREAK PASSED (${totalPocketedOnBreak} pocketed + ${ballsCrossedHeadString} crossed)! Legal break.`;
         } else if (isScratch) {
-          actionLog = `⚠️ BREAK SCRATCH! Opponent awarded Ball-in-Hand!`;
+          actionLog = `⚠️ BREAK SCRATCH by ${shooterHandle}! Ball-in-Hand for next shooter.`;
         } else {
-          actionLog = `⚠️ SOFT BREAK (Score: ${breakScore}/3). Opponent may accept or pass back!`;
+          actionLog = `⚠️ SOFT BREAK by ${shooterHandle} (${breakScore}/3 points).`;
         }
       }
 
       if (isScratch) {
         soundSynth.playBuzzer();
         if (eightBallPocketed) {
-          actionLog = "❌ 8-BALL SCRATCH FOUL! Instant loss.";
+          actionLog = `❌ 8-BALL SCRATCH FOUL by ${shooterHandle}! Instant game loss.`;
           isGameOver = true;
-          winnerUid = opponentUid;
+          winnerUid = otherPlayerUid;
         } else {
-          actionLog = "⚠️ SCRATCH! Cue ball in pocket. Opponent awarded Ball-in-Hand!";
-          nextTurnUid = opponentUid;
+          actionLog = `⚠️ SCRATCH by ${shooterHandle}! Turn passes with Ball-in-Hand.`;
+          nextTurnUid = otherPlayerUid;
         }
       } else if (eightBallPocketed) {
-        if (myCurrentSuit && myRemainingGroupCount === 0) {
-          actionLog = "🏆 8-BALL POCKETED LEGALLY! WPA CHAMPIONSHIP VICTORY!";
+        if (shooterSuit && shooterRemainingGroup === 0) {
+          actionLog = `🏆 8-BALL POCKETED LEGALLY by ${shooterHandle}! CHAMPIONSHIP VICTORY!`;
           isGameOver = true;
-          winnerUid = currentUid;
+          winnerUid = shooterUid;
           soundSynth.playFanfare();
         } else {
-          actionLog = "❌ 8-Ball pocketed prematurely! Automatic frame loss.";
+          actionLog = `❌ 8-Ball pocketed prematurely by ${shooterHandle}! Automatic frame loss.`;
           isGameOver = true;
-          winnerUid = opponentUid;
+          winnerUid = otherPlayerUid;
           soundSynth.playBuzzer();
         }
       } else if (solidsPocketed > 0 || stripesPocketed > 0) {
+        // Suit Assignment on Open Table
         if (!newP1Type && !newP2Type) {
           if (solidsPocketed > 0 && stripesPocketed === 0) {
-            if (isPlayer1) { newP1Type = "SOLIDS"; newP2Type = "STRIPES"; }
+            if (isShooterP1) { newP1Type = "SOLIDS"; newP2Type = "STRIPES"; }
             else { newP2Type = "SOLIDS"; newP1Type = "STRIPES"; }
-            actionLog = `${match.players[currentUid]?.handle || "Player"} claimed SOLIDS!`;
+            actionLog = `${shooterHandle} claimed SOLIDS!`;
           } else if (stripesPocketed > 0 && solidsPocketed === 0) {
-            if (isPlayer1) { newP1Type = "STRIPES"; newP2Type = "SOLIDS"; }
+            if (isShooterP1) { newP1Type = "STRIPES"; newP2Type = "SOLIDS"; }
             else { newP2Type = "STRIPES"; newP1Type = "SOLIDS"; }
-            actionLog = `${match.players[currentUid]?.handle || "Player"} claimed STRIPES!`;
+            actionLog = `${shooterHandle} claimed STRIPES!`;
           }
         }
 
+        const currentShooterSuit = isShooterP1 ? newP1Type : newP2Type;
         const assignedTargetPocketed =
-          (myCurrentSuit === "SOLIDS" && solidsPocketed > 0) ||
-          (myCurrentSuit === "STRIPES" && stripesPocketed > 0) ||
-          (!myCurrentSuit);
+          (currentShooterSuit === "SOLIDS" && solidsPocketed > 0) ||
+          (currentShooterSuit === "STRIPES" && stripesPocketed > 0) ||
+          (!currentShooterSuit); // Open Table
 
         if (assignedTargetPocketed) {
           const count = solidsPocketed + stripesPocketed;
-          if (isPlayer1) newP1Score += count * 10;
+          if (isShooterP1) newP1Score += count * 10;
           else newP2Score += count * 10;
-          actionLog = `Pocketed ${count} ball(s)! Turn continues!`;
-          nextTurnUid = currentUid;
+          actionLog = `${shooterHandle} pocketed ${count} ball(s)! Turn continues!`;
+          nextTurnUid = shooterUid; // SHOOTER GOALED -> PLAYS AGAIN!
         } else {
-          actionLog = "Pocketed opponent's ball. Turn passes.";
-          nextTurnUid = opponentUid;
+          actionLog = `${shooterHandle} pocketed opponent's ball. Turn passes.`;
+          nextTurnUid = otherPlayerUid;
         }
       } else {
-        nextTurnUid = opponentUid;
-        actionLog = isPushOutDeclared ? "✋ PUSH-OUT EXECUTED! Opponent may accept table or pass back." : "No ball pocketed. Turn passes.";
+        // Missed shot -> Turn passes to other player
+        nextTurnUid = otherPlayerUid;
+        actionLog = isPushOutDeclared ? `✋ PUSH-OUT EXECUTED by ${shooterHandle}! Opponent may accept table.` : `${shooterHandle} missed. Turn passes.`;
         setIsPushOutDeclared(false);
       }
     } else if (discipline === "9_BALL") {
@@ -1056,22 +1070,22 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
 
       if (isScratch || !isLegalHit) {
         soundSynth.playBuzzer();
-        actionLog = isScratch ? "⚠️ SCRATCH! Ball-in-Hand for opponent." : `⚠️ FOUL! Failed to hit lowest ball (#${lowestBallOnTable?.number}) first.`;
-        nextTurnUid = opponentUid;
+        actionLog = isScratch ? `⚠️ SCRATCH by ${shooterHandle}! Ball-in-Hand for opponent.` : `⚠️ FOUL by ${shooterHandle}! Failed to hit lowest ball (#${lowestBallOnTable?.number}) first.`;
+        nextTurnUid = otherPlayerUid;
       } else if (nineBallPocketed) {
-        actionLog = "🏆 9-BALL LEGALLY POCKETED! VICTORY!";
+        actionLog = `🏆 9-BALL LEGALLY POCKETED by ${shooterHandle}! VICTORY!`;
         isGameOver = true;
-        winnerUid = currentUid;
+        winnerUid = shooterUid;
         soundSynth.playFanfare();
       } else if (pocketed.length > 0) {
         const count = pocketed.length;
-        if (isPlayer1) newP1Score += count * 10;
+        if (isShooterP1) newP1Score += count * 10;
         else newP2Score += count * 10;
-        actionLog = `Legally pocketed ${count} ball(s)! Turn continues!`;
-        nextTurnUid = currentUid;
+        actionLog = `${shooterHandle} legally pocketed ${count} ball(s)! Turn continues!`;
+        nextTurnUid = shooterUid; // GOALED -> PLAYS AGAIN!
       } else {
-        nextTurnUid = opponentUid;
-        actionLog = "No ball pocketed. Turn passes.";
+        nextTurnUid = otherPlayerUid; // MISSED -> PASSES TO OTHER PLAYER!
+        actionLog = `${shooterHandle} missed. Turn passes.`;
       }
     } else if (discipline === "10_BALL") {
       const tenBallPocketed = pocketed.some((b) => b.number === 10);
@@ -1079,72 +1093,72 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
 
       if (isScratch || !isLegalHit) {
         soundSynth.playBuzzer();
-        actionLog = isScratch ? "⚠️ SCRATCH! Ball-in-Hand for opponent." : `⚠️ FOUL! Failed to hit lowest ball (#${lowestBallOnTable?.number}) first.`;
-        nextTurnUid = opponentUid;
+        actionLog = isScratch ? `⚠️ SCRATCH by ${shooterHandle}! Ball-in-Hand for opponent.` : `⚠️ FOUL by ${shooterHandle}! Failed to hit lowest ball (#${lowestBallOnTable?.number}) first.`;
+        nextTurnUid = otherPlayerUid;
       } else if (tenBallPocketed) {
-        actionLog = "🏆 10-BALL LEGALLY POCKETED! CHAMPIONSHIP VICTORY!";
+        actionLog = `🏆 10-BALL LEGALLY POCKETED by ${shooterHandle}! CHAMPIONSHIP VICTORY!`;
         isGameOver = true;
-        winnerUid = currentUid;
+        winnerUid = shooterUid;
         soundSynth.playFanfare();
       } else if (pocketed.length > 0) {
         const count = pocketed.length;
-        if (isPlayer1) newP1Score += count * 10;
+        if (isShooterP1) newP1Score += count * 10;
         else newP2Score += count * 10;
-        actionLog = `Legally pocketed ${count} ball(s)! Turn continues!`;
-        nextTurnUid = currentUid;
+        actionLog = `${shooterHandle} legally pocketed ${count} ball(s)! Turn continues!`;
+        nextTurnUid = shooterUid; // GOALED -> PLAYS AGAIN!
       } else {
-        nextTurnUid = opponentUid;
-        actionLog = "No ball pocketed. Turn passes.";
+        nextTurnUid = otherPlayerUid; // MISSED -> PASSES TO OTHER PLAYER!
+        actionLog = `${shooterHandle} missed. Turn passes.`;
       }
     } else if (discipline === "STRAIGHT_POOL") {
       if (isScratch) {
         soundSynth.playBuzzer();
-        actionLog = "⚠️ SCRATCH! -1 Point deduction and Ball-in-Hand.";
-        if (isPlayer1) newP1Score = Math.max(0, newP1Score - 1);
+        actionLog = `⚠️ SCRATCH by ${shooterHandle}! -1 pt penalty.`;
+        if (isShooterP1) newP1Score = Math.max(0, newP1Score - 1);
         else newP2Score = Math.max(0, newP2Score - 1);
-        nextTurnUid = opponentUid;
+        nextTurnUid = otherPlayerUid;
       } else if (pocketed.length > 0) {
         const count = pocketed.length;
-        if (isPlayer1) newP1Score += count;
+        if (isShooterP1) newP1Score += count;
         else newP2Score += count;
-        actionLog = `Scored +${count} point(s)! High run continues!`;
-        nextTurnUid = currentUid;
+        actionLog = `${shooterHandle} scored +${count} pt(s)! High run continues!`;
+        nextTurnUid = shooterUid; // GOALED -> PLAYS AGAIN!
 
         const remainingCount = balls.filter((b) => b.type !== "cue" && !b.isPocketed).length;
         if (remainingCount <= 1 || newP1Score >= 15 || newP2Score >= 15) {
-          actionLog = `🏆 STRAIGHT POOL TARGET REACHED! Winner: ${match.players[currentUid]?.handle || "Player"}!`;
+          actionLog = `🏆 STRAIGHT POOL TARGET REACHED! Winner: ${shooterHandle}!`;
           isGameOver = true;
-          winnerUid = currentUid;
+          winnerUid = shooterUid;
           soundSynth.playFanfare();
         }
       } else {
-        nextTurnUid = opponentUid;
-        actionLog = "No ball pocketed. Turn passes.";
+        nextTurnUid = otherPlayerUid; // MISSED -> PASSES TO OTHER PLAYER!
+        actionLog = `${shooterHandle} missed. Turn passes.`;
       }
     } else if (discipline === "ONE_POCKET") {
-      const myDesignatedPocket = isPlayer1 ? "BOT_LEFT" : "BOT_RIGHT";
-      const legalScored = pocketLocations.filter((item) => item.pocketName === myDesignatedPocket).length;
+      const shooterDesignatedPocket = isShooterP1 ? "BOT_LEFT" : "BOT_RIGHT";
+      const legalScored = pocketLocations.filter((item) => item.pocketName === shooterDesignatedPocket).length;
 
       if (isScratch) {
         soundSynth.playBuzzer();
-        actionLog = "⚠️ SCRATCH! Ball-in-Hand for opponent.";
-        nextTurnUid = opponentUid;
+        actionLog = `⚠️ SCRATCH by ${shooterHandle}! Turn passes.`;
+        nextTurnUid = otherPlayerUid;
       } else if (legalScored > 0) {
-        if (isPlayer1) newP1Score += legalScored;
+        if (isShooterP1) newP1Score += legalScored;
         else newP2Score += legalScored;
-        actionLog = `Scored +${legalScored} ball(s) in designated pocket (${myDesignatedPocket})!`;
-        nextTurnUid = currentUid;
+        actionLog = `${shooterHandle} scored +${legalScored} ball(s) in designated pocket!`;
+        nextTurnUid = shooterUid; // GOALED IN OWN POCKET -> PLAYS AGAIN!
 
-        const currentScore = isPlayer1 ? newP1Score : newP2Score;
+        const currentScore = isShooterP1 ? newP1Score : newP2Score;
         if (currentScore >= 8) {
-          actionLog = `🏆 8 BALLS SCORED IN DESIGNATED POCKET! ONE POCKET VICTORY!`;
+          actionLog = `🏆 8 BALLS SCORED IN DESIGNATED POCKET! ${shooterHandle} WINS!`;
           isGameOver = true;
-          winnerUid = currentUid;
+          winnerUid = shooterUid;
           soundSynth.playFanfare();
         }
       } else {
-        nextTurnUid = opponentUid;
-        actionLog = "No ball scored in designated pocket. Turn passes.";
+        nextTurnUid = otherPlayerUid; // MISSED OR SANK IN WRONG POCKET -> PASSES TO OTHER PLAYER!
+        actionLog = `${shooterHandle} did not score in designated pocket. Turn passes.`;
       }
     }
 
@@ -1167,7 +1181,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
     } catch (err) {
       console.error("Failed to fire pool shot turn:", err);
     }
-  }, [currentUid, discipline, isPlayer1, isPushOutDeclared, lowestBallOnTable, match.id, match.players, playerUids, ps]);
+  }, [currentUid, discipline, isBreakShotRef, lowestBallOnTable, match.id, match.players, playerUids, ps]);
 
   // Inventory of remaining balls
   const balls = ballsRef.current;
