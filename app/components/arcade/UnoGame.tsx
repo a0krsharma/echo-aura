@@ -40,6 +40,7 @@ interface UnoGameProps {
   match: ArcadeMatch;
   currentUid: string;
   isHost: boolean;
+  onRematch?: () => void;
 }
 
 const COLOR_MAP: Record<string, { bg: string; text: string; innerText: string; border: string; glow: string; label: string }> = {
@@ -76,7 +77,7 @@ const COLOR_MAP: Record<string, { bg: string; text: string; innerText: string; b
     label: "YELLOW",
   },
   WILD: {
-    bg: "bg-black",
+    bg: "bg-neutral-900",
     text: "text-white drop-shadow-md",
     innerText: "text-black drop-shadow-[2px_2px_0px_rgba(255,255,255,0.8)]",
     border: "border-white",
@@ -94,7 +95,7 @@ const QUICK_BANTER = [
   "Swap hands! 🤝",
 ];
 
-export default function UnoGame({ match, currentUid }: UnoGameProps) {
+export default function UnoGame({ match, currentUid, onRematch }: UnoGameProps) {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [wildCardToPlay, setWildCardToPlay] = useState<UnoCard | null>(null);
@@ -697,7 +698,7 @@ export default function UnoGame({ match, currentUid }: UnoGameProps) {
 
       {/* Victory Declaration */}
       {match.status === "FINISHED" && (
-        <div className="border-4 border-white bg-black p-6 text-center space-y-2 animate-bounce shadow-2xl">
+        <div className="border-4 border-white bg-black p-6 text-center space-y-3 animate-bounce shadow-2xl rounded-2xl">
           <Trophy className="w-8 h-8 text-white mx-auto animate-pulse" />
           <h2 className="font-black text-base uppercase tracking-widest text-white">
             🏆 {match.winnerHandle} EMPTIED THEIR HAND & WON UNO!
@@ -705,6 +706,18 @@ export default function UnoGame({ match, currentUid }: UnoGameProps) {
           <p className="text-xs text-neutral-300 uppercase font-bold">
             AWARDED +{match.stakes * 2 || 100} AURA POINTS
           </p>
+          {onRematch && (
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={onRematch}
+                className="px-6 py-2.5 border-2 border-white bg-white text-black hover:bg-neutral-200 font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 mx-auto rounded-xl shadow-lg active:scale-95 cursor-pointer"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span>[ 🔄 PLAY REMATCH ]</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
 

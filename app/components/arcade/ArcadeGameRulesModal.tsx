@@ -148,22 +148,24 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
   },
   uno: {
     id: "uno",
-    name: "Uno (Flow Override)",
+    name: "Tournament UNO & Show 'Em No Mercy (Flow Override)",
     rank: 6,
     category: "Card & Bluffing",
     icon: "🎴",
-    overview: "World-class fast-paced card battle. Match colors and numbers, stack +2 and +4 penalties, execute 7-0 hand swaps, jump in with identical cards, and shout UNO before your final card!",
+    overview: "Official 108-card Master Deck tournament rules plus brutal 'Show Em No Mercy' and 'UNO Flip!' mechanics. Features legal +2/+4 penalty stacking, Wild Draw 4 bluff challenges, 25-card mercy elimination, 7-0 hand swaps, jump-in overrides, and the 500-point championship scoring matrix.",
     howToPlay: [
-      "Match the active discard top card by Color or Number/Value.",
-      "Action Cards: Skip cancels next player; Reverse swaps turn order; Wild lets you choose the table color.",
-      "Stacking (+2 / +4): If a +2 or +4 is played, counter-stack another +2 or +4 to pass the compounded penalty to the next player!",
-      "7-0 Hand Rules: Playing a 7 lets you swap entire hands with any opponent; playing a 0 rotates all hands in the active direction.",
-      "Jump-In Rule: Holding an exact duplicate card (same color and value) lets you jump in immediately out of turn!",
-      "Shout UNO: Tap [ 🚨 SHOUT UNO! ] when holding 1 card remaining. If an opponent catches you before you shout, you suffer a +2 penalty."
+      "1. MASTER 108-DECK COMPOSITION: 76 Numbered cards (0-9 across Red, Blue, Green, Yellow) + 24 Action cards (8 Skips, 8 Reverses, 8 Draw Twos) + 8 Wild Cards (4 Standard Wild, 4 Wild Draw Four).",
+      "2. ACTION CARDS: Draw Two (+2) forces next player to draw 2 cards and forfeit turn; Skip loses turn; Reverse inverts clockwise/counter-clockwise play direction (acts as Skip in 1v1).",
+      "3. THE WILD DRAW 4 (+4) CHALLENGE RULE: Legally playable ONLY if you hold zero cards matching the active color. If challenged and guilty, the attacker draws 4 cards. If innocent, the challenger draws 6 cards (4 + 2 penalty)!",
+      "4. PENALTY STACKING (NO MERCY): Counter an incoming +2 or +4 with an equal or higher draw card to pass the compounded sum (+2 -> +4 -> +6 -> +10) down the line to the next victim.",
+      "5. 25-CARD MERCY ELIMINATION RULE: If any player accumulates 25 or more cards in their hand at any time, they are instantly knocked out of the match!",
+      "6. 7-0 HAND SWAPS: Playing a '7' forces you to swap hands with any chosen opponent; playing a '0' rotates all players' hands in the active turn direction.",
+      "7. JUMP-IN OVERRIDES: Holding an identical card (same color AND same value/action) allows you to jump in immediately out of turn!",
+      "8. THE 'UNO!' SHOUT PENALTY: When holding exactly 1 card remaining, you must declare UNO. If caught by an opponent before the next play/draw, you draw 2 penalty cards."
     ],
-    voiceGuide: "Shout 'UNO!' into the mic and coordinate counter-stacking banter on live audio.",
-    scoring: "First player to empty hand wins match + Aura rewards.",
-    proTip: "Save your +2 and +4 Wilds to defend against incoming penalty stacks!"
+    voiceGuide: "Shout 'UNO!' into the mic, challenge suspicious +4 bluffs, and negotiate temporary non-aggression pacts over live voice chat.",
+    scoring: "Official 500-Pt System: Number cards (0-9 face value), Action cards (+2/Skip/Reverse = 20 pts), Wild/+4 = 50 pts (No Mercy Wild +6 = 60 pts, Wild +10 = 100 pts). First to 500 wins championship!",
+    proTip: "Track the active discard color history—if a player plays a +4 right after playing a normal color card, challenge their bluff immediately!"
   },
   ludo: {
     id: "ludo",
