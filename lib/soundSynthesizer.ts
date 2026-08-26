@@ -433,6 +433,49 @@ class SoundSynthesizer {
     }
   }
 
+  // 13. Magical Genie Summon Arpeggio (Sparkle + Cosmic Chime)
+  playGenieSummon() {
+    try {
+      const ctx = this.getContext();
+      const notes = [392.0, 523.25, 659.25, 783.99, 1046.5, 1318.51, 1567.98, 2093.0];
+      const now = ctx.currentTime;
+
+      // Sub whoosh
+      const sub = ctx.createOscillator();
+      const subGain = ctx.createGain();
+      sub.type = "sine";
+      sub.frequency.setValueAtTime(120, now);
+      sub.frequency.exponentialRampToValueAtTime(40, now + 0.6);
+      subGain.gain.setValueAtTime(0.3, now);
+      subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+      sub.connect(subGain);
+      subGain.connect(ctx.destination);
+      sub.start(now);
+      sub.stop(now + 0.6);
+
+      // Magical Chime Arpeggio
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const t = now + idx * 0.05;
+
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, t);
+
+        gain.gain.setValueAtTime(0.001, t);
+        gain.gain.exponentialRampToValueAtTime(0.25, t + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.45);
+      });
+    } catch (e) {
+      console.warn("Synth play error:", e);
+    }
+  }
+
   // Universal Player by Sound ID
   playById(id: string) {
     const cleanId = id.toLowerCase();
