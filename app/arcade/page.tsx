@@ -698,35 +698,84 @@ function ArcadeContent() {
             )}
           </div>
         ) : (
-          /* ── Clean Main Arcade Hub ── */
+          /* ── Modern World-Class Gaming Lounge ── */
           <div className="space-y-6">
-            {/* Clean Category Filter Tabs & Search Bar */}
-            <div className="space-y-3 font-mono">
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                {/* Search Bar */}
-                <div className="w-full relative">
-                  <Search className="w-4 h-4 absolute left-3.5 top-3 text-neutral-400" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="SEARCH GAMES (ANTAKSHARI, COURTROOM, NEWS ANCHOR, MUSHAIRA, LUDO, CARROM, POOL, MONOPOLY)..."
-                    className="w-full bg-neutral-950 border border-neutral-800 focus:border-white pl-10 pr-4 py-2.5 text-xs font-mono text-white placeholder-neutral-500 uppercase outline-none rounded-xl"
-                  />
+            {/* Quick Stats & Welcome Strip */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <div className="bg-gradient-to-br from-neutral-900/90 to-neutral-950/90 border border-neutral-800/80 p-3 rounded-2xl flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-amber-400/10 border border-amber-400/30 flex items-center justify-center text-lg">
+                  🎮
+                </div>
+                <div>
+                  <div className="text-xs font-black text-white">39 TITLES</div>
+                  <div className="text-[10px] text-neutral-400 font-bold">100% FREE &amp; FAIR</div>
                 </div>
               </div>
 
-              {/* Filter Tabs */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+              <div className="bg-gradient-to-br from-neutral-900/90 to-neutral-950/90 border border-neutral-800/80 p-3 rounded-2xl flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-pink-400/10 border border-pink-400/30 flex items-center justify-center text-lg">
+                  🎙️
+                </div>
+                <div>
+                  <div className="text-xs font-black text-white">VOICE ARENA</div>
+                  <div className="text-[10px] text-neutral-400 font-bold">LIVE MIC &amp; PARTY</div>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-neutral-900/90 to-neutral-950/90 border border-neutral-800/80 p-3 rounded-2xl flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-emerald-400/10 border border-emerald-400/30 flex items-center justify-center text-lg">
+                  🤖
+                </div>
+                <div>
+                  <div className="text-xs font-black text-white">AI BOT RIVAL</div>
+                  <div className="text-[10px] text-neutral-400 font-bold">ADAPTIVE DIFFICULTY</div>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-neutral-900/90 to-neutral-950/90 border border-neutral-800/80 p-3 rounded-2xl flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-yellow-400/10 border border-yellow-400/30 flex items-center justify-center text-lg">
+                  🏆
+                </div>
+                <div>
+                  <div className="text-xs font-black text-white">TOURNAMENTS</div>
+                  <div className="text-[10px] text-neutral-400 font-bold">AURA REWARDS</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Search & Category Filter Pills */}
+            <div className="space-y-3">
+              {/* Search Field */}
+              <div className="w-full relative">
+                <Search className="w-4 h-4 absolute left-3.5 top-3.5 text-neutral-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="SEARCH 39 GAMES (ANTAKSHARI, MONOPOLY, CHESS, POOL, LUDO, CARROM)..."
+                  className="w-full bg-neutral-950 border border-neutral-800 focus:border-neutral-500 pl-10 pr-4 py-3 text-xs font-mono text-white placeholder-neutral-500 uppercase outline-none rounded-2xl transition-all shadow-inner"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-3.5 top-3.5 text-neutral-500 hover:text-white text-xs font-bold"
+                  >
+                    CLEAR
+                  </button>
+                )}
+              </div>
+
+              {/* Category Filter Pills */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs no-scrollbar">
                 {(
                   [
-                    { id: "ALL", label: "ALL GAMES" },
-                    { id: "VOICE", label: "🎙️ VOICE PARTY & ANTAKSHARI" },
-                    { id: "BOARD", label: "🎲 BOARD & TACTICS" },
-                    { id: "PHYSICS", label: "🎱 SPORTS & 2D PHYSICS" },
-                    { id: "CARD", label: "♠️ CASINO & CARDS" },
-                    { id: "PAPER", label: "👑 PAPER & DESI" },
-                    { id: "PUZZLE", label: "🧩 SOLITARY & PUZZLES" },
+                    { id: "ALL", label: `ALL GAMES (${CLEAN_GAMES.length})`, icon: "🌟" },
+                    { id: "VOICE", label: "VOICE & PARTY", icon: "🎙️" },
+                    { id: "BOARD", label: "BOARD & TACTICS", icon: "🎲" },
+                    { id: "PHYSICS", label: "SPORTS & PHYSICS", icon: "🎱" },
+                    { id: "CARD", label: "CASINO & CARDS", icon: "♠️" },
+                    { id: "PAPER", label: "PAPER & NOSTALGIA", icon: "👑" },
+                    { id: "PUZZLE", label: "SOLO & LOGIC", icon: "🧩" },
                   ] as const
                 ).map((tab) => {
                   const isActive = activeCategory === tab.id;
@@ -735,72 +784,75 @@ function ArcadeContent() {
                       key={tab.id}
                       type="button"
                       onClick={() => setActiveCategory(tab.id as any)}
-                      className={`px-3.5 py-1.5 border font-bold uppercase whitespace-nowrap transition-all cursor-pointer rounded-xl ${
+                      className={`px-3.5 py-2 rounded-xl font-bold text-xs uppercase whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
                         isActive
-                          ? "bg-white text-black border-white shadow-md font-black"
-                          : "bg-neutral-950 text-neutral-400 border-neutral-800 hover:border-neutral-500 hover:text-white"
+                          ? "bg-white text-black shadow-md font-black"
+                          : "bg-neutral-900/80 text-neutral-400 border border-neutral-800/80 hover:border-neutral-600 hover:text-white"
                       }`}
                     >
-                      {tab.label}
+                      <span>{tab.icon}</span>
+                      <span>{tab.label}</span>
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            {/* Clean Game Directory Grid */}
-            <div className="space-y-3 font-mono">
-              <div className="flex items-center justify-between text-xs text-neutral-400 font-bold uppercase">
+            {/* Clean Game Grid */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs text-neutral-400 font-bold uppercase tracking-wider">
                 <span>GAMES DIRECTORY ({filteredGames.length})</span>
-                <span className="text-[10px] text-neutral-500">1-TAP PLAY VS BOT OR MULTIPLAYER</span>
+                <span className="text-[10px] text-neutral-500">INSTANT PLAY SOLO OR MULTIPLAYER</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
                 {filteredGames.map((game) => (
                   <div
                     key={game.id}
-                    className="border border-neutral-800 hover:border-neutral-600 bg-neutral-950 p-4 flex flex-col justify-between transition-all rounded-2xl shadow-lg hover:shadow-[0_0_30px_rgba(255,255,255,0.05)] group"
+                    className="group relative bg-gradient-to-b from-neutral-900/90 via-neutral-950/90 to-neutral-950 border border-neutral-800/80 hover:border-neutral-600 p-4 rounded-2xl transition-all duration-200 hover:-translate-y-0.5 shadow-lg flex flex-col justify-between"
                   >
-                    <div className="flex items-start gap-3">
-                      <div className="w-12 h-12 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform shrink-0">
-                        {game.icon}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <h4 className="font-black text-sm uppercase text-white tracking-wide truncate">
-                            {game.name}
-                          </h4>
-                          {game.category === "VOICE" && (
-                            <span className="px-1.5 py-0.2 bg-white/20 text-white border border-white/40 text-[8px] font-bold rounded">
-                              MIC 🎙️
-                            </span>
-                          )}
+                    <div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-12 h-12 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-center justify-center text-2xl group-hover:scale-105 transition-transform shrink-0 shadow-inner">
+                          {game.icon}
                         </div>
-                        <p className="text-[11px] text-neutral-400 line-clamp-2 mt-0.5">
-                          {game.description}
-                        </p>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-1">
+                            <h4 className="font-black text-sm uppercase text-white tracking-wide truncate">
+                              {game.name}
+                            </h4>
+                            {game.category === "VOICE" && (
+                              <span className="px-1.5 py-0.5 bg-pink-500/10 text-pink-300 border border-pink-500/30 text-[9px] font-bold rounded-full shrink-0">
+                                🎙️ MIC
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-neutral-400 line-clamp-2 mt-1 leading-relaxed">
+                            {game.description}
+                          </p>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 pt-3 border-t border-neutral-900 mt-3">
+                    <div className="grid grid-cols-2 gap-2 pt-3 border-t border-neutral-800/60 mt-3.5">
                       <button
                         type="button"
                         disabled={!user}
                         onClick={() => handleOpenBotDifficulty(game.id)}
-                        className="py-2 px-2 border border-neutral-700 bg-neutral-900 hover:border-white hover:bg-white hover:text-black text-neutral-200 font-bold text-xs uppercase transition-all cursor-pointer text-center truncate rounded-xl shadow-sm"
+                        className="py-2 px-2.5 bg-neutral-900 hover:bg-neutral-800 text-neutral-200 border border-neutral-700/80 hover:border-neutral-500 font-bold text-xs uppercase transition-all cursor-pointer text-center truncate rounded-xl shadow-sm"
                         title={`Play ${game.name} vs AI Bot`}
                       >
-                        [ 🤖 PLAY BOT ]
+                        🤖 SOLO BOT
                       </button>
 
                       <button
                         type="button"
                         disabled={!user}
                         onClick={() => handleOpenCreate(game.id)}
-                        className="py-2 px-2 border-2 border-white bg-white text-black hover:bg-neutral-200 font-black text-xs uppercase transition-all cursor-pointer text-center truncate rounded-xl shadow-md active:scale-95"
-                        title={`Create PvP Room in ${game.name}`}
+                        className="py-2 px-2.5 bg-white text-black hover:bg-neutral-200 font-black text-xs uppercase transition-all cursor-pointer text-center truncate rounded-xl shadow-md active:scale-95"
+                        title={`Create Multiplayer Room in ${game.name}`}
                       >
-                        [ 👥 MULTI ]
+                        👥 MULTI
                       </button>
                     </div>
                   </div>
@@ -809,17 +861,25 @@ function ArcadeContent() {
             </div>
 
             {/* Live Open Match Lobbies */}
-            <div className="space-y-3 pt-6 border-t border-neutral-900">
-              <h3 className="text-xs font-bold uppercase text-neutral-400 tracking-widest flex items-center gap-2">
-                <Zap className="w-3.5 h-3.5 text-white animate-pulse" />
-                // LIVE OPEN MATCH LOBBIES ({lobbyMatches.length})
-              </h3>
+            <div className="space-y-3 pt-6 border-t border-neutral-800">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold uppercase text-neutral-300 tracking-wider flex items-center gap-2">
+                  <Zap className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                  <span>ACTIVE TABLES &amp; ROOMS ({lobbyMatches.length})</span>
+                </h3>
+                <button
+                  onClick={() => handleOpenCreate("antakshari")}
+                  className="text-[11px] font-bold text-neutral-400 hover:text-white uppercase flex items-center gap-1 cursor-pointer"
+                >
+                  <span>+ HOST NEW TABLE</span>
+                </button>
+              </div>
 
               {lobbyMatches.length === 0 ? (
-                <div className="border border-neutral-800 bg-neutral-950 p-8 text-center space-y-2 rounded-2xl">
-                  <p className="text-xs text-neutral-400 uppercase font-bold">NO ACTIVE LOBBIES RIGHT NOW.</p>
+                <div className="border border-neutral-800/80 bg-gradient-to-b from-neutral-900/40 to-neutral-950/80 p-8 text-center space-y-2 rounded-2xl">
+                  <p className="text-xs text-neutral-300 font-bold uppercase">NO ACTIVE LOBBIES RIGHT NOW</p>
                   <p className="text-[11px] text-neutral-500">
-                    CLICK &quot;CREATE MATCH&quot; OR PICK ANY GAME TO START PLAYING!
+                    Host your own table or challenge an AI bot instantly!
                   </p>
                 </div>
               ) : (
@@ -837,13 +897,13 @@ function ArcadeContent() {
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-xs uppercase text-white">
-                              {m.title || "ARCADE ARENA"}
+                              {m.title || "CLUB ARENA"}
                             </span>
-                            <span className="text-[10px] text-neutral-400 border border-neutral-800 px-2 py-0.5 rounded-md bg-black font-bold">
+                            <span className="text-[10px] text-neutral-400 border border-neutral-800 px-2 py-0.5 rounded-full bg-neutral-900 font-bold">
                               {m.mode === "VS_COMPUTER" ? "AI BOT" : (m.gameType || "ARENA").toUpperCase()}
                             </span>
                           </div>
-                          <p className="text-[11px] text-neutral-400 flex items-center gap-2">
+                          <p className="text-[11px] text-neutral-400 flex items-center gap-2 font-mono">
                             <span>HOST: {m.hostHandle}</span>
                             <span>•</span>
                             <span>PLAYERS: {playerCount}/{m.maxPlayers}</span>
@@ -882,13 +942,13 @@ function ArcadeContent() {
                                 handleJoinMatch(m.id);
                               }
                             }}
-                            className="px-4 py-2 border-2 border-white hover:bg-white hover:text-black font-black text-xs uppercase transition-all cursor-pointer rounded-xl shadow"
+                            className="px-4 py-2 bg-white text-black hover:bg-neutral-200 font-black text-xs uppercase transition-all cursor-pointer rounded-xl shadow-md"
                           >
                             {m.players?.[user?.uid || ""]
-                              ? "[ RESUME ]"
+                              ? "RESUME"
                               : isFull
-                              ? "[ SPECTATE ]"
-                              : "[ JOIN & PLAY ⚔️ ]"}
+                              ? "SPECTATE"
+                              : "JOIN & PLAY"}
                           </button>
                         </div>
                       </div>
