@@ -1039,16 +1039,20 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
               Total score: Pocketed Balls + Crossed Head-String Balls &ge; 3. Prevents soft breaking!
             </div>
             <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
-              <span className="text-emerald-400 font-bold block mb-0.5">2. 📐 1-RAIL KICKING (MIDPOINT &amp; PARALLEL SHIFT):</span>
-              Drop perpendicular projections from cue and target ball to cushion; aim through midpoint $M$.
+              <span className="text-emerald-400 font-bold block mb-0.5">2. 📐 1-RAIL &amp; 2-RAIL PLUS SYSTEM:</span>
+              1-Rail: Aim through midpoint M. 2-Rail: 1st Rail Aim = Target Arrival - Cue Origin.
             </div>
             <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
-              <span className="text-emerald-400 font-bold block mb-0.5">3. 🪞 2-RAIL PLUS SYSTEM (SHORT ➔ LONG):</span>
-              Formula: 1st Rail Aim = Target Arrival - Cue Origin (with running English).
+              <span className="text-emerald-400 font-bold block mb-0.5">3. 🎯 3-RAIL &amp; 4-RAIL CORNER-5 SYSTEM:</span>
+              1st Rail Aim = Origin - 3rd Rail Arrival. 4th Cushion Shift: T4 = T3 + (Origin - 50) / 4.
             </div>
             <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
-              <span className="text-emerald-400 font-bold block mb-0.5">4. 🎯 3-RAIL CORNER-5 SYSTEM (LONG ➔ SHORT ➔ LONG):</span>
-              Formula: 1st Rail Aim = Origin (Start) - 3rd Rail Arrival (Target). Corner 50 track.
+              <span className="text-emerald-400 font-bold block mb-0.5">4. 🏎️ SPEED DRIFT &amp; CUSHION COMPRESSION:</span>
+              Soft stroke (widens +0.5 to 1.0 diamond) ➔ Aim 2-4 pts lower. Hard stroke ➔ Aim 3-6 pts higher.
+            </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">5. 🔄 THE TIKI SHOT (RAIL-FIRST CAROM):</span>
+              Rail ➔ Object Ball ➔ Same Cushion. Squeeze clearance with inside spin and gap offset.
             </div>
           </div>
         )}
