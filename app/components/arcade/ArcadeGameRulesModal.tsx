@@ -596,11 +596,11 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
       "TURN CONTINUATION & PUSH-OUT: Your turn continues as long as you legally pocket assigned balls. Shot #2 Push-Out operates on Cake-Cutting game theory (I cut, you choose) where EV_Opponent = EV_Shooter.",
       "STANDARD FOULS & BALL-IN-HAND: Scratching the cue ball, hitting wrong suit first, or failing to drive a ball to a cushion yields Ball-in-Hand anywhere on the table for the opponent.",
       "INSTANT LOSS CONDITIONS: Pocketing the 8-ball while scratching/fouling, or pocketing the 8-ball before clearing all 7 of your suit balls results in an immediate frame loss.",
-      "PARALLEL SHIFT & PLUS KICKING: 1-Cushion and 2-Cushion (Corner Inversion) Parallel Shift construct specular kick paths without math; Plus System (Aim = Arrival - Origin) delivers exact diamond tracks!"
+      "TABLE CALIBRATION & BENCHMARKS: Test tables using 50-to-20 Corner-5 benchmark (Origin 50 -> Aim 30 -> Arrival 20). Adjust for long (+Delta) or short (-Delta) cloth conditions: Aim = (Origin - Arrival) - Delta!"
     ],
     voiceGuide: "Call pockets, declare bank shots, and engage in psychological banter over the mic.",
     scoring: "+250 Aura for legally pocketing the 8-Ball to win the match.",
-    proTip: "In 1-Cushion Parallel Shift with unequal ball depths, shift your aim point toward the closer ball by Delta_x = |d1 - d2| / 4 to ensure exact pocket/object-ball contact!"
+    proTip: "On fast/slick cloth (plays long), reduce running English to 1.0-1.5 tips; on humid/worn cloth (plays short), increase spin to 2.5 tips with slight follow (+0.5 tips)!"
   },
   "2048": {
     id: "2048",

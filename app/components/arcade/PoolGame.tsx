@@ -1170,6 +1170,14 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
               <span className="text-emerald-400 font-bold block mb-0.5">34. ➕ PLUS SYSTEM (AIM = ARRIVAL - ORIGIN):</span>
               Diamond arithmetic with 2-2.5 tips running English delivers exact multi-rail tracks; use Parallel Shift for rapid visual escapes.
             </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">35. 🔄 CORNER-5 VS PLUS SYSTEM DUALITY:</span>
+              Corner-5 (Subtraction: Aim = Origin - Arrival) routes perimeter loops from long rail; Plus System (Addition: Arrival = Origin + Aim) routes corner wraps from short rail.
+            </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">36. 🧪 50-TO-20 BENCHMARK &amp; CLOTH CALIBRATION:</span>
+              Shoot 50 ➔ 30 with 2 tips spin (expects 20). If table plays long (+&Delta;) or short (-&Delta;), adjust: Aim = (Origin - Arrival) - &Delta;!
+            </div>
           </div>
         )}
       </div>
