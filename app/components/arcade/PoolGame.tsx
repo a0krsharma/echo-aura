@@ -28,25 +28,26 @@ interface PoolGameProps {
 const TABLE_WIDTH = 380;
 const TABLE_HEIGHT = 480;
 const CUSHION = 24;
-const PLAYABLE_MIN_X = CUSHION + 2;
-const PLAYABLE_MAX_X = TABLE_WIDTH - CUSHION - 2;
-const PLAYABLE_MIN_Y = CUSHION + 2;
-const PLAYABLE_MAX_Y = TABLE_HEIGHT - CUSHION - 2;
+const PLAYABLE_MIN_X = CUSHION + 1;
+const PLAYABLE_MAX_X = TABLE_WIDTH - CUSHION - 1;
+const PLAYABLE_MIN_Y = CUSHION + 1;
+const PLAYABLE_MAX_Y = TABLE_HEIGHT - CUSHION - 1;
 
 const FRICTION = 0.985;
 const RESTITUTION = 0.88;
 
-// 6 Official Drop Pockets with Optimal Entry Zones
+// 6 Official Tournament Drop Pockets (4 Corners + 2 Side/Middle Long Rails)
 const POCKETS = [
   { x: CUSHION + 2, y: CUSHION + 2, name: "TOP_LEFT" },
-  { x: TABLE_WIDTH / 2, y: CUSHION - 4, name: "TOP_MID" },
   { x: TABLE_WIDTH - CUSHION - 2, y: CUSHION + 2, name: "TOP_RIGHT" },
+  { x: CUSHION - 2, y: TABLE_HEIGHT / 2, name: "MID_LEFT" },     // Left Side/Middle Pocket
+  { x: TABLE_WIDTH - CUSHION + 2, y: TABLE_HEIGHT / 2, name: "MID_RIGHT" }, // Right Side/Middle Pocket
   { x: CUSHION + 2, y: TABLE_HEIGHT - CUSHION - 2, name: "BOT_LEFT" },
-  { x: TABLE_WIDTH / 2, y: TABLE_HEIGHT - CUSHION + 4, name: "BOT_MID" },
   { x: TABLE_WIDTH - CUSHION - 2, y: TABLE_HEIGHT - CUSHION - 2, name: "BOT_RIGHT" },
 ];
-const POCKET_RADIUS = 24;
-const POCKET_DEPTH_RADIUS = 16;
+const POCKET_MOUTH_RADIUS = 28;
+const POCKET_DROP_RADIUS = 16;
+const POCKET_PULL_FORCE = 0.55;
 
 // Ball Color Palette
 const BALL_COLORS: Record<string, string> = {
@@ -691,7 +692,6 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
           if (b.isPocketed) return;
 
           const speed = Math.hypot(b.vx, b.vy);
-          // Strict sleep threshold prevents infinite micro-creep
           if (speed > 0.08) {
             anyMoving = true;
             b.x += b.vx / subSteps;
@@ -700,53 +700,61 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
             b.vx *= Math.pow(FRICTION, 1 / subSteps);
             b.vy *= Math.pow(FRICTION, 1 / subSteps);
 
-            // Cushion Rebounds with Rail Grip
-            if (b.x - b.radius < PLAYABLE_MIN_X) {
-              b.x = PLAYABLE_MIN_X + b.radius;
-              b.vx = -b.vx * RESTITUTION;
-              if (speed > 1.2) soundSynth.playSubtlePop();
-            } else if (b.x + b.radius > PLAYABLE_MAX_X) {
-              b.x = PLAYABLE_MAX_X - b.radius;
-              b.vx = -b.vx * RESTITUTION;
-              if (speed > 1.2) soundSynth.playSubtlePop();
+            // A. Check if Ball is Entering ANY Pocket Mouth (4 Corners + 2 Side/Middle Holes)
+            let nearPocket: typeof POCKETS[0] | null = null;
+            let distToNearPocket = 999;
+            for (const pkt of POCKETS) {
+              const d = Math.hypot(b.x - pkt.x, b.y - pkt.y);
+              if (d < POCKET_MOUTH_RADIUS) {
+                nearPocket = pkt;
+                distToNearPocket = d;
+                break;
+              }
             }
 
-            if (b.y - b.radius < PLAYABLE_MIN_Y) {
-              b.y = PLAYABLE_MIN_Y + b.radius;
-              b.vy = -b.vy * RESTITUTION;
-              if (speed > 1.2) soundSynth.playSubtlePop();
-            } else if (b.y + b.radius > PLAYABLE_MAX_Y) {
-              b.y = PLAYABLE_MAX_Y - b.radius;
-              b.vy = -b.vy * RESTITUTION;
-              if (speed > 1.2) soundSynth.playSubtlePop();
-            }
+            if (nearPocket) {
+              // Pocket Gravity / Suction: smoothly pulls ball into the drop chamber
+              b.vx += ((nearPocket.x - b.x) / distToNearPocket) * POCKET_PULL_FORCE;
+              b.vy += ((nearPocket.y - b.y) / distToNearPocket) * POCKET_PULL_FORCE;
 
-            // Pocket Gravity & Dropping
-            POCKETS.forEach((pkt) => {
-              const dToPocket = Math.hypot(b.x - pkt.x, b.y - pkt.y);
-              if (dToPocket < POCKET_RADIUS) {
-                const pullForce = 0.45;
-                b.vx += ((pkt.x - b.x) / dToPocket) * pullForce;
-                b.vy += ((pkt.y - b.y) / dToPocket) * pullForce;
+              if (distToNearPocket < POCKET_DROP_RADIUS) {
+                b.isPocketed = true;
+                b.vx = 0;
+                b.vy = 0;
+                pocketedThisShotRef.current.push({ ...b });
+                pocketLocationsThisShotRef.current.push({ ball: { ...b }, pocketName: nearPocket.name });
 
-                if (dToPocket < POCKET_DEPTH_RADIUS) {
-                  b.isPocketed = true;
-                  b.vx = 0;
-                  b.vy = 0;
-                  pocketedThisShotRef.current.push({ ...b });
-                  pocketLocationsThisShotRef.current.push({ ball: { ...b }, pocketName: pkt.name });
-
-                  if (b.type === "cue") {
-                    cueScratchRef.current = true;
-                    soundSynth.playBuzzer();
-                  } else if (b.type === "8ball" || b.number === 9 || b.number === 10) {
-                    soundSynth.playFanfare();
-                  } else {
-                    soundSynth.playSnare();
-                  }
+                if (b.type === "cue") {
+                  cueScratchRef.current = true;
+                  soundSynth.playBuzzer();
+                } else if (b.type === "8ball" || b.number === 9 || b.number === 10) {
+                  soundSynth.playFanfare();
+                } else {
+                  soundSynth.playSnare();
                 }
               }
-            });
+            } else {
+              // B. Normal Cushion Rebounds (ONLY active outside pocket mouths so middle/side pockets NEVER resist!)
+              if (b.x - b.radius < PLAYABLE_MIN_X) {
+                b.x = PLAYABLE_MIN_X + b.radius;
+                b.vx = -b.vx * RESTITUTION;
+                if (speed > 1.2) soundSynth.playSubtlePop();
+              } else if (b.x + b.radius > PLAYABLE_MAX_X) {
+                b.x = PLAYABLE_MAX_X - b.radius;
+                b.vx = -b.vx * RESTITUTION;
+                if (speed > 1.2) soundSynth.playSubtlePop();
+              }
+
+              if (b.y - b.radius < PLAYABLE_MIN_Y) {
+                b.y = PLAYABLE_MIN_Y + b.radius;
+                b.vy = -b.vy * RESTITUTION;
+                if (speed > 1.2) soundSynth.playSubtlePop();
+              } else if (b.y + b.radius > PLAYABLE_MAX_Y) {
+                b.y = PLAYABLE_MAX_Y - b.radius;
+                b.vy = -b.vy * RESTITUTION;
+                if (speed > 1.2) soundSynth.playSubtlePop();
+              }
+            }
           } else {
             b.vx = 0;
             b.vy = 0;
@@ -817,7 +825,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
       // Inlaid Diamond Markers
       ctx.fillStyle = "#fef08a";
       const diamondsX = [CUSHION + 45, CUSHION + 115, CUSHION + 185, CUSHION + 255, CUSHION + 325];
-      const diamondsY = [CUSHION + 60, CUSHION + 140, CUSHION + 220, CUSHION + 300, CUSHION + 380];
+      const diamondsY = [CUSHION + 50, CUSHION + 105, CUSHION + 160, TABLE_HEIGHT / 2 + 50, TABLE_HEIGHT / 2 + 105, TABLE_HEIGHT / 2 + 160];
 
       diamondsX.forEach((dx) => {
         if (dx > CUSHION && dx < TABLE_WIDTH - CUSHION) {
@@ -877,15 +885,15 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
       ctx.arc(190, 140, 3, 0, Math.PI * 2);
       ctx.fill();
 
-      // C. 6 Drop Pockets
+      // C. 6 Drop Pockets (4 Corners + 2 Side/Middle Holes)
       POCKETS.forEach((pkt) => {
         ctx.beginPath();
-        ctx.arc(pkt.x, pkt.y, POCKET_RADIUS, 0, Math.PI * 2);
+        ctx.arc(pkt.x, pkt.y, POCKET_MOUTH_RADIUS, 0, Math.PI * 2);
         ctx.fillStyle = "#854d0e";
         ctx.fill();
 
         ctx.beginPath();
-        ctx.arc(pkt.x, pkt.y, POCKET_DEPTH_RADIUS, 0, Math.PI * 2);
+        ctx.arc(pkt.x, pkt.y, POCKET_DROP_RADIUS, 0, Math.PI * 2);
         ctx.fillStyle = "#09090b";
         ctx.fill();
 
@@ -901,7 +909,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         ctx.lineWidth = 2.5;
         ctx.setLineDash([3, 2]);
         ctx.beginPath();
-        ctx.arc(CUSHION + 2, TABLE_HEIGHT - CUSHION - 2, POCKET_RADIUS + 4, 0, Math.PI * 2);
+        ctx.arc(CUSHION + 2, TABLE_HEIGHT - CUSHION - 2, POCKET_MOUTH_RADIUS + 4, 0, Math.PI * 2);
         ctx.stroke();
         ctx.fillStyle = "#34d399";
         ctx.font = "bold 8px monospace";
@@ -909,7 +917,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
 
         ctx.strokeStyle = "#60a5fa";
         ctx.beginPath();
-        ctx.arc(TABLE_WIDTH - CUSHION - 2, TABLE_HEIGHT - CUSHION - 2, POCKET_RADIUS + 4, 0, Math.PI * 2);
+        ctx.arc(TABLE_WIDTH - CUSHION - 2, TABLE_HEIGHT - CUSHION - 2, POCKET_MOUTH_RADIUS + 4, 0, Math.PI * 2);
         ctx.stroke();
         ctx.fillStyle = "#60a5fa";
         ctx.fillText("P2 GOAL", TABLE_WIDTH - CUSHION - 20, TABLE_HEIGHT - CUSHION - 16);
