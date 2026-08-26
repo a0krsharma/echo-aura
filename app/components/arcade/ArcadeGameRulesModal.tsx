@@ -586,20 +586,21 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
   },
   pool: {
     id: "pool",
-    name: "8-Ball Pool Matrix",
+    name: "8-Ball Pool Pro (Official WPA Tournament Rules)",
     rank: 8,
     category: "2D Physics & Tabletop",
     icon: "🎱",
-    overview: "2D physics billiards table. Break the rack, pocket Solids (1-7) or Stripes (9-15), and legally pocket the 8-Ball to claim victory.",
+    overview: "Official World Pool-Billiard Association (WPA) tournament rules. 15 object balls (Solids 1-7, Stripes 9-15, and the Black 8-Ball) racked with the apex on Foot Spot and 8-Ball in center. Break from behind the head string. Clear all 7 balls of your assigned group before pocketing the 8-Ball for victory.",
     howToPlay: [
-      "Drag cue stick backward to adjust strike power and line up trajectory.",
-      "After the break, the first pocketed group assigns your target set (Solids or Stripes).",
-      "Clear all balls in your designated group before pocketing the 8-Ball (Black).",
-      "Pocketing the 8-Ball prematurely results in an immediate loss."
+      "BREAK & OPEN TABLE: Breaking does not assign suits. The table remains open until a player legally pockets a called ball from their chosen group in regular play.",
+      "TURN CONTINUATION: Your turn continues uninterrupted as long as you legally pocket a ball from your assigned suit on each shot.",
+      "STANDARD FOULS & BALL-IN-HAND: Scratching the cue ball, hitting wrong suit first, or failing to drive a ball to a cushion yields Ball-in-Hand anywhere on the table for the opponent.",
+      "INSTANT LOSS CONDITIONS: Pocketing the 8-ball while scratching/fouling, or pocketing the 8-ball before clearing all 7 of your suit balls results in an immediate loss.",
+      "WPA PRO SHOT MECHANICS: Utilize Ghost-Ball trajectory math, 90° tangent cue deflection, Cut-Induced Throw (CIT) compensation, and Cushion Bank rebounds with rail grip."
     ],
-    voiceGuide: "Call your pocket shots and strategize table control on mic.",
-    scoring: "+220 Aura for legally potting the 8-Ball.",
-    proTip: "Plan 2 shots ahead: position the cue ball where your next shot is unobstructed!"
+    voiceGuide: "Call pockets, declare bank shots, and engage in psychological banter over the mic.",
+    scoring: "+250 Aura for legally pocketing the 8-Ball to win the match.",
+    proTip: "Master Gearing English (0.4 * R * sin(phi) tip offset) to completely eliminate Cut-Induced Throw on angled cuts!"
   },
   "2048": {
     id: "2048",

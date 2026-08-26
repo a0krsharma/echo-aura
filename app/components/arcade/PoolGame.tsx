@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect, useState, useCallback } from "react";
+import React, { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import { soundSynth } from "@/lib/soundSynthesizer";
 import { firePoolShot, type ArcadeMatch, type PoolBall } from "@/lib/arcade";
 import { executePoolBotShot } from "@/lib/arcadeBots";
@@ -13,6 +13,12 @@ import {
   Sparkles,
   HelpCircle,
   Users,
+  Compass,
+  ChevronDown,
+  ChevronUp,
+  CircleDot,
+  Flame,
+  ShieldAlert,
 } from "lucide-react";
 
 interface PoolGameProps {
@@ -32,7 +38,7 @@ const PLAYABLE_MAX_Y = TABLE_HEIGHT - CUSHION - 2;
 const FRICTION = 0.986;
 const RESTITUTION = 0.89;
 
-// 6 Tournament Pocket Positions
+// 6 Official Tournament Pocket Positions
 const POCKETS = [
   { x: CUSHION, y: CUSHION, name: "TOP_LEFT" },
   { x: TABLE_WIDTH / 2, y: CUSHION - 4, name: "TOP_MID" },
@@ -46,13 +52,13 @@ const POCKET_DEPTH_RADIUS = 16;
 
 // Ball Color Palette (Official Tournament Balls)
 const BALL_COLORS: Record<string, string> = {
-  "1": "#eab308", // Yellow
-  "2": "#2563eb", // Blue
-  "3": "#dc2626", // Red
-  "4": "#7c3aed", // Purple
-  "5": "#ea580c", // Orange
-  "6": "#16a34a", // Green
-  "7": "#7f1d1d", // Maroon
+  "1": "#eab308", // Solid Yellow
+  "2": "#2563eb", // Solid Blue
+  "3": "#dc2626", // Solid Red
+  "4": "#7c3aed", // Solid Purple
+  "5": "#ea580c", // Solid Orange
+  "6": "#16a34a", // Solid Green
+  "7": "#7f1d1d", // Solid Maroon
   "8": "#09090b", // 8-Ball Black
   "9": "#eab308", // Stripe Yellow
   "10": "#2563eb", // Stripe Blue
@@ -66,6 +72,7 @@ const BALL_COLORS: Record<string, string> = {
 export default function PoolGame({ match, currentUid }: PoolGameProps) {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
+  const [showProPhysics, setShowProPhysics] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const ps = match.poolState;
@@ -73,11 +80,13 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
   const playerUids = Object.keys(match.players || {});
   const isPlayer1 = playerUids[0] === currentUid;
 
-  // Aiming and Controls State
+  // Aiming, Spin and Controls State
   const [isAiming, setIsAiming] = useState(false);
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const [dragCurrent, setDragCurrent] = useState<{ x: number; y: number } | null>(null);
   const [power, setPower] = useState(0);
+  const [englishSpin, setEnglishSpin] = useState<{ x: number; y: number }>({ x: 0, y: 0 }); // Spin pad (-1 to 1)
+  const [isBallInHand, setIsBallInHand] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
 
   // Local physics pieces state
@@ -85,6 +94,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
   const isSimulatingRef = useRef(false);
   const pocketedThisShotRef = useRef<PoolBall[]>([]);
   const cueScratchRef = useRef(false);
+  const firstContactBallRef = useRef<PoolBall | null>(null);
 
   // Sync balls from match state
   useEffect(() => {
@@ -97,6 +107,11 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
       }
     }
   }, [ps?.ballsStr]);
+
+  // Determine assigned suit for active players
+  const p1Suit = ps?.p1Type || null; // "SOLIDS" | "STRIPES" | null
+  const p2Suit = ps?.p2Type || null;
+  const myAssignedSuit = isPlayer1 ? p1Suit : p2Suit;
 
   // Trigger AI Bot Shot in VS_COMPUTER mode
   useEffect(() => {
@@ -122,7 +137,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
       const balls = ballsRef.current;
       let anyMoving = false;
 
-      // 1. Physics Sub-Stepping for High-Speed Ball Accuracy
+      // 1. Physics Sub-Stepping for High Accuracy & Continuous Collision
       const subSteps = 3;
       for (let step = 0; step < subSteps; step++) {
         balls.forEach((b) => {
@@ -137,7 +152,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
             b.vx *= Math.pow(FRICTION, 1 / subSteps);
             b.vy *= Math.pow(FRICTION, 1 / subSteps);
 
-            // Cushion Frame Rebound
+            // Cushion Rebounds with Cushion Restitution & Rail Grip
             if (b.x - b.radius < PLAYABLE_MIN_X) {
               b.x = PLAYABLE_MIN_X + b.radius;
               b.vx = -b.vx * RESTITUTION;
@@ -162,8 +177,8 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
             POCKETS.forEach((pkt) => {
               const dToPocket = Math.hypot(b.x - pkt.x, b.y - pkt.y);
               if (dToPocket < POCKET_RADIUS) {
-                // Gravitational suction into pocket
-                const pullForce = 0.35;
+                // Suction toward pocket hole
+                const pullForce = 0.38;
                 b.vx += ((pkt.x - b.x) / dToPocket) * pullForce;
                 b.vy += ((pkt.y - b.y) / dToPocket) * pullForce;
 
@@ -190,7 +205,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
           }
         });
 
-        // 2. Ball-to-Ball Elastic Collisions
+        // 2. Elastic Circle-to-Circle Collision Resolution
         for (let i = 0; i < balls.length; i++) {
           for (let j = i + 1; j < balls.length; j++) {
             const b1 = balls[i];
@@ -203,6 +218,12 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
             const minDist = b1.radius + b2.radius;
 
             if (dist < minDist && dist > 0) {
+              // Record first contact made by cue ball
+              if ((b1.type === "cue" || b2.type === "cue") && !firstContactBallRef.current) {
+                firstContactBallRef.current = b1.type === "cue" ? { ...b2 } : { ...b1 };
+              }
+
+              // Positional Separation to prevent sticking
               const overlap = (minDist - dist) / 2;
               const nx = dx / dist;
               const ny = dy / dist;
@@ -212,16 +233,17 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
               b2.x += nx * overlap;
               b2.y += ny * overlap;
 
+              // Elastic Impulse Exchange (Equal Mass)
               const kx = b1.vx - b2.vx;
               const ky = b1.vy - b2.vy;
-              const p = 2 * (nx * kx + ny * ky) / 2;
+              const p = (kx * nx + ky * ny);
 
               b1.vx -= p * nx * RESTITUTION;
               b1.vy -= p * ny * RESTITUTION;
               b2.vx += p * nx * RESTITUTION;
               b2.vy += p * ny * RESTITUTION;
 
-              if (Math.hypot(b1.vx, b1.vy) > 1.0) {
+              if (Math.hypot(b1.vx, b1.vy) > 1.2) {
                 soundSynth.playSubtlePop();
               }
             }
@@ -229,7 +251,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         }
       }
 
-      // Check if simulation just completed
+      // Check if simulation just finished
       if (isSimulatingRef.current && !anyMoving) {
         isSimulatingRef.current = false;
         setIsSimulating(false);
@@ -239,7 +261,16 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
       // --- 3. Photorealistic Table Rendering ---
       ctx.clearRect(0, 0, TABLE_WIDTH, TABLE_HEIGHT);
 
-      // A. Championship Green Velvet Felt Bed
+      // A. Deluxe Mahogany Rail Frame with Pearl Diamonds
+      ctx.fillStyle = "#2b1006";
+      ctx.fillRect(0, 0, TABLE_WIDTH, TABLE_HEIGHT);
+
+      // Bevel Border
+      ctx.strokeStyle = "#451e0f";
+      ctx.lineWidth = 3;
+      ctx.strokeRect(2, 2, TABLE_WIDTH - 4, TABLE_HEIGHT - 4);
+
+      // B. Tournament Green Worsted Velvet Felt Bed
       const feltGrad = ctx.createRadialGradient(
         TABLE_WIDTH / 2,
         TABLE_HEIGHT / 2,
@@ -248,73 +279,30 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         TABLE_HEIGHT / 2,
         TABLE_HEIGHT * 0.7
       );
-      feltGrad.addColorStop(0, "#059669"); // Vivid Emerald Green
-      feltGrad.addColorStop(0.6, "#047857");
-      feltGrad.addColorStop(1, "#065f46"); // Rich Deep Green
+      feltGrad.addColorStop(0, "#059669"); // Emerald Center
+      feltGrad.addColorStop(0.7, "#047857");
+      feltGrad.addColorStop(1, "#065f46"); // Dark Edge
       ctx.fillStyle = feltGrad;
-      ctx.fillRect(0, 0, TABLE_WIDTH, TABLE_HEIGHT);
+      ctx.fillRect(CUSHION, CUSHION, TABLE_WIDTH - CUSHION * 2, TABLE_HEIGHT - CUSHION * 2);
 
-      // B. Deluxe Mahogany Wooden Rails with Bevels
-      ctx.strokeStyle = "#381a08";
-      ctx.lineWidth = CUSHION;
-      ctx.strokeRect(CUSHION / 2, CUSHION / 2, TABLE_WIDTH - CUSHION, TABLE_HEIGHT - CUSHION);
-
-      // Inner Cushion Rubber Border
-      ctx.strokeStyle = "#064e3b";
-      ctx.lineWidth = 4;
+      // Cushion Nose Rubber Inset
+      ctx.strokeStyle = "#022c22";
+      ctx.lineWidth = 2.5;
       ctx.strokeRect(CUSHION, CUSHION, TABLE_WIDTH - CUSHION * 2, TABLE_HEIGHT - CUSHION * 2);
 
-      // Pearl Diamond Sights on Rails
-      const diamondPositions = [
-        [TABLE_WIDTH / 4, CUSHION / 2],
-        [(TABLE_WIDTH * 3) / 4, CUSHION / 2],
-        [TABLE_WIDTH / 4, TABLE_HEIGHT - CUSHION / 2],
-        [(TABLE_WIDTH * 3) / 4, TABLE_HEIGHT - CUSHION / 2],
-        [CUSHION / 2, TABLE_HEIGHT / 4],
-        [CUSHION / 2, (TABLE_HEIGHT * 3) / 4],
-        [TABLE_WIDTH - CUSHION / 2, TABLE_HEIGHT / 4],
-        [TABLE_WIDTH - CUSHION / 2, (TABLE_HEIGHT * 3) / 4],
-      ];
-      diamondPositions.forEach(([dx, dy]) => {
-        ctx.save();
-        ctx.translate(dx, dy);
-        ctx.fillStyle = "#fef08a";
-        ctx.beginPath();
-        ctx.arc(0, 0, 2.5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      });
-
-      // C. Head String & Foot Spot Markings
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(CUSHION, TABLE_HEIGHT - 110);
-      ctx.lineTo(TABLE_WIDTH - CUSHION, TABLE_HEIGHT - 110);
-      ctx.stroke();
-
-      // Foot spot
-      ctx.beginPath();
-      ctx.arc(TABLE_WIDTH / 2, 130, 3, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
-      ctx.fill();
-
-      // D. 6 Deep Leather Drop Pockets with Brass Rims
+      // C. 6 Tournament Pockets with Brass Rim Plates & Depth Nets
       POCKETS.forEach((pkt) => {
-        // Drop Shadow
+        // Brass Rim Plate
+        ctx.beginPath();
+        ctx.arc(pkt.x, pkt.y, POCKET_RADIUS + 3, 0, Math.PI * 2);
+        ctx.fillStyle = "#92400e";
+        ctx.fill();
+
+        // Inner Brass Edge
         ctx.beginPath();
         ctx.arc(pkt.x, pkt.y, POCKET_RADIUS, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(0,0,0,0.4)";
+        ctx.fillStyle = "#b45309";
         ctx.fill();
-
-        // Brass Pocket Lip
-        ctx.beginPath();
-        ctx.arc(pkt.x, pkt.y, POCKET_RADIUS - 2, 0, Math.PI * 2);
-        ctx.fillStyle = "#a16207";
-        ctx.fill();
-        ctx.strokeStyle = "#eab308";
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
 
         // Deep Net Pocket Hole
         ctx.beginPath();
@@ -323,7 +311,21 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         ctx.fill();
       });
 
-      // E. Render 3D Shiny Billiards Balls
+      // Head String & Foot Spot Markings
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(CUSHION, TABLE_HEIGHT - 120);
+      ctx.lineTo(TABLE_WIDTH - CUSHION, TABLE_HEIGHT - 120);
+      ctx.stroke();
+
+      // Foot Spot (Apex of Rack)
+      ctx.beginPath();
+      ctx.arc(TABLE_WIDTH / 2, 130, 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+      ctx.fill();
+
+      // D. Render 3D High-Gloss Pool Balls (1-15 + Cue Ball)
       balls.forEach((b) => {
         if (b.isPocketed) return;
 
@@ -335,100 +337,104 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         ctx.fill();
         ctx.restore();
 
-        // 3D Spherical Radial Gradient
+        // Ball Body
         ctx.save();
         ctx.beginPath();
         ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
 
         if (b.type === "cue") {
-          // Pure Ivory Cue Ball
+          // Deluxe Ivory Cue Ball
           const cueGrad = ctx.createRadialGradient(b.x - 3, b.y - 3, 2, b.x, b.y, b.radius);
           cueGrad.addColorStop(0, "#ffffff");
           cueGrad.addColorStop(0.7, "#f3f4f6");
-          cueGrad.addColorStop(1, "#9ca3af");
+          cueGrad.addColorStop(1, "#d1d5db");
           ctx.fillStyle = cueGrad;
           ctx.fill();
 
-          // Red Dot Target on Cue Ball
+          // Red Dot Spot on Cue Ball
           ctx.beginPath();
           ctx.arc(b.x, b.y, 2, 0, Math.PI * 2);
           ctx.fillStyle = "#dc2626";
           ctx.fill();
         } else if (b.type === "8ball") {
-          // Glossy 8-Ball
+          // 8-Ball Black Resin
           const eightGrad = ctx.createRadialGradient(b.x - 3, b.y - 3, 2, b.x, b.y, b.radius);
-          eightGrad.addColorStop(0, "#4b5563");
-          eightGrad.addColorStop(0.5, "#1f2937");
+          eightGrad.addColorStop(0, "#3f3f46");
+          eightGrad.addColorStop(0.4, "#18181b");
           eightGrad.addColorStop(1, "#09090b");
           ctx.fillStyle = eightGrad;
           ctx.fill();
 
           // White Number Circle
           ctx.beginPath();
-          ctx.arc(b.x, b.y, 4.5, 0, Math.PI * 2);
+          ctx.arc(b.x, b.y, b.radius * 0.48, 0, Math.PI * 2);
           ctx.fillStyle = "#ffffff";
           ctx.fill();
 
           ctx.fillStyle = "#000000";
-          ctx.font = "bold 6px sans-serif";
+          ctx.font = "bold 9px monospace";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
-          ctx.fillText("8", b.x, b.y);
+          ctx.fillText("8", b.x, b.y + 0.5);
         } else if (b.type === "solid") {
-          // Solid Colored Ball
-          const baseCol = BALL_COLORS[String(b.id)] || "#eab308";
+          // Solid Color Ball (1-7)
+          const col = BALL_COLORS[String(b.number)] || "#eab308";
           const sGrad = ctx.createRadialGradient(b.x - 3, b.y - 3, 2, b.x, b.y, b.radius);
           sGrad.addColorStop(0, "#ffffff");
-          sGrad.addColorStop(0.3, baseCol);
-          sGrad.addColorStop(1, "#000000");
+          sGrad.addColorStop(0.3, col);
+          sGrad.addColorStop(1, "#09090b");
           ctx.fillStyle = sGrad;
           ctx.fill();
 
-          // White Number Circle
+          // Number Circle
           ctx.beginPath();
-          ctx.arc(b.x, b.y, 4, 0, Math.PI * 2);
+          ctx.arc(b.x, b.y, b.radius * 0.44, 0, Math.PI * 2);
           ctx.fillStyle = "#ffffff";
           ctx.fill();
 
           ctx.fillStyle = "#000000";
-          ctx.font = "bold 5px sans-serif";
+          ctx.font = "bold 8px monospace";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
-          ctx.fillText(String(b.id), b.x, b.y);
+          ctx.fillText(String(b.number), b.x, b.y + 0.5);
         } else if (b.type === "stripe") {
-          // Striped Colored Ball
-          const baseCol = BALL_COLORS[String(b.id)] || "#2563eb";
-          const strGrad = ctx.createRadialGradient(b.x - 3, b.y - 3, 2, b.x, b.y, b.radius);
-          strGrad.addColorStop(0, "#ffffff");
-          strGrad.addColorStop(0.6, "#f3f4f6");
-          strGrad.addColorStop(1, "#9ca3af");
-          ctx.fillStyle = strGrad;
+          // Striped Ball (9-15)
+          const col = BALL_COLORS[String(b.number)] || "#eab308";
+
+          // White Base Ball
+          const baseGrad = ctx.createRadialGradient(b.x - 3, b.y - 3, 2, b.x, b.y, b.radius);
+          baseGrad.addColorStop(0, "#ffffff");
+          baseGrad.addColorStop(0.7, "#f3f4f6");
+          baseGrad.addColorStop(1, "#9ca3af");
+          ctx.fillStyle = baseGrad;
           ctx.fill();
 
-          // Central Colored Stripe Band
-          ctx.save();
-          ctx.clip();
-          ctx.fillStyle = baseCol;
-          ctx.fillRect(b.x - b.radius, b.y - b.radius * 0.45, b.radius * 2, b.radius * 0.9);
-          ctx.restore();
-
-          // White Number Circle
+          // Center Colored Stripe Belt
           ctx.beginPath();
-          ctx.arc(b.x, b.y, 4, 0, Math.PI * 2);
+          ctx.arc(b.x, b.y, b.radius, -Math.PI / 3, Math.PI / 3);
+          ctx.fillStyle = col;
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, b.radius, (2 * Math.PI) / 3, (4 * Math.PI) / 3);
+          ctx.fillStyle = col;
+          ctx.fill();
+
+          // Center White Number Circle
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, b.radius * 0.46, 0, Math.PI * 2);
           ctx.fillStyle = "#ffffff";
           ctx.fill();
 
           ctx.fillStyle = "#000000";
-          ctx.font = "bold 5px sans-serif";
+          ctx.font = "bold 8px monospace";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
-          ctx.fillText(String(b.id), b.x, b.y);
+          ctx.fillText(String(b.number), b.x, b.y + 0.5);
         }
-
         ctx.restore();
       });
 
-      // F. 3D Wooden Cue Stick & Dynamic Aim Laser
+      // E. WPA Mathematical Ghost Ball & Tangent Trajectory System
       if (isAiming && dragStart && dragCurrent) {
         const cueBall = balls.find((b) => b.type === "cue");
         if (cueBall && !cueBall.isPocketed) {
@@ -439,22 +445,96 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
           if (aimDist > 2) {
             const dirX = pullDx / aimDist;
             const dirY = pullDy / aimDist;
-            const laserLen = 320;
+            const rayMaxDist = 320;
 
-            // Direct Aim Guide Laser
+            // Find closest object ball in line of aim (Ghost Ball Raycast)
+            let closestT = rayMaxDist;
+            let targetBall: PoolBall | null = null;
+            const R2 = cueBall.radius * 2;
+
+            for (const b of balls) {
+              if (b.type === "cue" || b.isPocketed) continue;
+
+              // Vector from cue ball to target ball: D = P_cue - P_target
+              const Dx = cueBall.x - b.x;
+              const Dy = cueBall.y - b.y;
+
+              const dotD = dirX * Dx + dirY * Dy;
+              const c = Dx * Dx + Dy * Dy - R2 * R2;
+              const disc = dotD * dotD - c;
+
+              if (disc >= 0) {
+                const t = -dotD - Math.sqrt(disc);
+                if (t > 0 && t < closestT) {
+                  closestT = t;
+                  targetBall = b;
+                }
+              }
+            }
+
             ctx.save();
-            ctx.beginPath();
-            ctx.moveTo(cueBall.x, cueBall.y);
-            ctx.lineTo(cueBall.x + dirX * laserLen, cueBall.y + dirY * laserLen);
-            ctx.strokeStyle = "#34d399";
-            ctx.setLineDash([6, 4]);
-            ctx.lineWidth = 2;
-            ctx.shadowColor = "#34d399";
-            ctx.shadowBlur = 8;
-            ctx.stroke();
+            if (targetBall) {
+              const ghostX = cueBall.x + dirX * closestT;
+              const ghostY = cueBall.y + dirY * closestT;
+
+              // 1. Cue Ball to Ghost Ball Laser Ray
+              ctx.beginPath();
+              ctx.moveTo(cueBall.x, cueBall.y);
+              ctx.lineTo(ghostX, ghostY);
+              ctx.strokeStyle = "#34d399";
+              ctx.setLineDash([5, 3]);
+              ctx.lineWidth = 1.5;
+              ctx.stroke();
+
+              // 2. Ghost Ball Circle at Impact Point
+              ctx.beginPath();
+              ctx.arc(ghostX, ghostY, cueBall.radius, 0, Math.PI * 2);
+              ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
+              ctx.lineWidth = 1.5;
+              ctx.setLineDash([3, 2]);
+              ctx.stroke();
+
+              // 3. Target Ball Departure Vector along Line of Centers (Normal)
+              const normDx = targetBall.x - ghostX;
+              const normDy = targetBall.y - ghostY;
+              const normLen = Math.hypot(normDx, normDy) || 1;
+              const nx = normDx / normLen;
+              const ny = normDy / normLen;
+
+              ctx.beginPath();
+              ctx.moveTo(targetBall.x, targetBall.y);
+              ctx.lineTo(targetBall.x + nx * 100, targetBall.y + ny * 100);
+              ctx.strokeStyle = "#fbbf24";
+              ctx.setLineDash([]);
+              ctx.lineWidth = 2;
+              ctx.stroke();
+
+              // 4. Cue Ball 90° Tangent Deflection Vector
+              const dotNormal = dirX * nx + dirY * ny;
+              const defX = dirX - nx * dotNormal;
+              const defY = dirY - ny * dotNormal;
+              const defLen = Math.hypot(defX, defY) || 1;
+
+              ctx.beginPath();
+              ctx.moveTo(ghostX, ghostY);
+              ctx.lineTo(ghostX + (defX / defLen) * 60, ghostY + (defY / defLen) * 60);
+              ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+              ctx.setLineDash([3, 3]);
+              ctx.lineWidth = 1.5;
+              ctx.stroke();
+            } else {
+              // Direct Aim Ray (No collision)
+              ctx.beginPath();
+              ctx.moveTo(cueBall.x, cueBall.y);
+              ctx.lineTo(cueBall.x + dirX * rayMaxDist, cueBall.y + dirY * rayMaxDist);
+              ctx.strokeStyle = "#34d399";
+              ctx.setLineDash([6, 4]);
+              ctx.lineWidth = 1.5;
+              ctx.stroke();
+            }
             ctx.restore();
 
-            // 3D Wooden Cue Stick Rendering Behind Cue Ball
+            // 3D Ash Wood Cue Stick Behind Cue Ball
             const cueStickOffset = 18 + Math.min(aimDist * 0.8, 65);
             const cueStartX = cueBall.x - dirX * cueStickOffset;
             const cueStartY = cueBall.y - dirY * cueStickOffset;
@@ -470,7 +550,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
             ctx.lineCap = "round";
             ctx.stroke();
 
-            // Cue Tip White Chalk
+            // Cue Tip Chalk
             ctx.beginPath();
             ctx.moveTo(cueStartX, cueStartY);
             ctx.lineTo(cueStartX - dirX * 10, cueStartY - dirY * 10);
@@ -503,7 +583,18 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
     const y = (e.clientY - rect.top) * scaleY;
     const cueBall = ballsRef.current.find((b) => b.type === "cue");
 
-    if (cueBall && Math.hypot(cueBall.x - x, cueBall.y - y) < cueBall.radius * 3.5) {
+    // Handle Ball-in-Hand Drag Placement
+    if (isBallInHand && cueBall) {
+      const clampedX = Math.max(PLAYABLE_MIN_X + cueBall.radius, Math.min(PLAYABLE_MAX_X - cueBall.radius, x));
+      const clampedY = Math.max(PLAYABLE_MIN_Y + cueBall.radius, Math.min(PLAYABLE_MAX_Y - cueBall.radius, y));
+      cueBall.x = clampedX;
+      cueBall.y = clampedY;
+      setIsBallInHand(false);
+      soundSynth.playSubtlePop();
+      return;
+    }
+
+    if (cueBall && Math.hypot(cueBall.x - x, cueBall.y - y) < cueBall.radius * 3.8) {
       setIsAiming(true);
       setDragStart({ x, y });
       setDragCurrent({ x, y });
@@ -539,7 +630,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
       const pullDist = Math.hypot(pullDx, pullDy);
 
       if (pullDist > 4) {
-        const forceMultiplier = 0.32;
+        const forceMultiplier = 0.34;
         const impulseX = pullDx * forceMultiplier;
         const impulseY = pullDy * forceMultiplier;
 
@@ -549,6 +640,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         soundSynth.playSnare();
         pocketedThisShotRef.current = [];
         cueScratchRef.current = false;
+        firstContactBallRef.current = null;
         isSimulatingRef.current = true;
         setIsSimulating(true);
       }
@@ -560,15 +652,18 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
     setPower(0);
   };
 
-  // Finalize Shot and Apply Official 8-Ball Rules
+  // Finalize Shot and Apply Official WPA 8-Ball Rules
   const finalizeShotTurn = useCallback(async () => {
     const pocketed = pocketedThisShotRef.current;
     const isScratch = cueScratchRef.current;
     const balls = ballsRef.current;
+    const firstContact = firstContactBallRef.current;
 
     let nextTurnUid = ps?.currentTurnUid || currentUid;
     let newP1Score = ps?.p1Score || 0;
     let newP2Score = ps?.p2Score || 0;
+    let newP1Type = ps?.p1Type || null;
+    let newP2Type = ps?.p2Type || null;
     let actionLog = "";
     let isGameOver = false;
     let winnerUid = currentUid;
@@ -579,43 +674,87 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
       cueBall.isPocketed = false;
       cueBall.vx = 0;
       cueBall.vy = 0;
-      cueBall.x = TABLE_WIDTH / 2;
-      cueBall.y = TABLE_HEIGHT - 100;
+      if (isScratch) {
+        cueBall.x = TABLE_WIDTH / 2;
+        cueBall.y = TABLE_HEIGHT - 110;
+        setIsBallInHand(true);
+      }
     }
 
     const eightBallPocketed = pocketed.some((b) => b.type === "8ball");
     const solidsPocketed = pocketed.filter((b) => b.type === "solid").length;
     const stripesPocketed = pocketed.filter((b) => b.type === "stripe").length;
 
-    // 1. Check Scratch Foul
+    const remainingSolids = balls.filter((b) => b.type === "solid" && !b.isPocketed).length;
+    const remainingStripes = balls.filter((b) => b.type === "stripe" && !b.isPocketed).length;
+
+    const myCurrentSuit = isPlayer1 ? newP1Type : newP2Type;
+    const myRemainingGroupCount = myCurrentSuit === "SOLIDS" ? remainingSolids : myCurrentSuit === "STRIPES" ? remainingStripes : remainingSolids + remainingStripes;
+
+    // ── 1. Check Scratch & Foul Conditions ──
     if (isScratch) {
-      actionLog = "⚠️ SCRATCH! Cue ball in pocket. Foul ball in hand!";
-      const opponentUid = playerUids.find((id) => id !== currentUid) || currentUid;
-      nextTurnUid = opponentUid;
+      soundSynth.playBuzzer();
+      if (eightBallPocketed) {
+        // Instant Loss: 8-Ball sunk while scratching!
+        actionLog = "❌ 8-BALL SCRATCH FOUL! Instant loss.";
+        isGameOver = true;
+        winnerUid = playerUids.find((id) => id !== currentUid) || currentUid;
+      } else {
+        actionLog = "⚠️ SCRATCH! Cue ball in pocket. Opponent awarded Ball-in-Hand!";
+        const opponentUid = playerUids.find((id) => id !== currentUid) || currentUid;
+        nextTurnUid = opponentUid;
+      }
     } else if (eightBallPocketed) {
-      // 2. Eight Ball Pocketed
-      const remainingTargets = balls.filter((b) => (b.type === "solid" || b.type === "stripe") && !b.isPocketed);
-      if (remainingTargets.length === 0) {
-        actionLog = "🏆 8-BALL POCKETED CLEANLY! VICTORY!";
+      // ── 2. Eight Ball Pocketed ──
+      if (myCurrentSuit && myRemainingGroupCount === 0) {
+        // Legal Win! Cleared all assigned balls before pocketing 8-Ball
+        actionLog = "🏆 8-BALL POCKETED LEGALLY! WPA CHAMPIONSHIP VICTORY!";
         isGameOver = true;
         winnerUid = currentUid;
         soundSynth.playFanfare();
       } else {
-        actionLog = "❌ 8-Ball pocketed early! Automatic loss.";
+        // Instant Loss: 8-ball pocketed before clearing suit!
+        actionLog = "❌ 8-Ball pocketed prematurely! Automatic frame loss.";
         isGameOver = true;
         winnerUid = playerUids.find((id) => id !== currentUid) || currentUid;
         soundSynth.playBuzzer();
       }
     } else if (solidsPocketed > 0 || stripesPocketed > 0) {
-      // 3. Object Balls Pocketed
-      const count = solidsPocketed + stripesPocketed;
-      if (isPlayer1) newP1Score += count * 10;
-      else newP2Score += count * 10;
+      // ── 3. Open Table Suit Assignment & Turn Continuation ──
+      if (!newP1Type && !newP2Type) {
+        // First legal ball claims suit!
+        if (solidsPocketed > 0 && stripesPocketed === 0) {
+          if (isPlayer1) { newP1Type = "SOLIDS"; newP2Type = "STRIPES"; }
+          else { newP2Type = "SOLIDS"; newP1Type = "STRIPES"; }
+          actionLog = `${match.players[currentUid]?.handle || "Player"} claimed SOLIDS!`;
+        } else if (stripesPocketed > 0 && solidsPocketed === 0) {
+          if (isPlayer1) { newP1Type = "STRIPES"; newP2Type = "SOLIDS"; }
+          else { newP2Type = "STRIPES"; newP1Type = "SOLIDS"; }
+          actionLog = `${match.players[currentUid]?.handle || "Player"} claimed STRIPES!`;
+        }
+      }
 
-      actionLog = `Pocketed ${count} ball(s) (+${count * 10} pts)! Bonus shot awarded!`;
-      nextTurnUid = currentUid;
+      // Check if player pocketed their own assigned ball
+      const assignedTargetPocketed =
+        (myCurrentSuit === "SOLIDS" && solidsPocketed > 0) ||
+        (myCurrentSuit === "STRIPES" && stripesPocketed > 0) ||
+        (!myCurrentSuit); // Open table
+
+      if (assignedTargetPocketed) {
+        const count = solidsPocketed + stripesPocketed;
+        if (isPlayer1) newP1Score += count * 10;
+        else newP2Score += count * 10;
+
+        actionLog = `Pocketed ${count} ball(s)! Turn continues!`;
+        nextTurnUid = currentUid; // Bonus shot
+      } else {
+        // Pocketed ONLY opponent ball: turn passes
+        actionLog = "Pocketed opponent's ball. Turn passes.";
+        const opponentUid = playerUids.find((id) => id !== currentUid) || currentUid;
+        nextTurnUid = opponentUid;
+      }
     } else {
-      // 4. No Ball Pocketed
+      // ── 4. Blank Shot: Turn Passes ──
       const opponentUid = playerUids.find((id) => id !== currentUid) || currentUid;
       nextTurnUid = opponentUid;
       actionLog = "No ball pocketed. Turn passes.";
@@ -636,7 +775,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         winnerUid,
       }
     );
-  }, [currentUid, isPlayer1, match.id, playerUids, ps]);
+  }, [currentUid, isPlayer1, match.id, match.players, playerUids, ps]);
 
   // Inventory of remaining balls
   const balls = ballsRef.current;
@@ -652,20 +791,20 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
       {/* ── Top Match Control Header ── */}
       <div className="flex items-center justify-between border-b border-emerald-500/30 pb-3 text-xs flex-wrap gap-2">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-600 text-black flex items-center justify-center font-black shadow-[0_0_15px_rgba(16,185,129,0.5)]">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-700 text-black flex items-center justify-center font-black shadow-[0_0_15px_rgba(16,185,129,0.5)] text-lg">
             🎱
           </div>
           <div>
             <div className="flex items-center gap-1.5">
               <span className="text-sm font-black uppercase text-emerald-400 tracking-wider">
-                GRAND CHAMPION 8-BALL
+                8-BALL POOL PRO
               </span>
               <span className="px-1.5 py-0.2 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9px] font-bold rounded">
-                DELUXE 3D
+                WPA OFFICIAL
               </span>
             </div>
             <p className="text-[10px] text-neutral-400">
-              Turn: <span className="text-white font-bold">{match.players[ps?.currentTurnUid || ""]?.handle || "Player"}</span> • {isMyTurn ? "YOUR SHOT" : "OPPONENT'S TURN"}
+              Turn: <span className="text-white font-bold">{match.players[ps?.currentTurnUid || ""]?.handle || "Player"}</span> • {isMyTurn ? "YOUR SHOT" : "OPPONENT'S SHOT"}
             </p>
           </div>
         </div>
@@ -685,10 +824,10 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
               soundSynth.playSubtlePop();
               setInviteOpen(true);
             }}
-            className="px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-400 text-black font-black text-[10px] uppercase rounded transition-all hover:brightness-110 flex items-center gap-1.5 cursor-pointer shadow-[0_0_15px_rgba(16,185,129,0.4)] active:scale-95"
+            className="px-3 py-1.5 border-2 border-white bg-white text-black font-black text-[10px] uppercase rounded transition-all hover:bg-neutral-200 flex items-center gap-1.5 cursor-pointer shadow-md active:scale-95"
           >
             <Share2 className="w-3 h-3" />
-            <span>[ 🔗 INVITE & TALK 🎙️ ]</span>
+            <span>[ 🔗 INVITE &amp; TALK 🎙️ ]</span>
           </button>
         </div>
       </div>
@@ -698,11 +837,11 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
 
       {/* ── 1-Tap Empty Seat Availability Banner ── */}
       {!match.players[currentUid] && playersList.length < maxSeats && match.status !== "FINISHED" && (
-        <div className="w-full bg-gradient-to-r from-emerald-950 via-emerald-900 to-emerald-950 border-2 border-emerald-400 p-3 rounded-xl flex items-center justify-between gap-2 shadow-[0_0_25px_rgba(16,185,129,0.3)] animate-in fade-in">
+        <div className="w-full bg-gradient-to-r from-emerald-950 via-neutral-900 to-emerald-950 border-2 border-emerald-400 p-3 rounded-xl flex items-center justify-between gap-2 shadow-[0_0_25px_rgba(16,185,129,0.3)] animate-in fade-in">
           <div className="flex items-center gap-2.5 text-xs truncate">
             <Users className="w-4 h-4 text-emerald-400 shrink-0 animate-pulse" />
             <span className="font-black uppercase text-emerald-200 truncate">
-              🪑 SEAT OPEN ({playersList.length}/{maxSeats} PLAYERS) • TAKE A SEAT TO PLAY & TALK ON LIVE MIC
+              🪑 SEAT OPEN ({playersList.length}/{maxSeats} PLAYERS) • TAKE A SEAT TO PLAY ON MIC
             </span>
           </div>
           <button
@@ -713,7 +852,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
                 const { joinArcadeMatch } = await import("@/lib/arcade");
                 await joinArcadeMatch(match.id, {
                   uid: currentUid,
-                  handle: `@PLAYER_${currentUid.slice(0, 4)}`,
+                  handle: `@POOL_SHARK_${currentUid.slice(0, 4)}`,
                 });
                 if (match.roomId) {
                   const { promoteToSpeaker } = await import("@/lib/rooms");
@@ -723,39 +862,46 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
                 console.error("Failed to take seat in Pool:", e);
               }
             }}
-            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs uppercase cursor-pointer rounded-lg transition-all active:scale-95 shrink-0 shadow-lg"
+            className="px-4 py-2 border-2 border-white bg-white text-black font-black text-xs uppercase cursor-pointer rounded-lg hover:bg-neutral-200 transition-all active:scale-95 shrink-0 shadow-md"
           >
             [ 🪑 TAKE A SEAT ]
           </button>
         </div>
       )}
 
-      {/* ── Live Ball Inventory & Table Score HUD ── */}
+      {/* ── Live Suit Status & Ball Inventory HUD ── */}
       <div className="grid grid-cols-3 gap-2 bg-neutral-950 p-3 rounded-xl border border-emerald-500/30 text-center">
-        <div className="flex flex-col items-center justify-center p-2 rounded-lg bg-black/60 border border-neutral-800">
+        {/* Solids (1-7) */}
+        <div className="flex flex-col items-center justify-center p-2 rounded-lg bg-black/60 border border-neutral-800 space-y-0.5">
           <span className="text-[10px] text-yellow-400 font-bold uppercase flex items-center gap-1">
             🟡 SOLIDS (1-7)
           </span>
           <span className="text-lg font-black text-white font-mono">{remainingSolids} / 7</span>
-          <span className="text-[9px] text-emerald-400">+10 PTS EACH</span>
+          <span className="text-[8px] text-neutral-400">
+            {p1Suit === "SOLIDS" ? "PLAYER 1" : p2Suit === "SOLIDS" ? "PLAYER 2" : "OPEN TABLE"}
+          </span>
         </div>
 
-        <div className="flex flex-col items-center justify-center p-2 rounded-lg bg-neutral-900 border border-neutral-700">
+        {/* 8-Ball (Black) */}
+        <div className="flex flex-col items-center justify-center p-2 rounded-lg bg-neutral-900 border border-neutral-700 space-y-0.5">
           <span className="text-[10px] text-white font-bold uppercase flex items-center gap-1">
             🎱 8-BALL
           </span>
-          <span className="text-lg font-black text-emerald-400 font-mono">
-            {isEightBallOnTable ? "ON TABLE" : "POCKETED 🏆"}
+          <span className="text-sm font-black text-emerald-400 font-mono">
+            {isEightBallOnTable ? "ON TABLE" : "POCKETED"}
           </span>
-          <span className="text-[9px] text-amber-300">WINNING SHOT</span>
+          <span className="text-[8px] text-emerald-300">POCKET LAST TO WIN</span>
         </div>
 
-        <div className="flex flex-col items-center justify-center p-2 rounded-lg bg-black/60 border border-neutral-800">
+        {/* Stripes (9-15) */}
+        <div className="flex flex-col items-center justify-center p-2 rounded-lg bg-black/60 border border-neutral-800 space-y-0.5">
           <span className="text-[10px] text-blue-400 font-bold uppercase flex items-center gap-1">
             🔵 STRIPES (9-15)
           </span>
           <span className="text-lg font-black text-white font-mono">{remainingStripes} / 7</span>
-          <span className="text-[9px] text-emerald-400">+10 PTS EACH</span>
+          <span className="text-[8px] text-neutral-400">
+            {p1Suit === "STRIPES" ? "PLAYER 1" : p2Suit === "STRIPES" ? "PLAYER 2" : "OPEN TABLE"}
+          </span>
         </div>
       </div>
 
@@ -767,8 +913,8 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         </div>
       )}
 
-      {/* ── 3D Deluxe Billiards Table Canvas ── */}
-      <div className="relative aspect-[380/480] max-w-[380px] sm:max-w-[420px] mx-auto p-2 rounded-2xl bg-gradient-to-br from-[#2b1307] via-[#45220c] to-[#1a0b04] border-4 border-[#6e3713] shadow-[0_20px_50px_rgba(0,0,0,0.9),_inset_0_2px_10px_rgba(255,255,255,0.2)]">
+      {/* ── 3D Deluxe 8-Ball Table Canvas ── */}
+      <div className="relative aspect-[380/480] max-w-[380px] sm:max-w-[400px] mx-auto p-2 rounded-2xl bg-gradient-to-br from-[#1a0b04] via-[#2b1006] to-[#0f0502] border-4 border-[#451e0f] shadow-[0_20px_50px_rgba(0,0,0,0.9),_inset_0_2px_10px_rgba(255,255,255,0.2)]">
         <canvas
           ref={canvasRef}
           width={TABLE_WIDTH}
@@ -778,12 +924,19 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
           onPointerUp={handlePointerUp}
           className="touch-none cursor-crosshair w-full h-full rounded-xl"
         />
+
+        {/* Ball in Hand Alert Floating Badge */}
+        {isBallInHand && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-yellow-500 text-black px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider animate-bounce shadow-lg">
+            ✋ BALL-IN-HAND: TAP ANYWHERE ON TABLE TO PLACE CUE BALL
+          </div>
+        )}
       </div>
 
       {/* ── Power & Shot Instruction HUD ── */}
       <div className="space-y-1.5 bg-neutral-950 p-3 rounded-xl border border-neutral-800 shadow-md">
         <div className="flex justify-between text-xs text-neutral-300 font-bold uppercase">
-          <span>CUE SHOT POWER & TENSION:</span>
+          <span>CUE STRIKE VELOCITY &amp; TENSION:</span>
           <span className="text-emerald-400 font-mono font-black">{power}%</span>
         </div>
         <div className="w-full bg-neutral-900 h-2.5 rounded-full overflow-hidden border border-neutral-800">
@@ -794,21 +947,57 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         </div>
         <p className="text-[11px] text-neutral-400 text-center pt-1 font-mono">
           {isMyTurn
-            ? "DRAG FROM CUE BALL TO AIM ➔ PULL BACK FOR POWER ➔ RELEASE TO STRIKE!"
-            : "WAITING FOR OPPONENT TO LINE UP SHOT..."}
+            ? "DRAG CUE BALL BACKWARD TO AIM & SET POWER ➔ GHOST BALL SHOWS 90° DEFLECTION ➔ RELEASE TO STRIKE!"
+            : "WAITING FOR OPPONENT TO AIM & STRIKE..."}
         </p>
       </div>
 
-      {/* ── Victory Celebration Overlay ── */}
+      {/* ── WPA Pro Physics Master Guide HUD ── */}
+      <div className="border border-neutral-800 bg-neutral-950 rounded-xl overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setShowProPhysics(!showProPhysics)}
+          className="w-full p-3 flex items-center justify-between text-xs font-bold text-neutral-300 hover:text-white transition-colors cursor-pointer"
+        >
+          <span className="flex items-center gap-1.5 uppercase">
+            <Compass className="w-4 h-4 text-emerald-400" />
+            🎱 WPA PRO POOL PHYSICS (GHOST-BALL, SIDESPIN, CIT &amp; BANKS)
+          </span>
+          {showProPhysics ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </button>
+
+        {showProPhysics && (
+          <div className="p-3 border-t border-neutral-800 space-y-2.5 text-xs text-neutral-400 font-mono bg-black/50">
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">1. 🎯 GHOST-BALL &amp; 90° TANGENT:</span>
+              The aiming guide calculates exact line-of-centers trajectory and orthogonal cue ball deflection.
+            </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">2. 🌪️ CUT-INDUCED THROW (CIT):</span>
+              Friction between cue and object ball pushes cuts 1°-5° off line; outside English counteracts throw.
+            </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">3. 🪞 CUSHION BANK &amp; RAIL GRIP:</span>
+              Cushion compression and tangential friction govern bank angles and sidespin reversal.
+            </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">4. ⚡ 8-BALL VICTORY CONDITIONS:</span>
+              Clear all 7 of your suit (Solids or Stripes) before legally potting the 8-Ball for victory!
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Victory Celebration Declaration ── */}
       {match.status === "FINISHED" && (
         <div className="border-2 border-emerald-400 bg-gradient-to-b from-emerald-950/90 via-black to-black p-6 rounded-2xl text-center space-y-3 shadow-[0_0_60px_rgba(16,185,129,0.6)] animate-in fade-in zoom-in-95">
           <Trophy className="w-14 h-14 text-emerald-400 mx-auto animate-bounce drop-shadow-[0_0_20px_#10b981]" />
           <h2 className="text-xl font-black text-emerald-300 uppercase tracking-widest">
-            🏆 8-BALL CHAMPIONSHIP VICTORY!
+            🏆 8-BALL POOL CHAMPIONSHIP VICTORY!
           </h2>
           <p className="text-xs text-neutral-300 font-mono">
             {match.winnerUid === currentUid
-              ? `VICTORY! You pocketed the 8-Ball and scored +${match.stakes * 2} Aura Points!`
+              ? `VICTORY! You dominated the table and earned +${match.stakes * 2} Aura Points!`
               : `Match concluded! Winner: ${match.winnerHandle || "@PLAYER"}`}
           </p>
         </div>
