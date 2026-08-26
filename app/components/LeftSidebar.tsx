@@ -24,7 +24,6 @@ export default function LeftSidebar() {
   const navItems = [
     { href: "/",                 icon: Radio,         label: "[ FREQUENCY ]",  hasNotifDot: false },
     { href: "/waves",            icon: Waves,         label: "[ WAVES ]",      hasNotifDot: false },
-    { href: "/arcade",           icon: Gamepad2,      label: "[ ARCADE ]",     hasNotifDot: false },
     { href: "/shop",             icon: ShoppingCart,  label: "[ SHOP ]",       hasNotifDot: false },
     { href: "/studio",           icon: Mic2,          label: "[ STUDIO ]",     hasNotifDot: false },
     { href: "/clash",            icon: Swords,        label: "[ STAGE ]",      hasNotifDot: false },
