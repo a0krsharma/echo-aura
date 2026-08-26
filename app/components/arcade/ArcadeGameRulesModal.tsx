@@ -596,11 +596,11 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
       "TURN CONTINUATION & PUSH-OUT: Your turn continues as long as you legally pocket assigned balls. An optional Push-Out is allowed on Shot #2 immediately following the break.",
       "STANDARD FOULS & BALL-IN-HAND: Scratching the cue ball, hitting wrong suit first, or failing to drive a ball to a cushion yields Ball-in-Hand anywhere on the table for the opponent.",
       "INSTANT LOSS CONDITIONS: Pocketing the 8-ball while scratching/fouling, or pocketing the 8-ball before clearing all 7 of your suit balls results in an immediate frame loss.",
-      "WPA JUMP BALLISTICS & REFEREE RULES: Downward compression generates parabolic flight (Rule 6.7, cue >= 40 in; scoop/shovel is a foul). Airborne angular momentum (L = I*omega) is conserved and engages draw/follow/swerve upon landing!"
+      "JUMP BIOMECHANICS & PHENOLIC TECH: Dart-Grip (60°-85° wrist snap) for 2-8 in tight snookers; Pendulum-Stroke (30°-55° elbow hinge) for long jumps. Phenolic tips (95+ Shore D) minimize dwell to <=1.8ms to prevent double-hits!"
     ],
     voiceGuide: "Call pockets, declare bank shots, and engage in psychological banter over the mic.",
     scoring: "+250 Aura for legally pocketing the 8-Ball to win the match.",
-    proTip: "In jump shots, airborne angular momentum is conserved: apply high backspin (Jump-Draw) so cloth friction brakes the ball upon touchdown to draw back into position!"
+    proTip: "For tight obstacles (2-8 in), use the Dart-Grip with an elevated tripod bridge (heel raised 4-6 in) and snap the wrist downward, freezing the tip instantly upon contact!"
   },
   "2048": {
     id: "2048",

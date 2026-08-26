@@ -1122,6 +1122,14 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
               <span className="text-emerald-400 font-bold block mb-0.5">22. 🪂 TOUCHDOWN DAMPENING &amp; POST-LANDING SPIN:</span>
               Micro-hops decay by ~50% per bounce. Airborne spin L = I&omega; is conserved in flight, engaging draw/follow/swerve on touchdown!
             </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">23. 🎯 DART-GRIP VS PENDULUM BIOMECHANICS:</span>
+              Dart-Grip (60°-85° wrist snap &amp; high tripod) for 2-8&quot; tight snookers; Pendulum (30°-55° elbow hinge) for long jumps with spin control!
+            </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">24. 🔬 PHENOLIC JUMP ENGINEERING &amp; DWELL TIME:</span>
+              Phenolic tips (95+ Shore D, e&approx;0.90) cut dwell time to &le; 1.8ms to prevent double-hits. Conical 14mm taper resists buckling.
+            </div>
           </div>
         )}
       </div>
