@@ -2,11 +2,11 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import AgoraRTC, {
-  useJoin,
-  useRemoteUsers,
-  useRemoteAudioTracks,
-  useRTCClient,
-} from "agora-rtc-react";
+  type IAgoraRTCClient,
+  type IMicrophoneAudioTrack,
+  type IRemoteAudioTrack,
+  type ILocalAudioTrack,
+} from "agora-rtc-sdk-ng";
 import { useAuth } from "@/app/components/AuthProvider";
 import { AGORA_APP_ID } from "@/lib/agora";
 import { Mic, MicOff, Volume2, VolumeX, Radio, Sparkles } from "lucide-react";
@@ -18,73 +18,39 @@ interface ArcadeVoiceChannelProps {
   processedStream?: MediaStream | null;
 }
 
-export default function ArcadeVoiceChannel({ matchId, isSpectator = false, processedStream }: ArcadeVoiceChannelProps) {
+export default function ArcadeVoiceChannel({
+  matchId,
+  isSpectator = false,
+  processedStream,
+}: ArcadeVoiceChannelProps) {
   const { user } = useAuth();
-  const [token, setToken] = useState<string | null>(null);
-  const [tokenReady, setTokenReady] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
   const [speakingUids, setSpeakingUids] = useState<Set<string>>(new Set());
-  const [error, setError] = useState<string | null>(null);
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
+  const [remoteCount, setRemoteCount] = useState(0);
 
-  const localTrackRef = useRef<any>(null);
-  const customTrackRef = useRef<any>(null);
-  const client = useRTCClient();
+  const clientRef = useRef<IAgoraRTCClient | null>(null);
+  const localTrackRef = useRef<IMicrophoneAudioTrack | ILocalAudioTrack | null>(null);
+  const remoteTracksRef = useRef<Map<string, IRemoteAudioTrack>>(new Map());
 
-  // 1. Fetch token with automatic fallback
+  // Join Channel & Manage RTC Lifecycle directly in useEffect
   useEffect(() => {
-    let isCancelled = false;
-    async function fetchToken() {
-      if (!user) return;
-      try {
-        const response = await fetch(`/api/agora/token?channel=${encodeURIComponent(matchId)}&uid=${encodeURIComponent(user.uid)}`);
-        if (response.ok) {
-          const data = await response.json();
-          if (!isCancelled) {
-            setToken(data.token || null);
-            setTokenReady(true);
-          }
-        } else {
-          if (!isCancelled) {
-            setToken(null);
-            setTokenReady(true);
-          }
-        }
-      } catch (err) {
-        console.warn("[ArcadeVoice] Token fetch fallback to App ID mode:", err);
-        if (!isCancelled) {
-          setToken(null);
-          setTokenReady(true);
-        }
-      }
-    }
-    fetchToken();
-    return () => {
-      isCancelled = true;
-    };
-  }, [matchId, user]);
+    if (typeof window === "undefined" || !user || !matchId) return;
 
-  // 2. Join Agora RTC channel
-  useJoin(
-    {
-      appid: AGORA_APP_ID,
-      channel: matchId,
-      token: token || null,
-      uid: user?.uid,
-    },
-    Boolean(user && tokenReady)
-  );
+    let isMounted = true;
+    const client = AgoraRTC.createClient({ codec: "vp8", mode: "rtc" });
+    clientRef.current = client;
 
-  // 3. Enable Volume Indicator
-  useEffect(() => {
-    if (!client) return;
+    // Enable Volume Indicator
     try {
       client.enableAudioVolumeIndicator();
-      const handleVolume = (volumes: Array<{ uid: string | number; level: number }>) => {
+      client.on("volume-indicator", (volumes) => {
+        if (!isMounted) return;
         const speaking = new Set<string>();
         volumes.forEach((v) => {
-          if (v.level > 8) {
-            if (v.uid === 0 && user?.uid) {
+          if (v.level > 10) {
+            if (v.uid === 0 && user.uid) {
               speaking.add(user.uid);
             } else {
               speaking.add(String(v.uid));
@@ -92,138 +58,138 @@ export default function ArcadeVoiceChannel({ matchId, isSpectator = false, proce
           }
         });
         setSpeakingUids(speaking);
-      };
-      client.on("volume-indicator", handleVolume);
-      return () => {
-        client.off("volume-indicator", handleVolume);
-      };
+      });
     } catch (e) {
       console.warn("[ArcadeVoice] Volume indicator error:", e);
     }
-  }, [client, user]);
 
-  // 4. Play remote audio tracks automatically & detect autoplay blocks
-  const remoteUsers = useRemoteUsers();
-  const { audioTracks } = useRemoteAudioTracks(remoteUsers);
-
-  useEffect(() => {
-    audioTracks.forEach((track) => {
-      try {
-        track.setVolume(100);
-        track.play();
-      } catch (e) {
-        console.warn("[ArcadeVoice] Autoplay blocked for remote track:", e);
-        setAutoplayBlocked(true);
+    // Handle Remote User Audio Publishing
+    client.on("user-published", async (remoteUser, mediaType) => {
+      if (mediaType === "audio") {
+        try {
+          await client.subscribe(remoteUser, mediaType);
+          if (remoteUser.audioTrack && isMounted) {
+            remoteTracksRef.current.set(String(remoteUser.uid), remoteUser.audioTrack);
+            remoteUser.audioTrack.setVolume(100);
+            try {
+              remoteUser.audioTrack.play();
+            } catch {
+              setAutoplayBlocked(true);
+            }
+            setRemoteCount(remoteTracksRef.current.size);
+          }
+        } catch (subErr) {
+          console.warn("[ArcadeVoice] Error subscribing to remote user:", subErr);
+        }
       }
     });
-    return () => {
-      audioTracks.forEach((track) => {
-        try { track.stop(); } catch {}
-      });
-    };
-  }, [audioTracks]);
 
-  // 5. Local Mic Publishing (Native Microphone or Processed Stream)
-  useEffect(() => {
-    if (!user || !tokenReady || !client) return;
+    client.on("user-unpublished", (remoteUser, mediaType) => {
+      if (mediaType === "audio") {
+        remoteTracksRef.current.delete(String(remoteUser.uid));
+        if (isMounted) {
+          setRemoteCount(remoteTracksRef.current.size);
+        }
+      }
+    });
 
-    let isActive = true;
+    client.on("user-left", (remoteUser) => {
+      remoteTracksRef.current.delete(String(remoteUser.uid));
+      if (isMounted) {
+        setRemoteCount(remoteTracksRef.current.size);
+      }
+    });
 
-    const setupMicrophone = async () => {
+    // Join and publish mic
+    const joinAndPublish = async () => {
       try {
-        // Clean up previous tracks
-        if (localTrackRef.current) {
-          try {
-            await client.unpublish(localTrackRef.current);
-            localTrackRef.current.close();
-            localTrackRef.current = null;
-          } catch {}
-        }
-        if (customTrackRef.current) {
-          try {
-            await client.unpublish(customTrackRef.current);
-            customTrackRef.current.close();
-            customTrackRef.current = null;
-          } catch {}
+        // Fetch Token
+        let token: string | null = null;
+        try {
+          const res = await fetch(
+            `/api/agora/token?channel=${encodeURIComponent(matchId)}&uid=${encodeURIComponent(user.uid)}`
+          );
+          if (res.ok) {
+            const data = await res.json();
+            token = data.token || null;
+          }
+        } catch {
+          token = null;
         }
 
-        // Spectators only listen to game voice without broadcasting
-        if (isSpectator) return;
+        if (!isMounted) return;
 
-        let trackToPublish: any = null;
+        // Join Agora RTC Channel
+        await client.join(AGORA_APP_ID, matchId, token || null, user.uid);
+        if (!isMounted) {
+          await client.leave();
+          return;
+        }
+        setIsConnected(true);
 
-        if (processedStream) {
-          const audioTrack = processedStream.getAudioTracks()[0];
-          if (audioTrack) {
-            const customTrack = AgoraRTC.createCustomAudioTrack({
-              mediaStreamTrack: audioTrack,
-            });
-            customTrackRef.current = customTrack;
-            trackToPublish = customTrack;
+        // Publish Local Microphone (if not spectator)
+        if (!isSpectator) {
+          try {
+            let track: IMicrophoneAudioTrack | ILocalAudioTrack;
+            if (processedStream && processedStream.getAudioTracks()[0]) {
+              track = AgoraRTC.createCustomAudioTrack({
+                mediaStreamTrack: processedStream.getAudioTracks()[0],
+              });
+            } else {
+              track = await AgoraRTC.createMicrophoneAudioTrack({
+                encoderConfig: "speech_standard",
+                AEC: true,
+                ANS: true,
+                AGC: true,
+              });
+            }
+
+            if (!isMounted) {
+              track.close();
+              return;
+            }
+
+            localTrackRef.current = track;
+            await track.setEnabled(!isMuted);
+            await client.publish(track);
+          } catch (micErr) {
+            console.warn("[ArcadeVoice] Microphone capture error (muted fallback):", micErr);
           }
         }
-
-        // Default to high-fidelity native mic track if no custom stream
-        if (!trackToPublish) {
-          const micTrack = await AgoraRTC.createMicrophoneAudioTrack({
-            encoderConfig: "speech_standard",
-            AEC: true,
-            ANS: true,
-            AGC: true,
-          });
-          localTrackRef.current = micTrack;
-          trackToPublish = micTrack;
-        }
-
-        if (isActive && trackToPublish) {
-          await trackToPublish.setEnabled(!isMuted);
-
-          if (client.connectionState === "CONNECTED") {
-            await client.publish(trackToPublish);
-          } else {
-            const onStateChange = async (curState: string) => {
-              if (curState === "CONNECTED" && isActive && trackToPublish) {
-                try {
-                  await client.publish(trackToPublish);
-                } catch {}
-              }
-            };
-            client.on("connection-state-change", onStateChange);
-          }
-        }
-      } catch (e: any) {
-        console.error("[ArcadeVoice] Failed to initialize microphone:", e);
-        setError("Mic permission needed");
+      } catch (joinErr) {
+        console.warn("[ArcadeVoice] Join channel error:", joinErr);
       }
     };
 
-    setupMicrophone();
+    joinAndPublish();
 
     return () => {
-      isActive = false;
+      isMounted = false;
       if (localTrackRef.current) {
         try {
-          client.unpublish(localTrackRef.current);
+          localTrackRef.current.stop();
           localTrackRef.current.close();
         } catch {}
         localTrackRef.current = null;
       }
-      if (customTrackRef.current) {
+      remoteTracksRef.current.forEach((track) => {
         try {
-          client.unpublish(customTrackRef.current);
-          customTrackRef.current.close();
+          track.stop();
         } catch {}
-        customTrackRef.current = null;
-      }
+      });
+      remoteTracksRef.current.clear();
+      try {
+        client.leave().catch(() => {});
+      } catch {}
+      setIsConnected(false);
     };
-  }, [processedStream, user, tokenReady, client]);
+  }, [matchId, user?.uid, isSpectator]);
 
-  // 6. Mic Mute / Unmute Toggle
+  // Handle Mute / Unmute
   const toggleMute = async () => {
     soundSynth.playSubtlePop();
     const nextMuted = !isMuted;
     setIsMuted(nextMuted);
-
     if (localTrackRef.current) {
       try {
         await localTrackRef.current.setEnabled(!nextMuted);
@@ -231,31 +197,21 @@ export default function ArcadeVoiceChannel({ matchId, isSpectator = false, proce
         console.warn("[ArcadeVoice] Error toggling mic track:", e);
       }
     }
-    if (customTrackRef.current) {
-      try {
-        await customTrackRef.current.setEnabled(!nextMuted);
-      } catch (e) {
-        console.warn("[ArcadeVoice] Error toggling custom track:", e);
-      }
-    }
   };
 
-  // 7. Autoplay Unlock Handler
   const handleUnlockAudio = () => {
-    soundSynth.playSubtlePop();
-    audioTracks.forEach((track) => {
+    remoteTracksRef.current.forEach((track) => {
       try {
-        track.setVolume(100);
         track.play();
       } catch {}
     });
     setAutoplayBlocked(false);
   };
 
-  const isMeSpeaking = user && speakingUids.has(user.uid);
+  const isSelfSpeaking = Boolean(user && speakingUids.has(user.uid));
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 font-mono text-white select-none">
       {/* Autoplay blocked banner */}
       {autoplayBlocked && (
         <button
@@ -269,38 +225,40 @@ export default function ArcadeVoiceChannel({ matchId, isSpectator = false, proce
       )}
 
       {/* Main Voice Bar */}
-      <div className="flex items-center justify-between gap-2 px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-lg text-xs font-mono select-none shadow-md">
+      <div className="flex items-center justify-between gap-2 px-3 py-2 bg-neutral-950 border border-neutral-800 rounded-xl text-xs select-none shadow-md">
         {/* Left: Status & Connected Count */}
         <div className="flex items-center gap-2">
           <div className="relative flex items-center justify-center">
             <span
               className={`w-2.5 h-2.5 rounded-full ${
-                isMeSpeaking
+                isSelfSpeaking
                   ? "bg-emerald-400 ring-4 ring-emerald-500/40 animate-pulse"
-                  : "bg-emerald-500"
+                  : isConnected
+                  ? "bg-emerald-500"
+                  : "bg-neutral-600"
               }`}
             />
           </div>
-          <span className="font-extrabold uppercase text-white tracking-wider">
+          <span className="font-black uppercase text-white tracking-wider">
             VOICE ARENA
           </span>
-          <span className="text-[10px] text-neutral-400 font-bold border border-neutral-800 bg-neutral-900 px-1.5 py-0.5 rounded">
-            {remoteUsers.length + 1} CONNECTED
+          <span className="text-[10px] text-neutral-400 font-bold border border-neutral-800 bg-neutral-900 px-2 py-0.5 rounded-md">
+            {remoteCount > 0 ? `${remoteCount + 1} LIVE IN VOICE` : isConnected ? "VOICE ACTIVE" : "TUNING IN..."}
           </span>
         </div>
 
         {/* Right: Mic Toggle Control / Spectator Badge */}
         <div className="flex items-center gap-2">
           {isSpectator ? (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-neutral-900 border border-neutral-700 text-neutral-300 text-[10px] font-bold uppercase rounded">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-neutral-900 border border-neutral-700 text-neutral-300 text-[10px] font-bold uppercase rounded-lg">
               <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-              <span>SPECTATOR AUDIO (LIVE)</span>
+              <span>SPECTATOR (LIVE)</span>
             </div>
           ) : (
             <button
               type="button"
               onClick={toggleMute}
-              className={`px-3 py-1 text-[11px] font-black uppercase rounded flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95 ${
+              className={`px-3 py-1 text-[11px] font-black uppercase rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95 ${
                 isMuted
                   ? "bg-red-950/80 border border-red-700 text-red-300 hover:bg-red-900"
                   : "bg-emerald-500 border border-emerald-400 text-black hover:bg-emerald-400"
@@ -309,12 +267,12 @@ export default function ArcadeVoiceChannel({ matchId, isSpectator = false, proce
               {isMuted ? (
                 <>
                   <MicOff className="w-3.5 h-3.5 text-red-300" />
-                  <span>[ MIC MUTED ]</span>
+                  <span>MIC MUTED</span>
                 </>
               ) : (
                 <>
                   <Mic className="w-3.5 h-3.5 text-black animate-pulse" />
-                  <span>[ MIC ON 🎙️ ]</span>
+                  <span>MIC ON 🎙️</span>
                 </>
               )}
             </button>

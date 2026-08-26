@@ -17,7 +17,6 @@ import {
   type ArcadeMatch,
   type ArcadeGameType,
 } from "@/lib/arcade";
-import AgoraRTC, { AgoraRTCProvider } from "agora-rtc-react";
 import MicrophoneSoundCheckModal from "@/app/components/MicrophoneSoundCheckModal";
 import ArcadeVoiceChannel from "@/app/components/arcade/ArcadeVoiceChannel";
 import AntakshariGame from "@/app/components/arcade/AntakshariGame";
@@ -1166,16 +1165,9 @@ function ArcadeContent() {
 }
 
 export default function ArcadePage() {
-  const rtcClient = useMemo(
-    () => AgoraRTC.createClient({ codec: "vp8", mode: "rtc" }),
-    []
-  );
-
   return (
     <Suspense fallback={<div className="min-h-screen bg-black text-white font-mono p-8 text-center text-xs">Loading Echo Club...</div>}>
-      <AgoraRTCProvider client={rtcClient}>
-        <ArcadeContent />
-      </AgoraRTCProvider>
+      <ArcadeContent />
     </Suspense>
   );
 }
