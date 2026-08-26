@@ -2207,22 +2207,36 @@ export async function joinArcadeMatch(
   if (!snap.exists()) throw new Error("Match not found");
   const match = snap.data() as ArcadeMatch;
 
-  const currentCount = Object.keys(match.players || {}).length;
-  if (currentCount >= match.maxPlayers && !match.players[user.uid]) {
+  const existingPlayers = { ...(match.players || {}) };
+  
+  // If match already contains this user, no-op
+  if (existingPlayers[user.uid]) {
+    return;
+  }
+
+  // If match is full, check if any bots are present to evict for the human friend
+  const botPlayerKey = Object.keys(existingPlayers).find(
+    (k) => existingPlayers[k].isBot || k.startsWith("bot_") || k.startsWith("ghost_")
+  );
+
+  if (botPlayerKey && Object.keys(existingPlayers).length >= match.maxPlayers) {
+    delete existingPlayers[botPlayerKey];
+  } else if (Object.keys(existingPlayers).length >= match.maxPlayers) {
     throw new Error("Match lobby is full");
   }
 
   let team: any;
   if (match.gameType === "ludo") {
-    const taken = Object.values(match.players || {}).map((p) => p.team);
+    const taken = Object.values(existingPlayers).map((p) => p.team);
     const available = ["RED", "GREEN", "BLUE", "YELLOW"] as const;
     team = available.find((t) => !taken.includes(t)) || "GREEN";
   } else if (match.gameType === "chess") {
     team = "BLACK";
   }
 
-  const updates: any = {
-    [`players.${user.uid}`]: cleanData({
+  const updatedPlayers = {
+    ...existingPlayers,
+    [user.uid]: cleanData({
       uid: user.uid,
       handle: user.handle,
       avatar: user.avatar || "",
@@ -2233,7 +2247,15 @@ export async function joinArcadeMatch(
       isBot: false,
       joinedAt: Date.now(),
     }),
-    status: currentCount + 1 >= 2 ? "PLAYING" : match.status,
+  };
+
+  const currentCount = Object.keys(updatedPlayers).length;
+
+  const updates: any = {
+    players: updatedPlayers,
+    status: currentCount >= 2 ? "PLAYING" : match.status,
+    mode: match.mode === "VS_COMPUTER" ? "MULTIPLAYER" : match.mode,
+    enableVoice: true,
     updatedAt: serverTimestamp(),
   };
 

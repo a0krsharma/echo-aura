@@ -161,7 +161,9 @@ function ArcadeContent() {
   const [soundCheckOpen, setSoundCheckOpen] = useState(false);
   const [ghostTimerSec, setGhostTimerSec] = useState<number | null>(null);
 
-  const rtcClient = useMemo(() => AgoraRTC.createClient({ codec: "vp8", mode: "rtc" }), []);
+  const rtcClient = useMemo(() => {
+    return AgoraRTC.createClient({ codec: "vp8", mode: "rtc" });
+  }, [activeMatchId]);
   const [rawMicStream, setRawMicStream] = useState<MediaStream | null>(null);
 
   // 1. Zero-Install Deep Links Engine (Under 2 seconds auto-mount)
