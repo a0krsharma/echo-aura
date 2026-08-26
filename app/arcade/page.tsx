@@ -98,7 +98,7 @@ const CLEAN_GAMES: MasterRankedGame[] = [
   // ── 🎲 Board & Tactical Strategy ──
   { id: "ludo", name: "Ludo 3D", category: "BOARD", icon: "🎲", description: "World-class 3D wooden board & dice" },
   { id: "carrom", name: "Championship Carrom", category: "PHYSICS", icon: "⚪", description: "19-piece tournament rack with real physics" },
-  { id: "pool", name: "8-Ball Pool Pro", category: "PHYSICS", icon: "🎱", description: "3D green velvet table & cue stick aiming" },
+  { id: "pool", name: "Pool (8-Ball, 9-Ball, 10-Ball, 14.1, 1-Pocket)", category: "PHYSICS", icon: "🎱", description: "Top 5 disciplines: 8-Ball, 9-Ball, 10-Ball, Straight Pool 14.1, and One Pocket" },
   { id: "glow_hockey", name: "Glow Hockey Pro", category: "PHYSICS", icon: "⚡", description: "Cyberpunk 2D air hockey with neon sparks" },
   { id: "chess", name: "Grandmaster Chess", category: "BOARD", icon: "♟️", description: "3D luxury walnut & Staunton piece chess" },
   { id: "connect4", name: "Connect 4 Arena", category: "BOARD", icon: "🔴", description: "3D upright arcade grid with gravity drop" },
