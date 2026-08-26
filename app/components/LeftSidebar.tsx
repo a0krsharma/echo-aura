@@ -46,7 +46,6 @@ export default function LeftSidebar() {
     { href: "/studio",         icon: Mic2,         label: "STUDIO" },
     { href: "/clash",          icon: Swords,       label: "STAGE" },
     { href: "/rooms",          icon: Users,        label: "ROOMS" },
-    { href: "/leaderboard",    icon: Trophy,       label: "LEADERBOARD" },
     { href: "/radar",          icon: Compass,      label: "RADAR" },
     { href: "/frequency-plus", icon: Headphones,   label: "FREQUENCY+" },
   ] as const;

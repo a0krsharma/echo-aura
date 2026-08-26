@@ -622,9 +622,11 @@ function ArcadeContent() {
               <button
                 type="button"
                 onClick={() => setTournamentModalOpen(true)}
-                className="px-2.5 sm:px-3 py-1.5 border border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-neutral-500 hover:text-white font-bold text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer rounded-lg shadow-sm"
+                className="px-2.5 sm:px-3 py-1.5 border border-amber-500/50 bg-amber-950/30 text-amber-300 hover:border-amber-400 hover:bg-amber-900/50 font-bold text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer rounded-lg shadow-sm"
+                title="Tournament Bracket & Arena Matches"
               >
-                <span className="hidden md:inline">BRACKET</span>
+                <Trophy className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden md:inline">TOURNAMENT</span>
               </button>
 
               <button
