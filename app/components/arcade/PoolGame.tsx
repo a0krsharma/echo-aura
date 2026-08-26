@@ -1106,6 +1106,14 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
               <span className="text-emerald-400 font-bold block mb-0.5">18. 🎯 PIQUÉ (VERTICAL MASSÉ &amp; HOOK ESCAPES):</span>
               60°-85° cue elevation dart strike imparts heavy rotation with low translation, curving around snookers via cloth friction!
             </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">19. ⚖️ WPA TOURNAMENT JUMP &amp; FOUL LAWS:</span>
+              Downward compression on top hemisphere only (Rule 6.7, cue &ge; 40 in). Shovel/scoop under equator is an automatic foul!
+            </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">20. 📹 REFEREE FROZEN-BALL &amp; VAR PROTOCOL:</span>
+              Gap &lt; 5mm requires &ge; 45° elevation or 90° tangent cut to avoid double-hit foul. 120-1000 fps high-speed VAR review standard.
+            </div>
           </div>
         )}
       </div>

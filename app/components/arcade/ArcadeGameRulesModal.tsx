@@ -596,11 +596,11 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
       "TURN CONTINUATION & PUSH-OUT: Your turn continues as long as you legally pocket assigned balls. An optional Push-Out is allowed on Shot #2 immediately following the break.",
       "STANDARD FOULS & BALL-IN-HAND: Scratching the cue ball, hitting wrong suit first, or failing to drive a ball to a cushion yields Ball-in-Hand anywhere on the table for the opponent.",
       "INSTANT LOSS CONDITIONS: Pocketing the 8-ball while scratching/fouling, or pocketing the 8-ball before clearing all 7 of your suit balls results in an immediate frame loss.",
-      "DIAMOND & CAROM MASTER SUITE: 1-Rail midpoint, Plus-Two, Corner-5, Renverse, Grand Traverse, Umbrella, Butterfly, K-System, Dead-Ball stun, Five-Ball, Rojano, Sarda, Reverse Bricole, and Piqué vertical massé!"
+      "WPA & UMB REFEREE PROTOCOLS: Legal jumps require downward compression on top hemisphere (Rule 6.7, cue >= 40 in; scoop/shovel is a foul). Frozen balls & VAR reviews (1 challenge per match) adhere to international standards!"
     ],
     voiceGuide: "Call pockets, declare bank shots, and engage in psychological banter over the mic.",
     scoring: "+250 Aura for legally pocketing the 8-Ball to win the match.",
-    proTip: "Use the Piqué technique (60°-85° cue elevation dart strike) to impart high rotational spin with low forward roll, carving tight parabolic swerve curves around snookers!"
+    proTip: "On near-frozen balls (< 5mm gap), elevate cue >= 45° or cut at 90° to avoid an inevitable double-hit foul under official referee rules!"
   },
   "2048": {
     id: "2048",
