@@ -1,28 +1,52 @@
 "use client";
 
 /**
- * ECHO — The Terminal ( /terminal )
- * Settings as a command center. All toggles persist to Firestore.
- * [ ON ] / [ OFF ] — bracketed text is the only UI control.
+ * ECHO — The Terminal & Settings ( /terminal )
+ * Minimalist, neat, clean, and world-class command center.
+ * All toggles & preferences synchronize with Firestore.
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
-import { ArrowLeft, ChevronRight, Loader2, LogOut, Bookmark, Play, Pause, Trash2, Volume2, Mic, Activity, Zap, CheckCircle2 } from "lucide-react";
-import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import {
+  ArrowLeft,
+  ChevronRight,
+  Loader2,
+  LogOut,
+  Bookmark,
+  Play,
+  Pause,
+  Trash2,
+  Volume2,
+  Mic,
+  Activity,
+  Zap,
+  CheckCircle2,
+  Shield,
+  Sliders,
+  Bell,
+  Lock,
+  HelpCircle,
+  AlertTriangle,
+  Radio,
+  Sparkles,
+} from "lucide-react";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { getFirebaseAuth, getFirebaseDb } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { useAuth } from "@/app/components/AuthProvider";
 import { useRouter } from "next/navigation";
 import { getUserVaultedPosts, unvaultPost, type PostItem } from "@/lib/posts";
 import { getPlayableUrl } from "@/lib/cloudinary";
-import { type UserSettings as Settings, DEFAULT_SETTINGS, getVibeRead, updateVibeRead, analyzeVibeRead } from "@/lib/userDoc";
+import {
+  type UserSettings as Settings,
+  DEFAULT_SETTINGS,
+  getVibeRead,
+  updateVibeRead,
+  analyzeVibeRead,
+} from "@/lib/userDoc";
 
-
-// ─── Types ────────────────────────────────────────────────
-type ToggleState = boolean;
-
-// ─── Persist a single setting to Firestore ────────────────
+// ─── Persist setting to Firestore ─────────────────────────────
 async function persistSetting(uid: string, key: keyof Settings, value: any) {
   try {
     const db = getFirebaseDb();
@@ -37,147 +61,106 @@ async function persistSetting(uid: string, key: keyof Settings, value: any) {
   }
 }
 
-interface ToggleItemProps {
-  id: string; label: string; sub?: string;
-  value: ToggleState; onToggle: () => void; saving?: boolean;
-}
-interface NavItemProps {
-  label: string; sub?: string; href?: string;
-  onClick?: () => void; badge?: string | number;
-}
-
-// ═══════════════════════════════════════════════════════════
-// COMPONENT: SectionHeader
-// ═══════════════════════════════════════════════════════════
-function SectionHeader({ label }: { label: string }) {
-  return (
-    <p className="font-mono text-xs tracking-widest uppercase text-neutral-700 pt-10 pb-4 border-t border-neutral-900 first:border-t-0 first:pt-0">
-      // {label}
-    </p>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════
-// COMPONENT: ToggleItem  [ ON ] / [ OFF ]
-// ═══════════════════════════════════════════════════════════
-function ToggleItem({ id, label, sub, value, onToggle, saving }: ToggleItemProps) {
-  return (
-    <div className="flex items-center justify-between py-4 border-b border-neutral-900">
-      <div>
-        <p className="font-mono text-xs tracking-widest uppercase text-white">{label}</p>
-        {sub && <p className="font-mono text-xs text-neutral-700 tracking-widest mt-0.5">{sub}</p>}
-      </div>
-      <button
-        id={id}
-        onClick={onToggle}
-        disabled={saving}
-        className={`
-          font-mono text-xs tracking-widest uppercase px-3 py-1.5 border
-          transition-colors duration-150 cursor-pointer shrink-0 ml-4 flex items-center gap-1.5
-          ${value
-            ? "border-white text-white"
-            : "border-neutral-800 text-neutral-600 hover:border-neutral-600"
-          }
-          ${saving ? "opacity-50" : ""}
-        `}
-      >
-        {saving && <Loader2 size={9} className="animate-spin" />}
-        {value ? "[ ON ]" : "[ OFF ]"}
-      </button>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════
-// COMPONENT: NavItem
-// ═══════════════════════════════════════════════════════════
-function NavItem({ label, sub, href, onClick, badge }: NavItemProps) {
-  const inner = (
-    <div className="flex items-center justify-between py-4 border-b border-neutral-900 group cursor-pointer">
-      <div>
-        <p className="font-mono text-xs tracking-widest uppercase text-white group-hover:text-neutral-400 transition-colors">{label}</p>
-        {sub && <p className="font-mono text-xs text-neutral-700 tracking-widest mt-0.5">{sub}</p>}
-      </div>
-      <div className="flex items-center gap-3 ml-4">
-        {badge !== undefined && badge !== 0 && (
-          <span className="font-mono text-xs bg-white text-black px-1.5 py-0.5 tracking-widest">{badge}</span>
-        )}
-        <ChevronRight size={12} strokeWidth={1.5} className="text-neutral-700 group-hover:text-neutral-500 transition-colors" />
-      </div>
-    </div>
-  );
-  if (href) return <Link href={href}>{inner}</Link>;
-  return <button onClick={onClick} className="w-full text-left">{inner}</button>;
-}
-
-// ═══════════════════════════════════════════════════════════
-// COMPONENT: SelectItem — multi-choice setting
-// ═══════════════════════════════════════════════════════════
-function SelectItem({ label, sub, options, value, onChange }: {
-  label: string; sub?: string;
-  options: string[]; value: string;
-  onChange: (v: string) => void;
+// ─── Modern Minimalist Cyberpunk Toggle Switch ────────────────
+function ModernToggle({
+  label,
+  sub,
+  value,
+  onToggle,
+  saving,
+}: {
+  label: string;
+  sub?: string;
+  value: boolean;
+  onToggle: () => void;
+  saving?: boolean;
 }) {
   return (
-    <div className="py-4 border-b border-neutral-900">
-      <div className="flex items-start justify-between gap-4 mb-3">
-        <div>
-          <p className="font-mono text-xs tracking-widest uppercase text-white">{label}</p>
-          {sub && <p className="font-mono text-xs text-neutral-700 tracking-widest mt-0.5">{sub}</p>}
-        </div>
+    <div
+      onClick={onToggle}
+      className="flex items-center justify-between py-3.5 px-4 bg-neutral-950/60 hover:bg-neutral-950 border border-neutral-900 hover:border-neutral-800 rounded-2xl transition-all cursor-pointer select-none group"
+    >
+      <div className="space-y-0.5 pr-4">
+        <p className="font-mono text-xs font-bold uppercase text-white tracking-wide group-hover:text-amber-400 transition-colors">
+          {label}
+        </p>
+        {sub && <p className="text-[11px] text-neutral-500 font-sans">{sub}</p>}
       </div>
-      <div className="flex gap-2 flex-wrap">
-        {options.map((opt) => (
-          <button
-            key={opt}
-            onClick={() => onChange(opt)}
-            className={`
-              font-mono text-xs tracking-widest uppercase px-3 py-1.5 border
-              transition-colors duration-150 cursor-pointer
-              ${value === opt
-                ? "border-white text-white"
-                : "border-neutral-800 text-neutral-600 hover:border-neutral-600 hover:text-white"
-              }
-            `}
-          >
-            {value === opt ? `[ ${opt} ]` : opt}
-          </button>
-        ))}
+
+      <div className="flex items-center gap-2 shrink-0">
+        {saving && <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />}
+        <div
+          className={`w-11 h-6 rounded-full transition-colors relative flex items-center p-0.5 ${
+            value
+              ? "bg-white shadow-[0_0_12px_rgba(255,255,255,0.3)]"
+              : "bg-neutral-900 border border-neutral-800"
+          }`}
+        >
+          <div
+            className={`w-5 h-5 rounded-full transition-transform ${
+              value ? "translate-x-5 bg-black" : "translate-x-0 bg-neutral-600"
+            }`}
+          />
+        </div>
       </div>
     </div>
   );
 }
 
-// ═══════════════════════════════════════════════════════════
-// COMPONENT: SubView — wraps inner sections with back nav
-// ═══════════════════════════════════════════════════════════
-function SubView({ title, onBack, children }: { title: string; onBack: () => void; children: React.ReactNode }) {
+// ─── Segmented Option Selector ────────────────────────────────
+function SegmentedSelect({
+  label,
+  sub,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  sub?: string;
+  options: { id: string; label: string }[];
+  value: string;
+  onChange: (val: string) => void;
+}) {
   return (
-    <div className="bg-black min-h-screen pb-24 md:pb-0">
-      <div className="md:hidden flex items-center justify-between px-5 pt-10 pb-6 border-b border-neutral-900">
-        <button onClick={onBack} className="text-neutral-600 hover:text-white transition-colors cursor-pointer">
-          <ArrowLeft size={16} strokeWidth={1.5} />
-        </button>
-        <span className="font-mono text-xs tracking-widest uppercase text-white">{title}</span>
-        <div className="w-4" />
+    <div className="p-4 bg-neutral-950/60 border border-neutral-900 rounded-2xl space-y-2.5">
+      <div>
+        <p className="font-mono text-xs font-bold uppercase text-white tracking-wide">{label}</p>
+        {sub && <p className="text-[11px] text-neutral-500 font-sans mt-0.5">{sub}</p>}
       </div>
-      <div className="max-w-xl mx-auto px-5 md:px-6 pt-8 md:pt-12">
-        <div className="hidden md:flex items-center gap-3 mb-8">
-          <button onClick={onBack} className="font-mono text-xs tracking-widest uppercase text-neutral-600 hover:text-white transition-colors cursor-pointer">
-            ← TERMINAL
-          </button>
-          <span className="text-neutral-800">/</span>
-          <span className="font-mono text-xs tracking-widest uppercase text-white">{title}</span>
-        </div>
-        {children}
+      <div className="flex items-center gap-1.5 p-1 bg-black rounded-xl border border-neutral-900 overflow-x-auto">
+        {options.map((opt) => {
+          const isSelected = value.toLowerCase() === opt.id.toLowerCase() || value === opt.label;
+          return (
+            <button
+              key={opt.id}
+              onClick={() => onChange(opt.id)}
+              className={`flex-1 py-1.5 px-3 rounded-lg font-mono text-[11px] font-bold uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer text-center ${
+                isSelected
+                  ? "bg-white text-black font-black shadow-sm"
+                  : "text-neutral-500 hover:text-neutral-300 hover:bg-neutral-900/50"
+              }`}
+            >
+              {opt.label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-// ═══════════════════════════════════════════════════════════
-// PAGE: The Terminal
-// ═══════════════════════════════════════════════════════════
+// ─── Section Header ───────────────────────────────────────────
+function SectionTitle({ icon: Icon, title }: { icon: any; title: string }) {
+  return (
+    <div className="flex items-center gap-2 pt-4 pb-1">
+      <Icon className="w-3.5 h-3.5 text-neutral-500" />
+      <span className="font-mono text-xs font-black uppercase tracking-widest text-neutral-400">
+        {title}
+      </span>
+    </div>
+  );
+}
+
 export default function TerminalPage() {
   const { user } = useAuth();
   const router = useRouter();
@@ -206,9 +189,11 @@ export default function TerminalPage() {
   const [analysisCountdown, setAnalysisCountdown] = useState(0);
   const [analysisStatus, setAnalysisStatus] = useState<string | null>(null);
 
-  // ── Load settings, Vault, and Vibe Read from Firestore on mount ───────────────
   useEffect(() => {
-    if (!user?.uid) { setLoading(false); return; }
+    if (!user?.uid) {
+      setLoading(false);
+      return;
+    }
     const load = async () => {
       try {
         const db = getFirebaseDb();
@@ -231,12 +216,11 @@ export default function TerminalPage() {
     load();
   }, [user?.uid]);
 
-  // ── Live DSP Pitch & Audio Biometrics Analyzer ────────────
   const handleRunVibeAnalysis = async () => {
     if (!user?.uid) return;
     try {
       setIsAnalyzingPitch(true);
-      setAnalysisStatus("LISTENING TO AUDIO FREQUENCY (5S)...");
+      setAnalysisStatus("LISTENING TO AUDIO (5S)...");
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
       const chunks: BlobPart[] = [];
@@ -259,7 +243,7 @@ export default function TerminalPage() {
       mediaRecorder.stop();
       stream.getTracks().forEach((t) => t.stop());
 
-      setAnalysisStatus("COMPUTING DSP PITCH & HARMONICS...");
+      setAnalysisStatus("COMPUTING DSP HARMONICS...");
 
       await new Promise<void>((resolve) => {
         mediaRecorder.onstop = async () => {
@@ -267,14 +251,14 @@ export default function TerminalPage() {
           const result = await analyzeVibeRead(blob);
           await updateVibeRead(user.uid, result);
           setVibeRead(result);
-          setAnalysisStatus("DSP PITCH ANALYSIS COMPLETE!");
+          setAnalysisStatus("CALIBRATION COMPLETE!");
           setTimeout(() => setAnalysisStatus(null), 3000);
           resolve();
         };
       });
     } catch (err: any) {
       console.error("Vibe analysis failed:", err);
-      setAnalysisStatus("MIC ACCESS REQUIRED FOR PITCH ANALYSIS");
+      setAnalysisStatus("MIC ACCESS REQUIRED");
       setTimeout(() => setAnalysisStatus(null), 3000);
     } finally {
       setIsAnalyzingPitch(false);
@@ -282,26 +266,29 @@ export default function TerminalPage() {
     }
   };
 
-  // ── Generic toggle handler — updates state + Firestore ──
-  const toggle = useCallback(<K extends keyof Settings>(key: K) => {
-    if (!user?.uid) return;
-    setSavingKey(key);
-    setSettings(prev => {
-      const next = { ...prev, [key]: !prev[key] };
-      persistSetting(user.uid, key, next[key]).finally(() => setSavingKey(null));
-      return next;
-    });
-  }, [user?.uid]);
+  const toggle = useCallback(
+    <K extends keyof Settings>(key: K) => {
+      if (!user?.uid) return;
+      setSavingKey(key);
+      setSettings((prev) => {
+        const next = { ...prev, [key]: !prev[key] };
+        persistSetting(user.uid, key, next[key]).finally(() => setSavingKey(null));
+        return next;
+      });
+    },
+    [user?.uid]
+  );
 
-  // ── Generic select handler ───────────────────────────────
-  const select = useCallback(<K extends keyof Settings>(key: K, value: string) => {
-    if (!user?.uid) return;
-    setSavingKey(key);
-    setSettings(prev => ({ ...prev, [key]: value }));
-    persistSetting(user.uid, key, value).finally(() => setSavingKey(null));
-  }, [user?.uid]);
+  const select = useCallback(
+    <K extends keyof Settings>(key: K, value: string) => {
+      if (!user?.uid) return;
+      setSavingKey(key);
+      setSettings((prev) => ({ ...prev, [key]: value }));
+      persistSetting(user.uid, key, value).finally(() => setSavingKey(null));
+    },
+    [user?.uid]
+  );
 
-  // ── Sign out ─────────────────────────────────────────────
   const handleSignOut = async () => {
     try {
       const auth = getFirebaseAuth();
@@ -315,95 +302,20 @@ export default function TerminalPage() {
   if (loading) {
     return (
       <div className="bg-black min-h-screen flex items-center justify-center">
-        <p className="font-mono text-xs tracking-widest text-neutral-700 animate-pulse">// LOADING SETTINGS...</p>
+        <Loader2 className="w-6 h-6 animate-spin text-neutral-500" />
       </div>
     );
   }
 
-  // ── PINGS sub-view ───────────────────────────────────────
-  if (view === "pings") return (
-    <SubView title="PINGS" onBack={() => setView("main")}>
-      <ToggleItem id="ping-pulses"  label="NEW PULSES ON YOUR ECHOES"  sub="someone vibed to you"         value={settings.pingPulses}  onToggle={() => toggle("pingPulses")}  saving={savingKey === "pingPulses"} />
-      <ToggleItem id="ping-reverbs" label="NEW [ REPLIES ] / YAPS"      sub="someone dropped a reply"      value={settings.pingReverbs} onToggle={() => toggle("pingReverbs")} saving={savingKey === "pingReverbs"} />
-      <ToggleItem id="ping-fire"    label="YOU'RE ON FIRE"              sub="when your echo goes viral"    value={settings.pingOnFire}  onToggle={() => toggle("pingOnFire")}  saving={savingKey === "pingOnFire"} />
-      <ToggleItem id="ping-lockins" label="NEW [ ORBIT ]"               sub="someone locked in with you"   value={settings.pingLockIns} onToggle={() => toggle("pingLockIns")} saving={savingKey === "pingLockIns"} />
-      <ToggleItem id="ping-stage"   label="STAGE INVITES"               sub="clash / battle requests"      value={settings.pingStage}   onToggle={() => toggle("pingStage")}   saving={savingKey === "pingStage"} />
-    </SubView>
-  );
-
-  // ── HIDDEN WORDS sub-view ────────────────────────────────
-  if (view === "hidden") {
-    const handleAddWord = async () => {
-      if (!newWord.trim() || !user?.uid) return;
-      const word = newWord.trim().toUpperCase();
-      const current = settings.hiddenWords || [];
-      if (current.includes(word)) return;
-      
-      const nextWords = [...current, word];
-      setSettings(prev => ({ ...prev, hiddenWords: nextWords }));
-      setNewWord("");
-      await persistSetting(user.uid, "hiddenWords", nextWords);
-    };
-
-    const handleRemoveWord = async (wordToRemove: string) => {
-      if (!user?.uid) return;
-      const current = settings.hiddenWords || [];
-      const nextWords = current.filter(w => w !== wordToRemove);
-      setSettings(prev => ({ ...prev, hiddenWords: nextWords }));
-      await persistSetting(user.uid, "hiddenWords", nextWords);
-    };
-
-    return (
-      <SubView title="HIDDEN WORDS" onBack={() => setView("main")}>
-        <p className="font-mono text-xs text-neutral-700 tracking-widest mb-8">
-          [ REPLIES ] CONTAINING THESE WORDS WILL BE HIDDEN FROM YOU
-        </p>
-        <div className="border-b border-neutral-900 pb-4 mb-6 flex items-center">
-          <input
-            type="text"
-            value={newWord}
-            onChange={(e) => setNewWord(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") handleAddWord(); }}
-            placeholder="add a word or phrase..."
-            className="w-full bg-transparent outline-none font-mono text-xs tracking-widest uppercase text-white placeholder:text-neutral-800 placeholder:normal-case placeholder:tracking-normal"
-          />
-          <button onClick={handleAddWord} className="font-mono text-xs tracking-widest uppercase text-neutral-500 hover:text-white px-3 py-1.5 border border-neutral-800 hover:border-white transition-colors cursor-pointer shrink-0">
-            [ ADD ]
-          </button>
-        </div>
-        
-        {(!settings.hiddenWords || settings.hiddenWords.length === 0) ? (
-          <p className="font-mono text-xs text-neutral-700 tracking-widest">NO HIDDEN WORDS YET</p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {settings.hiddenWords.map((word) => (
-              <button
-                key={word}
-                onClick={() => handleRemoveWord(word)}
-                className="font-mono text-xs tracking-widest uppercase px-3 py-1.5 border border-neutral-800 text-neutral-400 hover:border-red-900 hover:text-red-500 transition-colors cursor-pointer flex items-center gap-2"
-              >
-                {word} <span className="text-[10px]">✕</span>
-              </button>
-            ))}
-          </div>
-        )}
-      </SubView>
-    );
-  }
-
-  // ── VAULT sub-view ───────────────────────────────────────
+  // ── VAULT SUB-VIEW ──────────────────────────────────────────
   if (view === "vault") {
     const handleTogglePlay = (postId: string, rawUrl: string) => {
       const playable = getPlayableUrl(rawUrl);
       if (playingPostId === postId) {
-        if (audioPlayerRef.current) {
-          audioPlayerRef.current.pause();
-        }
+        if (audioPlayerRef.current) audioPlayerRef.current.pause();
         setPlayingPostId(null);
       } else {
-        if (audioPlayerRef.current) {
-          audioPlayerRef.current.pause();
-        }
+        if (audioPlayerRef.current) audioPlayerRef.current.pause();
         const audio = new Audio(playable);
         audio.onended = () => setPlayingPostId(null);
         audioPlayerRef.current = audio;
@@ -423,61 +335,70 @@ export default function TerminalPage() {
     };
 
     return (
-      <SubView title="SAVED VAULT" onBack={() => {
-        if (audioPlayerRef.current) audioPlayerRef.current.pause();
-        setPlayingPostId(null);
-        setView("main");
-      }}>
-        <div className="space-y-4">
-          <p className="font-mono text-xs text-neutral-500 tracking-widest uppercase">
-            // BOOKMARKED AUDIO CLIPS ({vaultPosts.length})
-          </p>
+      <div className="bg-black min-h-screen text-white font-mono selection:bg-amber-500/30 pb-24">
+        <header className="sticky top-0 z-30 bg-black/90 backdrop-blur border-b border-neutral-900 px-4 py-3 flex items-center justify-between">
+          <button
+            onClick={() => {
+              if (audioPlayerRef.current) audioPlayerRef.current.pause();
+              setPlayingPostId(null);
+              setView("main");
+            }}
+            className="flex items-center gap-2 text-xs font-bold uppercase text-neutral-400 hover:text-white transition-colors cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>TERMINAL</span>
+          </button>
+          <span className="font-bold text-xs uppercase tracking-wider text-white">
+            SAVED ECHO VAULT ({vaultPosts.length})
+          </span>
+          <div className="w-6" />
+        </header>
 
+        <main className="max-w-xl mx-auto px-4 py-6 space-y-4">
           {vaultPosts.length === 0 ? (
-            <div className="py-16 text-center space-y-3 border border-dashed border-neutral-900">
-              <Bookmark className="w-6 h-6 text-neutral-700 mx-auto" />
-              <p className="font-mono text-neutral-400 text-xs uppercase tracking-wider">
-                YOUR VAULT IS EMPTY
-              </p>
-              <p className="font-mono text-[10px] text-neutral-700 uppercase tracking-widest">
-                Bookmark echoes from Frequency or Waves to save them here.
+            <div className="py-16 text-center space-y-3 border border-dashed border-neutral-800 rounded-3xl p-6">
+              <Bookmark className="w-8 h-8 text-neutral-700 mx-auto" />
+              <p className="font-bold text-xs uppercase text-neutral-400">YOUR VAULT IS EMPTY</p>
+              <p className="text-[11px] text-neutral-600 font-sans">
+                Bookmark audio snippets from Frequency or Waves to access them here.
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-neutral-900">
+            <div className="space-y-3">
               {vaultPosts.map((post) => (
-                <div key={post.id} className="py-4 space-y-2">
+                <div
+                  key={post.id}
+                  className="p-4 bg-neutral-950/80 border border-neutral-900 rounded-2xl space-y-3"
+                >
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-bold text-white">
+                    <span className="font-black text-xs text-white">
                       {post.authorHandle || "@ANON"}
                     </span>
                     <button
                       onClick={() => handleUnvault(post.id)}
-                      className="font-mono text-[10px] text-neutral-500 hover:text-red-400 uppercase tracking-widest flex items-center gap-1 cursor-pointer"
+                      className="text-[10px] text-neutral-500 hover:text-red-400 uppercase font-bold flex items-center gap-1 cursor-pointer transition-colors"
                     >
-                      <Trash2 className="w-3 h-3" />
-                      <span>[ REMOVE ]</span>
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>REMOVE</span>
                     </button>
                   </div>
-
-                  <p className="font-mono text-xs text-neutral-300">
-                    "{post.caption}"
+                  <p className="text-xs text-neutral-300 font-sans leading-relaxed">
+                    &ldquo;{post.caption}&rdquo;
                   </p>
-
                   {post.audioUrl && (
                     <div className="flex items-center gap-3 pt-1">
                       <button
                         onClick={() => handleTogglePlay(post.id, post.audioUrl)}
-                        className={`font-mono text-xs px-3 py-1 border uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer ${
+                        className={`px-3 py-1.5 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer ${
                           playingPostId === post.id
-                            ? "border-white bg-white text-black font-bold"
-                            : "border-neutral-700 text-neutral-300 hover:border-white hover:text-white"
+                            ? "bg-white text-black shadow-md"
+                            : "bg-neutral-900 text-white hover:bg-neutral-800"
                         }`}
                       >
-                        {playingPostId === post.id ? <Pause size={10} /> : <Play size={10} />}
+                        {playingPostId === post.id ? <Pause size={12} /> : <Play size={12} />}
                         <span>{playingPostId === post.id ? "PAUSE" : "PLAY VOICE"}</span>
                       </button>
-                      <span className="font-mono text-[10px] text-neutral-600">
+                      <span className="text-[11px] text-neutral-500 tabular-nums">
                         {post.duration || `${post.durationSec || 15}s`}
                       </span>
                     </div>
@@ -486,420 +407,606 @@ export default function TerminalPage() {
               ))}
             </div>
           )}
-        </div>
-      </SubView>
+        </main>
+      </div>
     );
   }
 
-  // ── VIBE READ BIOMETRICS sub-view ───────────────────────
+  // ── VOCAL BIOMETRICS SUB-VIEW ───────────────────────────────
   if (view === "vibe") {
     return (
-      <SubView title="AUDIO BIOMETRICS" onBack={() => setView("main")}>
-        <div className="space-y-6">
-          <p className="font-mono text-xs text-neutral-400 tracking-widest uppercase">
-            // [ LIVE VIBE_READ ] — VOCAL FREQUENCY DSP BIOMETRICS
-          </p>
+      <div className="bg-black min-h-screen text-white font-mono selection:bg-amber-500/30 pb-24">
+        <header className="sticky top-0 z-30 bg-black/90 backdrop-blur border-b border-neutral-900 px-4 py-3 flex items-center justify-between">
+          <button
+            onClick={() => setView("main")}
+            className="flex items-center gap-2 text-xs font-bold uppercase text-neutral-400 hover:text-white transition-colors cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>TERMINAL</span>
+          </button>
+          <span className="font-bold text-xs uppercase tracking-wider text-white">
+            AUDIO BIOMETRICS
+          </span>
+          <div className="w-6" />
+        </header>
 
-          <p className="font-mono text-xs text-neutral-600 leading-relaxed">
-            YOUR VIBE READ IS COMPUTED ALGORITHMICALLY FROM YOUR VOCAL HARMONICS, PITCH ZERO-CROSSING RATE, RMS ENERGY POWER, AND SIGNAL-TO-NOISE RATIO.
-          </p>
+        <main className="max-w-xl mx-auto px-4 py-6 space-y-6">
+          <div className="p-4 bg-neutral-950 border border-neutral-900 rounded-3xl space-y-2">
+            <p className="text-xs font-black uppercase text-white flex items-center gap-2">
+              <Activity className="w-4 h-4 text-emerald-400" />
+              <span>LIVE VIBE READ BIOMETRICS</span>
+            </p>
+            <p className="text-xs text-neutral-400 font-sans leading-relaxed">
+              Vibe Read is calculated from harmonic pitch resonance, cadence zero-crossing rate, RMS
+              energy power, and signal-to-noise ratio.
+            </p>
+          </div>
 
-          {/* Analysis Status / Countdown Banner */}
           {analysisStatus && (
-            <div className="p-3 border border-white bg-neutral-950 font-mono text-xs text-white tracking-wider flex items-center justify-between animate-pulse">
+            <div className="p-3.5 bg-neutral-950 border border-emerald-500 text-emerald-400 text-xs font-bold uppercase rounded-2xl flex items-center justify-between animate-pulse">
               <span>{analysisStatus}</span>
-              {analysisCountdown > 0 && <span className="font-bold text-base">{analysisCountdown}S</span>}
+              {analysisCountdown > 0 && <span className="text-sm font-black">{analysisCountdown}S</span>}
             </div>
           )}
 
-          {/* Biometric Meters */}
-          {!vibeRead ? (
-            <div className="p-6 border border-dashed border-neutral-900 text-center space-y-3">
-              <Activity className="w-8 h-8 text-neutral-700 mx-auto" />
-              <p className="font-mono text-xs text-neutral-400 uppercase tracking-wider">
-                NO VOCAL BIOMETRICS ANALYZED YET
-              </p>
-              <p className="font-mono text-[10px] text-neutral-600 uppercase tracking-widest">
-                Record a 5-second voice sample below to calibrate your live pitch & frequency.
-              </p>
-            </div>
-          ) : (
-            <div className="border border-neutral-900 bg-neutral-950/60 p-5 space-y-4">
+          {vibeRead ? (
+            <div className="p-5 bg-neutral-950 border border-neutral-900 rounded-3xl space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                {/* Pitch */}
-                <div className="space-y-1">
-                  <div className="flex justify-between font-mono text-[10px] uppercase">
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-[11px] uppercase">
                     <span className="text-neutral-500">PITCH (FREQ)</span>
                     <span className="text-white font-bold tabular-nums">{vibeRead.pitch}%</span>
                   </div>
                   <div className="h-2 bg-neutral-900 rounded-full overflow-hidden">
-                    <div className="h-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.4)]" style={{ width: `${vibeRead.pitch}%` }} />
+                    <div
+                      className="h-full bg-emerald-400 rounded-full"
+                      style={{ width: `${vibeRead.pitch}%` }}
+                    />
                   </div>
                 </div>
-
-                {/* Tempo */}
-                <div className="space-y-1">
-                  <div className="flex justify-between font-mono text-[10px] uppercase">
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-[11px] uppercase">
                     <span className="text-neutral-500">TEMPO (CADENCE)</span>
                     <span className="text-white font-bold tabular-nums">{vibeRead.tempo}%</span>
                   </div>
                   <div className="h-2 bg-neutral-900 rounded-full overflow-hidden">
-                    <div className="h-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.4)]" style={{ width: `${vibeRead.tempo}%` }} />
+                    <div
+                      className="h-full bg-cyan-400 rounded-full"
+                      style={{ width: `${vibeRead.tempo}%` }}
+                    />
                   </div>
                 </div>
-
-                {/* Energy */}
-                <div className="space-y-1">
-                  <div className="flex justify-between font-mono text-[10px] uppercase">
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-[11px] uppercase">
                     <span className="text-neutral-500">ENERGY (RMS)</span>
                     <span className="text-white font-bold tabular-nums">{vibeRead.energy}%</span>
                   </div>
                   <div className="h-2 bg-neutral-900 rounded-full overflow-hidden">
-                    <div className="h-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.4)]" style={{ width: `${vibeRead.energy}%` }} />
+                    <div
+                      className="h-full bg-amber-400 rounded-full"
+                      style={{ width: `${vibeRead.energy}%` }}
+                    />
                   </div>
                 </div>
-
-                {/* Clarity */}
-                <div className="space-y-1">
-                  <div className="flex justify-between font-mono text-[10px] uppercase">
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-[11px] uppercase">
                     <span className="text-neutral-500">CLARITY (SNR)</span>
                     <span className="text-white font-bold tabular-nums">{vibeRead.clarity}%</span>
                   </div>
                   <div className="h-2 bg-neutral-900 rounded-full overflow-hidden">
-                    <div className="h-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.4)]" style={{ width: `${vibeRead.clarity}%` }} />
+                    <div
+                      className="h-full bg-purple-400 rounded-full"
+                      style={{ width: `${vibeRead.clarity}%` }}
+                    />
                   </div>
                 </div>
               </div>
             </div>
+          ) : (
+            <div className="p-8 border border-dashed border-neutral-800 rounded-3xl text-center space-y-2">
+              <Activity className="w-8 h-8 text-neutral-700 mx-auto" />
+              <p className="font-bold text-xs uppercase text-neutral-400">NO BIOMETRICS YET</p>
+              <p className="text-[11px] text-neutral-600 font-sans">
+                Record a 5-second sample to compute your vocal frequency.
+              </p>
+            </div>
           )}
 
-          {/* Action button */}
           <button
             onClick={handleRunVibeAnalysis}
             disabled={isAnalyzingPitch}
-            className="w-full py-3.5 px-4 border border-white bg-white text-black font-mono text-xs font-bold tracking-widest uppercase hover:bg-neutral-200 transition-colors cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full py-3 px-4 bg-white hover:bg-neutral-200 text-black font-black text-xs uppercase tracking-widest rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg disabled:opacity-50"
           >
             {isAnalyzingPitch ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>ANALYZING PITCH ({analysisCountdown}S)...</span>
+                <span>CALIBRATING ({analysisCountdown}S)...</span>
               </>
             ) : (
               <>
                 <Mic className="w-4 h-4" />
-                <span>[ 🎙️ ANALYZE LIVE VOCAL PITCH ]</span>
+                <span>ANALYZE LIVE VOCAL PITCH 🎙️</span>
               </>
             )}
           </button>
-        </div>
-      </SubView>
+        </main>
+      </div>
     );
   }
 
-  // ── MAIN TERMINAL VIEW ──────────────────────────────────
-  return (
-    <div className="bg-black min-h-screen pb-24 md:pb-12">
+  // ── PINGS SUB-VIEW ──────────────────────────────────────────
+  if (view === "pings") {
+    return (
+      <div className="bg-black min-h-screen text-white font-mono selection:bg-amber-500/30 pb-24">
+        <header className="sticky top-0 z-30 bg-black/90 backdrop-blur border-b border-neutral-900 px-4 py-3 flex items-center justify-between">
+          <button
+            onClick={() => setView("main")}
+            className="flex items-center gap-2 text-xs font-bold uppercase text-neutral-400 hover:text-white transition-colors cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>TERMINAL</span>
+          </button>
+          <span className="font-bold text-xs uppercase tracking-wider text-white">
+            NOTIFICATION PINGS
+          </span>
+          <div className="w-6" />
+        </header>
 
-      {/* Top Bar with Back Navigation for Mobile & Desktop */}
-      <div className="sticky top-0 z-30 bg-black/90 backdrop-blur border-b border-neutral-900 px-5 md:px-8 py-4 flex items-center justify-between">
+        <main className="max-w-xl mx-auto px-4 py-6 space-y-3">
+          <ModernToggle
+            label="NEW PULSES ON ECHOES"
+            sub="Notify when someone pulses your voice drops"
+            value={settings.pingPulses}
+            onToggle={() => toggle("pingPulses")}
+            saving={savingKey === "pingPulses"}
+          />
+          <ModernToggle
+            label="NEW REVERB REPLIES"
+            sub="Notify when someone drops a voice reply"
+            value={settings.pingReverbs}
+            onToggle={() => toggle("pingReverbs")}
+            saving={savingKey === "pingReverbs"}
+          />
+          <ModernToggle
+            label="VIRAL ECHO ALERTS"
+            sub="Notify when your voice reaches trending orbit"
+            value={settings.pingOnFire}
+            onToggle={() => toggle("pingOnFire")}
+            saving={savingKey === "pingOnFire"}
+          />
+          <ModernToggle
+            label="NEW ORBITERS"
+            sub="Notify when someone follows/orbits your profile"
+            value={settings.pingLockIns}
+            onToggle={() => toggle("pingLockIns")}
+            saving={savingKey === "pingLockIns"}
+          />
+          <ModernToggle
+            label="STAGE CLASH INVITES"
+            sub="Notify for live stage battles and debate challenges"
+            value={settings.pingStage}
+            onToggle={() => toggle("pingStage")}
+            saving={savingKey === "pingStage"}
+          />
+        </main>
+      </div>
+    );
+  }
+
+  // ── HIDDEN WORDS SUB-VIEW ───────────────────────────────────
+  if (view === "hidden") {
+    const handleAddWord = async () => {
+      if (!newWord.trim() || !user?.uid) return;
+      const word = newWord.trim().toUpperCase();
+      const current = settings.hiddenWords || [];
+      if (current.includes(word)) return;
+      const nextWords = [...current, word];
+      setSettings((prev) => ({ ...prev, hiddenWords: nextWords }));
+      setNewWord("");
+      await persistSetting(user.uid, "hiddenWords", nextWords);
+    };
+
+    const handleRemoveWord = async (wordToRemove: string) => {
+      if (!user?.uid) return;
+      const current = settings.hiddenWords || [];
+      const nextWords = current.filter((w) => w !== wordToRemove);
+      setSettings((prev) => ({ ...prev, hiddenWords: nextWords }));
+      await persistSetting(user.uid, "hiddenWords", nextWords);
+    };
+
+    return (
+      <div className="bg-black min-h-screen text-white font-mono selection:bg-amber-500/30 pb-24">
+        <header className="sticky top-0 z-30 bg-black/90 backdrop-blur border-b border-neutral-900 px-4 py-3 flex items-center justify-between">
+          <button
+            onClick={() => setView("main")}
+            className="flex items-center gap-2 text-xs font-bold uppercase text-neutral-400 hover:text-white transition-colors cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>TERMINAL</span>
+          </button>
+          <span className="font-bold text-xs uppercase tracking-wider text-white">HIDDEN WORDS</span>
+          <div className="w-6" />
+        </header>
+
+        <main className="max-w-xl mx-auto px-4 py-6 space-y-4">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newWord}
+              onChange={(e) => setNewWord(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleAddWord();
+              }}
+              placeholder="Enter word to filter..."
+              className="flex-1 bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-xs font-mono text-white placeholder-neutral-600 focus:outline-none focus:border-white uppercase"
+            />
+            <button
+              onClick={handleAddWord}
+              className="px-4 py-2 bg-white text-black font-black text-xs uppercase rounded-xl hover:bg-neutral-200 transition-colors cursor-pointer"
+            >
+              ADD
+            </button>
+          </div>
+
+          <div className="flex flex-wrap gap-2 pt-2">
+            {(!settings.hiddenWords || settings.hiddenWords.length === 0) ? (
+              <p className="text-xs text-neutral-600 font-sans">No hidden words added yet.</p>
+            ) : (
+              settings.hiddenWords.map((word) => (
+                <button
+                  key={word}
+                  onClick={() => handleRemoveWord(word)}
+                  className="px-3 py-1.5 bg-neutral-950 border border-neutral-800 rounded-xl text-xs font-bold text-neutral-300 hover:border-red-500 hover:text-red-400 transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>{word}</span>
+                  <span className="text-[10px] text-neutral-500">✕</span>
+                </button>
+              ))
+            )}
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // ── MAIN TERMINAL VIEW ──────────────────────────────────────
+  return (
+    <div className="min-h-screen bg-black text-white font-mono selection:bg-amber-500/30 pb-28">
+      {/* ── Minimal Sticky Navigation Header ── */}
+      <header className="sticky top-0 z-30 bg-black/90 backdrop-blur-md border-b border-neutral-900 px-4 py-3 sm:px-6 flex items-center justify-between">
         <button
           onClick={() => router.back()}
-          className="font-mono text-xs tracking-widest uppercase text-neutral-400 hover:text-white transition-colors cursor-pointer flex items-center gap-2"
+          className="p-2 border border-neutral-800 rounded-xl hover:border-white text-neutral-400 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
+          title="Return"
         >
-          <ArrowLeft size={16} strokeWidth={1.5} />
-          <span>[ ← BACK ]</span>
+          <ArrowLeft className="w-4 h-4" />
+          <span className="text-xs font-bold hidden sm:inline">BACK</span>
         </button>
-        <span className="font-mono text-xs tracking-widest uppercase text-white font-bold">
-          [ SYSTEM TERMINAL ]
-        </span>
-        <Link
-          href="/profile"
-          className="font-mono text-xs tracking-widest uppercase text-neutral-500 hover:text-white transition-colors cursor-pointer"
-        >
-          [ PROFILE ]
-        </Link>
-      </div>
 
-      <div className="max-w-xl mx-auto px-5 md:px-6 pt-6 md:pt-8">
-
-        {/* Terminal label */}
-        <p className="font-mono text-xs tracking-widest uppercase text-neutral-700 mb-8">
-          // SYSTEM: ECHO TERMINAL v1.0 • SYSTEM COMMAND CENTER
-        </p>
-
-        {/* ── YOUR IDENTITY ──────────────────────────────────── */}
-        <SectionHeader label="YOUR IDENTITY" />
-        <div className="py-5 border-b border-neutral-900">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-mono text-xs tracking-widest text-white">{user?.handle || "@ANON"}</p>
-              <p className="font-mono text-xs text-neutral-700 tracking-widest mt-0.5">
-                AURA: {(user as any)?.auraScore || 0} • {user?.email || "—"}
-              </p>
-            </div>
-            <button
-              onClick={handleSignOut}
-              className="flex items-center gap-1.5 font-mono text-xs tracking-widest uppercase text-neutral-500 hover:text-white border border-neutral-800 hover:border-white px-3 py-1.5 transition-colors cursor-pointer"
-            >
-              <LogOut size={10} /> SIGN OUT
-            </button>
-          </div>
+        <div className="text-center">
+          <h1 className="font-black text-sm uppercase tracking-widest text-white">
+            SETTINGS &amp; TERMINAL
+          </h1>
         </div>
 
-        {/* ── SAVED VAULT ─────────────────────────────────── */}
-        <SectionHeader label="SAVED ARCHIVE & VAULT" />
-        <NavItem
-          label="SAVED ECHO VAULT"
-          sub="access all your bookmarked audio clips & saved waves"
-          onClick={() => setView("vault")}
-          badge={vaultPosts.length > 0 ? `${vaultPosts.length}` : undefined}
-        />
+        <Link
+          href="/profile"
+          className="px-3 py-1.5 bg-neutral-950 border border-neutral-800 rounded-xl text-xs font-bold text-neutral-300 hover:text-white hover:border-neutral-600 transition-all"
+        >
+          PROFILE
+        </Link>
+      </header>
 
-        {/* ── AUDIO FREQUENCY BIOMETRICS: LIVE VIBE_READ ────── */}
-        <SectionHeader label="VOCAL FREQUENCY BIOMETRICS" />
-        <div className="py-4 border-b border-neutral-900 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-mono text-xs tracking-widest uppercase text-white">LIVE VIBE_READ</p>
-              <p className="font-mono text-xs text-neutral-700 tracking-widest mt-0.5">
-                algorithmic pitch & harmonic frequency analysis
-              </p>
+      <main className="max-w-xl mx-auto px-4 py-6 space-y-6">
+        {/* ── Account Identity Card ── */}
+        <div className="p-4 bg-gradient-to-r from-neutral-950 via-neutral-900/60 to-neutral-950 border border-neutral-800 rounded-3xl flex items-center justify-between flex-wrap gap-3 shadow-lg">
+          <div className="space-y-0.5">
+            <h2 className="font-black text-sm text-white tracking-wide">
+              {user?.handle || "@ANON"}
+            </h2>
+            <p className="text-[11px] text-neutral-400 font-sans">{user?.email || "No email"}</p>
+            <div className="flex items-center gap-2 pt-1">
+              <span className="px-2 py-0.5 bg-neutral-900 border border-amber-400/50 text-yellow-400 font-black text-[10px] rounded-md shadow-sm">
+                🏆 {(user as any)?.auraScore || 0} AURA
+              </span>
             </div>
-            <button
-              onClick={() => setView("vibe")}
-              className="font-mono text-[11px] border border-neutral-800 text-neutral-400 hover:border-white hover:text-white px-2.5 py-1 uppercase tracking-wider transition-colors cursor-pointer"
-            >
-              [ CALIBRATE ]
-            </button>
           </div>
 
-          {vibeRead ? (
-            <div className="grid grid-cols-2 gap-3 pt-1">
-              <div className="border border-neutral-900 bg-neutral-950 p-2.5 space-y-1">
-                <span className="font-mono text-[9px] text-neutral-500 uppercase tracking-widest block">PITCH (FREQ)</span>
-                <span className="font-mono text-xs font-bold text-white tabular-nums">{vibeRead.pitch}%</span>
-              </div>
-              <div className="border border-neutral-900 bg-neutral-950 p-2.5 space-y-1">
-                <span className="font-mono text-[9px] text-neutral-500 uppercase tracking-widest block">TEMPO (CADENCE)</span>
-                <span className="font-mono text-xs font-bold text-white tabular-nums">{vibeRead.tempo}%</span>
-              </div>
-              <div className="border border-neutral-900 bg-neutral-950 p-2.5 space-y-1">
-                <span className="font-mono text-[9px] text-neutral-500 uppercase tracking-widest block">ENERGY (RMS)</span>
-                <span className="font-mono text-xs font-bold text-white tabular-nums">{vibeRead.energy}%</span>
-              </div>
-              <div className="border border-neutral-900 bg-neutral-950 p-2.5 space-y-1">
-                <span className="font-mono text-[9px] text-neutral-500 uppercase tracking-widest block">CLARITY (SNR)</span>
-                <span className="font-mono text-xs font-bold text-white tabular-nums">{vibeRead.clarity}%</span>
-              </div>
-            </div>
-          ) : (
-            <p className="font-mono text-[10px] text-neutral-700 uppercase tracking-widest">
-              NO BIOMETRICS YET. CALIBRATE VIA PITCH ANALYSIS OR RECORD A VOICE BIO.
-            </p>
-          )}
-
           <button
-            onClick={handleRunVibeAnalysis}
-            disabled={isAnalyzingPitch}
-            className="w-full py-2.5 px-3 border border-neutral-800 hover:border-white text-white font-mono text-xs tracking-widest uppercase transition-colors cursor-pointer flex items-center justify-center gap-2 bg-neutral-950 disabled:opacity-50"
+            onClick={handleSignOut}
+            className="px-3 py-1.5 border border-neutral-800 hover:border-red-500 text-neutral-400 hover:text-red-400 text-xs font-bold uppercase rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 bg-neutral-950"
           >
-            {isAnalyzingPitch ? (
-              <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>ANALYZING PITCH ({analysisCountdown}S)...</span>
-              </>
-            ) : (
-              <>
-                <Mic className="w-3.5 h-3.5 text-white" />
-                <span>[ 🎙️ ANALYZE LIVE VOCAL PITCH ]</span>
-              </>
-            )}
+            <LogOut className="w-3.5 h-3.5" />
+            <span>SIGN OUT</span>
           </button>
         </div>
 
-        {/* ── PINGS ─────────────────────────────────────────── */}
-        <SectionHeader label="PINGS — NOTIFICATIONS" />
-        <NavItem
-          label="PING SETTINGS"
-          sub="control what reaches you"
-          onClick={() => setView("pings")}
-        />
+        {/* ── Quick Action Hub (3 Minimal Pods) ── */}
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <button
+            onClick={() => setView("vault")}
+            className="p-3 bg-neutral-950/80 hover:bg-neutral-900 border border-neutral-900 hover:border-neutral-700 rounded-2xl text-center space-y-1 transition-all cursor-pointer group"
+          >
+            <Bookmark className="w-4 h-4 mx-auto text-neutral-400 group-hover:text-white" />
+            <p className="text-[10px] font-black uppercase text-white truncate">VAULT</p>
+            <p className="text-[9px] text-neutral-500 tabular-nums">({vaultPosts.length})</p>
+          </button>
 
-        {/* ── AUDIO TRANSMISSION SETTINGS ───────────────────── */}
-        <SectionHeader label="AUDIO TRANSMISSION SETTINGS" />
-        <SelectItem
-          label="STREAM QUALITY"
-          sub="data usage vs audio fidelity"
-          options={["HIGH", "STANDARD", "LOW"]}
-          value={settings.audioQuality}
-          onChange={(v) => select("audioQuality", v)}
-        />
-        <ToggleItem id="auto-transcribe" label="AUTO-TRANSCRIBE ECHOES" sub="convert voice takes to text" value={settings.autoTranscribe} onToggle={() => toggle("autoTranscribe")} saving={savingKey === "autoTranscribe"} />
-        <ToggleItem id="auto-play"       label="AUTO-PLAY ON FREQUENCY" sub="start playing on scroll"      value={settings.autoPlay}       onToggle={() => toggle("autoPlay")}       saving={savingKey === "autoPlay"} />
+          <button
+            onClick={() => setView("vibe")}
+            className="p-3 bg-neutral-950/80 hover:bg-neutral-900 border border-neutral-900 hover:border-neutral-700 rounded-2xl text-center space-y-1 transition-all cursor-pointer group"
+          >
+            <Activity className="w-4 h-4 mx-auto text-emerald-400 group-hover:scale-110 transition-transform" />
+            <p className="text-[10px] font-black uppercase text-white truncate">BIOMETRICS</p>
+            <p className="text-[9px] text-emerald-400 font-bold">LIVE VIBE</p>
+          </button>
 
-        {/* ── REVERB & RE-ECHO PERMISSIONS ────────────────────── */}
-        <SectionHeader label="REVERB & RE-ECHO PERMISSIONS" />
-        <SelectItem
-          label="WHO CAN DROP REVERBS"
-          sub="who can voice-reply to your echoes"
-          options={["EVERYONE", "[ ORBIT ]", "NOBODY"]}
-          value={settings.yapControl}
-          onChange={(v) => select("yapControl", v)}
-        />
-        <SelectItem
-          label="WHO CAN RE-ECHO"
-          sub="who can reshare your voice"
-          options={["EVERYONE", "[ ORBIT ]", "NOBODY"]}
-          value={settings.echoControl}
-          onChange={(v) => select("echoControl", v)}
-        />
-        <SelectItem
-          label="WHO CAN WIRE (DM) YOU"
-          sub="private direct voice messaging"
-          options={["EVERYONE", "[ ORBIT ]", "NOBODY"]}
-          value={settings.whoCanWire}
-          onChange={(v) => select("whoCanWire", v)}
-        />
+          <button
+            onClick={() => setView("pings")}
+            className="p-3 bg-neutral-950/80 hover:bg-neutral-900 border border-neutral-900 hover:border-neutral-700 rounded-2xl text-center space-y-1 transition-all cursor-pointer group"
+          >
+            <Bell className="w-4 h-4 mx-auto text-neutral-400 group-hover:text-white" />
+            <p className="text-[10px] font-black uppercase text-white truncate">PINGS</p>
+            <p className="text-[9px] text-neutral-500">ALERTS</p>
+          </button>
+        </div>
 
-        {/* ── PRIVACY & BOUNDARIES ──────────────────────────── */}
-        <SectionHeader label="PRIVACY & FREQUENCY BOUNDARIES" />
-        <ToggleItem id="private-acc"   label="PRIVATE FREQUENCY"       sub="approve orbiters manually"     value={settings.privateAcc}   onToggle={() => toggle("privateAcc")}   saving={savingKey === "privateAcc"} />
-        <ToggleItem id="aura-visible"  label="SHOW AURA SCORE"         sub="visible on your profile"       value={settings.auraVisible}  onToggle={() => toggle("auraVisible")}  saving={savingKey === "auraVisible"} />
-        <ToggleItem id="anon-mode"     label="ANONYMOUS MODE"          sub="mask handle in public feed"    value={settings.anonMode}     onToggle={() => toggle("anonMode")}     saving={savingKey === "anonMode"} />
-        <ToggleItem id="lock-approval" label="APPROVE ORBITS"          sub="manually approve orbiters"     value={settings.lockApproval} onToggle={() => toggle("lockApproval")} saving={savingKey === "lockApproval"} />
-        <NavItem label="HIDDEN WORDS" sub="filter specific words from reverbs" onClick={() => setView("hidden")} />
+        {/* ── 1. Audio & Transmission ── */}
+        <div className="space-y-2">
+          <SectionTitle icon={Sliders} title="AUDIO & TRANSMISSION" />
+          <SegmentedSelect
+            label="STREAM QUALITY"
+            sub="Balance audio fidelity vs data usage"
+            options={[
+              { id: "HIGH", label: "HIGH" },
+              { id: "STANDARD", label: "STANDARD" },
+              { id: "LOW", label: "LOW" },
+            ]}
+            value={settings.audioQuality}
+            onChange={(v) => select("audioQuality", v)}
+          />
+          <ModernToggle
+            label="AUTO-PLAY ON FEED"
+            sub="Automatically start playing audio takes on scroll"
+            value={settings.autoPlay}
+            onToggle={() => toggle("autoPlay")}
+            saving={savingKey === "autoPlay"}
+          />
+          <ModernToggle
+            label="AUTO-TRANSCRIBE ECHOES"
+            sub="Generate real-time captions for voice takes"
+            value={settings.autoTranscribe}
+            onToggle={() => toggle("autoTranscribe")}
+            saving={savingKey === "autoTranscribe"}
+          />
+        </div>
 
-        {/* ── HELP / SOS ────────────────────────────────────── */}
-        <SectionHeader label="SYSTEM DIAGNOSTICS & SOS" />
-        <NavItem label="ECHO GUIDE"          sub="how audio features work"  onClick={() => setActiveModal("guide")} />
-        <NavItem label="REPORT A PROBLEM"    sub="submit bugs directly"     onClick={() => setActiveModal("report")} />
-        <NavItem label="SAFETY CENTRE"       sub="security & moderation"    onClick={() => setActiveModal("safety")} />
-        <NavItem label="CONTACT US"          sub="reach platform engineers" onClick={() => setActiveModal("contact")} />
+        {/* ── 2. Reach & Voice Permissions ── */}
+        <div className="space-y-2">
+          <SectionTitle icon={Radio} title="VOICE & REVERB PERMISSIONS" />
+          <SegmentedSelect
+            label="WHO CAN DROP REVERBS"
+            sub="Control who can voice-reply to your echoes"
+            options={[
+              { id: "EVERYONE", label: "EVERYONE" },
+              { id: "ORBIT", label: "ORBITERS" },
+              { id: "NOBODY", label: "NOBODY" },
+            ]}
+            value={settings.yapControl}
+            onChange={(v) => select("yapControl", v)}
+          />
+          <SegmentedSelect
+            label="WHO CAN RE-ECHO"
+            sub="Control who can reshare your voice posts"
+            options={[
+              { id: "EVERYONE", label: "EVERYONE" },
+              { id: "ORBIT", label: "ORBITERS" },
+              { id: "NOBODY", label: "NOBODY" },
+            ]}
+            value={settings.echoControl}
+            onChange={(v) => select("echoControl", v)}
+          />
+          <SegmentedSelect
+            label="WHO CAN WIRE (DM)"
+            sub="Private 1-on-1 audio messaging permissions"
+            options={[
+              { id: "EVERYONE", label: "EVERYONE" },
+              { id: "ORBIT", label: "ORBITERS" },
+              { id: "NOBODY", label: "NOBODY" },
+            ]}
+            value={settings.whoCanWire}
+            onChange={(v) => select("whoCanWire", v)}
+          />
+        </div>
 
-        {/* ── DANGER ZONE ───────────────────────────────────── */}
-        <SectionHeader label="DANGER ZONE" />
-        <div className="border border-dashed border-neutral-800 p-5 mb-10 space-y-4">
+        {/* ── 3. Privacy & Safety ── */}
+        <div className="space-y-2">
+          <SectionTitle icon={Lock} title="PRIVACY & SAFETY" />
+          <ModernToggle
+            label="PRIVATE FREQUENCY"
+            sub="Require manual approval for new orbiters"
+            value={settings.privateAcc}
+            onToggle={() => toggle("privateAcc")}
+            saving={savingKey === "privateAcc"}
+          />
+          <ModernToggle
+            label="SHOW AURA SCORE"
+            sub="Display your Aura score on your profile"
+            value={settings.auraVisible}
+            onToggle={() => toggle("auraVisible")}
+            saving={savingKey === "auraVisible"}
+          />
+          <ModernToggle
+            label="ANONYMOUS MODE"
+            sub="Mask your handle on public feeds"
+            value={settings.anonMode}
+            onToggle={() => toggle("anonMode")}
+            saving={savingKey === "anonMode"}
+          />
+          <button
+            onClick={() => setView("hidden")}
+            className="w-full p-4 bg-neutral-950/60 hover:bg-neutral-950 border border-neutral-900 rounded-2xl flex items-center justify-between text-left transition-colors cursor-pointer group"
+          >
+            <div className="space-y-0.5">
+              <p className="font-mono text-xs font-bold uppercase text-white group-hover:text-amber-400 transition-colors">
+                HIDDEN WORDS FILTER
+              </p>
+              <p className="text-[11px] text-neutral-500 font-sans">
+                Filter specific keywords from voice replies
+              </p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-neutral-600 group-hover:text-white transition-colors" />
+          </button>
+        </div>
+
+        {/* ── 4. Diagnostics & Support ── */}
+        <div className="space-y-2">
+          <SectionTitle icon={HelpCircle} title="SUPPORT & DIAGNOSTICS" />
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => setActiveModal("guide")}
+              className="p-3.5 bg-neutral-950/60 hover:bg-neutral-900 border border-neutral-900 rounded-2xl text-left transition-colors cursor-pointer"
+            >
+              <p className="text-xs font-bold uppercase text-white">ECHO GUIDE</p>
+              <p className="text-[10px] text-neutral-500 font-sans">How audio works</p>
+            </button>
+            <button
+              onClick={() => setActiveModal("report")}
+              className="p-3.5 bg-neutral-950/60 hover:bg-neutral-900 border border-neutral-900 rounded-2xl text-left transition-colors cursor-pointer"
+            >
+              <p className="text-xs font-bold uppercase text-white">REPORT BUG</p>
+              <p className="text-[10px] text-neutral-500 font-sans">Submit glitch</p>
+            </button>
+            <button
+              onClick={() => setActiveModal("safety")}
+              className="p-3.5 bg-neutral-950/60 hover:bg-neutral-900 border border-neutral-900 rounded-2xl text-left transition-colors cursor-pointer"
+            >
+              <p className="text-xs font-bold uppercase text-white">SAFETY</p>
+              <p className="text-[10px] text-neutral-500 font-sans">Moderation</p>
+            </button>
+            <button
+              onClick={() => setActiveModal("contact")}
+              className="p-3.5 bg-neutral-950/60 hover:bg-neutral-900 border border-neutral-900 rounded-2xl text-left transition-colors cursor-pointer"
+            >
+              <p className="text-xs font-bold uppercase text-white">CONTACT US</p>
+              <p className="text-[10px] text-neutral-500 font-sans">Human support</p>
+            </button>
+          </div>
+        </div>
+
+        {/* ── 5. Danger Zone ── */}
+        <div className="pt-2">
           {!showDanger ? (
             <button
-              id="danger-zone-btn"
               onClick={() => setShowDanger(true)}
-              className="font-mono text-xs tracking-widest uppercase text-neutral-500 hover:text-white transition-colors cursor-pointer"
+              className="w-full py-3 border border-dashed border-neutral-800 text-neutral-500 hover:text-neutral-300 hover:border-neutral-700 rounded-2xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
             >
-              [ + SHOW DANGER ZONE COMMANDS ]
+              + ADVANCED SYSTEM COMMANDS
             </button>
           ) : (
-            <div className="space-y-3">
-              <p className="font-mono text-xs text-neutral-600 tracking-widest uppercase">
-                // CRITICAL COMMANDS & DATA ACTIONS
-              </p>
-              <button
-                onClick={() => {
-                  try {
-                    localStorage.clear();
-                    sessionStorage.clear();
-                    alert("Local audio cache cleared.");
-                  } catch (e) {}
-                }}
-                className="w-full text-left font-mono text-xs tracking-widest uppercase text-neutral-400 hover:text-white border border-neutral-800 hover:border-neutral-600 px-4 py-3 transition-colors cursor-pointer"
-              >
-                CLEAR LOCAL AUDIO CACHE
-              </button>
-              <button
-                onClick={handleSignOut}
-                className="w-full text-left font-mono text-xs tracking-widest uppercase text-neutral-400 hover:text-white border border-neutral-800 hover:border-neutral-600 px-4 py-3 transition-colors cursor-pointer"
-              >
-                SIGN OUT OF ALL SESSIONS
-              </button>
-              <button
-                onClick={() => {
-                  if (confirm("Are you sure you want to deactivate your node?")) {
-                    handleSignOut();
-                  }
-                }}
-                className="w-full text-left font-mono text-xs tracking-widest uppercase text-red-500 hover:text-red-400 border border-neutral-900 hover:border-red-900 px-4 py-3 transition-colors cursor-pointer"
-              >
-                DEACTIVATE NODE  →  EXILE YOURSELF
-              </button>
+            <div className="p-4 border border-red-950/60 bg-red-950/10 rounded-2xl space-y-2">
+              <p className="text-[11px] font-bold text-red-400 uppercase">ADVANCED DATA ACTIONS</p>
+              <div className="space-y-1.5">
+                <button
+                  onClick={() => {
+                    try {
+                      localStorage.clear();
+                      sessionStorage.clear();
+                      alert("Local audio cache cleared.");
+                    } catch {}
+                  }}
+                  className="w-full py-2 bg-neutral-950 border border-neutral-800 text-neutral-300 hover:text-white rounded-xl text-xs font-bold uppercase transition-colors"
+                >
+                  CLEAR LOCAL AUDIO CACHE
+                </button>
+                <button
+                  onClick={handleSignOut}
+                  className="w-full py-2 bg-neutral-950 border border-neutral-800 text-neutral-300 hover:text-white rounded-xl text-xs font-bold uppercase transition-colors"
+                >
+                  SIGN OUT OF ALL SESSIONS
+                </button>
+              </div>
             </div>
           )}
         </div>
 
-        {/* Version tag */}
-        <p className="font-mono text-xs text-neutral-800 tracking-widest pb-10">
-          ECHO v0.1.0 — AUG 2026 — UTILITARIAN CANVAS
-          {savingKey && <span className="ml-3 text-neutral-500 animate-pulse">SAVING...</span>}
+        {/* Version Footer */}
+        <p className="text-[10px] text-neutral-700 text-center uppercase tracking-widest pt-4">
+          ECHO PROTOCOL v0.1.0 • AURA SECURE
         </p>
-      </div>
+      </main>
 
-      {/* ── HELP / SOS MODALS ────────────────────────────────── */}
+      {/* ── Modals ── */}
       {activeModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md border border-neutral-800 bg-black p-6 space-y-5">
-            <div className="flex items-center justify-between border-b border-neutral-900 pb-3">
-              <span className="font-mono text-xs tracking-widest text-white uppercase font-bold">
-                {activeModal === "guide" && "// ECHO GUIDE"}
-                {activeModal === "report" && "// REPORT A PROBLEM"}
-                {activeModal === "safety" && "// SAFETY CENTRE"}
-                {activeModal === "contact" && "// CONTACT HUMAN SUPPORT"}
+          <div className="w-full max-w-md border border-neutral-800 bg-neutral-950 p-6 rounded-3xl space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
+              <span className="font-bold text-xs uppercase tracking-wider text-white">
+                {activeModal === "guide" && "ECHO PLATFORM GUIDE"}
+                {activeModal === "report" && "REPORT A PROBLEM"}
+                {activeModal === "safety" && "SAFETY & MODERATION"}
+                {activeModal === "contact" && "CONTACT ENGINEERING"}
               </span>
               <button
-                onClick={() => { setActiveModal(null); setReportSuccess(false); setReportText(""); }}
-                className="font-mono text-xs text-neutral-500 hover:text-white cursor-pointer"
+                onClick={() => {
+                  setActiveModal(null);
+                  setReportSuccess(false);
+                  setReportText("");
+                }}
+                className="text-xs text-neutral-500 hover:text-white cursor-pointer font-bold"
               >
-                [ ✕ CLOSE ]
+                ✕
               </button>
             </div>
 
             {activeModal === "guide" && (
-              <div className="space-y-3 font-mono text-xs text-neutral-300 leading-relaxed max-h-80 overflow-y-auto">
-                <p><strong className="text-white">FREQUENCY:</strong> Live public voice feed of authentic audio snippets.</p>
-                <p><strong className="text-white">WAVES:</strong> 30s TikTok-style vertical audio cards with interactive waveforms.</p>
-                <p><strong className="text-white">STUDIO:</strong> Record 15s to 60s voice takes, filters & voice bio.</p>
-                <p><strong className="text-white">STAGE / CLASH:</strong> Live audio debate arena & voice battles.</p>
-                <p><strong className="text-white">ROOMS:</strong> Real-time Clubhouse-style audio spaces with live speakers.</p>
-                <p><strong className="text-white">WIRE:</strong> Direct 1-on-1 private voice messages.</p>
-                <p><strong className="text-white">AURA:</strong> Dynamic engagement score earned by authentic voice drops.</p>
+              <div className="space-y-2.5 text-xs text-neutral-300 font-sans leading-relaxed max-h-80 overflow-y-auto">
+                <p><strong className="text-white font-mono">FREQUENCY:</strong> Live public voice feed of authentic audio snippets.</p>
+                <p><strong className="text-white font-mono">WAVES:</strong> 30s TikTok-style vertical audio cards with interactive waveforms.</p>
+                <p><strong className="text-white font-mono">STUDIO:</strong> Record 15s to 60s voice takes, filters & voice bio.</p>
+                <p><strong className="text-white font-mono">STAGE:</strong> Live audio debate arena & voice battles.</p>
+                <p><strong className="text-white font-mono">ROOMS:</strong> Real-time Clubhouse-style audio spaces with live speakers.</p>
+                <p><strong className="text-white font-mono">ECHO CLUB:</strong> 39 real-time multiplayer board & voice games.</p>
               </div>
             )}
 
             {activeModal === "report" && (
-              <div className="space-y-4">
+              <div className="space-y-3 font-sans">
                 {reportSuccess ? (
-                  <p className="font-mono text-xs text-green-400">
-                    ✓ THANK YOU! YOUR PROBLEM REPORT HAS BEEN RECORDED AND ROUTED TO ENGINEERING.
+                  <p className="text-xs text-emerald-400 font-bold">
+                    ✓ Thank you! Your report has been submitted to the engineering team.
                   </p>
                 ) : (
                   <>
-                    <p className="font-mono text-xs text-neutral-400">
-                      DESCRIBE THE ISSUE OR GLITCH:
-                    </p>
                     <textarea
                       rows={4}
                       value={reportText}
                       onChange={(e) => setReportText(e.target.value)}
-                      placeholder="e.g. Mic input cut out during Stage clash..."
-                      className="w-full bg-neutral-950 border border-neutral-800 p-3 font-mono text-xs text-white placeholder-neutral-700 focus:outline-none focus:border-white"
+                      placeholder="Describe the issue or bug..."
+                      className="w-full bg-black border border-neutral-800 rounded-xl p-3 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white font-mono"
                     />
                     <button
                       onClick={async () => {
                         if (reportText.trim()) {
                           try {
                             const db = getFirebaseDb();
-                            const { addDoc, collection, serverTimestamp } = await import("firebase/firestore");
+                            const { addDoc, collection, serverTimestamp } = await import(
+                              "firebase/firestore"
+                            );
                             await addDoc(collection(db, "reports"), {
                               uid: user?.uid || "anon",
                               handle: (user as any)?.handle || "@ANON",
                               report: reportText.trim(),
                               createdAt: serverTimestamp(),
                             });
-                          } catch (e) {}
+                          } catch {}
                           setReportSuccess(true);
                         }
                       }}
                       disabled={!reportText.trim()}
-                      className="w-full py-2.5 bg-white text-black font-mono text-xs tracking-widest uppercase font-bold hover:bg-neutral-200 cursor-pointer disabled:opacity-40"
+                      className="w-full py-2.5 bg-white text-black font-black text-xs uppercase rounded-xl hover:bg-neutral-200 transition-colors cursor-pointer disabled:opacity-40"
                     >
-                      [ SUBMIT REPORT ]
+                      SUBMIT REPORT
                     </button>
                   </>
                 )}
@@ -907,22 +1014,21 @@ export default function TerminalPage() {
             )}
 
             {activeModal === "safety" && (
-              <div className="space-y-3 font-mono text-xs text-neutral-300 leading-relaxed">
-                <p className="text-white font-bold">// USER BOUNDARIES & SAFETY</p>
-                <p>• Block or Mute any user directly from their profile card.</p>
-                <p>• Enable Anonymous Mode or Private Frequency in Privacy settings.</p>
-                <p>• 24/7 Support Helpline: <span className="text-white underline">988 (Crisis Line)</span>.</p>
+              <div className="space-y-2 text-xs text-neutral-300 font-sans leading-relaxed">
+                <p>• Block or mute any profile directly from their user card.</p>
+                <p>• Enable Anonymous Mode or Private Frequency in settings.</p>
+                <p>• 24/7 Crisis Helpline: <strong className="text-white">988</strong>.</p>
               </div>
             )}
 
             {activeModal === "contact" && (
-              <div className="space-y-4 font-mono text-xs">
-                <p className="text-neutral-400">REACH OUR PLATFORM TEAM:</p>
-                <div className="p-3 border border-neutral-800 bg-neutral-950 text-white font-bold text-sm select-all">
+              <div className="space-y-3 text-xs font-sans">
+                <p className="text-neutral-400">Reach the platform support team:</p>
+                <div className="p-3 bg-black border border-neutral-800 rounded-xl text-white font-mono font-bold select-all">
                   support@echo-aura.app
                 </div>
-                <p className="text-neutral-500 text-[10px]">
-                  EXPECT RESPONSES WITHIN 12-24 HOURS.
+                <p className="text-[11px] text-neutral-500">
+                  Responses typically arrive within 12-24 hours.
                 </p>
               </div>
             )}
