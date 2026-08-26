@@ -343,19 +343,22 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
   },
   glow_hockey: {
     id: "glow_hockey",
-    name: "Glow Hockey Neon Clash",
+    name: "Glow Hockey Neon Clash (USAA Regulations)",
     rank: 16,
     category: "2D Physics & Tabletop",
     icon: "⚡",
-    overview: "Ultra-responsive 60FPS neon air hockey. Slide your paddle to deflect the glowing puck at high velocities and score in the opponent's goal slot.",
+    overview: "Official United States Air Hockey Association (USAA) tournament regulations. 60FPS Continuous Collision Detection (CCD) engine with aerostatic air suspension damping, strict centerline enforcement, and 7-second shot clock.",
     howToPlay: [
-      "Drag your finger/mouse to control your neon striker paddle.",
-      "Deflect the puck with speed to bounce off walls into opponent goal.",
-      "First player to score 5 goals wins the round."
+      "1. STRICT CENTERLINE RULE: Mallets are restricted entirely to their defensive half. Crossing the red centerline is an immediate foul.",
+      "2. 7-SECOND POSSESSION CLOCK: Once the puck enters your defensive half, you must advance it across the centerline within 7 seconds or forfeit possession.",
+      "3. TOPPING & CLAMPING FOUL: Trapping or clamping the puck beneath the mallet body is illegal. Contact must occur purely on the vertical rim.",
+      "4. PRO SHOT MECHANICS: 1. Straight Bullet Drive (0° max speed blast), 2. One-Rail Bank (30°–45° side rail slice), 3. Double-Rail Diamond Wrap (multi-rail misdirection).",
+      "5. DEFENSE: Master the Triangle Crease Guard (moving in an arc 5–10 cm in front of the goal slot) to cut down high-velocity angles.",
+      "6. SCORING & VICTORY: First player to score 7 points (USAA championship standard) wins the match!"
     ],
-    voiceGuide: "Fast-paced trash talk and goal celebrations over open audio.",
-    scoring: "+150 Aura to the winner.",
-    proTip: "Slice the puck at sharp 45-degree angles to create unpredictable bank-shot rebounds."
+    voiceGuide: "Fast-paced trash talk, shot calls, and goal celebrations over open mic audio.",
+    scoring: "+150 Aura to the match victor (+double stakes in wager matches).",
+    proTip: "Use the AI Difficulty toggle (Amateur, Semi-Pro, USAA World Champion) to practice bank shots and rapid-fire crease defense!"
   },
   npat: {
     id: "npat",
