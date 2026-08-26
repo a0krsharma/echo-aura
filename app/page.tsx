@@ -6,7 +6,8 @@ import {
   ArrowUp, Flame, Mic2, Share2, RefreshCw,
   Loader2, Send, Trash2, ChevronDown, ChevronUp,
   Heart, AtSign, Repeat2, MessageSquare,
-  RotateCcw, RotateCw, Music
+  RotateCcw, RotateCw, Music,
+  Bot, Sparkles,
 } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
 import {
@@ -1385,6 +1386,27 @@ export default function HomeFeedPage() {
           currentUser={user}
           onClose={()=>setCommentPost(null)}/>
       )}
+
+      {/* ── Floating Mini Robo-Echo Companion Beacon ── */}
+      <aside aria-label="Robo-Echo Companion" className="fixed bottom-20 md:bottom-8 right-4 md:right-8 z-40">
+        <Link
+          href="/echo-bot"
+          className="group flex items-center gap-2.5 px-3 py-2 bg-neutral-950/90 hover:bg-neutral-900 border border-emerald-500/40 hover:border-emerald-400 rounded-full shadow-[0_0_20px_rgba(16,185,129,0.25)] hover:shadow-[0_0_25px_rgba(16,185,129,0.5)] backdrop-blur-md transition-all duration-300 active:scale-95"
+          title="Open Robo-Echo 3D Companion & AI Voice"
+        >
+          <div className="relative w-7 h-7 rounded-full bg-emerald-950 border border-emerald-500/60 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform">
+            <Bot className="w-4 h-4" />
+            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+          </div>
+          <div className="flex flex-col text-left pr-1">
+            <span className="font-mono text-[10px] font-black uppercase text-white tracking-wider group-hover:text-emerald-300 transition-colors flex items-center gap-1">
+              <span>ROBO-ECHO</span>
+              <Sparkles className="w-2.5 h-2.5 text-emerald-400" />
+            </span>
+            <span className="font-mono text-[8px] text-neutral-400">3D Companion</span>
+          </div>
+        </Link>
+      </aside>
     </div>
   );
 }

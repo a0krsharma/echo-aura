@@ -75,9 +75,12 @@ import {
   ShoppingCart,
   RotateCcw,
   Bot,
+  Flame,
 } from "lucide-react";
 import Link from "next/link";
-import { updateArcadeElo } from "@/lib/userDoc";
+import { updateArcadeElo, awardAura } from "@/lib/userDoc";
+import { createPost } from "@/lib/posts";
+import { soundSynth } from "@/lib/soundSynthesizer";
 
 type CategoryFilter = "ALL" | "VOICE" | "BOARD" | "PHYSICS" | "CARD" | "PAPER" | "PUZZLE";
 
@@ -397,6 +400,49 @@ function ArcadeContent() {
     }
   };
 
+  // Victory Mic Drop Post to Frequency
+  const [isPostingVictory, setIsPostingVictory] = useState(false);
+  const [hasPostedVictory, setHasPostedVictory] = useState(false);
+
+  // Reset victory post state on new match
+  useEffect(() => {
+    setHasPostedVictory(false);
+  }, [activeMatch?.id]);
+
+  const handlePostVictoryToFrequency = async () => {
+    if (!user || !activeMatch) return;
+    setIsPostingVictory(true);
+    try {
+      // 1. Play victory sounds & mic drop fanfare
+      soundSynth.playFanfare();
+      setTimeout(() => soundSynth.playApplause(), 600);
+
+      // 2. Award victory Aura bonus
+      await awardAura(user.uid, 50);
+
+      const gameObj = CLEAN_GAMES.find((g) => g.id === activeMatch.gameType);
+      const gameName = gameObj?.name || "Arcade Match";
+      const victoryCaption = `🏆 Just dropped the mic with a VICTORY in ${gameName} on Echo Arcade! 🎙️💥 Current Arcade Champion. Who's stepping up next? #EchoArcade #ArcadeWinner #MicDrop #Aura`;
+
+      // 3. Post to Frequency feed
+      await createPost({
+        audioUrl: "https://res.cloudinary.com/echo-aura/video/upload/v1/victory_fanfare.mp3",
+        caption: victoryCaption,
+        authorUid: user.uid,
+        authorHandle: user.handle || "@CHAMPION",
+        tags: ["ARCADE", "WINNER", "MICDROP", (gameObj?.category || "GAMING").toUpperCase()],
+        durationSec: 5,
+        duration: "00:05",
+      });
+
+      setHasPostedVictory(true);
+    } catch (err) {
+      console.error("Failed to post victory to frequency:", err);
+    } finally {
+      setIsPostingVictory(false);
+    }
+  };
+
   // Update Elo once per match on the Winner's client
   const eloUpdatedRef = useRef<string | null>(null);
   useEffect(() => {
@@ -565,13 +611,20 @@ function ArcadeContent() {
                 <span className="hidden sm:inline">MIC CHECK</span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => setTournamentModalOpen(true)}
+              <Link
+                href="/leaderboard"
                 className="px-2.5 sm:px-3 py-1.5 border border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-yellow-400 hover:text-yellow-300 font-bold text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer rounded-lg shadow-sm"
               >
                 <Trophy className="w-3.5 h-3.5 text-yellow-400" />
-                <span className="hidden md:inline">TOURNAMENT</span>
+                <span className="hidden md:inline">LEADERBOARD</span>
+              </Link>
+
+              <button
+                type="button"
+                onClick={() => setTournamentModalOpen(true)}
+                className="px-2.5 sm:px-3 py-1.5 border border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-neutral-500 hover:text-white font-bold text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer rounded-lg shadow-sm"
+              >
+                <span className="hidden md:inline">BRACKET</span>
               </button>
 
               <button
@@ -640,6 +693,29 @@ function ArcadeContent() {
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
+                  {/* Celebratory Mic Drop Button on Victory */}
+                  {user && (activeMatch.winnerUid === user.uid || !activeMatch.winnerUid) && (
+                    <button
+                      type="button"
+                      onClick={handlePostVictoryToFrequency}
+                      disabled={isPostingVictory || hasPostedVictory}
+                      className={`px-4 py-2.5 border font-black text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer rounded-xl active:scale-95 ${
+                        hasPostedVictory
+                          ? "border-emerald-500 bg-emerald-950/80 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+                          : "border-amber-400 bg-gradient-to-r from-amber-500 to-yellow-400 text-black hover:from-amber-400 hover:to-yellow-300 shadow-[0_0_20px_rgba(251,191,36,0.35)]"
+                      }`}
+                    >
+                      <Flame className={`w-4 h-4 ${hasPostedVictory ? "text-emerald-400" : "fill-black text-black"}`} />
+                      <span>
+                        {isPostingVictory
+                          ? "POSTING TO FREQUENCY..."
+                          : hasPostedVictory
+                          ? "✓ POSTED WITH MIC DROP 🎙️"
+                          : "🎙️ POST TO FREQUENCY // MIC DROP 💥"}
+                      </span>
+                    </button>
+                  )}
+
                   <button
                     type="button"
                     onClick={handleRematch}
