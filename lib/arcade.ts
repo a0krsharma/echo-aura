@@ -38,6 +38,14 @@ import { getFirebaseDb } from "@/lib/firebase";
 import { awardAura } from "@/lib/userDoc";
 
 export type ArcadeGameType =
+  | "roast_ring"
+  | "one_breath"
+  | "laughing_trap"
+  | "tone_shift"
+  | "mushaira"
+  | "singer_roleplay"
+  | "news_anchor"
+  | "courtroom_debate"
   | "antakshari"
   | "ludo"
   | "chess"

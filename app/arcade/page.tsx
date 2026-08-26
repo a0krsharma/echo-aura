@@ -18,6 +18,7 @@ import {
 import AgoraRTC, { AgoraRTCProvider } from "agora-rtc-react";
 import ArcadeVoiceChannel from "@/app/components/arcade/ArcadeVoiceChannel";
 import AntakshariGame from "@/app/components/arcade/AntakshariGame";
+import VoicePartyGame from "@/app/components/arcade/VoicePartyGame";
 import MelodyBuzzerGame from "@/app/components/arcade/MelodyBuzzerGame";
 import TwoTruthsGame from "@/app/components/arcade/TwoTruthsGame";
 import PitchArenaGame from "@/app/components/arcade/PitchArenaGame";
@@ -83,10 +84,15 @@ interface MasterRankedGame {
 }
 
 const CLEAN_GAMES: MasterRankedGame[] = [
-  // ── 🎙️ Voice Party & Antakshari (Live Mic Duels) ──
+  // ── 🎙️ Voice Party & Antakshari (Live Mic Games) ──
   { id: "antakshari", name: "Bollywood Antakshari", category: "VOICE", icon: "🎶", description: "Sing hit songs on mic with Hindi letter wheel, turn timer & audience cheer jury" },
+  { id: "courtroom_debate", name: "Voice Courtroom Debate", category: "VOICE", icon: "⚖️", description: "Accuser vs Defender with Judge gavel soundboard and jury verdict voting" },
+  { id: "news_anchor", name: "9 PM News Anchor Clash", category: "VOICE", icon: "📰", description: "The Nation Wants To Know! Aggressive prime-time news debate with breaking tickers" },
+  { id: "singer_roleplay", name: "Singer Roleplay Battle", category: "VOICE", icon: "🎤", description: "Sing hit tracks in hilarious singer voices (Arijit, Honey Singh, Jagjit Ghazal, Alka)" },
+  { id: "mushaira", name: "Desi Mushaira & Shayari", category: "VOICE", icon: "📜", description: "Royal Urdu/Hindi poetry slam with live Wah-Wah and Irshaad reaction cheers" },
+  { id: "tone_shift", name: "Tone-Shift Dialogue Clash", category: "VOICE", icon: "🎭", description: "Deliver iconic dialogues in contradictory funny emotions (Mogambo crying, Pushpa polite)" },
   { id: "melody_buzzer", name: "Hum & Whistle (Melody Relay)", category: "VOICE", icon: "🎵", description: "Hum or whistle secret Bollywood hits on mic; room members smash the speed buzzer to guess" },
-  { id: "two_truths", name: "Two Truths & A Lie", category: "VOICE", icon: "🎭", description: "Voice party bluffing with live jury voting and truth reveal" },
+  { id: "two_truths", name: "Two Truths & A Lie", category: "VOICE", icon: "🤫", description: "Voice party bluffing with live jury voting and truth reveal" },
   { id: "pitch_arena", name: "Pitch Arena / Shark Mic", category: "VOICE", icon: "🎙️", description: "60-second crazy startup & product improv battle on live microphone" },
 
   // ── 🎲 Board & Tactical Strategy ──
@@ -245,7 +251,12 @@ function ArcadeContent() {
         type === "antakshari" ||
         type === "melody_buzzer" ||
         type === "two_truths" ||
-        type === "pitch_arena"
+        type === "pitch_arena" ||
+        type === "courtroom_debate" ||
+        type === "news_anchor" ||
+        type === "singer_roleplay" ||
+        type === "mushaira" ||
+        type === "tone_shift"
       ) {
         maxPlayers = 4;
       } else if (
@@ -459,7 +470,7 @@ function ArcadeContent() {
                 <button
                   type="button"
                   onClick={() => setInviteModalMatch(activeMatch)}
-                  className="px-3.5 py-1.5 border-2 border-emerald-500 bg-emerald-500 text-black hover:bg-emerald-400 font-black uppercase text-xs transition-all flex items-center gap-1.5 cursor-pointer rounded-lg shadow-md active:scale-95"
+                  className="px-3.5 py-1.5 border-2 border-white bg-white text-black hover:bg-neutral-200 font-black uppercase text-xs transition-all flex items-center gap-1.5 cursor-pointer rounded-lg shadow-md active:scale-95"
                 >
                   <Share2 className="w-3.5 h-3.5" />
                   <span>[ 🔗 INVITE &amp; TALK 🎙️ ]</span>
@@ -489,9 +500,16 @@ function ArcadeContent() {
               </AgoraRTCProvider>
             )}
 
-            {/* Game Renderers */}
+            {/* Voice Party Games Renderers */}
             {activeMatch.gameType === "antakshari" && (
               <AntakshariGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+            )}
+            {(activeMatch.gameType === "courtroom_debate" ||
+              activeMatch.gameType === "news_anchor" ||
+              activeMatch.gameType === "singer_roleplay" ||
+              activeMatch.gameType === "mushaira" ||
+              activeMatch.gameType === "tone_shift") && (
+              <VoicePartyGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
             )}
             {activeMatch.gameType === "melody_buzzer" && (
               <MelodyBuzzerGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
@@ -502,6 +520,8 @@ function ArcadeContent() {
             {activeMatch.gameType === "pitch_arena" && (
               <PitchArenaGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
             )}
+
+            {/* Board & Card & Puzzle Renderers */}
             {activeMatch.gameType === "ludo" && (
               <LudoGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
             )}
@@ -603,7 +623,7 @@ function ArcadeContent() {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="SEARCH GAMES (ANTAKSHARI, MELODY, LUDO, CARROM, POOL, CHESS)..."
+                    placeholder="SEARCH GAMES (ANTAKSHARI, COURTROOM, NEWS ANCHOR, MUSHAIRA, LUDO, CARROM, POOL)..."
                     className="w-full bg-neutral-950 border border-neutral-800 focus:border-white pl-9 pr-3 py-2 text-xs font-mono text-white placeholder-neutral-500 uppercase outline-none rounded-xl"
                   />
                 </div>
@@ -673,7 +693,7 @@ function ArcadeContent() {
                             {game.name}
                           </h4>
                           {game.category === "VOICE" && (
-                            <span className="px-1.5 py-0.2 bg-pink-500/20 text-pink-300 border border-pink-500/40 text-[8px] font-bold rounded">
+                            <span className="px-1.5 py-0.2 bg-white/20 text-white border border-white/40 text-[8px] font-bold rounded">
                               MIC 🎙️
                             </span>
                           )}
@@ -699,7 +719,7 @@ function ArcadeContent() {
                         type="button"
                         disabled={!user}
                         onClick={() => handleOpenCreate(game.id)}
-                        className="py-2 px-2 border-2 border-pink-500 bg-pink-500 text-white hover:bg-pink-400 font-black text-xs uppercase transition-all cursor-pointer text-center truncate rounded-xl shadow-md active:scale-95"
+                        className="py-2 px-2 border-2 border-white bg-white text-black hover:bg-neutral-200 font-black text-xs uppercase transition-all cursor-pointer text-center truncate rounded-xl shadow-md active:scale-95"
                         title={`Create PvP Room in ${game.name}`}
                       >
                         [ 👥 MULTI ]
@@ -808,7 +828,7 @@ function ArcadeContent() {
         <button
           type="button"
           onClick={() => handleOpenRules(activeMatch?.gameType || "antakshari")}
-          className="px-4 py-2.5 bg-black border-2 border-pink-400 text-pink-300 hover:bg-pink-400 hover:text-black font-black text-xs uppercase transition-all shadow-[0_0_25px_rgba(236,72,153,0.3)] flex items-center gap-2 rounded-full cursor-pointer hover:scale-105 active:scale-95"
+          className="px-4 py-2.5 bg-black border-2 border-white text-white hover:bg-white hover:text-black font-black text-xs uppercase transition-all shadow-[0_0_25px_rgba(255,255,255,0.3)] flex items-center gap-2 rounded-full cursor-pointer hover:scale-105 active:scale-95"
         >
           <HelpCircle className="w-4 h-4 animate-bounce" />
           <span className="font-mono tracking-wider">[ ❓ HELP &amp; RULES ]</span>
@@ -884,7 +904,7 @@ function ArcadeContent() {
             >
               <X className="w-5 h-5" />
             </button>
-            <div className="flex items-center justify-center mb-4 w-12 h-12 bg-white rounded-full text-2xl">
+            <div className="flex items-center justify-center mb-4 w-12 h-12 bg-white rounded-full text-2xl text-black flex items-center justify-center">
               🤖
             </div>
             <h2 className="text-lg font-black uppercase text-center mb-1 tracking-wider">

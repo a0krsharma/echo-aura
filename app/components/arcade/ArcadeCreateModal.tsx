@@ -20,6 +20,12 @@ interface ArcadeCreateModalProps {
 
 const GAME_META: Record<string, { name: string; icon: string; desc: string; maxAllowed: number }> = {
   antakshari: { name: "BOLLYWOOD ANTAKSHARI", icon: "🎶", desc: "Live singing duel on mic with Hindi letter wheel & audience cheers", maxAllowed: 8 },
+  courtroom_debate: { name: "VOICE COURTROOM DEBATE", icon: "⚖️", desc: "Accuser vs Defender with Judge gavel soundboard and jury verdict voting", maxAllowed: 8 },
+  news_anchor: { name: "9 PM NEWS ANCHOR CLASH", icon: "📰", desc: "The Nation Wants To Know! Aggressive prime-time news debate", maxAllowed: 8 },
+  singer_roleplay: { name: "SINGER ROLEPLAY BATTLE", icon: "🎤", desc: "Sing hit tracks in signature artist voices (Arijit, Honey Singh, Jagjit)", maxAllowed: 8 },
+  mushaira: { name: "DESI MUSHAIRA & SHAYARI", icon: "📜", desc: "Royal Urdu/Hindi poetry slam with live Wah-Wah and Irshaad cheers", maxAllowed: 8 },
+  tone_shift: { name: "TONE-SHIFT DIALOGUE CLASH", icon: "🎭", desc: "Iconic dialogues delivered in contradictory emotional styles", maxAllowed: 8 },
+
   rummy: { name: "INDIAN 13-CARD RUMMY", icon: "🃏", desc: "Pure sequences, second runs, and sets with wild jokers", maxAllowed: 6 },
   call_break: { name: "CALL BREAK (LAKDI)", icon: "♠️", desc: "Spades permanent trumps with bidding & overtrick scoring", maxAllowed: 4 },
   teen_patti: { name: "TEEN PATTI (3-CARD FLUSH)", icon: "🔥", desc: "Blind vs Seen wagering with Trail, Pure Sequence & Flushes", maxAllowed: 6 },
