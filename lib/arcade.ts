@@ -281,6 +281,8 @@ export interface CarromState {
   currentTurnUid: string;
   p1Score: number;
   p2Score: number;
+  p1Due?: number;
+  p2Due?: number;
   hasQueen: string | null;
   queenPendingUid?: string | null;
   playerColors?: Record<string, "WHITE" | "BLACK">;
@@ -2733,6 +2735,8 @@ export async function fireCarromShot(
     nextTurnUid?: string;
     p1Score?: number;
     p2Score?: number;
+    p1Due?: number;
+    p2Due?: number;
     hasQueen?: string | null;
     queenPendingUid?: string | null;
     actionLog?: string;
@@ -2762,6 +2766,8 @@ export async function fireCarromShot(
 
   if (options?.p1Score !== undefined) updates["carromState.p1Score"] = options.p1Score;
   if (options?.p2Score !== undefined) updates["carromState.p2Score"] = options.p2Score;
+  if (options?.p1Due !== undefined) updates["carromState.p1Due"] = options.p1Due;
+  if (options?.p2Due !== undefined) updates["carromState.p2Due"] = options.p2Due;
   if (options?.hasQueen !== undefined) updates["carromState.hasQueen"] = options.hasQueen;
   if (options?.queenPendingUid !== undefined) updates["carromState.queenPendingUid"] = options.queenPendingUid;
 

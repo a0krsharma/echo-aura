@@ -17,8 +17,11 @@ import {
   Zap,
   Flame,
   Crown,
-  Shield,
-  RotateCcw,
+  ShieldAlert,
+  ChevronDown,
+  ChevronUp,
+  Target,
+  Compass,
 } from "lucide-react";
 
 interface CarromGameProps {
@@ -48,6 +51,7 @@ const POCKETS = [
 export default function CarromGame({ match, currentUid }: CarromGameProps) {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
+  const [showProTips, setShowProTips] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const cs = match.carromState;
@@ -55,7 +59,6 @@ export default function CarromGame({ match, currentUid }: CarromGameProps) {
   const playerUids = Object.keys(match.players || {});
   const isPlayer1 = playerUids[0] === currentUid;
   const myTargetColor = isPlayer1 ? "white" : "black";
-  const opponentTargetColor = isPlayer1 ? "black" : "white";
 
   // Aiming and Controls State
   const [isAiming, setIsAiming] = useState(false);
@@ -112,7 +115,7 @@ export default function CarromGame({ match, currentUid }: CarromGameProps) {
       const pieces = piecesRef.current;
       let anyMoving = false;
 
-      // 1. Physics Sub-Stepping for High Accuracy
+      // 1. Physics Sub-Stepping for High Accuracy & Smooth Momentum
       const subSteps = 3;
       for (let step = 0; step < subSteps; step++) {
         pieces.forEach((p) => {
@@ -127,7 +130,7 @@ export default function CarromGame({ match, currentUid }: CarromGameProps) {
             p.vx *= Math.pow(FRICTION, 1 / subSteps);
             p.vy *= Math.pow(FRICTION, 1 / subSteps);
 
-            // Cushion Rebounds
+            // Cushion Rebounds off Wooden Frame
             if (p.x - p.radius < PLAYABLE_MIN) {
               p.x = PLAYABLE_MIN + p.radius;
               p.vx = -p.vx * RESTITUTION;
@@ -357,7 +360,7 @@ export default function CarromGame({ match, currentUid }: CarromGameProps) {
       ctx.stroke();
 
       // F. 4 Official Baselines with Edge Circles
-      const drawBaseline = (yPos: number, isBottom: boolean) => {
+      const drawBaseline = (yPos: number) => {
         const startX = 75;
         const endX = BOARD_SIZE - 75;
         const lineOffset = 6;
@@ -389,16 +392,16 @@ export default function CarromGame({ match, currentUid }: CarromGameProps) {
       };
 
       // Top & Bottom Baselines
-      drawBaseline(55, false);
-      drawBaseline(BOARD_SIZE - 55, true);
+      drawBaseline(55);
+      drawBaseline(BOARD_SIZE - 55);
 
       // Left & Right Baselines (Perpendicular)
       ctx.save();
       ctx.translate(BOARD_SIZE / 2, BOARD_SIZE / 2);
       ctx.rotate(Math.PI / 2);
       ctx.translate(-BOARD_SIZE / 2, -BOARD_SIZE / 2);
-      drawBaseline(55, false);
-      drawBaseline(BOARD_SIZE - 55, true);
+      drawBaseline(55);
+      drawBaseline(BOARD_SIZE - 55);
       ctx.restore();
 
       // G. Render 3D Carrom Pieces & Striker
@@ -437,7 +440,7 @@ export default function CarromGame({ match, currentUid }: CarromGameProps) {
           ctx.fillStyle = "#fef08a";
           ctx.fill();
         } else if (p.type === "white") {
-          // Polished Natural Ivory / White Wood (10 pts)
+          // Polished Natural Ivory / White Wood
           const wGrad = ctx.createRadialGradient(p.x - 3, p.y - 3, 2, p.x, p.y, p.radius);
           wGrad.addColorStop(0, "#ffffff");
           wGrad.addColorStop(0.6, "#f3f4f6");
@@ -456,7 +459,7 @@ export default function CarromGame({ match, currentUid }: CarromGameProps) {
           ctx.lineWidth = 1;
           ctx.stroke();
         } else if (p.type === "black") {
-          // Polished Ebony / Dark Wood (5 pts)
+          // Polished Ebony / Dark Wood
           const bGrad = ctx.createRadialGradient(p.x - 3, p.y - 3, 2, p.x, p.y, p.radius);
           bGrad.addColorStop(0, "#4b5563");
           bGrad.addColorStop(0.5, "#1f2937");
@@ -689,6 +692,8 @@ export default function CarromGame({ match, currentUid }: CarromGameProps) {
     let nextTurnUid = cs?.currentTurnUid || currentUid;
     let newP1Score = cs?.p1Score || 0;
     let newP2Score = cs?.p2Score || 0;
+    let newP1Due = cs?.p1Due || 0;
+    let newP2Due = cs?.p2Due || 0;
     let newHasQueen = cs?.hasQueen || null;
     let newQueenPending = cs?.queenPendingUid || null;
     let actionLog = "";
@@ -710,8 +715,8 @@ export default function CarromGame({ match, currentUid }: CarromGameProps) {
     const myPocketedCount = isPlayer1 ? whitePocketed : blackPocketed;
     const opponentPocketedCount = isPlayer1 ? blackPocketed : whitePocketed;
 
-    // Helper: Return 1 coin of player back to center on penalty
-    const returnPenaltyCoinToCenter = (type: "white" | "black") => {
+    // Helper: Return 1 coin of player back to center
+    const returnPenaltyCoinToCenter = (type: "white" | "black"): boolean => {
       const pocketedCoin = pieces.find((p) => p.type === type && p.isPocketed);
       if (pocketedCoin) {
         pocketedCoin.isPocketed = false;
@@ -719,7 +724,9 @@ export default function CarromGame({ match, currentUid }: CarromGameProps) {
         pocketedCoin.y = BOARD_SIZE / 2 + (Math.random() * 10 - 5);
         pocketedCoin.vx = 0;
         pocketedCoin.vy = 0;
+        return true;
       }
+      return false;
     };
 
     // Helper: Return Queen to center circle
@@ -734,64 +741,77 @@ export default function CarromGame({ match, currentUid }: CarromGameProps) {
       }
     };
 
-    // ── 1. Check Striker Foul (Due Penalty) ──
+    // Count remaining pieces before resolving
+    const remainingWhiteBefore = pieces.filter((p) => p.type === "white" && !p.isPocketed).length;
+    const remainingBlackBefore = pieces.filter((p) => p.type === "black" && !p.isPocketed).length;
+    const myRemainingBefore = isPlayer1 ? remainingWhiteBefore : remainingBlackBefore;
+    const isQueenOnBoardBefore = pieces.some((p) => p.type === "queen" && !p.isPocketed);
+
+    // ── 1. Check Striker Foul (Due Penalty Return) ──
     if (isStrikerFoul) {
-      actionLog = "⚠️ STRIKER FOUL! 1 Penalty coin returned to center. Turn passes!";
       soundSynth.playBuzzer();
 
-      // Return 1 penalty piece of offending player to center circle
-      returnPenaltyCoinToCenter(myTargetColor);
-
-      // If queen was pending by this player, Queen returns to center
-      if (newQueenPending === currentUid) {
-        newQueenPending = null;
-        returnQueenToCenter();
+      // Return player's pocketed coin to center if available, otherwise record Due
+      const returned = returnPenaltyCoinToCenter(myTargetColor);
+      if (!returned) {
+        if (isPlayer1) newP1Due += 1;
+        else newP2Due += 1;
+        actionLog = "⚠️ STRIKER FOUL! 0 coins in bank. Marked as 1 Due penalty!";
+      } else {
+        actionLog = "⚠️ STRIKER FOUL! 1 Penalty coin returned to center circle!";
       }
 
-      // If any of player's own pieces were pocketed this shot, they also return to center
+      // If player also pocketed their own piece in this shot, that piece also returns to center
       if (myPocketedCount > 0) {
         returnPenaltyCoinToCenter(myTargetColor);
       }
 
-      // Credit opponent if opponent piece went in
-      if (opponentPocketedCount > 0) {
-        if (isPlayer1) newP2Score += opponentPocketedCount * 5;
-        else newP1Score += opponentPocketedCount * 10;
+      // If queen was pending cover by this player, Queen returns to center
+      if (newQueenPending === currentUid) {
+        newQueenPending = null;
+        returnQueenToCenter();
       }
 
       // Turn immediately passes to opponent
       const opponentUid = playerUids.find((id) => id !== currentUid) || currentUid;
       nextTurnUid = opponentUid;
     } else {
-      // ── 2. Queen Pocketing & Official Cover Verification ──
+      // ── 2. Outstanding "Due" Penalty Repayment ──
+      let activeDue = isPlayer1 ? newP1Due : newP2Due;
+      let effectiveMyPocketed = myPocketedCount;
+
+      if (activeDue > 0 && myPocketedCount > 0) {
+        // Pay off 1 Due penalty coin by returning it to center
+        returnPenaltyCoinToCenter(myTargetColor);
+        if (isPlayer1) newP1Due -= 1;
+        else newP2Due -= 1;
+        effectiveMyPocketed -= 1;
+        actionLog = "💸 1 Due penalty coin paid back and returned to center!";
+      }
+
+      // ── 3. Queen Pocketing & Official Cover Verification ──
       if (queenPocketed && !newHasQueen) {
         // Did player pocket Queen AND their own piece in the SAME shot?
-        if (myPocketedCount > 0) {
+        if (effectiveMyPocketed > 0) {
           // Immediately Covered!
           newHasQueen = currentUid;
           newQueenPending = null;
-          if (isPlayer1) newP1Score += 25 + myPocketedCount * 10;
-          else newP2Score += 25 + myPocketedCount * 5;
-
-          actionLog = "👑 QUEEN & COVER SOUGHT IN ONE SHOT! +25 PTS! Bonus turn awarded!";
+          actionLog = "👑 QUEEN & COVER SUNK IN SAME SHOT! Queen claimed! Bonus turn awarded!";
           soundSynth.playFanfare();
           nextTurnUid = currentUid; // Retain turn
         } else {
           // Queen sunk alone -> Next shot is the mandatory Cover Shot
           newQueenPending = currentUid;
-          actionLog = "👑 QUEEN SUNK! You have 1 turn to pocket a cover coin!";
+          actionLog = "👑 QUEEN SUNK! Pocket one of your pieces on the next shot to cover!";
           nextTurnUid = currentUid; // Bonus shot to cover
         }
       } else if (newQueenPending === currentUid) {
         // Player was on Cover Shot turn
-        if (myPocketedCount > 0) {
+        if (effectiveMyPocketed > 0) {
           // Queen Covered successfully!
           newHasQueen = currentUid;
           newQueenPending = null;
-          if (isPlayer1) newP1Score += 25 + myPocketedCount * 10;
-          else newP2Score += 25 + myPocketedCount * 5;
-
-          actionLog = `🎉 QUEEN COVERED (+25 pts) + Pocketed ${myPocketedCount} coin(s)! Bonus Turn!`;
+          actionLog = `🎉 QUEEN COVERED! Pocketed ${effectiveMyPocketed} coin(s)! Bonus Turn!`;
           soundSynth.playFanfare();
           nextTurnUid = currentUid; // Retain turn
         } else {
@@ -803,25 +823,12 @@ export default function CarromGame({ match, currentUid }: CarromGameProps) {
           nextTurnUid = opponentUid;
         }
       } else {
-        // ── 3. Regular Scoring & Turn Flow ──
-        if (myPocketedCount > 0) {
-          // Pocketed own target piece
-          if (isPlayer1) newP1Score += myPocketedCount * 10;
-          else newP2Score += myPocketedCount * 5;
-
-          // If opponent piece also went in, credit opponent
-          if (opponentPocketedCount > 0) {
-            if (isPlayer1) newP2Score += opponentPocketedCount * 5;
-            else newP1Score += opponentPocketedCount * 10;
-          }
-
-          actionLog = `Pocketed ${myPocketedCount} ${myTargetColor.toUpperCase()}! Bonus Turn awarded!`;
+        // ── 4. Regular Scoring & Turn Flow ──
+        if (effectiveMyPocketed > 0) {
+          actionLog = `Pocketed ${effectiveMyPocketed} ${myTargetColor.toUpperCase()}! Bonus Turn awarded!`;
           nextTurnUid = currentUid; // Retains turn
         } else if (opponentPocketedCount > 0) {
-          // Pocketed ONLY opponent piece: Opponent gets credit, turn passes
-          if (isPlayer1) newP2Score += opponentPocketedCount * 5;
-          else newP1Score += opponentPocketedCount * 10;
-
+          // Pocketed ONLY opponent piece: Opponent piece stays pocketed, turn passes
           actionLog = `Opponent's coin pocketed. Turn passes.`;
           const opponentUid = playerUids.find((id) => id !== currentUid) || currentUid;
           nextTurnUid = opponentUid;
@@ -834,15 +841,44 @@ export default function CarromGame({ match, currentUid }: CarromGameProps) {
       }
     }
 
-    // ── 4. Check Tournament Victory Condition ──
+    // ── 5. Check Tournament Victory & Last Piece Rule ──
     const remainingWhite = pieces.filter((p) => p.type === "white" && !p.isPocketed).length;
     const remainingBlack = pieces.filter((p) => p.type === "black" && !p.isPocketed).length;
-    const isGameOver = remainingWhite === 0 || remainingBlack === 0;
+    const isQueenStillOnBoard = pieces.some((p) => p.type === "queen" && !p.isPocketed);
 
+    let isGameOver = false;
     let winnerUid = currentUid;
-    if (isGameOver) {
-      if (remainingWhite === 0) winnerUid = playerUids[0] || currentUid;
-      else winnerUid = playerUids[1] || currentUid;
+
+    // Last Piece Rule: Clearing all 9 pieces while Queen is still on board = LOSS!
+    if (remainingWhite === 0 && isQueenStillOnBoard) {
+      isGameOver = true;
+      winnerUid = playerUids[1] || currentUid; // Opponent wins
+      actionLog = "⚠️ LAST PIECE FOUL! Cleared all pieces without Queen. Opponent wins board!";
+    } else if (remainingBlack === 0 && isQueenStillOnBoard) {
+      isGameOver = true;
+      winnerUid = playerUids[0] || currentUid; // Player 1 wins
+      actionLog = "⚠️ LAST PIECE FOUL! Cleared all pieces without Queen. Opponent wins board!";
+    } else if (remainingWhite === 0) {
+      // Player 1 cleared board legally
+      isGameOver = true;
+      winnerUid = playerUids[0] || currentUid;
+      // ICF Score: 1 pt per remaining opponent piece + (3 pts for Queen if winner < 21 pts)
+      let boardPts = remainingBlack;
+      if (newHasQueen === winnerUid && newP1Score < 21) {
+        boardPts += 3;
+      }
+      newP1Score += boardPts;
+      actionLog = `🏆 BOARD CLEARED! White wins +${boardPts} ICF Points!`;
+    } else if (remainingBlack === 0) {
+      // Player 2 cleared board legally
+      isGameOver = true;
+      winnerUid = playerUids[1] || currentUid;
+      let boardPts = remainingWhite;
+      if (newHasQueen === winnerUid && newP2Score < 21) {
+        boardPts += 3;
+      }
+      newP2Score += boardPts;
+      actionLog = `🏆 BOARD CLEARED! Black wins +${boardPts} ICF Points!`;
     }
 
     await fireCarromShot(
@@ -857,6 +893,8 @@ export default function CarromGame({ match, currentUid }: CarromGameProps) {
         nextTurnUid,
         p1Score: newP1Score,
         p2Score: newP2Score,
+        p1Due: newP1Due,
+        p2Due: newP2Due,
         hasQueen: newHasQueen,
         queenPendingUid: newQueenPending,
         actionLog,
@@ -899,7 +937,7 @@ export default function CarromGame({ match, currentUid }: CarromGameProps) {
                 CHAMPIONSHIP CARROM
               </span>
               <span className="px-1.5 py-0.2 bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[9px] font-bold rounded">
-                ICF TOURNAMENT
+                ICF OFFICIAL
               </span>
             </div>
             <p className="text-[10px] text-neutral-400">
@@ -968,32 +1006,43 @@ export default function CarromGame({ match, currentUid }: CarromGameProps) {
         </div>
       )}
 
-      {/* ── Live Carrom Men Inventory & Queen HUD ── */}
+      {/* ── Live Carrom Men Inventory, Queen Status & Due Penalty HUD ── */}
       <div className="grid grid-cols-3 gap-2 bg-neutral-950 p-3 rounded-xl border border-amber-500/30 text-center">
-        <div className="flex flex-col items-center justify-center p-2 rounded-lg bg-black/60 border border-neutral-800">
+        {/* Player 1 (White) */}
+        <div className="flex flex-col items-center justify-center p-2 rounded-lg bg-black/60 border border-neutral-800 space-y-0.5">
           <span className="text-[10px] text-white font-bold uppercase flex items-center gap-1">
-            ⚪ WHITE MEN (10 PTS)
+            ⚪ WHITE ({cs?.p1Score || 0} PTS)
           </span>
           <span className="text-lg font-black text-white font-mono">{remainingWhite} / 9</span>
-          <span className="text-[9px] text-neutral-400">PLAYER 1 TARGET</span>
+          {(cs?.p1Due || 0) > 0 && (
+            <span className="text-[8px] bg-red-950 text-red-400 px-1.5 py-0.5 rounded font-bold border border-red-800">
+              🔴 DUE: {cs?.p1Due} COIN(S)
+            </span>
+          )}
         </div>
 
-        <div className="flex flex-col items-center justify-center p-2 rounded-lg bg-neutral-900 border border-neutral-700">
+        {/* Queen (Red) */}
+        <div className="flex flex-col items-center justify-center p-2 rounded-lg bg-neutral-900 border border-neutral-700 space-y-0.5">
           <span className="text-[10px] text-red-400 font-bold uppercase flex items-center gap-1">
-            👑 QUEEN (+25 PTS)
+            👑 QUEEN (3 PTS)
           </span>
-          <span className="text-lg font-black text-amber-400 font-mono">
+          <span className="text-sm font-black text-amber-400 font-mono">
             {cs?.hasQueen ? "COVERED 🏆" : cs?.queenPendingUid ? "COVER PENDING ⏳" : isQueenOnBoard ? "ON BOARD" : "POCKETED"}
           </span>
-          <span className="text-[9px] text-amber-300">MUST BE COVERED</span>
+          <span className="text-[8px] text-amber-300">21-PT CAP APPLIES</span>
         </div>
 
-        <div className="flex flex-col items-center justify-center p-2 rounded-lg bg-black/60 border border-neutral-800">
+        {/* Player 2 (Black) */}
+        <div className="flex flex-col items-center justify-center p-2 rounded-lg bg-black/60 border border-neutral-800 space-y-0.5">
           <span className="text-[10px] text-neutral-400 font-bold uppercase flex items-center gap-1">
-            ⚫ BLACK MEN (5 PTS)
+            ⚫ BLACK ({cs?.p2Score || 0} PTS)
           </span>
           <span className="text-lg font-black text-white font-mono">{remainingBlack} / 9</span>
-          <span className="text-[9px] text-neutral-400">PLAYER 2 TARGET</span>
+          {(cs?.p2Due || 0) > 0 && (
+            <span className="text-[8px] bg-red-950 text-red-400 px-1.5 py-0.5 rounded font-bold border border-red-800">
+              🔴 DUE: {cs?.p2Due} COIN(S)
+            </span>
+          )}
         </div>
       </div>
 
@@ -1056,6 +1105,42 @@ export default function CarromGame({ match, currentUid }: CarromGameProps) {
             ? "1. POSITION STRIKER ➔ 2. DRAG FROM STRIKER TO AIM (LASER SHOWS BANK SHOT) ➔ 3. RELEASE TO STRIKE!"
             : "WAITING FOR OPPONENT TO AIM & SHOOT..."}
         </p>
+      </div>
+
+      {/* ── Pro Shot Mechanics Interactive Guide ── */}
+      <div className="border border-neutral-800 bg-neutral-950 rounded-xl overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setShowProTips(!showProTips)}
+          className="w-full p-3 flex items-center justify-between text-xs font-bold text-neutral-300 hover:text-white transition-colors cursor-pointer"
+        >
+          <span className="flex items-center gap-1.5 uppercase">
+            <Compass className="w-4 h-4 text-amber-400" />
+            🎯 ICF PRO SHOT TECHNIQUES (THUMBING, CUTS, REBOUNDS, CANNONS)
+          </span>
+          {showProTips ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </button>
+
+        {showProTips && (
+          <div className="p-3 border-t border-neutral-800 space-y-2.5 text-xs text-neutral-400 font-mono bg-black/50">
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-amber-400 font-bold block mb-0.5">1. 🤙 THUMB SHOT (THUMBING):</span>
+              Reverse pocketing near own baseline without crossing diagonal foul lines.
+            </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-amber-400 font-bold block mb-0.5">2. 📐 BOARD CUTS (THIN / THICK CUTS):</span>
+              Aim at the &quot;ghost coin&quot; position to impart 15° to 80° deflection into corner pockets.
+            </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-amber-400 font-bold block mb-0.5">3. 🪞 REBOUND &amp; FRAME BANK SHOTS:</span>
+              Use the wooden cushion frame to bounce striker or coin around opponent blocker pieces.
+            </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-amber-400 font-bold block mb-0.5">4. 💥 DOUBLE TOUCH &amp; CANNONS:</span>
+              Hit Piece A to drive Piece B into the pocket, or execute split shots between touching pieces.
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Victory Celebration Declaration ── */}

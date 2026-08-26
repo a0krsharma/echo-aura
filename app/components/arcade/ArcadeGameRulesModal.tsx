@@ -567,20 +567,22 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
   },
   carrom: {
     id: "carrom",
-    name: "Cyber Carrom Strike Arena",
+    name: "Championship Carrom (Official ICF Tournament Rules)",
     rank: 6,
     category: "2D Physics & Tabletop",
     icon: "⚪",
-    overview: "2D physics carrom strike arena. Drag and aim the striker along the baseline to pocket carrom men into 4 corner pockets.",
+    overview: "Official International Carrom Federation (ICF) tournament rules. Played with 9 White pieces, 9 Black pieces, 1 Red Queen (3 pts), and 1 Striker. Player who breaks plays White; opponent plays Black. Clear all pieces plus the Queen to claim board victory.",
     howToPlay: [
-      "Place striker on your baseline and drag backward to aim angle and release power.",
-      "Pocket White carrom men (+10 pts) or Black men (+5 pts).",
-      "Pocket the Red Queen (+25 pts) followed immediately by a cover carrom man on the next shot.",
-      "Pocketing your own striker incurs a penalty foul."
+      "STRIKING & TURN: Position striker on baseline touching both front/back lines. Turn continues as long as you legally pocket at least 1 assigned colored piece.",
+      "QUEEN & COVER: Pocket Queen after sinking at least 1 of your pieces. You MUST pocket a cover piece of your color on the very next shot (or same shot) to secure Queen. If cover fails, Queen returns to center.",
+      "LAST PIECE RULE: You cannot pocket the Queen as your last piece. Clearing all 9 pieces while Queen remains on the board results in an immediate loss!",
+      "FOULS & PENALTIES: Pocketing striker (scratch) ends turn + 1 of your pocketed pieces returns to center as Due penalty. If 0 pieces in bank, 1 Due is marked and deducted upon your next pocket.",
+      "OPPONENT PIECE: Sinking only opponent's coin leaves it pocketed but ends your turn. Sinking opponent + own coin keeps both and continues your turn.",
+      "SCORING & 21-PT CAP: Winner earns 1 pt per remaining opponent piece + 3 pts for Queen. Under ICF rules, 3-pt Queen bonus is not added once score reaches 21+ points."
     ],
-    voiceGuide: "Banter with opponents on rebound bank shots and corner defense.",
-    scoring: "+200 Aura for highest score upon board clearance.",
-    proTip: "Use gentle bank angles off side cushions rather than maximum force!"
+    voiceGuide: "Call shots, announce Queens, and engage in tactical board banter over the mic.",
+    scoring: "1 pt per opponent piece on board + 3 pts for Queen (subject to 21-pt cap). Match won at 25 pts.",
+    proTip: "Master the 4 ICF Pro Shots: 1. Thumbing (reverse angles) 2. Board Cuts (thin/thick deflection) 3. Rebound Bank Shots (cushion reflection) 4. Cannons (double touch)."
   },
   pool: {
     id: "pool",
