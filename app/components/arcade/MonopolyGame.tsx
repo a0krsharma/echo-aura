@@ -110,6 +110,75 @@ export default function MonopolyGame({ match, currentUid, isHost, onRematch }: M
     0
   );
 
+  // Compute VaR_0.95 and Expected Hazard Loss
+  const myHazard = useMemo(() => {
+    let expectedLoss = 0;
+    const outcomes: { cost: number; prob: number }[] = [];
+    const probs: Record<number, number> = {
+      2: 1 / 36, 3: 2 / 36, 4: 3 / 36, 5: 4 / 36, 6: 5 / 36, 7: 6 / 36,
+      8: 5 / 36, 9: 4 / 36, 10: 3 / 36, 11: 2 / 36, 12: 1 / 36,
+    };
+
+    for (let d = 2; d <= 12; d++) {
+      const targetTileIdx = (myPos + d) % 40;
+      const tile = MONOPOLY_TILES[targetTileIdx];
+      const prob = probs[d] || 1 / 36;
+      let cost = 0;
+
+      if (tile.group === "SPECIAL") {
+        if (tile.name === "Income Tax") cost = 200;
+        else if (tile.name === "Luxury Tax") cost = 100;
+      } else {
+        const prop = properties[targetTileIdx];
+        if (prop && prop.ownerUid && prop.ownerUid !== currentUid && !prop.isMortgaged) {
+          if (tile.group === "RAILROAD") {
+            const count = Object.entries(properties).filter(
+              ([id, p]) => p.ownerUid === prop.ownerUid && MONOPOLY_TILES[Number(id)]?.group === "RAILROAD"
+            ).length;
+            cost = 25 * Math.pow(2, Math.max(0, count - 1));
+          } else if (tile.group === "UTILITY") {
+            const count = Object.entries(properties).filter(
+              ([id, p]) => p.ownerUid === prop.ownerUid && MONOPOLY_TILES[Number(id)]?.group === "UTILITY"
+            ).length;
+            cost = count === 2 ? d * 10 : d * 4;
+          } else {
+            cost = prop.houses > 0 ? (tile.rent[prop.houses] || tile.rent[0]) : tile.rent[0];
+          }
+        }
+      }
+
+      expectedLoss += cost * prob;
+      outcomes.push({ cost, prob });
+    }
+
+    outcomes.sort((a, b) => b.cost - a.cost);
+    let cumProb = 0;
+    let var95 = 0;
+    for (const o of outcomes) {
+      cumProb += o.prob;
+      if (cumProb >= 0.05) {
+        var95 = o.cost;
+        break;
+      }
+    }
+    return { var95: Math.round(var95), expectedLoss: Math.round(expectedLoss) };
+  }, [myPos, currentUid, properties]);
+
+  const getPlayerNAV = (uid: string) => {
+    let nav = cash[uid] || 0;
+    for (const [idStr, prop] of Object.entries(properties)) {
+      if (prop.ownerUid === uid) {
+        const tile = MONOPOLY_TILES[Number(idStr)];
+        if (!tile) continue;
+        nav += prop.isMortgaged ? Math.round(tile.price * 0.5) : tile.price;
+        if (prop.houses > 0 && tile.houseCost > 0) {
+          nav += prop.houses * tile.houseCost;
+        }
+      }
+    }
+    return nav;
+  };
+
   const handleRoll = async () => {
     if (!isMyTurn || ms.hasRolledThisTurn || isRolling) return;
     setIsRolling(true);
@@ -176,28 +245,25 @@ export default function MonopolyGame({ match, currentUid, isHost, onRematch }: M
   // 11x11 Grid Coordinate Mapping for the 40 Tiles
   const getGridPosition = (index: number) => {
     if (index >= 0 && index <= 10) {
-      // Bottom row (GO at 0, Jail at 10)
       return { row: 11, col: 11 - index };
     } else if (index >= 11 && index <= 20) {
-      // Left column (11 to 20 Free Parking)
       return { row: 11 - (index - 10), col: 1 };
     } else if (index >= 21 && index <= 30) {
-      // Top row (21 to 30 Go To Jail)
       return { row: 1, col: 1 + (index - 20) };
     } else {
-      // Right column (31 to 39)
       return { row: 1 + (index - 30), col: 11 };
     }
   };
 
   return (
     <div className="flex flex-col gap-4 max-w-5xl mx-auto w-full p-2 sm:p-4 text-white">
-      {/* ── Top Dashboard: Players & Global Housing Inventory ── */}
+      {/* ── Top Dashboard: Players, NAV & Global Housing Inventory ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
         {playerUids.map((uid, idx) => {
           const p = match.players[uid];
           const isTurn = ms.currentTurnUid === uid && match.status !== "FINISHED";
           const pCash = cash[uid] ?? 1500;
+          const pNAV = getPlayerNAV(uid);
           const pBankrupt = bankrupt[uid];
           const pInJail = (inJailTurns[uid] || 0) > 0;
           const pProps = Object.values(properties).filter((pr) => pr.ownerUid === uid).length;
@@ -221,9 +287,12 @@ export default function MonopolyGame({ match, currentUid, isHost, onRematch }: M
                 </span>
                 {isTurn && <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-400 text-black font-black">TURN</span>}
               </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-mono font-black text-emerald-400">${pCash}</span>
-                <span className="text-[11px] text-neutral-400">{pProps} Deeds</span>
+              <div className="flex items-center justify-between text-xs font-mono">
+                <span className="font-black text-emerald-400">${pCash} <span className="text-[10px] text-neutral-500">CASH</span></span>
+                <span className="font-bold text-amber-300">${pNAV} <span className="text-[10px] text-neutral-500">NAV</span></span>
+              </div>
+              <div className="text-[10px] text-neutral-400 mt-0.5 font-mono">
+                {pProps} Deeds
               </div>
               {pInJail && (
                 <div className="mt-1 text-[10px] text-red-400 font-bold flex items-center gap-1">
@@ -369,6 +438,20 @@ export default function MonopolyGame({ match, currentUid, isHost, onRematch }: M
                     : "EXECUTE PROPERTY DEALS OR PASS TURN"
                   : `WAITING FOR ${match.players[ms.currentTurnUid]?.handle || "OPPONENT"}...`}
               </p>
+            </div>
+
+            {/* Value at Risk (VaR_0.95) Hazard Meter */}
+            <div className="flex items-center justify-between w-full max-w-md bg-neutral-950/80 border border-neutral-800 px-3 py-1.5 rounded-lg text-[10px] font-mono">
+              <div className="flex items-center gap-1.5 text-neutral-400">
+                <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
+                <span>NEXT-ROLL HAZARD (VaR 95%):</span>
+                <span className={`font-black ${myHazard.var95 > 300 ? "text-red-400" : "text-emerald-400"}`}>
+                  ${myHazard.var95}
+                </span>
+              </div>
+              <div className="text-neutral-400">
+                E[Loss]: <span className="text-amber-300 font-bold">${myHazard.expectedLoss}</span>
+              </div>
             </div>
 
             {/* 3D Dice Display & Roll Button */}

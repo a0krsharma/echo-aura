@@ -1208,7 +1208,7 @@ export async function executeMonopolyBotTurn(match: ArcadeMatch, botUid: string)
   const botPos = positions[botUid] || 0;
   const tile = MONOPOLY_TILES[botPos];
   if (tile && tile.price > 0 && !properties[botPos]?.ownerUid) {
-    const safetyBuffer = 250;
+    const safetyBuffer = 200;
     if ((cash[botUid] || 0) - tile.price >= safetyBuffer) {
       await new Promise((r) => setTimeout(r, 500));
       try {
@@ -1217,13 +1217,45 @@ export async function executeMonopolyBotTurn(match: ArcadeMatch, botUid: string)
     }
   }
 
-  // 3. Build house if has complete monopoly
+  // 3. Build house using VaR_0.95 Solvency Razor
+  // Calculate bot's next-turn VaR_0.95 hazard reserve
+  let var95Hazard = 0;
+  const probs: Record<number, number> = {
+    2: 1 / 36, 3: 2 / 36, 4: 3 / 36, 5: 4 / 36, 6: 5 / 36, 7: 6 / 36,
+    8: 5 / 36, 9: 4 / 36, 10: 3 / 36, 11: 2 / 36, 12: 1 / 36,
+  };
+  const outcomes: { cost: number; prob: number }[] = [];
+  for (let d = 2; d <= 12; d++) {
+    const tIdx = (botPos + d) % 40;
+    const tMeta = MONOPOLY_TILES[tIdx];
+    const pMeta = properties[tIdx];
+    let cost = 0;
+    if (tMeta.group === "SPECIAL") {
+      if (tMeta.name === "Income Tax") cost = 200;
+      else if (tMeta.name === "Luxury Tax") cost = 100;
+    } else if (pMeta && pMeta.ownerUid && pMeta.ownerUid !== botUid && !pMeta.isMortgaged) {
+      cost = pMeta.houses > 0 ? (tMeta.rent[pMeta.houses] || tMeta.rent[0]) : tMeta.rent[0];
+    }
+    outcomes.push({ cost, prob: probs[d] || 1 / 36 });
+  }
+  outcomes.sort((a, b) => b.cost - a.cost);
+  let cProb = 0;
+  for (const o of outcomes) {
+    cProb += o.prob;
+    if (cProb >= 0.05) {
+      var95Hazard = o.cost;
+      break;
+    }
+  }
+
+  const deployableCapital = Math.max(0, (cash[botUid] || 0) - var95Hazard);
+
   const botOwned = Object.entries(properties)
     .filter(([_, p]) => p.ownerUid === botUid && p.houses < 4)
     .map(([id]) => Number(id));
   for (const propId of botOwned) {
     const pTile = MONOPOLY_TILES[propId];
-    if (pTile && pTile.houseCost > 0 && (cash[botUid] || 0) - pTile.houseCost > 300) {
+    if (pTile && pTile.houseCost > 0 && deployableCapital >= pTile.houseCost) {
       const groupProps = MONOPOLY_TILES.filter((t) => t.group === pTile.group);
       const hasMonopoly = groupProps.every((gp) => properties[gp.id]?.ownerUid === botUid);
       if (hasMonopoly) {

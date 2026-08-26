@@ -212,21 +212,21 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
     rank: 5,
     category: "Tactical Boards & Grids",
     icon: "🎩",
-    overview: "Official 40-tile circuit tournament rules ($500x500mm), 120-state Markov Chain stochastic model, DCF property valuation, 32-house supply starvation lockouts, Capital Efficiency Ratio (CER) mortgage liquidation, and Nash Bargaining auction game theory.",
+    overview: "Official 40-tile circuit tournament rules ($500x500mm), 120-state Markov Chain stochastic model, Value at Risk (VaR_0.95) solvency engine, official Speed Die tournament mechanics (Bus & Mr. Monopoly warps), Expectimax game tree AI, 32-house supply starvation lockouts, and WMC Net Asset Value (NAV) scoring.",
     howToPlay: [
       "1. 40-TILE PERIMETER CIRCUIT: Standard 10-tile per side layout with $1,500 starting bankroll (2x$500, 2x$100, 2x$50, 6x$20, 5x$10, 5x$5, 5x$1).",
       "2. 120-STATE MARKOV CHAIN: State space S=(t,d) tracks tile position t in [0..39] and doubles counter d in [0..2]. Rolling 3 consecutive doubles triggers immediate transition to Jail (Tile 10, pi=3.94%).",
-      "3. 32-HOUSE SUPPLY STARVATION LOCK: Strict global inventory of exactly 32 green houses and 12 hotels. Building 4 houses per deed across 2-3 sets hoards 100% of global houses, permanently blocking opponent building upgrades without releasing houses via hotels.",
-      "4. MANDATORY AUCTION & SOLVENCY SQUEEZE: Declining to buy unowned property triggers an instant open auction starting at $1. Winning bid formula: B* = min(V_AI, max(Cash_Opp + Borrowing_Cap) + $1) to extract maximum consumer surplus.",
-      "5. CAPITAL EFFICIENCY RATIO (CER) MORTGAGE HIERARCHY: When raising emergency cash, liquidate in order of lowest CER (income sacrificed per dollar raised): Utilities (0.0014) -> Browns (0.0022) -> Isolated Greens (0.0031). NEVER mortgage completed monopolies.",
-      "6. INTRINSIC DCF VALUATION: Property net present value is modeled as V_intrinsic = Σ (γ^t * π_i * Rent * N_opp). Completing a monopoly unlocks 3-house upgrades (Orange recovers in 7.2 turns; Red in 8.4 turns).",
-      "7. STRATEGIC DENIAL VALUE (V_block): Never trade a monopoly-completing deed to an opponent unless compensation exceeds V_block + V_intrinsic (expected damage penalty).",
-      "8. LIQUIDITY WATERFALL & RESOLUTION: Unmortgaging incurs 10% interest fee. Bankruptcies transfer assets with mandatory 10% interest to creditor, or public unmortgaged auction upon bankruptcy to Bank.",
-      "9. GAME-PHASE TRANSITIONS: Early Phase (buy everything, pay $50 to exit jail) -> Mid Phase (race to 3 houses, trade for Orange/Red) -> Late Phase (stay in Jail full 3 turns, hoard 32 houses, force liquidity collapses)."
+      "3. VALUE AT RISK (VaR_0.95) SOLVENCY ENGINE: Evaluates next-turn financial liability distribution P(X_t = c) across the 2D6 roll spectrum. C_deployable = max(0, Cash - VaR_0.95(t) - 0.5*E[X_{t+7}]). If C_deployable < HouseCost, hold cash to prevent forced liquidation.",
+      "4. OFFICIAL SPEED DIE TOURNAMENT RULES: Adds 3rd red die (1, 2, 3, BUS, MR. MONOPOLY). Triples allow moving to ANY tile on the board. BUS grants movement choice (D1, D2, or D1+D2). MR. MONOPOLY moves normal sum, then warps to the next unowned property (or next opponent property if all owned).",
+      "5. 32-HOUSE SUPPLY STARVATION LOCK: Strict global inventory of exactly 32 green houses and 12 hotels. Building 4 houses per deed across 2-3 sets hoards 100% of global houses, permanently blocking opponent building upgrades without releasing houses via hotels.",
+      "6. MANDATORY AUCTION & SOLVENCY SQUEEZE: Declining to buy unowned property triggers an instant open auction starting at $1. Winning bid formula: B* = min(V_AI, max(Cash_Opp + Borrowing_Cap) + $1) to extract maximum consumer surplus.",
+      "7. CAPITAL EFFICIENCY RATIO (CER) MORTGAGE HIERARCHY: When raising emergency cash, liquidate in order of lowest CER (income sacrificed per dollar raised): Utilities (0.0014) -> Browns (0.0022) -> Isolated Greens (0.0031). NEVER mortgage completed monopolies.",
+      "8. EXPECTIMAX AI ARCHITECTURE: Depth-limited Expectimax search DAG with alpha-beta pruning alternates MAX decisions (buy/build/mortgage/trade) with CHANCE nodes (2D6/3D6 distributions and Chance/Chest draws).",
+      "9. OFFICIAL WMC NET ASSET VALUE (NAV) SCORING: Adjudicated on 60-min tournament clock: NAV = Cash + Σ(Unmortgaged Printed Price) + Σ(0.50 * Mortgaged Price) + Σ(Houses * HouseCost) + Σ(Hotels * 5 * HouseCost)."
     ],
     voiceGuide: "Execute property trades, negotiate mortgage buyouts, and bid aggressively in instant auctions over live voice.",
-    scoring: "Winner bankrupts all opponents or holds highest net worth upon tournament shot clock expiration (+350 Aura).",
-    proTip: "Once you control 2 complete color groups, build to exactly 4 houses per property and refuse hotel upgrades to starve the entire table of housing inventory!"
+    scoring: "Winner bankrupts all opponents or holds highest Net Asset Value (NAV) upon tournament shot clock expiration (+350 Aura).",
+    proTip: "Calculate your VaR_0.95 before buying houses: never spend cash if your reserve drops below the maximum rent on the next 2-12 step hazard horizon!"
   },
   sudoku: {
     id: "sudoku",
