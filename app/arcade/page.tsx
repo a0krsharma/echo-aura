@@ -776,48 +776,6 @@ function ArcadeContent() {
         ) : (
           /* ── Modern World-Class Gaming Lounge ── */
           <div className="space-y-6">
-            {/* Quick Stats & Welcome Strip */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              <div className="bg-gradient-to-br from-neutral-900/90 to-neutral-950/90 border border-neutral-800/80 p-3 rounded-2xl flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-amber-400/10 border border-amber-400/30 flex items-center justify-center text-lg">
-                  🎮
-                </div>
-                <div>
-                  <div className="text-xs font-black text-white">39 TITLES</div>
-                  <div className="text-[10px] text-neutral-400 font-bold">100% FREE &amp; FAIR</div>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-neutral-900/90 to-neutral-950/90 border border-neutral-800/80 p-3 rounded-2xl flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-pink-400/10 border border-pink-400/30 flex items-center justify-center text-lg">
-                  🎙️
-                </div>
-                <div>
-                  <div className="text-xs font-black text-white">VOICE ARENA</div>
-                  <div className="text-[10px] text-neutral-400 font-bold">LIVE MIC &amp; PARTY</div>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-neutral-900/90 to-neutral-950/90 border border-neutral-800/80 p-3 rounded-2xl flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-emerald-400/10 border border-emerald-400/30 flex items-center justify-center text-lg">
-                  🤖
-                </div>
-                <div>
-                  <div className="text-xs font-black text-white">AI BOT RIVAL</div>
-                  <div className="text-[10px] text-neutral-400 font-bold">ADAPTIVE DIFFICULTY</div>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-neutral-900/90 to-neutral-950/90 border border-neutral-800/80 p-3 rounded-2xl flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-yellow-400/10 border border-yellow-400/30 flex items-center justify-center text-lg">
-                  🏆
-                </div>
-                <div>
-                  <div className="text-xs font-black text-white">TOURNAMENTS</div>
-                  <div className="text-[10px] text-neutral-400 font-bold">AURA REWARDS</div>
-                </div>
-              </div>
-            </div>
 
             {/* Search & Category Filter Pills */}
             <div className="space-y-3">
