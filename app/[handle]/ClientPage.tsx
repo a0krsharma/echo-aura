@@ -31,6 +31,8 @@ import { ChatWidget } from "@/app/components/ChatWidget";
 import { getPlayableUrl } from "@/lib/cloudinary";
 import { isThoughtActive, getThoughtRemainingHours } from "@/lib/userDoc";
 import ChallengeModal from "@/app/components/ChallengeModal";
+import ExpressiveAvatar from "@/app/components/avatar/ExpressiveAvatar";
+import { type AvatarConfig, DEFAULT_AVATAR_CONFIG } from "@/lib/avatarRig";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -43,6 +45,8 @@ interface FirestoreUser {
   photoUrl?: string;
   photoURL?: string;
   avatarUrl?: string;
+  avatarConfig?: AvatarConfig;
+  equipped?: Record<string, string>;
   auraScore?: number;
   badges?: string[];
   bio?: string;
@@ -584,15 +588,44 @@ export default function HandlePage({ params }: { params?: { handle?: string } })
                 )
               )}
 
-              <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-full border-2 border-neutral-700 overflow-hidden flex items-center justify-center text-2xl font-mono bg-neutral-950 mt-2">
-                {profile.avatarUrl ? (
+              <div className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 overflow-hidden flex items-center justify-center text-2xl font-mono bg-black relative mt-2 transition-all ${
+                profile.equipped?.border === "cosmetic_neon_border"
+                  ? "border-emerald-400 ring-4 ring-emerald-400/80 ring-offset-2 ring-offset-black shadow-[0_0_35px_rgba(52,211,153,0.7)] animate-pulse"
+                  : "border-neutral-700"
+              }`}>
+                {profile.avatarUrl && !profile.avatarConfig ? (
                   <img
                     src={profile.avatarUrl}
                     alt={displayHandle}
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <span className="text-white font-bold">{displayHandle.charAt(1).toUpperCase()}</span>
+                  <ExpressiveAvatar
+                    config={{
+                      skinTone: profile.avatarConfig?.skinTone || "ALMOND",
+                      hairStyle: profile.avatarConfig?.hairStyle || "CYBER_FADE",
+                      hairColor: profile.avatarConfig?.hairColor || "CYAN",
+                      eyewear:
+                        profile.equipped?.eyewear === "item_cyber_visor"
+                          ? "CYBER_VISOR"
+                          : profile.avatarConfig?.eyewear || "CYBER_VISOR",
+                      outfitColor:
+                        profile.equipped?.suit === "suit_neon_crimson"
+                          ? "CRIMSON"
+                          : profile.equipped?.suit === "suit_emerald_tux"
+                          ? "EMERALD"
+                          : profile.equipped?.suit === "suit_gold_champion"
+                          ? "AMBER"
+                          : profile.equipped?.suit === "suit_cyan_runner"
+                          ? "CYAN"
+                          : profile.equipped?.suit === "suit_cyber_obsidian"
+                          ? "OBSIDIAN"
+                          : profile.avatarConfig?.outfitColor || "OBSIDIAN",
+                    }}
+                    gesture="IDLE"
+                    size={96}
+                    className="w-full h-full"
+                  />
                 )}
               </div>
             </div>
@@ -647,11 +680,28 @@ export default function HandlePage({ params }: { params?: { handle?: string } })
             </div>
           </div>
 
-          {/* User Bio Details */}
-          <div className="space-y-1 pt-1">
-            <h2 className="font-mono text-xs sm:text-sm font-bold text-white">
-              {profile.displayName || displayHandle}
-            </h2>
+          {/* User Bio Details & Equipped Titles */}
+          <div className="space-y-1.5 pt-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="font-mono text-xs sm:text-sm font-bold text-white">
+                {profile.displayName || displayHandle}
+              </h2>
+              {profile.equipped?.title === "title_shadow_broker" && (
+                <span className="px-2 py-0.5 bg-purple-950 border border-purple-500 text-purple-300 font-mono text-[9px] uppercase font-black rounded-md shadow-sm">
+                  🕵️ SHADOW BROKER
+                </span>
+              )}
+              {profile.equipped?.title === "title_grandmaster" && (
+                <span className="px-2 py-0.5 bg-amber-950 border border-amber-400 text-yellow-400 font-mono text-[9px] uppercase font-black rounded-md shadow-sm">
+                  👑 GRANDMASTER TYCOON
+                </span>
+              )}
+              {profile.equipped?.suit && (
+                <span className="px-2 py-0.5 bg-neutral-900 border border-neutral-700 text-white font-mono text-[9px] uppercase font-bold rounded-md shadow-sm">
+                  🥋 {profile.equipped.suit.replace('suit_', '').replace(/_/g, ' ').toUpperCase()}
+                </span>
+              )}
+            </div>
             <p className="font-mono text-xs text-neutral-300 whitespace-pre-line leading-relaxed">
               {profile.bio || "Voice creator on Echo"}
             </p>

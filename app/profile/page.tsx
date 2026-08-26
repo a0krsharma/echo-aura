@@ -305,6 +305,28 @@ export default function ProfilePage() {
     return DEFAULT_AVATAR_CONFIG;
   });
 
+  const effectiveAvatarConfig: AvatarConfig = {
+    skinTone: avatarConfig.skinTone || "ALMOND",
+    hairStyle: avatarConfig.hairStyle || "CYBER_FADE",
+    hairColor: avatarConfig.hairColor || "CYAN",
+    eyewear:
+      equippedItems.eyewear === "item_cyber_visor"
+        ? "CYBER_VISOR"
+        : avatarConfig.eyewear || "CYBER_VISOR",
+    outfitColor:
+      equippedItems.suit === "suit_neon_crimson"
+        ? "CRIMSON"
+        : equippedItems.suit === "suit_emerald_tux"
+        ? "EMERALD"
+        : equippedItems.suit === "suit_gold_champion"
+        ? "AMBER"
+        : equippedItems.suit === "suit_cyan_runner"
+        ? "CYAN"
+        : equippedItems.suit === "suit_cyber_obsidian"
+        ? "OBSIDIAN"
+        : avatarConfig.outfitColor || "OBSIDIAN",
+  };
+
   const handleSaveAvatarConfig = async (newConfig: AvatarConfig) => {
     setAvatarConfig(newConfig);
     if (typeof window !== "undefined") {
@@ -910,7 +932,7 @@ export default function ProfilePage() {
                     />
                   ) : (
                     <ExpressiveAvatar
-                      config={avatarConfig}
+                      config={effectiveAvatarConfig}
                       gesture="IDLE"
                       size={96}
                       className="w-full h-full"
