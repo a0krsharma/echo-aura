@@ -3,7 +3,6 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import { soundSynth } from "@/lib/soundSynthesizer";
 import { firePoolShot, type ArcadeMatch, type PoolBall } from "@/lib/arcade";
-import { executePoolBotShot } from "@/lib/arcadeBots";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
 import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
@@ -152,54 +151,40 @@ export function createDisciplineRack(discipline: PoolDiscipline): PoolBall[] {
 
   if (discipline === "8_BALL" || discipline === "STRAIGHT_POOL" || discipline === "ONE_POCKET") {
     // 15-ball full triangle rack
-    // Row 1 (Apex): 1
     balls.push({ id: "b1", x: apexX, y: apexY, vx: 0, vy: 0, radius: r, color: BALL_COLORS["1"], number: 1, type: "solid", isPocketed: false });
-    // Row 2: 2, 9
     balls.push({ id: "b2", x: apexX - spacingX / 2, y: apexY - spacingY, vx: 0, vy: 0, radius: r, color: BALL_COLORS["2"], number: 2, type: "solid", isPocketed: false });
     balls.push({ id: "b9", x: apexX + spacingX / 2, y: apexY - spacingY, vx: 0, vy: 0, radius: r, color: BALL_COLORS["9"], number: 9, type: "stripe", isPocketed: false });
-    // Row 3: 3, 8 (Center!), 10
     balls.push({ id: "b3", x: apexX - spacingX, y: apexY - spacingY * 2, vx: 0, vy: 0, radius: r, color: BALL_COLORS["3"], number: 3, type: "solid", isPocketed: false });
     balls.push({ id: "b8", x: apexX, y: apexY - spacingY * 2, vx: 0, vy: 0, radius: r, color: BALL_COLORS["8"], number: 8, type: "8ball", isPocketed: false });
     balls.push({ id: "b10", x: apexX + spacingX, y: apexY - spacingY * 2, vx: 0, vy: 0, radius: r, color: BALL_COLORS["10"], number: 10, type: "stripe", isPocketed: false });
-    // Row 4: 4, 11, 5, 12
     balls.push({ id: "b4", x: apexX - 1.5 * spacingX, y: apexY - spacingY * 3, vx: 0, vy: 0, radius: r, color: BALL_COLORS["4"], number: 4, type: "solid", isPocketed: false });
     balls.push({ id: "b11", x: apexX - 0.5 * spacingX, y: apexY - spacingY * 3, vx: 0, vy: 0, radius: r, color: BALL_COLORS["11"], number: 11, type: "stripe", isPocketed: false });
     balls.push({ id: "b5", x: apexX + 0.5 * spacingX, y: apexY - spacingY * 3, vx: 0, vy: 0, radius: r, color: BALL_COLORS["5"], number: 5, type: "solid", isPocketed: false });
     balls.push({ id: "b12", x: apexX + 1.5 * spacingX, y: apexY - spacingY * 3, vx: 0, vy: 0, radius: r, color: BALL_COLORS["12"], number: 12, type: "stripe", isPocketed: false });
-    // Row 5: 6, 13, 7, 14, 15
     balls.push({ id: "b6", x: apexX - 2 * spacingX, y: apexY - spacingY * 4, vx: 0, vy: 0, radius: r, color: BALL_COLORS["6"], number: 6, type: "solid", isPocketed: false });
     balls.push({ id: "b13", x: apexX - 1 * spacingX, y: apexY - spacingY * 4, vx: 0, vy: 0, radius: r, color: BALL_COLORS["13"], number: 13, type: "stripe", isPocketed: false });
     balls.push({ id: "b7", x: apexX, y: apexY - spacingY * 4, vx: 0, vy: 0, radius: r, color: BALL_COLORS["7"], number: 7, type: "solid", isPocketed: false });
     balls.push({ id: "b14", x: apexX + 1 * spacingX, y: apexY - spacingY * 4, vx: 0, vy: 0, radius: r, color: BALL_COLORS["14"], number: 14, type: "stripe", isPocketed: false });
     balls.push({ id: "b15", x: apexX + 2 * spacingX, y: apexY - spacingY * 4, vx: 0, vy: 0, radius: r, color: BALL_COLORS["15"], number: 15, type: "stripe", isPocketed: false });
   } else if (discipline === "9_BALL") {
-    // 9-ball diamond rack (1 at apex, 9 dead in center)
-    // Row 1: 1
+    // 9-ball diamond rack
     balls.push({ id: "b1", x: apexX, y: apexY, vx: 0, vy: 0, radius: r, color: BALL_COLORS["1"], number: 1, type: "solid", isPocketed: false });
-    // Row 2: 2, 3
     balls.push({ id: "b2", x: apexX - spacingX / 2, y: apexY - spacingY, vx: 0, vy: 0, radius: r, color: BALL_COLORS["2"], number: 2, type: "solid", isPocketed: false });
     balls.push({ id: "b3", x: apexX + spacingX / 2, y: apexY - spacingY, vx: 0, vy: 0, radius: r, color: BALL_COLORS["3"], number: 3, type: "solid", isPocketed: false });
-    // Row 3: 4, 9 (Center!), 5
     balls.push({ id: "b4", x: apexX - spacingX, y: apexY - spacingY * 2, vx: 0, vy: 0, radius: r, color: BALL_COLORS["4"], number: 4, type: "solid", isPocketed: false });
     balls.push({ id: "b9", x: apexX, y: apexY - spacingY * 2, vx: 0, vy: 0, radius: r, color: BALL_COLORS["9"], number: 9, type: "stripe", isPocketed: false });
     balls.push({ id: "b5", x: apexX + spacingX, y: apexY - spacingY * 2, vx: 0, vy: 0, radius: r, color: BALL_COLORS["5"], number: 5, type: "solid", isPocketed: false });
-    // Row 4: 6, 7
     balls.push({ id: "b6", x: apexX - spacingX / 2, y: apexY - spacingY * 3, vx: 0, vy: 0, radius: r, color: BALL_COLORS["6"], number: 6, type: "solid", isPocketed: false });
     balls.push({ id: "b7", x: apexX + spacingX / 2, y: apexY - spacingY * 3, vx: 0, vy: 0, radius: r, color: BALL_COLORS["7"], number: 7, type: "solid", isPocketed: false });
-    // Row 5: 8
     balls.push({ id: "b8", x: apexX, y: apexY - spacingY * 4, vx: 0, vy: 0, radius: r, color: BALL_COLORS["8"], number: 8, type: "8ball", isPocketed: false });
   } else if (discipline === "10_BALL") {
-    // 10-ball triangle rack (1 at apex, 10 dead in center)
-    // Row 1: 1
+    // 10-ball triangle rack
     balls.push({ id: "b1", x: apexX, y: apexY, vx: 0, vy: 0, radius: r, color: BALL_COLORS["1"], number: 1, type: "solid", isPocketed: false });
-    // Row 2: 2, 3
     balls.push({ id: "b2", x: apexX - spacingX / 2, y: apexY - spacingY, vx: 0, vy: 0, radius: r, color: BALL_COLORS["2"], number: 2, type: "solid", isPocketed: false });
     balls.push({ id: "b3", x: apexX + spacingX / 2, y: apexY - spacingY, vx: 0, vy: 0, radius: r, color: BALL_COLORS["3"], number: 3, type: "solid", isPocketed: false });
-    // Row 3: 4, 10 (Center!), 5
     balls.push({ id: "b4", x: apexX - spacingX, y: apexY - spacingY * 2, vx: 0, vy: 0, radius: r, color: BALL_COLORS["4"], number: 4, type: "solid", isPocketed: false });
     balls.push({ id: "b10", x: apexX, y: apexY - spacingY * 2, vx: 0, vy: 0, radius: r, color: BALL_COLORS["10"], number: 10, type: "stripe", isPocketed: false });
     balls.push({ id: "b5", x: apexX + spacingX, y: apexY - spacingY * 2, vx: 0, vy: 0, radius: r, color: BALL_COLORS["5"], number: 5, type: "solid", isPocketed: false });
-    // Row 4: 6, 7, 8, 9
     balls.push({ id: "b6", x: apexX - 1.5 * spacingX, y: apexY - spacingY * 3, vx: 0, vy: 0, radius: r, color: BALL_COLORS["6"], number: 6, type: "solid", isPocketed: false });
     balls.push({ id: "b7", x: apexX - 0.5 * spacingX, y: apexY - spacingY * 3, vx: 0, vy: 0, radius: r, color: BALL_COLORS["7"], number: 7, type: "solid", isPocketed: false });
     balls.push({ id: "b8", x: apexX + 0.5 * spacingX, y: apexY - spacingY * 3, vx: 0, vy: 0, radius: r, color: BALL_COLORS["8"], number: 8, type: "8ball", isPocketed: false });
@@ -233,11 +218,28 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
   // Local physics pieces state
   const ballsRef = useRef<PoolBall[]>([]);
   const isSimulatingRef = useRef(false);
+  const watchdogTimerRef = useRef<any>(null);
   const pocketedThisShotRef = useRef<PoolBall[]>([]);
   const cueScratchRef = useRef(false);
   const firstContactBallRef = useRef<PoolBall | null>(null);
   const isBreakShotRef = useRef(false);
   const pocketLocationsThisShotRef = useRef<{ ball: PoolBall; pocketName: string }[]>([]);
+
+  // Start Safety Watchdog Timer (Forces settlement if balls jitter past 5 seconds)
+  const startWatchdog = useCallback(() => {
+    if (watchdogTimerRef.current) clearTimeout(watchdogTimerRef.current);
+    watchdogTimerRef.current = setTimeout(() => {
+      if (isSimulatingRef.current) {
+        ballsRef.current.forEach((b) => {
+          b.vx = 0;
+          b.vy = 0;
+        });
+        isSimulatingRef.current = false;
+        setIsSimulating(false);
+        finalizeShotTurn();
+      }
+    }, 4500);
+  }, []);
 
   // Initialize or Sync balls from match state
   useEffect(() => {
@@ -261,6 +263,9 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
     ballsRef.current = newRack;
     setIsBallInHand(false);
     setIsPushOutDeclared(false);
+    isSimulatingRef.current = false;
+    setIsSimulating(false);
+    if (watchdogTimerRef.current) clearTimeout(watchdogTimerRef.current);
 
     try {
       await firePoolShot(
@@ -282,7 +287,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
   }, [currentUid, match.id]);
 
   // Determine assigned suit for active players (8-Ball)
-  const p1Suit = ps?.p1Type || null; // "SOLIDS" | "STRIPES" | null
+  const p1Suit = ps?.p1Type || null;
   const p2Suit = ps?.p2Type || null;
   const myAssignedSuit = isPlayer1 ? p1Suit : p2Suit;
 
@@ -300,9 +305,48 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
       (p) => p.uid === ps.currentTurnUid && p.isBot
     );
     if (botPlayer && !isSimulatingRef.current) {
-      executePoolBotShot(match);
+      const timer = setTimeout(() => {
+        if (isSimulatingRef.current) return;
+        const balls = ballsRef.current;
+        const cueBall = balls.find((b) => b.type === "cue" && !b.isPocketed);
+        const targets = balls.filter((b) => b.type !== "cue" && !b.isPocketed);
+        if (!cueBall || targets.length === 0) return;
+
+        // Pick target according to discipline
+        let target = targets[0];
+        if ((discipline === "9_BALL" || discipline === "10_BALL") && lowestBallOnTable) {
+          target = lowestBallOnTable;
+        } else {
+          target = targets[Math.floor(Math.random() * targets.length)];
+        }
+
+        const dx = target.x - cueBall.x;
+        const dy = target.y - cueBall.y;
+        const dist = Math.hypot(dx, dy) || 1;
+        const speed = 11 + Math.random() * 5;
+        const impulseX = (dx / dist) * speed + (Math.random() - 0.5) * 1.0;
+        const impulseY = (dy / dist) * speed + (Math.random() - 0.5) * 1.0;
+
+        cueBall.vx = impulseX;
+        cueBall.vy = impulseY;
+
+        soundSynth.playSnare();
+        pocketedThisShotRef.current = [];
+        pocketLocationsThisShotRef.current = [];
+        cueScratchRef.current = false;
+        firstContactBallRef.current = null;
+
+        const totalRemaining = balls.filter((b) => b.type !== "cue" && !b.isPocketed).length;
+        isBreakShotRef.current = totalRemaining === POOL_DISCIPLINES[discipline].ballsCount;
+
+        isSimulatingRef.current = true;
+        setIsSimulating(true);
+        startWatchdog();
+      }, 1100);
+
+      return () => clearTimeout(timer);
     }
-  }, [match, ps?.currentTurnUid]);
+  }, [match, ps?.currentTurnUid, isSimulating, discipline, lowestBallOnTable, startWatchdog]);
 
   // Main Canvas & Continuous Physics Render Loop
   useEffect(() => {
@@ -324,7 +368,8 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
           if (b.isPocketed) return;
 
           const speed = Math.hypot(b.vx, b.vy);
-          if (speed > 0.05) {
+          // Sleep threshold to prevent perpetual micro-vibration
+          if (speed > 0.08) {
             anyMoving = true;
             b.x += b.vx / subSteps;
             b.y += b.vy / subSteps;
@@ -357,7 +402,6 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
             POCKETS.forEach((pkt) => {
               const dToPocket = Math.hypot(b.x - pkt.x, b.y - pkt.y);
               if (dToPocket < POCKET_RADIUS) {
-                // Suction toward pocket hole
                 const pullForce = 0.38;
                 b.vx += ((pkt.x - b.x) / dToPocket) * pullForce;
                 b.vy += ((pkt.y - b.y) / dToPocket) * pullForce;
@@ -381,6 +425,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
               }
             });
           } else {
+            // Strict velocity zeroing to prevent micro-creep
             b.vx = 0;
             b.vy = 0;
           }
@@ -407,7 +452,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
                 firstContactBallRef.current = b1.type === "cue" ? b2 : b1;
               }
 
-              // Positional Correction to Prevent Overlap Penetration
+              // Positional Separation
               const overlap = minDist - dist;
               b1.x -= nx * overlap * 0.5;
               b1.y -= ny * overlap * 0.5;
@@ -417,15 +462,18 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
               // Relative Velocity along Normal
               const kx = b1.vx - b2.vx;
               const ky = b1.vy - b2.vy;
-              const p = 2 * (nx * kx + ny * ky) / 2;
-
-              b1.vx -= p * nx * 0.96;
-              b1.vy -= p * ny * 0.96;
-              b2.vx += p * nx * 0.96;
-              b2.vy += p * ny * 0.96;
-
               const hitSpeed = Math.hypot(kx, ky);
-              if (hitSpeed > 0.8) soundSynth.playSubtlePop();
+
+              // Only transfer momentum if at least one ball has moving energy
+              if (hitSpeed > 0.05) {
+                const p = 2 * (nx * kx + ny * ky) / 2;
+                b1.vx -= p * nx * 0.96;
+                b1.vy -= p * ny * 0.96;
+                b2.vx += p * nx * 0.96;
+                b2.vy += p * ny * 0.96;
+
+                if (hitSpeed > 1.2) soundSynth.playSubtlePop();
+              }
             }
           }
         }
@@ -433,6 +481,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
 
       // Check if Simulation Finished
       if (isSimulatingRef.current && !anyMoving) {
+        if (watchdogTimerRef.current) clearTimeout(watchdogTimerRef.current);
         isSimulatingRef.current = false;
         setIsSimulating(false);
         finalizeShotTurn();
@@ -511,21 +560,18 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
       ctx.arc(190, 140, 3, 0, Math.PI * 2);
       ctx.fill();
 
-      // C. 6 Drop Pockets (Deep Leather Net Holes with Brass Rims)
+      // C. 6 Drop Pockets
       POCKETS.forEach((pkt) => {
-        // Brass Rim Plates
         ctx.beginPath();
         ctx.arc(pkt.x, pkt.y, POCKET_RADIUS, 0, Math.PI * 2);
         ctx.fillStyle = "#854d0e";
         ctx.fill();
 
-        // Deep Pocket Net Hole
         ctx.beginPath();
         ctx.arc(pkt.x, pkt.y, POCKET_DEPTH_RADIUS, 0, Math.PI * 2);
         ctx.fillStyle = "#09090b";
         ctx.fill();
 
-        // Pocket Inner Shadow Ring
         ctx.strokeStyle = "rgba(0, 0, 0, 0.8)";
         ctx.lineWidth = 2;
         ctx.stroke();
@@ -555,18 +601,17 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         ctx.restore();
       }
 
-      // D. Draw Tournament Balls with 3D Specular Shading & Numbers
+      // D. Draw Tournament Balls
       balls.forEach((b) => {
         if (b.isPocketed) return;
 
         ctx.save();
-        // Drop Shadow
         ctx.beginPath();
         ctx.arc(b.x + 1.5, b.y + 2, b.radius, 0, Math.PI * 2);
         ctx.fillStyle = "rgba(0, 0, 0, 0.38)";
         ctx.fill();
 
-        // Pulsing Gold Target Halo for Lowest Ball in Rotation Games (9-Ball & 10-Ball)
+        // Pulsing Gold Target Halo for Lowest Ball in Rotation Games
         if ((discipline === "9_BALL" || discipline === "10_BALL") && lowestBallOnTable && lowestBallOnTable.id === b.id) {
           ctx.beginPath();
           ctx.arc(b.x, b.y, b.radius + 4, 0, Math.PI * 2);
@@ -576,12 +621,10 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
           ctx.stroke();
         }
 
-        // Ball Body
         ctx.beginPath();
         ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
 
         if (b.type === "cue") {
-          // Pure White Cue Ball with Specular Glow
           const cueGrad = ctx.createRadialGradient(b.x - 3, b.y - 3, 2, b.x, b.y, b.radius);
           cueGrad.addColorStop(0, "#ffffff");
           cueGrad.addColorStop(0.85, "#e5e7eb");
@@ -589,13 +632,11 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
           ctx.fillStyle = cueGrad;
           ctx.fill();
 
-          // Red Target Measurement Dot
           ctx.beginPath();
           ctx.arc(b.x, b.y, 2, 0, Math.PI * 2);
           ctx.fillStyle = "#dc2626";
           ctx.fill();
         } else if (b.type === "8ball" || b.number === 8) {
-          // Solid Black 8-Ball
           const blackGrad = ctx.createRadialGradient(b.x - 3, b.y - 3, 2, b.x, b.y, b.radius);
           blackGrad.addColorStop(0, "#4b5563");
           blackGrad.addColorStop(0.4, "#111827");
@@ -603,7 +644,6 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
           ctx.fillStyle = blackGrad;
           ctx.fill();
 
-          // Center White Number Circle
           ctx.beginPath();
           ctx.arc(b.x, b.y, b.radius * 0.44, 0, Math.PI * 2);
           ctx.fillStyle = "#ffffff";
@@ -615,7 +655,6 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
           ctx.textBaseline = "middle";
           ctx.fillText("8", b.x, b.y + 0.5);
         } else if (b.type === "solid") {
-          // Solid Color Ball (1-7)
           const col = BALL_COLORS[String(b.number)] || "#eab308";
           const sGrad = ctx.createRadialGradient(b.x - 3, b.y - 3, 2, b.x, b.y, b.radius);
           sGrad.addColorStop(0, "#ffffff");
@@ -624,7 +663,6 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
           ctx.fillStyle = sGrad;
           ctx.fill();
 
-          // Number Circle
           ctx.beginPath();
           ctx.arc(b.x, b.y, b.radius * 0.44, 0, Math.PI * 2);
           ctx.fillStyle = "#ffffff";
@@ -636,10 +674,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
           ctx.textBaseline = "middle";
           ctx.fillText(String(b.number), b.x, b.y + 0.5);
         } else if (b.type === "stripe") {
-          // Striped Ball (9-15)
           const col = BALL_COLORS[String(b.number)] || "#eab308";
-
-          // White Base Ball
           const baseGrad = ctx.createRadialGradient(b.x - 3, b.y - 3, 2, b.x, b.y, b.radius);
           baseGrad.addColorStop(0, "#ffffff");
           baseGrad.addColorStop(0.7, "#f3f4f6");
@@ -647,7 +682,6 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
           ctx.fillStyle = baseGrad;
           ctx.fill();
 
-          // Center Colored Stripe Belt
           ctx.beginPath();
           ctx.arc(b.x, b.y, b.radius, -Math.PI / 3, Math.PI / 3);
           ctx.fillStyle = col;
@@ -657,7 +691,6 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
           ctx.fillStyle = col;
           ctx.fill();
 
-          // Center White Number Circle
           ctx.beginPath();
           ctx.arc(b.x, b.y, b.radius * 0.46, 0, Math.PI * 2);
           ctx.fillStyle = "#ffffff";
@@ -672,7 +705,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         ctx.restore();
       });
 
-      // E. WPA Mathematical Ghost Ball & Tangent Trajectory System
+      // E. Mathematical Ghost Ball & Tangent Trajectory System
       if (isAiming && dragStart && dragCurrent) {
         const cueBall = balls.find((b) => b.type === "cue");
         if (cueBall && !cueBall.isPocketed) {
@@ -685,7 +718,6 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
             const dirY = pullDy / aimDist;
             const rayMaxDist = 320;
 
-            // Find closest object ball in line of aim (Ghost Ball Raycast)
             let closestT = rayMaxDist;
             let targetBall: PoolBall | null = null;
             const R2 = cueBall.radius * 2;
@@ -714,7 +746,6 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
               const ghostX = cueBall.x + dirX * closestT;
               const ghostY = cueBall.y + dirY * closestT;
 
-              // 1. Cue Ball to Ghost Ball Laser Ray
               ctx.beginPath();
               ctx.moveTo(cueBall.x, cueBall.y);
               ctx.lineTo(ghostX, ghostY);
@@ -723,7 +754,6 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
               ctx.lineWidth = 1.5;
               ctx.stroke();
 
-              // 2. Ghost Ball Circle at Impact Point
               ctx.beginPath();
               ctx.arc(ghostX, ghostY, cueBall.radius, 0, Math.PI * 2);
               ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
@@ -731,7 +761,6 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
               ctx.setLineDash([3, 2]);
               ctx.stroke();
 
-              // 3. Object Ball Departure Path (Line of Centers Vector)
               const objDirX = targetBall.x - ghostX;
               const objDirY = targetBall.y - ghostY;
               const objDist = Math.hypot(objDirX, objDirY);
@@ -743,12 +772,11 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
                 ctx.beginPath();
                 ctx.moveTo(targetBall.x, targetBall.y);
                 ctx.lineTo(targetBall.x + normObjX * 120, targetBall.y + normObjY * 120);
-                ctx.strokeStyle = "#fde047"; // Yellow Object Ball Path
+                ctx.strokeStyle = "#fde047";
                 ctx.setLineDash([]);
                 ctx.lineWidth = 2;
                 ctx.stroke();
 
-                // 4. Cue Ball 90-Degree Tangent Deflection Line
                 const tangentX = -normObjY;
                 const tangentY = normObjX;
 
@@ -757,13 +785,12 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
                 ctx.lineTo(ghostX + tangentX * 60, ghostY + tangentY * 60);
                 ctx.moveTo(ghostX, ghostY);
                 ctx.lineTo(ghostX - tangentX * 60, ghostY - tangentY * 60);
-                ctx.strokeStyle = "rgba(56, 189, 248, 0.75)"; // Cyan 90-degree line
+                ctx.strokeStyle = "rgba(56, 189, 248, 0.75)";
                 ctx.lineWidth = 1.5;
                 ctx.setLineDash([2, 2]);
                 ctx.stroke();
               }
             } else {
-              // Open Bank/Kick Shot Ray to Cushion
               ctx.beginPath();
               ctx.moveTo(cueBall.x, cueBall.y);
               ctx.lineTo(cueBall.x + dirX * rayMaxDist, cueBall.y + dirY * rayMaxDist);
@@ -774,7 +801,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
             }
             ctx.restore();
 
-            // F. Tournament Hardwood Cue Stick with Carbon Fiber Ferrule
+            // F. Tournament Cue Stick
             ctx.save();
             const cueStickLength = 160;
             const cueOffset = 18 + power * 0.4;
@@ -784,10 +811,10 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
             const stickEndY = cueBall.y - dirY * (cueOffset + cueStickLength);
 
             const cueGrad = ctx.createLinearGradient(stickStartX, stickStartY, stickEndX, stickEndY);
-            cueGrad.addColorStop(0, "#e5e7eb"); // Phenolic Tip / Ferrule
-            cueGrad.addColorStop(0.08, "#1f2937"); // Carbon Joint
-            cueGrad.addColorStop(0.3, "#b45309"); // Maple Forearm
-            cueGrad.addColorStop(0.8, "#78350f"); // Hardwood Butt
+            cueGrad.addColorStop(0, "#e5e7eb");
+            cueGrad.addColorStop(0.08, "#1f2937");
+            cueGrad.addColorStop(0.3, "#b45309");
+            cueGrad.addColorStop(0.8, "#78350f");
             cueGrad.addColorStop(1, "#1c1917");
 
             ctx.beginPath();
@@ -808,7 +835,10 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
     };
 
     animId = requestAnimationFrame(updatePhysicsAndRender);
-    return () => cancelAnimationFrame(animId);
+    return () => {
+      cancelAnimationFrame(animId);
+      if (watchdogTimerRef.current) clearTimeout(watchdogTimerRef.current);
+    };
   }, [discipline, isAiming, dragStart, dragCurrent, power, lowestBallOnTable]);
 
   // Pointer Interaction Handlers
@@ -841,6 +871,8 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
     // Aiming Initiation
     const cueBall = ballsRef.current.find((b) => b.type === "cue");
     if (cueBall && !cueBall.isPocketed) {
+      cueBall.vx = 0;
+      cueBall.vy = 0;
       setIsAiming(true);
       setDragStart({ x: clickX, y: clickY });
       setDragCurrent({ x: clickX, y: clickY });
@@ -892,12 +924,12 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         cueScratchRef.current = false;
         firstContactBallRef.current = null;
 
-        // Check if this is the Break Shot
         const totalRemaining = ballsRef.current.filter((b) => b.type !== "cue" && !b.isPocketed).length;
         isBreakShotRef.current = totalRemaining === POOL_DISCIPLINES[discipline].ballsCount;
 
         isSimulatingRef.current = true;
         setIsSimulating(true);
+        startWatchdog();
       }
     }
 
@@ -1116,21 +1148,25 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
       }
     }
 
-    await firePoolShot(
-      match.id,
-      currentUid,
-      0,
-      0,
-      balls,
-      {
-        nextTurnUid,
-        p1Score: newP1Score,
-        p2Score: newP2Score,
-        actionLog,
-        isGameOver,
-        winnerUid,
-      }
-    );
+    try {
+      await firePoolShot(
+        match.id,
+        currentUid,
+        0,
+        0,
+        balls,
+        {
+          nextTurnUid,
+          p1Score: newP1Score,
+          p2Score: newP2Score,
+          actionLog,
+          isGameOver,
+          winnerUid,
+        }
+      );
+    } catch (err) {
+      console.error("Failed to fire pool shot turn:", err);
+    }
   }, [currentUid, discipline, isPlayer1, isPushOutDeclared, lowestBallOnTable, match.id, match.players, playerUids, ps]);
 
   // Inventory of remaining balls

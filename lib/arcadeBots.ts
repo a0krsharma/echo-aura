@@ -78,54 +78,12 @@ import {
 const activeBotRuns = new Set<string>();
 
 /**
- * 8-Ball Pool Bot
+ * 8-Ball / 5-Discipline Pool Bot
+ * (Executed with continuous physics simulation in PoolGame.tsx)
  */
 export async function executePoolBotShot(match: ArcadeMatch): Promise<void> {
-  if (!match.poolState || match.status !== "PLAYING") return;
-  const ps = match.poolState;
-  const botPlayer = Object.values(match.players || {}).find(
-    (p) => p.uid === ps.currentTurnUid && p.isBot
-  );
-  if (!botPlayer) return;
-
-  const runKey = `${match.id}_pool_bot_${ps.currentTurnUid}`;
-  if (activeBotRuns.has(runKey)) return;
-  activeBotRuns.add(runKey);
-
-  try {
-    await new Promise((resolve) => setTimeout(resolve, 1400));
-    const balls: PoolBall[] = JSON.parse(ps.ballsStr || "[]");
-    const cueBall = balls.find((b) => b.type === "cue");
-    const targets = balls.filter((b) => b.type !== "cue" && !b.isPocketed);
-
-    if (!cueBall || targets.length === 0) return;
-
-    // Pick a target ball
-    const target = targets[Math.floor(Math.random() * targets.length)];
-    const dx = target.x - cueBall.x;
-    const dy = target.y - cueBall.y;
-    const dist = Math.hypot(dx, dy) || 1;
-
-    const speed = 12 + Math.random() * 6;
-    const impulseX = (dx / dist) * speed + (Math.random() - 0.5) * 1.5;
-    const impulseY = (dy / dist) * speed + (Math.random() - 0.5) * 1.5;
-
-    cueBall.vx = impulseX;
-    cueBall.vy = impulseY;
-
-    await firePoolShot(
-      match.id,
-      botPlayer.uid,
-      impulseX,
-      impulseY,
-      balls
-    );
-    await tryBotTrashTalk(match.id, botPlayer, 0.15);
-  } catch (err) {
-    console.error("[ArcadeBot] Pool error:", err);
-  } finally {
-    setTimeout(() => activeBotRuns.delete(runKey), 2000);
-  }
+  // Managed by client-side physics loop in PoolGame.tsx for smooth visual trajectories
+  return;
 }
 
 /**
