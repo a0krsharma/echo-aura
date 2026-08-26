@@ -1264,15 +1264,35 @@ export default function HomeFeedPage() {
     }catch(e){console.error(e);}
   };
 
-  return(
-    <div className="min-h-screen bg-black text-white pb-28 md:pb-12 flex flex-col font-mono"
-      onClick={()=>{userInteracted.current=true;}}>
-      <header className="w-full bg-black border-b border-neutral-900 py-2.5 px-4 overflow-x-hidden">
-        <div className="flex items-center gap-5 font-mono text-[10px] tracking-widest text-neutral-500 uppercase whitespace-nowrap">
+  return (
+    <div
+      className="min-h-screen bg-black text-white pb-28 md:pb-12 flex flex-col font-mono"
+      onClick={() => {
+        userInteracted.current = true;
+      }}
+    >
+      <header className="w-full bg-black border-b border-neutral-900 py-2.5 px-4 flex items-center justify-between">
+        <div className="flex items-center gap-4 font-mono text-[10px] tracking-widest text-neutral-500 uppercase whitespace-nowrap overflow-hidden">
           <span className="flex items-center gap-1.5 text-white shrink-0"><Flame className="w-3 h-3"/>[ FREQUENCY ]</span>
-          <span className="shrink-0">•</span><span className="shrink-0">LIVE AUDIO FEED</span>
-          <span className="shrink-0">•</span><span className="shrink-0">UNFILTERED VOICES</span>
+          <span className="shrink-0 hidden sm:inline">•</span><span className="shrink-0 hidden sm:inline">LIVE AUDIO FEED</span>
+          <span className="shrink-0 hidden sm:inline">•</span><span className="shrink-0 hidden sm:inline">UNFILTERED VOICES</span>
         </div>
+
+        {/* Small Robo-Echo Logo on Home Frequency Header */}
+        <Link
+          href="/echo-bot"
+          className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-950/40 hover:bg-emerald-950/90 border border-emerald-500/50 hover:border-emerald-400 rounded-full transition-all cursor-pointer shadow-[0_0_12px_rgba(16,185,129,0.15)] group shrink-0 active:scale-95"
+          title="Open Robo-Echo AI Companion & Voice"
+        >
+          <div className="relative flex items-center justify-center">
+            <Bot className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
+            <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+          </div>
+          <span className="font-mono text-[10px] font-bold text-emerald-300 tracking-wider uppercase flex items-center gap-1">
+            ROBO-ECHO
+            <Sparkles className="w-2.5 h-2.5 text-emerald-400" />
+          </span>
+        </Link>
       </header>
 
       <main className="max-w-xl mx-auto px-5 md:px-6 pt-8 w-full flex-1 flex flex-col">
@@ -1386,27 +1406,6 @@ export default function HomeFeedPage() {
           currentUser={user}
           onClose={()=>setCommentPost(null)}/>
       )}
-
-      {/* ── Floating Mini Robo-Echo Companion Beacon ── */}
-      <aside aria-label="Robo-Echo Companion" className="fixed bottom-20 md:bottom-8 right-4 md:right-8 z-40">
-        <Link
-          href="/echo-bot"
-          className="group flex items-center gap-2.5 px-3 py-2 bg-neutral-950/90 hover:bg-neutral-900 border border-emerald-500/40 hover:border-emerald-400 rounded-full shadow-[0_0_20px_rgba(16,185,129,0.25)] hover:shadow-[0_0_25px_rgba(16,185,129,0.5)] backdrop-blur-md transition-all duration-300 active:scale-95"
-          title="Open Robo-Echo 3D Companion & AI Voice"
-        >
-          <div className="relative w-7 h-7 rounded-full bg-emerald-950 border border-emerald-500/60 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform">
-            <Bot className="w-4 h-4" />
-            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-          </div>
-          <div className="flex flex-col text-left pr-1">
-            <span className="font-mono text-[10px] font-black uppercase text-white tracking-wider group-hover:text-emerald-300 transition-colors flex items-center gap-1">
-              <span>ROBO-ECHO</span>
-              <Sparkles className="w-2.5 h-2.5 text-emerald-400" />
-            </span>
-            <span className="font-mono text-[8px] text-neutral-400">3D Companion</span>
-          </div>
-        </Link>
-      </aside>
     </div>
   );
 }
