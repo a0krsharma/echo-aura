@@ -408,11 +408,11 @@ function ArcadeContent() {
         <div className="flex items-center gap-2 text-xs shrink-0">
           <Link
             href="/shop"
-            className="px-3 py-1.5 border-2 border-amber-400 bg-amber-400 text-black hover:bg-amber-300 font-black text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer rounded-lg shadow-md active:scale-95"
-            title="Open Aura Shop"
+            className="p-2 border border-neutral-700 bg-neutral-900 text-white hover:border-white transition-all flex items-center justify-center cursor-pointer rounded-lg shadow-sm"
+            aria-label="Aura Shop"
+            title="Aura Shop"
           >
-            <ShoppingCart className="w-3.5 h-3.5" />
-            <span>[ 🛒 SHOP {user?.auraScore ? `• ${user.auraScore} AURA` : ""} ]</span>
+            <ShoppingCart className="w-4 h-4 text-white" />
           </Link>
 
           <button
@@ -623,36 +623,6 @@ function ArcadeContent() {
         ) : (
           /* ── Clean Main Arcade Hub ── */
           <div className="space-y-6">
-            {/* ── Top Aura Rewards & Shop Bar ── */}
-            <div className="bg-gradient-to-r from-amber-950/40 via-neutral-950 to-neutral-900 border-2 border-amber-400/60 p-3 sm:p-4 rounded-2xl flex items-center justify-between gap-3 flex-wrap shadow-[0_0_30px_rgba(251,191,36,0.1)]">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-400 text-black flex items-center justify-center font-black text-lg shadow-lg">
-                  🛒
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs sm:text-sm font-black uppercase text-amber-300 tracking-wider">
-                      AURA REWARDS SHOP
-                    </span>
-                    <span className="px-1.5 py-0.5 bg-amber-400/20 text-amber-300 border border-amber-400/40 text-[9px] font-bold rounded">
-                      {user?.auraScore || 0} AURA
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-neutral-400">
-                    Unlock VIP Avatars, Power-Up Boosters, Board Skins &amp; Procedural Audio
-                  </p>
-                </div>
-              </div>
-
-              <Link
-                href="/shop"
-                className="px-4 py-2 border-2 border-amber-400 bg-amber-400 text-black hover:bg-amber-300 font-black text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer rounded-xl shadow-md active:scale-95"
-              >
-                <ShoppingCart className="w-4 h-4" />
-                <span>[ 🛒 OPEN AURA SHOP ➔ ]</span>
-              </Link>
-            </div>
-
             {/* Clean Category Filter Tabs & Search Bar */}
             <div className="space-y-3 font-mono">
               <div className="flex items-center justify-between gap-3 flex-wrap">

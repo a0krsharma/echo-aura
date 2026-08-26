@@ -144,7 +144,6 @@ function ShellContent({ children }: { children: React.ReactNode }) {
   const drawerNav = [
     { label: "[ FREQUENCY ]",  href: "/",               icon: Radio      },
     { label: "[ WAVES ]",      href: "/waves",          icon: Waves      },
-    { label: "[ SHOP ]",       href: "/shop",           icon: ShoppingCart },
     { label: "[ STUDIO ]",     href: "/studio",         icon: Mic2       },
     { label: "[ STAGE ]",      href: "/clash",          icon: Swords     },
     { label: "[ ROOMS ]",      href: "/rooms",          icon: Users      },
@@ -314,16 +313,14 @@ function ShellContent({ children }: { children: React.ReactNode }) {
       {/* FLOATING SHOP & ARCADE GAME QUICK DOCK */}
       {!pathname.startsWith("/arcade") && !pathname.startsWith("/shop") && !pathname.startsWith("/room") && !pathname.startsWith("/stage") && !pathname.startsWith("/wire") && (
         <div className="fixed bottom-36 md:bottom-20 right-4 md:right-6 z-40 flex flex-col items-end gap-2.5">
-          {/* Shop Bar / Button (On top of Game Icon) */}
+          {/* Clean White Shop Icon (On top of Game Icon) */}
           <Link
             href="/shop"
-            className="bg-neutral-950 text-amber-300 hover:bg-amber-400 hover:text-black border-2 border-amber-400/80 p-3 rounded-full shadow-2xl transition-all duration-200 hover:scale-110 flex items-center justify-center gap-2 group cursor-pointer"
-            title="Aura Rewards Shop & Power-Ups"
+            className="bg-black text-white hover:bg-white hover:text-black border-2 border-white p-3 rounded-full shadow-2xl transition-all duration-200 hover:scale-110 flex items-center justify-center cursor-pointer group"
+            aria-label="Aura Shop"
+            title="Aura Shop"
           >
-            <ShoppingCart className="w-4 h-4 group-hover:scale-110 transition-transform" />
-            <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 ease-in-out whitespace-nowrap font-mono text-[11px] font-bold tracking-widest uppercase">
-              [ 🛒 SHOP ]
-            </span>
+            <ShoppingCart className="w-4 h-4 text-white group-hover:text-black transition-colors" />
           </Link>
 
           {/* Arcade Game Launcher Icon */}
