@@ -19,6 +19,7 @@ interface ArcadeCreateModalProps {
 }
 
 const GAME_META: Record<string, { name: string; icon: string; desc: string; maxAllowed: number }> = {
+  antakshari: { name: "BOLLYWOOD ANTAKSHARI", icon: "🎶", desc: "Live singing duel on mic with Hindi letter wheel & audience cheers", maxAllowed: 8 },
   rummy: { name: "INDIAN 13-CARD RUMMY", icon: "🃏", desc: "Pure sequences, second runs, and sets with wild jokers", maxAllowed: 6 },
   call_break: { name: "CALL BREAK (LAKDI)", icon: "♠️", desc: "Spades permanent trumps with bidding & overtrick scoring", maxAllowed: 4 },
   teen_patti: { name: "TEEN PATTI (3-CARD FLUSH)", icon: "🔥", desc: "Blind vs Seen wagering with Trail, Pure Sequence & Flushes", maxAllowed: 6 },

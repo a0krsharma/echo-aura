@@ -11,13 +11,16 @@ import {
   subscribeLobbyArcadeMatches,
   deleteArcadeMatch,
   leaveArcadeMatch,
-  sendSpectatorEvent,
   processWagerPayouts,
   type ArcadeMatch,
   type ArcadeGameType,
 } from "@/lib/arcade";
 import AgoraRTC, { AgoraRTCProvider } from "agora-rtc-react";
 import ArcadeVoiceChannel from "@/app/components/arcade/ArcadeVoiceChannel";
+import AntakshariGame from "@/app/components/arcade/AntakshariGame";
+import MelodyBuzzerGame from "@/app/components/arcade/MelodyBuzzerGame";
+import TwoTruthsGame from "@/app/components/arcade/TwoTruthsGame";
+import PitchArenaGame from "@/app/components/arcade/PitchArenaGame";
 import LudoGame from "@/app/components/arcade/LudoGame";
 import ChessGame from "@/app/components/arcade/ChessGame";
 import Connect4Game from "@/app/components/arcade/Connect4Game";
@@ -51,32 +54,25 @@ import ArcadeInviteModal from "@/app/components/arcade/ArcadeInviteModal";
 import ArcadeCreateModal from "@/app/components/arcade/ArcadeCreateModal";
 import ArcadeGameRulesModal from "@/app/components/arcade/ArcadeGameRulesModal";
 import ArcadeTournamentBracketModal from "@/app/components/arcade/ArcadeTournamentBracketModal";
-import {
-  subscribeToChallengeNotifications,
-  type AppNotification,
-} from "@/lib/notifications";
 import IncomingChallengeListener from "@/app/components/arcade/IncomingChallengeListener";
-import { soundSynth } from "@/lib/soundSynthesizer";
 import {
   Gamepad2,
   Trophy,
-  Flame,
-  Swords,
   Zap,
   ArrowLeft,
   Share2,
   Trash2,
   HelpCircle,
-  Crown,
   Search,
   Users,
   Sparkles,
   X,
+  Mic2,
 } from "lucide-react";
 import Link from "next/link";
 import { updateArcadeElo } from "@/lib/userDoc";
 
-type CategoryFilter = "ALL" | "BOARD" | "PHYSICS" | "CARD" | "PAPER" | "PUZZLE";
+type CategoryFilter = "ALL" | "VOICE" | "BOARD" | "PHYSICS" | "CARD" | "PAPER" | "PUZZLE";
 
 interface MasterRankedGame {
   id: ArcadeGameType;
@@ -87,6 +83,12 @@ interface MasterRankedGame {
 }
 
 const CLEAN_GAMES: MasterRankedGame[] = [
+  // ── 🎙️ Voice Party & Antakshari (Live Mic Duels) ──
+  { id: "antakshari", name: "Bollywood Antakshari", category: "VOICE", icon: "🎶", description: "Sing hit songs on mic with Hindi letter wheel, turn timer & audience cheer jury" },
+  { id: "melody_buzzer", name: "Hum & Whistle (Melody Relay)", category: "VOICE", icon: "🎵", description: "Hum or whistle secret Bollywood hits on mic; room members smash the speed buzzer to guess" },
+  { id: "two_truths", name: "Two Truths & A Lie", category: "VOICE", icon: "🎭", description: "Voice party bluffing with live jury voting and truth reveal" },
+  { id: "pitch_arena", name: "Pitch Arena / Shark Mic", category: "VOICE", icon: "🎙️", description: "60-second crazy startup & product improv battle on live microphone" },
+
   // ── 🎲 Board & Tactical Strategy ──
   { id: "ludo", name: "Ludo 3D", category: "BOARD", icon: "🎲", description: "World-class 3D wooden board & dice" },
   { id: "carrom", name: "Championship Carrom", category: "PHYSICS", icon: "⚪", description: "19-piece tournament rack with real physics" },
@@ -132,10 +134,10 @@ function ArcadeContent() {
   const [activeMatchId, setActiveMatchId] = useState<string | null>(null);
   const [lobbyMatches, setLobbyMatches] = useState<ArcadeMatch[]>([]);
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [defaultGameType, setDefaultGameType] = useState<ArcadeGameType>("ludo");
+  const [defaultGameType, setDefaultGameType] = useState<ArcadeGameType>("antakshari");
   const [inviteModalMatch, setInviteModalMatch] = useState<ArcadeMatch | null>(null);
   const [rulesModalOpen, setRulesModalOpen] = useState(false);
-  const [rulesModalGameType, setRulesModalGameType] = useState<string>("ludo");
+  const [rulesModalGameType, setRulesModalGameType] = useState<string>("antakshari");
   const [tournamentModalOpen, setTournamentModalOpen] = useState(false);
   const [initialTournamentId, setInitialTournamentId] = useState<string | undefined>(undefined);
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>("ALL");
@@ -239,7 +241,11 @@ function ArcadeContent() {
       if (
         type === "ludo" ||
         type === "call_break" ||
-        type === "raja_mantri"
+        type === "raja_mantri" ||
+        type === "antakshari" ||
+        type === "melody_buzzer" ||
+        type === "two_truths" ||
+        type === "pitch_arena"
       ) {
         maxPlayers = 4;
       } else if (
@@ -380,7 +386,7 @@ function ArcadeContent() {
                 ECHO ARCADE
               </h1>
               <p className="text-[10px] text-neutral-400 font-bold hidden sm:block">
-                PREMIER 3D REAL MULTIPLAYER SUITE
+                PREMIER 3D REAL &amp; VOICE MULTIPLAYER SUITE
               </p>
             </div>
           </div>
@@ -399,7 +405,7 @@ function ArcadeContent() {
 
           <button
             type="button"
-            onClick={() => handleOpenRules("ludo")}
+            onClick={() => handleOpenRules("antakshari")}
             className="px-3 py-1.5 border border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-white hover:text-white font-bold text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer rounded-lg shadow-sm"
           >
             <HelpCircle className="w-3.5 h-3.5 text-emerald-400" />
@@ -408,7 +414,7 @@ function ArcadeContent() {
 
           <button
             type="button"
-            onClick={() => handleOpenCreate("ludo")}
+            onClick={() => handleOpenCreate("antakshari")}
             className="px-3.5 py-1.5 border-2 border-white bg-white text-black hover:bg-neutral-200 font-black text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer rounded-lg shadow-md active:scale-95"
           >
             <Zap className="w-3.5 h-3.5 fill-black" />
@@ -484,6 +490,18 @@ function ArcadeContent() {
             )}
 
             {/* Game Renderers */}
+            {activeMatch.gameType === "antakshari" && (
+              <AntakshariGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+            )}
+            {activeMatch.gameType === "melody_buzzer" && (
+              <MelodyBuzzerGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+            )}
+            {activeMatch.gameType === "two_truths" && (
+              <TwoTruthsGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+            )}
+            {activeMatch.gameType === "pitch_arena" && (
+              <PitchArenaGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+            )}
             {activeMatch.gameType === "ludo" && (
               <LudoGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
             )}
@@ -585,17 +603,17 @@ function ArcadeContent() {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="SEARCH GAMES (LUDO, CARROM, POOL, CHESS, UNO, POKER)..."
+                    placeholder="SEARCH GAMES (ANTAKSHARI, MELODY, LUDO, CARROM, POOL, CHESS)..."
                     className="w-full bg-neutral-950 border border-neutral-800 focus:border-white pl-9 pr-3 py-2 text-xs font-mono text-white placeholder-neutral-500 uppercase outline-none rounded-xl"
                   />
                 </div>
 
                 <button
                   type="button"
-                  onClick={() => handleOpenRules("ludo")}
+                  onClick={() => handleOpenRules("antakshari")}
                   className="px-3.5 py-2 border border-neutral-700 bg-neutral-900 hover:border-white text-white font-bold text-xs uppercase flex items-center gap-1.5 cursor-pointer transition-colors rounded-xl shadow-sm"
                 >
-                  <HelpCircle className="w-4 h-4 text-emerald-400" />
+                  <HelpCircle className="w-4 h-4 text-pink-400" />
                   <span>[ ❓ GAME RULES ]</span>
                 </button>
               </div>
@@ -605,6 +623,7 @@ function ArcadeContent() {
                 {(
                   [
                     { id: "ALL", label: "ALL GAMES" },
+                    { id: "VOICE", label: "🎙️ VOICE PARTY & ANTAKSHARI" },
                     { id: "BOARD", label: "🎲 BOARD & TACTICS" },
                     { id: "PHYSICS", label: "🎱 SPORTS & 2D PHYSICS" },
                     { id: "CARD", label: "♠️ CASINO & CARDS" },
@@ -649,9 +668,16 @@ function ArcadeContent() {
                         {game.icon}
                       </div>
                       <div className="min-w-0">
-                        <h4 className="font-black text-sm uppercase text-white tracking-wide truncate">
-                          {game.name}
-                        </h4>
+                        <div className="flex items-center gap-1.5">
+                          <h4 className="font-black text-sm uppercase text-white tracking-wide truncate">
+                            {game.name}
+                          </h4>
+                          {game.category === "VOICE" && (
+                            <span className="px-1.5 py-0.2 bg-pink-500/20 text-pink-300 border border-pink-500/40 text-[8px] font-bold rounded">
+                              MIC 🎙️
+                            </span>
+                          )}
+                        </div>
                         <p className="text-[11px] text-neutral-400 line-clamp-2 mt-0.5">
                           {game.description}
                         </p>
@@ -673,7 +699,7 @@ function ArcadeContent() {
                         type="button"
                         disabled={!user}
                         onClick={() => handleOpenCreate(game.id)}
-                        className="py-2 px-2 border-2 border-emerald-500 bg-emerald-500 text-black hover:bg-emerald-400 font-black text-xs uppercase transition-all cursor-pointer text-center truncate rounded-xl shadow-md active:scale-95"
+                        className="py-2 px-2 border-2 border-pink-500 bg-pink-500 text-white hover:bg-pink-400 font-black text-xs uppercase transition-all cursor-pointer text-center truncate rounded-xl shadow-md active:scale-95"
                         title={`Create PvP Room in ${game.name}`}
                       >
                         [ 👥 MULTI ]
@@ -781,8 +807,8 @@ function ArcadeContent() {
       <div className="fixed bottom-4 right-4 z-40">
         <button
           type="button"
-          onClick={() => handleOpenRules(activeMatch?.gameType || "ludo")}
-          className="px-4 py-2.5 bg-black border-2 border-emerald-400 text-emerald-300 hover:bg-emerald-400 hover:text-black font-black text-xs uppercase transition-all shadow-[0_0_25px_rgba(16,185,129,0.3)] flex items-center gap-2 rounded-full cursor-pointer hover:scale-105 active:scale-95"
+          onClick={() => handleOpenRules(activeMatch?.gameType || "antakshari")}
+          className="px-4 py-2.5 bg-black border-2 border-pink-400 text-pink-300 hover:bg-pink-400 hover:text-black font-black text-xs uppercase transition-all shadow-[0_0_25px_rgba(236,72,153,0.3)] flex items-center gap-2 rounded-full cursor-pointer hover:scale-105 active:scale-95"
         >
           <HelpCircle className="w-4 h-4 animate-bounce" />
           <span className="font-mono tracking-wider">[ ❓ HELP &amp; RULES ]</span>
@@ -830,7 +856,7 @@ function ArcadeContent() {
             setTournamentModalOpen(false);
             setInitialTournamentId(undefined);
           }}
-          gameType={activeMatch?.gameType || "ludo"}
+          gameType={activeMatch?.gameType || "antakshari"}
           hostUid={activeMatch?.hostUid || user?.uid || ""}
           currentUid={user?.uid || ""}
           initialTournamentId={initialTournamentId}

@@ -38,6 +38,7 @@ import { getFirebaseDb } from "@/lib/firebase";
 import { awardAura } from "@/lib/userDoc";
 
 export type ArcadeGameType =
+  | "antakshari"
   | "ludo"
   | "chess"
   | "connect4"
@@ -745,6 +746,24 @@ export interface SpeedState {
   lastActionLog?: string;
 }
 
+
+export interface AntakshariHistoryItem {
+  letter: string;
+  song: string;
+  singerHandle: string;
+  timestamp: number;
+}
+
+export interface AntakshariState {
+  currentLetter: string;
+  currentTurnUid: string;
+  round: number;
+  songHistory: AntakshariHistoryItem[];
+  scores: Record<string, number>;
+  timeRemainingSec: number;
+  lastActionLog?: string;
+}
+
 export interface ArcadeMatch {
   id: string;
   isArcade?: boolean;
@@ -805,6 +824,7 @@ export interface ArcadeMatch {
   yahtzeeState?: YahtzeeState;
   tabooState?: TabooState;
   melodyBuzzerState?: MelodyBuzzerState;
+  antakshariState?: AntakshariState;
   pitchArenaState?: PitchArenaState;
   twentyQuestionsState?: TwentyQuestionsState;
   rajaMantriState?: RajaMantriState;
@@ -1782,6 +1802,18 @@ export async function createArcadeMatch(params: {
       forbiddenWords: card.forbidden,
       scores: { [params.hostUid]: 0 },
       lastActionLog: "Forbidden Lexicon active! Describe keyword without using forbidden words.",
+    };
+  } else if (params.gameType === "antakshari") {
+    const letters = ["म", "न", "र", "स", "क", "ल", "ह", "द", "प", "य", "त", "ब", "ज", "ग"];
+    const startingLetter = letters[Math.floor(Math.random() * letters.length)];
+    matchData.antakshariState = {
+      currentLetter: startingLetter,
+      currentTurnUid: params.hostUid,
+      round: 1,
+      songHistory: [],
+      scores: { [params.hostUid]: 0 },
+      timeRemainingSec: 30,
+      lastActionLog: `Antakshari begins on letter [${startingLetter}]! Sing your song into the mic.`,
     };
   } else if (params.gameType === "melody_buzzer") {
     const tracks = ["Shape of You", "Bad Guy", "Despacito", "Believer", "Blinding Lights", "Bohemian Rhapsody"];
@@ -5151,4 +5183,70 @@ export async function processWagerPayouts(matchId: string, winnerUid: string): P
   await updateDoc(matchRef, {
     spectatorWagers: {}
   });
+}
+
+
+// ── Bollywood Antakshari Actions ──────────────────────────────────────────────
+export async function submitAntakshariSong(
+  matchId: string,
+  playerUid: string,
+  songTitle: string,
+  endingLetter: string
+): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) return;
+  const match = snap.data() as ArcadeMatch;
+  if (!match.antakshariState) return;
+
+  const playerUids = Object.keys(match.players || {});
+  const nextTurnUid = playerUids.find((id) => id !== playerUid) || playerUid;
+  const currentScores = match.antakshariState.scores || {};
+  const newScore = (currentScores[playerUid] || 0) + 10;
+
+  const newHistory: AntakshariHistoryItem = {
+    letter: match.antakshariState.currentLetter,
+    song: songTitle,
+    singerHandle: match.players[playerUid]?.handle || "Singer",
+    timestamp: Date.now(),
+  };
+
+  const updates: any = {
+    "antakshariState.currentLetter": endingLetter,
+    "antakshariState.currentTurnUid": nextTurnUid,
+    "antakshariState.round": (match.antakshariState.round || 1) + 1,
+    "antakshariState.songHistory": [...(match.antakshariState.songHistory || []), newHistory],
+    [`antakshariState.scores.${playerUid}`]: newScore,
+    "antakshariState.lastActionLog": `${match.players[playerUid]?.handle || "Singer"} sang "${songTitle}"! Next letter: [${endingLetter}]`,
+    updatedAt: serverTimestamp(),
+  };
+
+  await updateDoc(matchRef, updates);
+}
+
+export async function passAntakshariTurn(
+  matchId: string,
+  playerUid: string
+): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) return;
+  const match = snap.data() as ArcadeMatch;
+  if (!match.antakshariState) return;
+
+  const letters = ["म", "न", "र", "स", "क", "ल", "ह", "द", "प", "य", "त", "ब", "ज", "ग"];
+  const nextLetter = letters[Math.floor(Math.random() * letters.length)];
+  const playerUids = Object.keys(match.players || {});
+  const nextTurnUid = playerUids.find((id) => id !== playerUid) || playerUid;
+
+  const updates: any = {
+    "antakshariState.currentLetter": nextLetter,
+    "antakshariState.currentTurnUid": nextTurnUid,
+    "antakshariState.lastActionLog": `Turn passed! Next letter is [${nextLetter}].`,
+    updatedAt: serverTimestamp(),
+  };
+
+  await updateDoc(matchRef, updates);
 }
