@@ -1070,6 +1070,18 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
               <span className="text-emerald-400 font-bold block mb-0.5">9. 🦋 BUTTERFLY SYSTEM (LE PAPILLON 5-CUSHION):</span>
               Aim = (Origin + Target_4) / 2. Figure-8 double-crossing trajectory connecting diagonally opposite corners!
             </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">10. ➕ PLUS-TWO SYSTEM &amp; BRICOLE:</span>
+              Aim = Target_3 - Origin. Short ➔ Long rail with running English yields +2 diamonds forward bounce expansion.
+            </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">11. 📐 K-SYSTEM (SHORT-ANGLE QUADRANT):</span>
+              Aim = (Origin &times; Arrival_2) / 100 or Aim = Origin - 2T. Tight 2-cushion quadrant calculations.
+            </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">12. ⚪ DEAD-BALL (NO-SPIN SPECULAR):</span>
+              Aim = (Origin + Arrival) / 2. Center-ball stun eliminates squirt/swerve with pure specular reflection.
+            </div>
           </div>
         )}
       </div>

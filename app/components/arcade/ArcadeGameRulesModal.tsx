@@ -596,11 +596,11 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
       "TURN CONTINUATION & PUSH-OUT: Your turn continues as long as you legally pocket assigned balls. An optional Push-Out is allowed on Shot #2 immediately following the break.",
       "STANDARD FOULS & BALL-IN-HAND: Scratching the cue ball, hitting wrong suit first, or failing to drive a ball to a cushion yields Ball-in-Hand anywhere on the table for the opponent.",
       "INSTANT LOSS CONDITIONS: Pocketing the 8-ball while scratching/fouling, or pocketing the 8-ball before clearing all 7 of your suit balls results in an immediate frame loss.",
-      "DIAMOND & CAROM MASTER SYSTEMS: 1-Rail midpoint, 2-Rail Plus, 3-Rail Corner-5, Renverse Reverse Corner, Grand Traverse Z-path, Umbrella Parapluie, and Butterfly figure-8 caroms!"
+      "DIAMOND & CAROM MASTER SUITE: 1-Rail midpoint, Plus-Two System (Aim = Arrival - Origin), Corner-5 (Aim = Origin - Arrival), Renverse, Grand Traverse, Umbrella, Butterfly, K-System, and Dead-Ball no-spin stun!"
     ],
     voiceGuide: "Call pockets, declare bank shots, and engage in psychological banter over the mic.",
     scoring: "+250 Aura for legally pocketing the 8-Ball to win the match.",
-    proTip: "Master the Grand Traverse (Aim = Origin + Distance / 2 with 3 tips reverse English) for tight symmetric Z-path caroms across parallel rails!"
+    proTip: "Use the Dead-Ball System (Aim = (Origin + Arrival) / 2) with pure center-ball stun to achieve 100% stable specular reflections with zero squirt or swerve!"
   },
   "2048": {
     id: "2048",
