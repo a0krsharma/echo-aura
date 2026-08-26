@@ -1400,24 +1400,26 @@ export default function CarromGame({ match, currentUid }: CarromGameProps) {
               • Duboo Fast: Heavy striker (18-25g), open potting, Queen=50 pts.
             </div>
             <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
-              <span className="text-amber-400 font-bold block mb-0.5">2. 👑 LATE-GAME QUEEN STANDOFFS (ICF LAW 22):</span>
+              <span className="text-amber-400 font-bold block mb-0.5">2. 📐 BANK SHOT REBOUND PHYSICS &amp; RESTITUTION:</span>
+              • Wood Restitution (e ≈ 0.75): tan(θ_r) = (tan(θ_i) - μ_k(1+e))/e.<br/>
+              • Hard strikes compress grain and steepen exit path toward the normal.<br/>
+              • Running spin widens rebounds; check spin bites wood and steepens rebound.
+            </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-amber-400 font-bold block mb-0.5">3. 👑 LATE-GAME QUEEN STANDOFFS (ICF LAW 22):</span>
               • 1-Piece Lockout: Cannot pot final piece before Queen (foul &amp; loss of board).<br/>
               • Simultaneous Double-Pot: Striking Queen + last piece into pocket on same stroke wins frame instantly.<br/>
               • Hostage Queen Burial: Tapping Queen behind opponent cluster to stall their runout.
             </div>
             <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
-              <span className="text-amber-400 font-bold block mb-0.5">3. 👥 2v2 DOUBLES &amp; 15s BIOMECHANICS:</span>
+              <span className="text-amber-400 font-bold block mb-0.5">4. 👥 2v2 DOUBLES &amp; 15s BIOMECHANICS:</span>
               • Seating: Teammates sit opposite (South A1 &amp; North A2); clockwise rotation.<br/>
               • 15s Clock: (0-4s) Scan &amp; nod ➔ (4-8s) Anchor base ➔ (8-12s) Grip tension ➔ (12-14s) Snap.<br/>
               • Immediate Opponent Freeze: Pin opponent pieces flat against next shooter's rail (0mm gap)!
             </div>
             <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
-              <span className="text-amber-400 font-bold block mb-0.5">4. ☝️ 4 CORE STRIKING GRIPS:</span>
-              Index (Direct accuracy), Middle Straight (100% kinetic break power), Scissors/Kainchi (Sharp 60°+ tangent slices), Thumb (Reverse baseline shots).
-            </div>
-            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
-              <span className="text-amber-400 font-bold block mb-0.5">5. 🧪 POWDER CHEMISTRY &amp; 22-PT CAP:</span>
-              Boric Acid (μk ≈ 0.08–0.12) vs Disco Polymer (μk &lt; 0.04). Queen must be covered immediately. 22-pt cap removes Queen bonus.
+              <span className="text-amber-400 font-bold block mb-0.5">5. ☝️ 4 CORE STRIKING GRIPS &amp; POWDER:</span>
+              Index (Direct precision), Middle Straight (100% kinetic power), Scissors (Acute cuts), Thumb (Reverse shots). Boric Acid (μk ≈ 0.10) vs Disco Polymer (μk &lt; 0.04).
             </div>
           </div>
         )}
