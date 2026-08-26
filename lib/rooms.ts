@@ -876,7 +876,8 @@ export async function getPublicRooms(): Promise<Room[]> {
   );
 
   const roomsSnap = await getDocs(roomsQuery);
-  return roomsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Room[];
+  const allDocs = roomsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Room[];
+  return allDocs.filter(r => !(r as any).isArcade && !(r as any).gameType && !!r.name);
 }
 
 // ── Subscribe to room updates (real-time) ───────────────────────────────
@@ -910,8 +911,9 @@ export function subscribeToPublicRooms(callback: (rooms: Room[]) => void): () =>
     const now = Date.now();
     const allDocs = querySnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Room[];
     
-    // Filter public & non-expired rooms client-side
+    // Filter public & non-expired rooms client-side, exclude arcade matches & untitled ghost docs
     const validRooms = allDocs.filter(r => {
+      if ((r as any).isArcade || (r as any).gameType || !r.name) return false;
       if (r.isPublic === false) return false;
       if (r.expiresAt) {
         try {
@@ -936,7 +938,7 @@ export function subscribeToPublicRooms(callback: (rooms: Room[]) => void): () =>
     const fallbackQuery = query(collection(db, ROOMS_COLLECTION), limit(60));
     onSnapshot(fallbackQuery, (snap) => {
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Room[];
-      callback(list.filter(r => r.isPublic !== false));
+      callback(list.filter(r => r.isPublic !== false && !(r as any).isArcade && !(r as any).gameType && !!r.name));
     }, () => callback([]));
   });
 

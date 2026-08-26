@@ -110,7 +110,7 @@ export type ArcadeGameType =
 export type ArcadeMatchMode = "MULTIPLAYER" | "VS_COMPUTER";
 
 // Whitelisted collection in production Firebase
-const ARCADE_COLLECTION = "arcade_matches";
+const ARCADE_COLLECTION = "rooms";
 
 export const LUDO_CONFIG = {
   START_POS: {
