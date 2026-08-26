@@ -22,6 +22,7 @@ import {
   Users,
   Crown,
   Zap,
+  Flame,
 } from "lucide-react";
 
 interface ChessGameProps {
@@ -35,7 +36,11 @@ const PIECE_GLYPHS: Record<string, string> = {
   kb: "♚", qb: "♛", rb: "♜", bb: "♝", nb: "♞", pb: "♟",
 };
 
-// Calculate all pseudo-legal destination coordinates for a selected piece
+const PIECE_VALUES: Record<string, number> = {
+  p: 1, n: 3, b: 3, r: 5, q: 9, k: 0
+};
+
+// Calculate all legal destination coordinates for a selected piece
 function getLegalDestinations(
   board: (ChessPiece | null)[][],
   fromR: number,
@@ -145,6 +150,50 @@ export default function ChessGame({ match, currentUid, isHost }: ChessGameProps)
   const myColor: "w" | "b" = isWhite ? "w" : "b";
   const isMyTurn = chessState.currentTurn === myColor && match.status === "PLAYING";
 
+  // Calculate remaining & captured pieces
+  const { capturedByWhite, capturedByBlack, whiteMaterial, blackMaterial } = useMemo(() => {
+    const initialCounts: Record<string, number> = {
+      pw: 8, nw: 2, bw: 2, rw: 2, qw: 1,
+      pb: 8, nb: 2, bb: 2, rb: 2, qb: 1,
+    };
+    const currentCounts: Record<string, number> = {
+      pw: 0, nw: 0, bw: 0, rw: 0, qw: 0,
+      pb: 0, nb: 0, bb: 0, rb: 0, qb: 0,
+    };
+
+    let wMat = 0;
+    let bMat = 0;
+
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        const p = board[r]?.[c];
+        if (p && p.type !== "k") {
+          const key = `${p.type}${p.color}`;
+          currentCounts[key] = (currentCounts[key] || 0) + 1;
+          if (p.color === "w") wMat += PIECE_VALUES[p.type] || 0;
+          else bMat += PIECE_VALUES[p.type] || 0;
+        }
+      }
+    }
+
+    const capByW: string[] = [];
+    const capByB: string[] = [];
+
+    ["p", "n", "b", "r", "q"].forEach((t) => {
+      const lostBlack = Math.max(0, initialCounts[`${t}b`] - (currentCounts[`${t}b`] || 0));
+      const lostWhite = Math.max(0, initialCounts[`${t}w`] - (currentCounts[`${t}w`] || 0));
+      for (let i = 0; i < lostBlack; i++) capByW.push(PIECE_GLYPHS[`${t}b`]);
+      for (let i = 0; i < lostWhite; i++) capByB.push(PIECE_GLYPHS[`${t}w`]);
+    });
+
+    return {
+      capturedByWhite: capByW,
+      capturedByBlack: capByB,
+      whiteMaterial: wMat,
+      blackMaterial: bMat,
+    };
+  }, [board]);
+
   // Compute legal moves for selected piece
   const legalDestinations = useMemo(() => {
     if (!selectedPos) return [];
@@ -162,7 +211,7 @@ export default function ChessGame({ match, currentUid, isHost }: ChessGameProps)
         executeChessBotTurn(match);
       }
     }
-  }, [chessState?.currentTurn, match.status]);
+  }, [chessState?.currentTurn, match]);
 
   const handleCellClick = async (r: number, c: number) => {
     if (!isMyTurn || match.status === "FINISHED") return;
@@ -207,10 +256,10 @@ export default function ChessGame({ match, currentUid, isHost }: ChessGameProps)
 
   return (
     <div className="w-full max-w-xl mx-auto bg-gradient-to-b from-neutral-950 via-neutral-900 to-black border-2 border-amber-500/60 p-3 sm:p-5 font-mono text-white space-y-4 select-none shadow-[0_0_80px_rgba(245,158,11,0.15)] rounded-2xl">
-      {/* ── Top Match Control Header ── */}
+      {/* ── Top Match Header ── */}
       <div className="flex items-center justify-between border-b border-amber-500/30 pb-3 text-xs flex-wrap gap-2">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 text-black flex items-center justify-center font-black shadow-[0_0_15px_rgba(245,158,11,0.5)]">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-700 text-black flex items-center justify-center font-black shadow-[0_0_15px_rgba(245,158,11,0.5)] text-lg">
             ♟️
           </div>
           <div>
@@ -223,7 +272,11 @@ export default function ChessGame({ match, currentUid, isHost }: ChessGameProps)
               </span>
             </div>
             <p className="text-[10px] text-neutral-400">
-              Turn: <span className="text-white font-bold">{chessState.currentTurn === "w" ? "White (♔)" : "Black (♚)"}</span> • {isMyTurn ? "YOUR MOVE" : "OPPONENT'S MOVE"}
+              Turn:{" "}
+              <span className="text-white font-bold">
+                {chessState.currentTurn === "w" ? "WHITE" : "BLACK"}
+              </span>{" "}
+              • {isMyTurn ? "YOUR MOVE" : "OPPONENT THINKING..."}
             </p>
           </div>
         </div>
@@ -243,10 +296,10 @@ export default function ChessGame({ match, currentUid, isHost }: ChessGameProps)
               soundSynth.playSubtlePop();
               setInviteOpen(true);
             }}
-            className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-yellow-400 text-black font-black text-[10px] uppercase rounded transition-all hover:brightness-110 flex items-center gap-1.5 cursor-pointer shadow-[0_0_15px_rgba(245,158,11,0.4)] active:scale-95"
+            className="px-3 py-1.5 border-2 border-white bg-white text-black font-black text-[10px] uppercase rounded transition-all hover:bg-neutral-200 flex items-center gap-1.5 cursor-pointer shadow-md active:scale-95"
           >
             <Share2 className="w-3 h-3" />
-            <span>[ 🔗 INVITE & TALK 🎙️ ]</span>
+            <span>[ 🔗 INVITE &amp; TALK 🎙️ ]</span>
           </button>
         </div>
       </div>
@@ -256,11 +309,11 @@ export default function ChessGame({ match, currentUid, isHost }: ChessGameProps)
 
       {/* ── 1-Tap Empty Seat Availability Banner ── */}
       {!match.players[currentUid] && playersList.length < maxSeats && match.status !== "FINISHED" && (
-        <div className="w-full bg-gradient-to-r from-emerald-950 via-emerald-900 to-emerald-950 border-2 border-emerald-400 p-3 rounded-xl flex items-center justify-between gap-2 shadow-[0_0_25px_rgba(16,185,129,0.3)] animate-in fade-in">
+        <div className="w-full bg-gradient-to-r from-amber-950 via-neutral-900 to-amber-950 border-2 border-amber-400 p-3 rounded-xl flex items-center justify-between gap-2 shadow-[0_0_25px_rgba(245,158,11,0.3)] animate-in fade-in">
           <div className="flex items-center gap-2.5 text-xs truncate">
-            <Users className="w-4 h-4 text-emerald-400 shrink-0 animate-pulse" />
-            <span className="font-black uppercase text-emerald-200 truncate">
-              🪑 SEAT OPEN ({playersList.length}/{maxSeats} PLAYERS) • TAKE A SEAT TO PLAY & TALK ON LIVE MIC
+            <Users className="w-4 h-4 text-amber-400 shrink-0 animate-pulse" />
+            <span className="font-black uppercase text-amber-200 truncate">
+              🪑 SEAT OPEN ({playersList.length}/{maxSeats} PLAYERS) • TAKE A SEAT TO PLAY ON MIC
             </span>
           </div>
           <button
@@ -271,7 +324,7 @@ export default function ChessGame({ match, currentUid, isHost }: ChessGameProps)
                 const { joinArcadeMatch } = await import("@/lib/arcade");
                 await joinArcadeMatch(match.id, {
                   uid: currentUid,
-                  handle: `@PLAYER_${currentUid.slice(0, 4)}`,
+                  handle: `@GRANDMASTER_${currentUid.slice(0, 4)}`,
                 });
                 if (match.roomId) {
                   const { promoteToSpeaker } = await import("@/lib/rooms");
@@ -281,87 +334,143 @@ export default function ChessGame({ match, currentUid, isHost }: ChessGameProps)
                 console.error("Failed to take seat in Chess:", e);
               }
             }}
-            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs uppercase cursor-pointer rounded-lg transition-all active:scale-95 shrink-0 shadow-lg"
+            className="px-4 py-2 border-2 border-white bg-white text-black font-black text-xs uppercase cursor-pointer rounded-lg hover:bg-neutral-200 transition-all active:scale-95 shrink-0 shadow-md"
           >
             [ 🪑 TAKE A SEAT ]
           </button>
         </div>
       )}
 
-      {/* ── Action Telemetry Log ── */}
+      {/* ── Captured Material Trays HUD ── */}
+      <div className="grid grid-cols-2 gap-2 text-xs">
+        {/* Black Player Tray */}
+        <div className="p-2.5 rounded-xl bg-neutral-950 border border-neutral-800 flex items-center justify-between">
+          <div className="space-y-0.5">
+            <span className="text-[10px] text-neutral-400 font-bold uppercase flex items-center gap-1">
+              ♚ BLACK ({blackMaterial} PTS)
+            </span>
+            <div className="flex items-center gap-1 text-sm tracking-tighter min-h-[20px]">
+              {capturedByBlack.map((glyph, i) => (
+                <span key={i} className="text-white drop-shadow-sm">{glyph}</span>
+              ))}
+            </div>
+          </div>
+          {chessState.currentTurn === "b" && (
+            <span className="px-2 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[9px] font-black rounded animate-pulse">
+              ON MOVE
+            </span>
+          )}
+        </div>
+
+        {/* White Player Tray */}
+        <div className="p-2.5 rounded-xl bg-neutral-950 border border-neutral-800 flex items-center justify-between">
+          <div className="space-y-0.5">
+            <span className="text-[10px] text-amber-400 font-bold uppercase flex items-center gap-1">
+              ♔ WHITE ({whiteMaterial} PTS)
+            </span>
+            <div className="flex items-center gap-1 text-sm tracking-tighter min-h-[20px]">
+              {capturedByWhite.map((glyph, i) => (
+                <span key={i} className="text-neutral-400 drop-shadow-sm">{glyph}</span>
+              ))}
+            </div>
+          </div>
+          {chessState.currentTurn === "w" && (
+            <span className="px-2 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[9px] font-black rounded animate-pulse">
+              ON MOVE
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Action Telemetry Log */}
       {chessState.lastActionLog && (
-        <div className="border border-amber-500/30 bg-neutral-950/80 px-3.5 py-2 rounded-lg text-xs text-amber-200 flex items-center gap-2 shadow-inner">
+        <div className="border border-amber-500/30 bg-neutral-950 px-3.5 py-2 rounded-lg text-xs text-amber-200 flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-amber-400 shrink-0 animate-pulse" />
           <span className="truncate font-bold tracking-wide">{chessState.lastActionLog}</span>
         </div>
       )}
 
-      {/* ── 3D Deluxe Handcrafted Walnut & Maple Chess Board ── */}
-      <div className="relative aspect-square max-w-[420px] sm:max-w-[460px] mx-auto p-3 rounded-2xl bg-gradient-to-br from-[#2b1307] via-[#45220c] to-[#1a0b04] border-4 border-[#6e3713] shadow-[0_20px_50px_rgba(0,0,0,0.9),_inset_0_2px_10px_rgba(255,255,255,0.2)]">
-        {/* 8x8 Board Grid */}
-        <div className="w-full h-full grid grid-cols-8 grid-rows-8 border-2 border-[#3d200e] rounded-xl overflow-hidden shadow-inner">
+      {/* ── 3D Handcrafted Walnut & Maple Chess Board ── */}
+      <div className="relative max-w-[420px] mx-auto p-3.5 rounded-2xl bg-gradient-to-br from-[#2b1810] via-[#3d2314] to-[#1a0f0a] border-4 border-[#61381f] shadow-[0_20px_50px_rgba(0,0,0,0.9),_inset_0_2px_10px_rgba(255,255,255,0.2)]">
+        <div className="grid grid-cols-8 grid-rows-8 gap-0 border-2 border-[#2b1810] rounded-lg overflow-hidden shadow-inner aspect-square">
           {board.map((row, r) =>
             row.map((piece, c) => {
-              const isLight = (r + c) % 2 === 0;
+              const isDarkSquare = (r + c) % 2 === 1;
               const isSelected = selectedPos && selectedPos[0] === r && selectedPos[1] === c;
-              const isLegal = legalDestinations.some(([tr, tc]) => tr === r && tc === c);
-              const pieceKey = piece ? `${piece.type}${piece.color}` : "";
-              const glyph = pieceKey ? PIECE_GLYPHS[pieceKey] : "";
+              const isValidDestination = legalDestinations.some(
+                ([tr, tc]) => tr === r && tc === c
+              );
+              const glyph = piece ? PIECE_GLYPHS[`${piece.type}${piece.color}`] : null;
 
               return (
-                <button
+                <div
                   key={`${r}-${c}`}
-                  type="button"
                   onClick={() => handleCellClick(r, c)}
-                  className={`w-full h-full flex items-center justify-center relative transition-all cursor-pointer ${
-                    isLight ? "bg-[#f4ebd0] text-black" : "bg-[#b88b4a] text-black"
+                  className={`relative flex items-center justify-center cursor-pointer transition-all duration-75 select-none ${
+                    isDarkSquare
+                      ? "bg-gradient-to-br from-[#8a532b] to-[#6b3e1e]" // Handcrafted Walnut Wood
+                      : "bg-gradient-to-br from-[#f2d8b3] to-[#deb887]" // Smooth Blonde Maple Wood
                   } ${
                     isSelected
-                      ? "ring-4 ring-amber-400 bg-amber-200/80 z-20 shadow-[inset_0_0_15px_#f59e0b]"
+                      ? "ring-4 ring-amber-400 ring-inset z-10 brightness-110 shadow-lg"
                       : ""
+                  } ${
+                    isValidDestination ? "hover:brightness-125" : ""
                   }`}
                 >
-                  {/* Legal Destination Highlight */}
-                  {isLegal && (
-                    <div
-                      className={`absolute rounded-full z-10 ${
-                        piece
-                          ? "w-full h-full border-4 border-red-500/80 bg-red-500/20 animate-pulse"
-                          : "w-3.5 h-3.5 bg-emerald-500/80 ring-2 ring-emerald-300 shadow-[0_0_8px_#10b981]"
-                      }`}
-                    />
+                  {/* Coordinate Notations on Edge Squares */}
+                  {c === 0 && (
+                    <span className="absolute top-0.5 left-1 text-[8px] font-bold opacity-40 font-mono text-black">
+                      {8 - r}
+                    </span>
+                  )}
+                  {r === 7 && (
+                    <span className="absolute bottom-0.5 right-1 text-[8px] font-bold opacity-40 font-mono text-black">
+                      {String.fromCharCode(97 + c)}
+                    </span>
                   )}
 
-                  {/* 3D Realistic Piece Glyph */}
+                  {/* Valid Move Indicator (Green Dot / Red Capture Ring) */}
+                  {isValidDestination && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                      {piece ? (
+                        <div className="w-8 h-8 rounded-full border-2 border-red-500/90 animate-pulse bg-red-500/20" />
+                      ) : (
+                        <div className="w-3.5 h-3.5 rounded-full bg-emerald-500/90 shadow-[0_0_8px_#10b981]" />
+                      )}
+                    </div>
+                  )}
+
+                  {/* 3D Piece Glyph with Directional Drop Shadow */}
                   {glyph && (
                     <span
-                      className={`text-2xl sm:text-3xl font-bold select-none transition-transform ${
+                      className={`text-3xl sm:text-4xl transition-transform active:scale-95 ${
                         piece?.color === "w"
-                          ? "text-[#fafafa] drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] filter"
-                          : "text-[#18181b] drop-shadow-[0_2px_3px_rgba(255,255,255,0.4)]"
-                      } ${isSelected ? "scale-125 animate-bounce" : ""}`}
+                          ? "text-[#ffffff] drop-shadow-[0_4px_6px_rgba(0,0,0,0.8)] filter"
+                          : "text-[#171717] drop-shadow-[0_4px_6px_rgba(255,255,255,0.3)] filter"
+                      } ${isSelected ? "-translate-y-1 scale-110" : ""}`}
                     >
                       {glyph}
                     </span>
                   )}
-                </button>
+                </div>
               );
             })
           )}
         </div>
       </div>
 
-      {/* ── Victory Celebration Overlay ── */}
+      {/* ── Checkmate / Finished Banner ── */}
       {match.status === "FINISHED" && (
         <div className="border-2 border-amber-400 bg-gradient-to-b from-amber-950/90 via-black to-black p-6 rounded-2xl text-center space-y-3 shadow-[0_0_60px_rgba(245,158,11,0.6)] animate-in fade-in zoom-in-95">
           <Trophy className="w-14 h-14 text-amber-400 mx-auto animate-bounce drop-shadow-[0_0_20px_#f59e0b]" />
           <h2 className="text-xl font-black text-amber-300 uppercase tracking-widest">
-            🏆 CHECKMATE! GRANDMASTER VICTORY!
+            🏆 CHECKMATE // VICTORY SECURED!
           </h2>
           <p className="text-xs text-neutral-300 font-mono">
             {match.winnerUid === currentUid
-              ? `VICTORY! You delivered checkmate and won +${match.stakes * 2} Aura Points!`
-              : `Match concluded! Winner: ${match.winnerHandle || "@PLAYER"}`}
+              ? `CHECKMATE! You dominated the grandmaster board and earned +${match.stakes * 2} Aura Points!`
+              : `Match concluded! Winner: ${match.winnerHandle || "@GRANDMASTER"}`}
           </p>
         </div>
       )}
