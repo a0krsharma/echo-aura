@@ -143,6 +143,15 @@ service cloud.firestore {
       }
     }
 
+    // ── ARCADE GAME MATCHES ─────────────────────────────────────────────
+    // Isolated from audio rooms — game sessions only
+    match /arcade_matches/{matchId} {
+      allow read, write: if true;
+      match /{document=**} {
+        allow read, write: if true;
+      }
+    }
+
     // ── ROOM PARTICIPANTS ───────────────────────────────────────────────
     // Room participants sub-collection
     match /room_participants/{participantId} {
