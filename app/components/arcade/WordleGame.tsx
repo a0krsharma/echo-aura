@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import { soundSynth } from "@/lib/soundSynthesizer";
 import { submitWordleGuess, type ArcadeMatch } from "@/lib/arcade";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
-import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
 import { Trophy, Key, Delete, Send, Sparkles, HelpCircle } from "lucide-react";
 
 interface WordleGameProps {
@@ -22,7 +21,6 @@ const KEYBOARD_ROWS = [
 export default function WordleGame({ match, currentUid }: WordleGameProps) {
   const [currentGuess, setCurrentGuess] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [rulesOpen, setRulesOpen] = useState(false);
 
   const ws = match.wordleState;
   if (!ws) return <div className="text-white font-mono p-4">Loading Cipher Protocol...</div>;
@@ -88,14 +86,6 @@ export default function WordleGame({ match, currentUid }: WordleGameProps) {
           // CIPHER PROTOCOL [ 5-LETTER WORDLE ]
         </span>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setRulesOpen(true)}
-            className="px-2.5 py-0.5 border border-white bg-black hover:bg-white hover:text-black font-black uppercase text-[10px] transition-all flex items-center gap-1 cursor-pointer"
-          >
-            <HelpCircle className="w-3 h-3" />
-            <span>[ ❓ RULES ]</span>
-          </button>
           <span className="px-2 py-0.5 border border-white bg-white text-black font-extrabold">
             {guesses.length}/6 TRIES
           </span>
@@ -186,12 +176,6 @@ export default function WordleGame({ match, currentUid }: WordleGameProps) {
           </p>
         </div>
       )}
-
-      <ArcadeGameRulesModal
-        isOpen={rulesOpen}
-        onClose={() => setRulesOpen(false)}
-        initialGameType="wordle"
-      />
 
       <ArcadeSocialDeck match={match} currentUid={currentUid} />
     </div>

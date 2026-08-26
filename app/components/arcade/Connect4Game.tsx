@@ -6,7 +6,6 @@ import { dropConnect4Token, type ArcadeMatch } from "@/lib/arcade";
 import { executeConnect4BotTurn } from "@/lib/arcadeBots";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
-import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
 import {
   Trophy,
   Zap,
@@ -27,7 +26,6 @@ interface Connect4GameProps {
 
 export default function Connect4Game({ match, currentUid }: Connect4GameProps) {
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [rulesOpen, setRulesOpen] = useState(false);
   const [droppingCol, setDroppingCol] = useState<number | null>(null);
   const [hoveredCol, setHoveredCol] = useState<number | null>(null);
 
@@ -102,14 +100,6 @@ export default function Connect4Game({ match, currentUid }: Connect4GameProps) {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setRulesOpen(true)}
-            className="px-2.5 py-1.5 border border-neutral-700 bg-black hover:border-white text-neutral-300 font-bold text-[10px] uppercase rounded transition-all cursor-pointer flex items-center gap-1"
-          >
-            <HelpCircle className="w-3 h-3" />
-            <span>RULES</span>
-          </button>
-          <button
-            type="button"
             onClick={() => {
               soundSynth.playSubtlePop();
               setInviteOpen(true);
@@ -123,7 +113,6 @@ export default function Connect4Game({ match, currentUid }: Connect4GameProps) {
       </div>
 
       <ArcadeInviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} match={match} />
-      <ArcadeGameRulesModal isOpen={rulesOpen} onClose={() => setRulesOpen(false)} initialGameType="connect4" />
 
       {/* ── 1-Tap Empty Seat Availability Banner ── */}
       {!match.players[currentUid] && playersList.length < maxSeats && match.status !== "FINISHED" && (

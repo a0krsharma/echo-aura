@@ -6,7 +6,6 @@ import { makeLiarsDiceBid, callLiarsDiceBluff, type ArcadeMatch } from "@/lib/ar
 import { executeLiarsDiceBotTurn } from "@/lib/arcadeBots";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
-import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
 import { Trophy, Share2, Sparkles, Dices, EyeOff, AlertTriangle, HelpCircle } from "lucide-react";
 
 interface LiarsDiceGameProps {
@@ -17,7 +16,6 @@ interface LiarsDiceGameProps {
 
 export default function LiarsDiceGame({ match, currentUid }: LiarsDiceGameProps) {
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [rulesOpen, setRulesOpen] = useState(false);
   const [bidCount, setBidCount] = useState(2);
   const [bidFace, setBidFace] = useState(3);
 
@@ -195,22 +193,6 @@ export default function LiarsDiceGame({ match, currentUid }: LiarsDiceGameProps)
       )}
 
       {/* Floating Bottom-Right [ ❓ RULES ] Button for In-Game Help */}
-      <div className="fixed bottom-4 right-4 z-40">
-        <button
-          type="button"
-          onClick={() => setRulesOpen(true)}
-          className="px-3.5 py-2 bg-black border-2 border-emerald-400 text-emerald-300 hover:bg-emerald-400 hover:text-black font-black text-xs uppercase transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] flex items-center gap-1.5 rounded-full cursor-pointer hover:scale-105"
-        >
-          <HelpCircle className="w-4 h-4" />
-          <span>[ ❓ LIAR'S DICE RULES ]</span>
-        </button>
-      </div>
-
-      <ArcadeGameRulesModal
-        isOpen={rulesOpen}
-        onClose={() => setRulesOpen(false)}
-        initialGameType="liars_dice"
-      />
 
       <ArcadeInviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} match={match} />
       <ArcadeSocialDeck match={match} currentUid={currentUid} />

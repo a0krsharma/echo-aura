@@ -6,7 +6,6 @@ import { guessRajaMantriChor, type ArcadeMatch } from "@/lib/arcade";
 import { executeRajaMantriBotTurn } from "@/lib/arcadeBots";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
-import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
 import { Trophy, Share2, Sparkles, Crown, Scroll, HelpCircle } from "lucide-react";
 
 interface RajaMantriGameProps {
@@ -17,7 +16,6 @@ interface RajaMantriGameProps {
 
 export default function RajaMantriGame({ match, currentUid, isHost }: RajaMantriGameProps) {
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [rulesOpen, setRulesOpen] = useState(false);
   const rms = match.rajaMantriState;
 
   // Trigger AI Mantri Bot Turn in VS_COMPUTER mode
@@ -136,22 +134,6 @@ export default function RajaMantriGame({ match, currentUid, isHost }: RajaMantri
       )}
 
       {/* Floating Bottom-Right [ ❓ RULES ] Button for In-Game Help */}
-      <div className="fixed bottom-4 right-4 z-40">
-        <button
-          type="button"
-          onClick={() => setRulesOpen(true)}
-          className="px-3.5 py-2 bg-black border-2 border-amber-400 text-amber-300 hover:bg-amber-400 hover:text-black font-black text-xs uppercase transition-all shadow-[0_0_20px_rgba(245,158,11,0.3)] flex items-center gap-1.5 rounded-full cursor-pointer hover:scale-105"
-        >
-          <HelpCircle className="w-4 h-4" />
-          <span>[ ❓ RAJA MANTRI RULES ]</span>
-        </button>
-      </div>
-
-      <ArcadeGameRulesModal
-        isOpen={rulesOpen}
-        onClose={() => setRulesOpen(false)}
-        initialGameType="raja_mantri"
-      />
 
       <ArcadeInviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} match={match} />
       <ArcadeSocialDeck match={match} currentUid={currentUid} />

@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import { soundSynth } from "@/lib/soundSynthesizer";
 import { slide15PuzzleTile, type ArcadeMatch } from "@/lib/arcade";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
-import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
 import { Trophy, LayoutGrid, RefreshCw, HelpCircle } from "lucide-react";
 
 interface Puzzle15GameProps {
@@ -14,7 +13,6 @@ interface Puzzle15GameProps {
 }
 
 export default function Puzzle15Game({ match, currentUid }: Puzzle15GameProps) {
-  const [rulesOpen, setRulesOpen] = useState(false);
   const ps = match.puzzle15State;
   if (!ps) return <div className="text-white font-mono p-4">Loading 15-Puzzle...</div>;
 
@@ -41,14 +39,6 @@ export default function Puzzle15Game({ match, currentUid }: Puzzle15GameProps) {
           // 15-PUZZLE [ SLIDING TILES ]
         </span>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setRulesOpen(true)}
-            className="px-2.5 py-0.5 border border-white bg-black hover:bg-white hover:text-black font-black uppercase text-[10px] transition-all flex items-center gap-1 cursor-pointer"
-          >
-            <HelpCircle className="w-3 h-3" />
-            <span>[ ❓ RULES ]</span>
-          </button>
           <span className="px-2 py-0.5 border border-white bg-white text-black font-extrabold text-[10px]">
             MOVES: {ps.moves}
           </span>
@@ -95,12 +85,6 @@ export default function Puzzle15Game({ match, currentUid }: Puzzle15GameProps) {
           </p>
         </div>
       )}
-
-      <ArcadeGameRulesModal
-        isOpen={rulesOpen}
-        onClose={() => setRulesOpen(false)}
-        initialGameType="puzzle15"
-      />
 
       <ArcadeSocialDeck match={match} currentUid={currentUid} />
     </div>

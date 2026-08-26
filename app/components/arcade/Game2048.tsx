@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback } from "react";
 import { soundSynth } from "@/lib/soundSynthesizer";
 import { update2048State, type ArcadeMatch } from "@/lib/arcade";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
-import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
 import { Trophy, RefreshCw, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, HelpCircle } from "lucide-react";
 
 interface Game2048Props {
@@ -14,7 +13,6 @@ interface Game2048Props {
 }
 
 export default function Game2048({ match, currentUid }: Game2048Props) {
-  const [rulesOpen, setRulesOpen] = useState(false);
   const g2048 = match.game2048State;
   const initialGrid: number[][] = g2048
     ? JSON.parse(g2048.gridStr)
@@ -152,14 +150,6 @@ export default function Game2048({ match, currentUid }: Game2048Props) {
           // 2048 [ BINARY MERGE MATRIX ]
         </span>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setRulesOpen(true)}
-            className="px-2.5 py-0.5 border border-white bg-black hover:bg-white hover:text-black font-black uppercase text-[10px] transition-all flex items-center gap-1 cursor-pointer"
-          >
-            <HelpCircle className="w-3 h-3" />
-            <span>[ ❓ RULES ]</span>
-          </button>
           <span className="px-2 py-0.5 border border-white bg-white text-black font-extrabold">
             SCORE: {score}
           </span>
@@ -238,12 +228,6 @@ export default function Game2048({ match, currentUid }: Game2048Props) {
           </p>
         </div>
       )}
-
-      <ArcadeGameRulesModal
-        isOpen={rulesOpen}
-        onClose={() => setRulesOpen(false)}
-        initialGameType="2048"
-      />
 
       <ArcadeSocialDeck match={match} currentUid={currentUid} />
     </div>

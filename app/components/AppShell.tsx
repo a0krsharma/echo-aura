@@ -323,15 +323,15 @@ function ShellContent({ children }: { children: React.ReactNode }) {
             <ShoppingCart className="w-4 h-4 text-white group-hover:text-black transition-colors" />
           </Link>
 
-          {/* Arcade Game Launcher Icon */}
+          {/* Echo Club Launcher Icon */}
           <Link
             href="/arcade"
             className="bg-black text-white hover:bg-white hover:text-black border-2 border-white p-3.5 rounded-full shadow-2xl transition-all duration-200 hover:scale-110 flex items-center justify-center gap-2 group cursor-pointer relative"
-            title="Echo Arcade Gaming Lounge"
+            title="Echo Club Gaming Lounge"
           >
             <Gamepad2 className="w-5 h-5 group-hover:scale-110 transition-transform" />
             <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 ease-in-out whitespace-nowrap font-mono text-xs font-bold tracking-widest uppercase">
-              [ ARCADE ]
+              [ ECHO CLUB ]
             </span>
             <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping"></span>
             <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full"></span>

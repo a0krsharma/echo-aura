@@ -125,7 +125,7 @@ export default function ArcadeRevengeCardModal({
     ctx.fillStyle = "#FFFFFF";
     ctx.font = "900 36px monospace";
     ctx.textAlign = "center";
-    ctx.fillText("ECHO ARCADE // SOCIAL VOICE GAMING", canvas.width / 2, isStory ? 160 : 100);
+    ctx.fillText("ECHO CLUB // SOCIAL VOICE GAMING", canvas.width / 2, isStory ? 160 : 100);
 
     // Game Title Badge
     ctx.fillStyle = "#10B981";

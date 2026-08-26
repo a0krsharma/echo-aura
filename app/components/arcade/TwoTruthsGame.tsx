@@ -5,7 +5,6 @@ import { soundSynth } from "@/lib/soundSynthesizer";
 import { voteTwoTruthsLie, type ArcadeMatch } from "@/lib/arcade";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
-import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
 import { Trophy, Share2, Sparkles, HelpCircle, CheckCircle2, XCircle } from "lucide-react";
 
 interface TwoTruthsGameProps {
@@ -16,7 +15,6 @@ interface TwoTruthsGameProps {
 
 export default function TwoTruthsGame({ match, currentUid }: TwoTruthsGameProps) {
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [rulesOpen, setRulesOpen] = useState(false);
   const [votedIdx, setVotedIdx] = useState<number | null>(null);
 
   const tts = match.twoTruthsState;
@@ -47,14 +45,6 @@ export default function TwoTruthsGame({ match, currentUid }: TwoTruthsGameProps)
           // TWO TRUTHS AND A LIE [ NODE VERIFICATION ]
         </span>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setRulesOpen(true)}
-            className="px-2 py-0.5 border border-white bg-black hover:bg-white hover:text-black font-black uppercase text-[10px] transition-all flex items-center gap-1 cursor-pointer"
-          >
-            <HelpCircle className="w-3 h-3" />
-            <span>[ ❓ RULES ]</span>
-          </button>
           <button
             type="button"
             onClick={() => setInviteOpen(true)}
@@ -115,12 +105,6 @@ export default function TwoTruthsGame({ match, currentUid }: TwoTruthsGameProps)
           <span className="truncate uppercase font-bold">{tts.lastActionLog}</span>
         </div>
       )}
-
-      <ArcadeGameRulesModal
-        isOpen={rulesOpen}
-        onClose={() => setRulesOpen(false)}
-        initialGameType="two_truths"
-      />
 
       <ArcadeInviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} match={match} />
       <ArcadeSocialDeck match={match} currentUid={currentUid} />

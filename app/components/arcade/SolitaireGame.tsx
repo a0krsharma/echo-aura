@@ -8,7 +8,6 @@ import {
 } from "@/lib/arcade";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
-import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
 import { Trophy, Share2, Sparkles, HelpCircle, Layers, RefreshCw } from "lucide-react";
 
 interface SolitaireGameProps {
@@ -19,7 +18,6 @@ interface SolitaireGameProps {
 
 export default function SolitaireGame({ match, currentUid }: SolitaireGameProps) {
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [rulesOpen, setRulesOpen] = useState(false);
 
   const ss = match.solitaireState;
 
@@ -53,14 +51,6 @@ export default function SolitaireGame({ match, currentUid }: SolitaireGameProps)
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setRulesOpen(true)}
-            className="px-2.5 py-1 border border-white bg-black hover:bg-white hover:text-black font-black uppercase text-[10px] transition-all flex items-center gap-1 cursor-pointer"
-          >
-            <HelpCircle className="w-3 h-3" />
-            <span>[ ❓ RULES ]</span>
-          </button>
           <span className="px-2.5 py-1 border border-neutral-700 bg-black font-bold uppercase text-[10px] text-neutral-300">
             MOVES: {ss.moves}
           </span>
@@ -153,22 +143,6 @@ export default function SolitaireGame({ match, currentUid }: SolitaireGameProps)
       )}
 
       {/* Floating Bottom-Right [ ❓ RULES ] Button for In-Game Help */}
-      <div className="fixed bottom-4 right-4 z-40">
-        <button
-          type="button"
-          onClick={() => setRulesOpen(true)}
-          className="px-3.5 py-2 bg-black border-2 border-white text-white hover:bg-white hover:text-black font-black text-xs uppercase transition-all shadow-[0_0_20px_rgba(255,255,255,0.4)] flex items-center gap-1.5 rounded-full cursor-pointer hover:scale-105"
-        >
-          <HelpCircle className="w-4 h-4" />
-          <span>[ ❓ SOLITAIRE RULES ]</span>
-        </button>
-      </div>
-
-      <ArcadeGameRulesModal
-        isOpen={rulesOpen}
-        onClose={() => setRulesOpen(false)}
-        initialGameType="solitaire"
-      />
 
       <ArcadeInviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} match={match} />
       <ArcadeSocialDeck match={match} currentUid={currentUid} />

@@ -9,7 +9,6 @@ import {
 } from "@/lib/arcade";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
-import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
 import {
   Mic,
   Music,
@@ -52,7 +51,6 @@ const HINDI_LETTERS = [
 
 export default function AntakshariGame({ match, currentUid }: AntakshariGameProps) {
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [rulesOpen, setRulesOpen] = useState(false);
   const [typedSong, setTypedSong] = useState("");
   const [selectedNextLetter, setSelectedNextLetter] = useState("न");
   const [timerSeconds, setTimerSeconds] = useState(30);
@@ -149,14 +147,6 @@ export default function AntakshariGame({ match, currentUid }: AntakshariGameProp
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setRulesOpen(true)}
-            className="px-2.5 py-1.5 border border-neutral-700 bg-black hover:border-white text-neutral-300 font-bold text-[10px] uppercase rounded transition-all cursor-pointer flex items-center gap-1"
-          >
-            <HelpCircle className="w-3 h-3" />
-            <span>RULES</span>
-          </button>
-          <button
-            type="button"
             onClick={() => {
               soundSynth.playSubtlePop();
               setInviteOpen(true);
@@ -170,7 +160,6 @@ export default function AntakshariGame({ match, currentUid }: AntakshariGameProp
       </div>
 
       <ArcadeInviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} match={match} />
-      <ArcadeGameRulesModal isOpen={rulesOpen} onClose={() => setRulesOpen(false)} initialGameType="antakshari" />
 
       {/* ── 1-Tap Empty Seat Availability Banner ── */}
       {!match.players[currentUid] && playersList.length < maxSeats && match.status !== "FINISHED" && (

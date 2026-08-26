@@ -5,7 +5,6 @@ import { soundSynth } from "@/lib/soundSynthesizer";
 import { submitTabooGuess, type ArcadeMatch } from "@/lib/arcade";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
-import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
 import { Trophy, Share2, Sparkles, Ban, CheckCircle2, XCircle, HelpCircle } from "lucide-react";
 
 interface TabooGameProps {
@@ -16,7 +15,6 @@ interface TabooGameProps {
 
 export default function TabooGame({ match, currentUid, isHost }: TabooGameProps) {
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [rulesOpen, setRulesOpen] = useState(false);
   const ts = match.tabooState;
   if (!ts) return <div className="text-white font-mono p-4">Loading Forbidden Lexicon...</div>;
 
@@ -43,14 +41,6 @@ export default function TabooGame({ match, currentUid, isHost }: TabooGameProps)
           // TABOO [ FORBIDDEN LEXICON ]
         </span>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setRulesOpen(true)}
-            className="px-2 py-0.5 border border-white bg-black hover:bg-white hover:text-black font-black uppercase text-[10px] transition-all flex items-center gap-1 cursor-pointer"
-          >
-            <HelpCircle className="w-3 h-3" />
-            <span>[ ❓ RULES ]</span>
-          </button>
           <button
             type="button"
             onClick={() => setInviteOpen(true)}
@@ -136,12 +126,6 @@ export default function TabooGame({ match, currentUid, isHost }: TabooGameProps)
           <span className="truncate uppercase font-bold">{ts.lastActionLog}</span>
         </div>
       )}
-
-      <ArcadeGameRulesModal
-        isOpen={rulesOpen}
-        onClose={() => setRulesOpen(false)}
-        initialGameType="taboo"
-      />
 
       <ArcadeInviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} match={match} />
       <ArcadeSocialDeck match={match} currentUid={currentUid} />

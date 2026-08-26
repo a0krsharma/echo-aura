@@ -5,7 +5,6 @@ import { soundSynth } from "@/lib/soundSynthesizer";
 import { askTwentyQuestion, type ArcadeMatch } from "@/lib/arcade";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
-import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
 import { Trophy, Share2, Sparkles, HelpCircle, Send } from "lucide-react";
 
 interface TwentyQuestionsGameProps {
@@ -16,7 +15,6 @@ interface TwentyQuestionsGameProps {
 
 export default function TwentyQuestionsGame({ match, currentUid, isHost }: TwentyQuestionsGameProps) {
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [rulesOpen, setRulesOpen] = useState(false);
   const [questionInput, setQuestionInput] = useState("");
 
   const tqs = match.twentyQuestionsState;
@@ -50,14 +48,6 @@ export default function TwentyQuestionsGame({ match, currentUid, isHost }: Twent
           // 20 QUESTIONS [ DATA DECRYPTION ]
         </span>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setRulesOpen(true)}
-            className="px-2 py-0.5 border border-white bg-black hover:bg-white hover:text-black font-black uppercase text-[10px] transition-all flex items-center gap-1 cursor-pointer"
-          >
-            <HelpCircle className="w-3 h-3" />
-            <span>[ ❓ RULES ]</span>
-          </button>
           <button
             type="button"
             onClick={() => setInviteOpen(true)}
@@ -136,12 +126,6 @@ export default function TwentyQuestionsGame({ match, currentUid, isHost }: Twent
           <span className="truncate uppercase font-bold">{tqs.lastActionLog}</span>
         </div>
       )}
-
-      <ArcadeGameRulesModal
-        isOpen={rulesOpen}
-        onClose={() => setRulesOpen(false)}
-        initialGameType="twenty_questions"
-      />
 
       <ArcadeInviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} match={match} />
       <ArcadeSocialDeck match={match} currentUid={currentUid} />

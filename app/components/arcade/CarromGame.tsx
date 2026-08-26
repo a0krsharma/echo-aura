@@ -5,7 +5,6 @@ import { soundSynth } from "@/lib/soundSynthesizer";
 import { fireCarromShot, type ArcadeMatch, type CarromPiece } from "@/lib/arcade";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
-import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
 import {
   Trophy,
   Share2,
@@ -138,7 +137,6 @@ export default function CarromGame({ match, currentUid, onRematch }: CarromGameP
   const [activeGrip, setActiveGrip] = useState<CarromGrip>("MIDDLE_STRAIGHT");
   const [activePowder, setActivePowder] = useState<CarromPowder>("BORIC_ACID");
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [rulesOpen, setRulesOpen] = useState(false);
   const [showProTips, setShowProTips] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -1180,15 +1178,6 @@ export default function CarromGame({ match, currentUid, onRematch }: CarromGameP
 
           <button
             type="button"
-            onClick={() => setRulesOpen(true)}
-            className="px-2.5 py-1.5 border border-neutral-700 bg-black hover:border-white text-neutral-300 font-bold text-[10px] uppercase rounded transition-all cursor-pointer flex items-center gap-1"
-          >
-            <HelpCircle className="w-3 h-3" />
-            <span>RULES</span>
-          </button>
-
-          <button
-            type="button"
             onClick={() => {
               soundSynth.playSubtlePop();
               setInviteOpen(true);
@@ -1202,7 +1191,6 @@ export default function CarromGame({ match, currentUid, onRematch }: CarromGameP
       </div>
 
       <ArcadeInviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} match={match} />
-      <ArcadeGameRulesModal isOpen={rulesOpen} onClose={() => setRulesOpen(false)} initialGameType="carrom" />
 
       {/* ── ICF Grand Slam Live Adjudicator Banner ── */}
       {slamDeclared && (

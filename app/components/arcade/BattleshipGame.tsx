@@ -6,7 +6,6 @@ import { fireBattleshipShot, type ArcadeMatch } from "@/lib/arcade";
 import { executeBattleshipBotTurn } from "@/lib/arcadeBots";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
-import ArcadeGameRulesModal from "./ArcadeGameRulesModal";
 import {
   Trophy,
   Crosshair,
@@ -27,7 +26,6 @@ interface BattleshipGameProps {
 
 export default function BattleshipGame({ match, currentUid }: BattleshipGameProps) {
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [rulesOpen, setRulesOpen] = useState(false);
   const bs = match.battleshipState;
   if (!bs) return <div className="text-white font-mono p-4">Loading Radar Command...</div>;
 
@@ -103,14 +101,6 @@ export default function BattleshipGame({ match, currentUid }: BattleshipGameProp
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setRulesOpen(true)}
-            className="px-2.5 py-1.5 border border-neutral-700 bg-black hover:border-white text-neutral-300 font-bold text-[10px] uppercase rounded transition-all cursor-pointer flex items-center gap-1"
-          >
-            <HelpCircle className="w-3 h-3" />
-            <span>RULES</span>
-          </button>
-          <button
-            type="button"
             onClick={() => {
               soundSynth.playSubtlePop();
               setInviteOpen(true);
@@ -124,7 +114,6 @@ export default function BattleshipGame({ match, currentUid }: BattleshipGameProp
       </div>
 
       <ArcadeInviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} match={match} />
-      <ArcadeGameRulesModal isOpen={rulesOpen} onClose={() => setRulesOpen(false)} initialGameType="battleship" />
 
       {/* ── 1-Tap Empty Seat Availability Banner ── */}
       {!match.players[currentUid] && playersList.length < maxSeats && match.status !== "FINISHED" && (

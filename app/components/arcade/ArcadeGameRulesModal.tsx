@@ -807,7 +807,7 @@ export default function ArcadeGameRulesModal({
           <div className="flex items-center gap-2">
             <BookOpen className="w-4 h-4 text-white animate-pulse" />
             <h2 className="font-black text-xs sm:text-sm uppercase tracking-widest text-white">
-              // ECHO ARCADE // 50-GAME MASTER RULES & TACTICAL MANUAL
+              // ECHO CLUB // 50-GAME MASTER RULES & TACTICAL MANUAL
             </h2>
           </div>
           <button

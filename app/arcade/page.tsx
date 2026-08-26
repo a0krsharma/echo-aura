@@ -418,10 +418,10 @@ function ArcadeContent() {
             </div>
             <div>
               <h1 className="font-black text-xs sm:text-sm tracking-wider uppercase text-white truncate">
-                ECHO ARCADE
+                ECHO CLUB
               </h1>
               <p className="text-[10px] text-neutral-400 font-bold hidden sm:block">
-                PREMIER 3D REAL &amp; VOICE MULTIPLAYER SUITE
+                PREMIER REAL-TIME &amp; VOICE GAMING LOUNGE
               </p>
             </div>
           </div>
@@ -708,25 +708,16 @@ function ArcadeContent() {
             <div className="space-y-3 font-mono">
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 {/* Search Bar */}
-                <div className="flex-1 min-w-[260px] relative">
-                  <Search className="w-4 h-4 absolute left-3 top-2.5 text-neutral-400" />
+                <div className="w-full relative">
+                  <Search className="w-4 h-4 absolute left-3.5 top-3 text-neutral-400" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="SEARCH GAMES (ANTAKSHARI, COURTROOM, NEWS ANCHOR, MUSHAIRA, LUDO, CARROM, POOL)..."
-                    className="w-full bg-neutral-950 border border-neutral-800 focus:border-white pl-9 pr-3 py-2 text-xs font-mono text-white placeholder-neutral-500 uppercase outline-none rounded-xl"
+                    placeholder="SEARCH GAMES (ANTAKSHARI, COURTROOM, NEWS ANCHOR, MUSHAIRA, LUDO, CARROM, POOL, MONOPOLY)..."
+                    className="w-full bg-neutral-950 border border-neutral-800 focus:border-white pl-10 pr-4 py-2.5 text-xs font-mono text-white placeholder-neutral-500 uppercase outline-none rounded-xl"
                   />
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => handleOpenRules("antakshari")}
-                  className="px-3.5 py-2 border border-neutral-700 bg-neutral-900 hover:border-white text-white font-bold text-xs uppercase flex items-center gap-1.5 cursor-pointer transition-colors rounded-xl shadow-sm"
-                >
-                  <HelpCircle className="w-4 h-4 text-pink-400" />
-                  <span>[ ❓ GAME RULES ]</span>
-                </button>
               </div>
 
               {/* Filter Tabs */}
@@ -914,18 +905,6 @@ function ArcadeContent() {
         )}
       </main>
 
-      {/* Floating Bottom-Right [ ? RULES & MANUAL ] Button */}
-      <div className="fixed bottom-4 right-4 z-40">
-        <button
-          type="button"
-          onClick={() => handleOpenRules(activeMatch?.gameType || "antakshari")}
-          className="px-4 py-2.5 bg-black border-2 border-white text-white hover:bg-white hover:text-black font-black text-xs uppercase transition-all shadow-[0_0_25px_rgba(255,255,255,0.3)] flex items-center gap-2 rounded-full cursor-pointer hover:scale-105 active:scale-95"
-        >
-          <HelpCircle className="w-4 h-4 animate-bounce" />
-          <span className="font-mono tracking-wider">[ ❓ HELP &amp; RULES ]</span>
-        </button>
-      </div>
-
       {/* Master Rules & Tactical Manual Modal */}
       <ArcadeGameRulesModal
         isOpen={rulesModalOpen}
@@ -1049,7 +1028,7 @@ function ArcadeContent() {
 
 export default function ArcadePage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-black text-white font-mono p-8 text-center text-xs">Loading Echo Arcade...</div>}>
+    <Suspense fallback={<div className="min-h-screen bg-black text-white font-mono p-8 text-center text-xs">Loading Echo Club...</div>}>
       <ArcadeContent />
     </Suspense>
   );
