@@ -13,10 +13,12 @@ import {
   deleteArcadeMatch,
   leaveArcadeMatch,
   processWagerPayouts,
+  addGhostParticipantToMatch,
   type ArcadeMatch,
   type ArcadeGameType,
 } from "@/lib/arcade";
 import AgoraRTC, { AgoraRTCProvider } from "agora-rtc-react";
+import MicrophoneSoundCheckModal from "@/app/components/MicrophoneSoundCheckModal";
 import ArcadeVoiceChannel from "@/app/components/arcade/ArcadeVoiceChannel";
 import AntakshariGame from "@/app/components/arcade/AntakshariGame";
 import VoicePartyGame from "@/app/components/arcade/VoicePartyGame";
@@ -156,10 +158,13 @@ function ArcadeContent() {
   const [botDifficultyModalOpen, setBotDifficultyModalOpen] = useState(false);
   const [pendingBotGameType, setPendingBotGameType] = useState<ArcadeGameType | null>(null);
 
+  const [soundCheckOpen, setSoundCheckOpen] = useState(false);
+  const [ghostTimerSec, setGhostTimerSec] = useState<number | null>(null);
+
   const rtcClient = useMemo(() => AgoraRTC.createClient({ codec: "vp8", mode: "rtc" }), []);
   const [rawMicStream, setRawMicStream] = useState<MediaStream | null>(null);
 
-  // Auto-load match or tournament from URL params
+  // 1. Zero-Install Deep Links Engine (Under 2 seconds auto-mount)
   useEffect(() => {
     const paramMatchId = searchParams.get("matchId") || searchParams.get("join");
     if (paramMatchId) {
@@ -170,7 +175,41 @@ function ArcadeContent() {
       setInitialTournamentId(paramTourId);
       setTournamentModalOpen(true);
     }
-  }, [searchParams]);
+    const paramGame = searchParams.get("game") || searchParams.get("gameType");
+    const isChallenger = searchParams.get("challenger") === "true";
+    if (paramGame && !paramMatchId && user) {
+      const matchedGame = CLEAN_GAMES.find((g) => g.id === paramGame.toLowerCase());
+      if (matchedGame) {
+        handleOpenCreate(matchedGame.id);
+      }
+    }
+  }, [searchParams, user]);
+
+  // 2. Ghost Participant Fallback Engine (Activates within 3.5s if solo in multiplayer)
+  useEffect(() => {
+    if (!activeMatch || activeMatch.mode === "VS_COMPUTER" || activeMatch.status !== "WAITING") {
+      setGhostTimerSec(null);
+      return;
+    }
+    const playerCount = Object.keys(activeMatch.players || {}).length;
+    if (playerCount === 1 && activeMatch.hostUid === user?.uid) {
+      setGhostTimerSec(4);
+      const interval = setInterval(() => {
+        setGhostTimerSec((prev) => {
+          if (prev === null) return null;
+          if (prev <= 1) {
+            clearInterval(interval);
+            addGhostParticipantToMatch(activeMatch.id).catch(console.warn);
+            return null;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(interval);
+    } else {
+      setGhostTimerSec(null);
+    }
+  }, [activeMatch?.id, activeMatch?.status, activeMatch?.players, activeMatch?.hostUid, user?.uid]);
 
   // Subscribe to active match if playing
   useEffect(() => {
@@ -438,6 +477,17 @@ function ArcadeContent() {
                 <span className="hidden sm:inline">{isRematching ? "REMATCHING..." : "REMATCH"}</span>
               </button>
 
+              {/* Sound Check Button */}
+              <button
+                type="button"
+                onClick={() => setSoundCheckOpen(true)}
+                className="px-2.5 sm:px-3 py-1.5 border border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-emerald-400 hover:text-emerald-300 font-bold uppercase text-xs transition-all flex items-center gap-1 cursor-pointer rounded-lg shadow-sm"
+                title="Microphone Sound Check"
+              >
+                <Mic2 className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="hidden sm:inline">MIC CHECK</span>
+              </button>
+
               {/* Single Rules Button */}
               <button
                 type="button"
@@ -500,6 +550,16 @@ function ArcadeContent() {
             <div className="flex items-center gap-2 text-xs shrink-0">
               <button
                 type="button"
+                onClick={() => setSoundCheckOpen(true)}
+                className="px-2.5 sm:px-3 py-1.5 border border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-emerald-400 hover:text-emerald-300 font-bold text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer rounded-lg shadow-sm"
+                title="Microphone Sound Check"
+              >
+                <Mic2 className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="hidden sm:inline">MIC CHECK</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setTournamentModalOpen(true)}
                 className="px-2.5 sm:px-3 py-1.5 border border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-yellow-400 hover:text-yellow-300 font-bold text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer rounded-lg shadow-sm"
               >
@@ -533,6 +593,27 @@ function ArcadeContent() {
         {activeMatch ? (
           /* ── Active Game Arena View ── */
           <div className="space-y-4">
+            {/* Ghost Participant Fallback Notification Bar */}
+            {activeMatch.status === "WAITING" && activeMatch.mode !== "VS_COMPUTER" && Object.keys(activeMatch.players || {}).length < activeMatch.maxPlayers && (
+              <div className="p-3.5 rounded-2xl bg-neutral-950 border border-neutral-800 flex items-center justify-between gap-3 shadow-md">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                  <span className="text-xs text-neutral-300 font-sans">
+                    {ghostTimerSec !== null ? (
+                      <>Waiting for challenger... Auto-dropping <strong>Ghost AI</strong> in <strong>{ghostTimerSec}s</strong> so the room never stays dead.</>
+                    ) : (
+                      <>Awaiting opponent to join...</>
+                    )}
+                  </span>
+                </div>
+                <button
+                  onClick={() => addGhostParticipantToMatch(activeMatch.id)}
+                  className="px-3 py-1 bg-white text-black font-black text-xs uppercase rounded-xl hover:bg-neutral-200 transition-colors cursor-pointer shadow-sm shrink-0"
+                >
+                  🤖 DROP GHOST AI NOW
+                </button>
+              </div>
+            )}
 
             {/* Universal Match Finished & Rematch Bar */}
             {activeMatch.status === "FINISHED" && (
@@ -1078,6 +1159,12 @@ function ArcadeContent() {
           </div>
         </div>
       )}
+
+      {/* 1-Tap Microphone Sound Check Modal */}
+      <MicrophoneSoundCheckModal
+        isOpen={soundCheckOpen}
+        onClose={() => setSoundCheckOpen(false)}
+      />
     </div>
   );
 }

@@ -2257,6 +2257,64 @@ export async function joinArcadeMatch(
   await updateDoc(matchRef, updates);
 }
 
+// ── Ghost Participant Fallback (Aha Activation Engine) ───────────────────────
+export async function addGhostParticipantToMatch(
+  matchId: string,
+  customGhostName?: string
+): Promise<string> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const snap = await getDoc(matchRef);
+  if (!snap.exists()) throw new Error("Match not found");
+  const match = snap.data() as ArcadeMatch;
+
+  const currentPlayers = Object.values(match.players || {});
+  if (currentPlayers.length >= match.maxPlayers) return "";
+
+  const ghostIndex = currentPlayers.filter((p) => p.isBot).length + 1;
+  const ghostUid = `ghost_ai_${matchId}_${Date.now()}_${ghostIndex}`;
+  const ghostHandles = [
+    "@CyberGhost_AI",
+    "@Satoshi_Bot",
+    "@AuraMaster_AI",
+    "@NeonPulse_Ghost",
+    "@EchoValkyrie_AI",
+  ];
+  const ghostHandle = customGhostName || ghostHandles[Math.floor(Math.random() * ghostHandles.length)];
+
+  let team: any;
+  if (match.gameType === "ludo") {
+    const taken = currentPlayers.map((p) => p.team);
+    const available = ["GREEN", "YELLOW", "BLUE", "RED"] as const;
+    team = available.find((t) => !taken.includes(t)) || "GREEN";
+  } else if (match.gameType === "chess") {
+    team = "BLACK";
+  }
+
+  const updates: any = {
+    [`players.${ghostUid}`]: cleanData({
+      uid: ghostUid,
+      handle: ghostHandle,
+      avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=" + ghostUid,
+      score: 0,
+      mistakes: 0,
+      team,
+      ready: true,
+      isBot: true,
+      joinedAt: Date.now(),
+    }),
+    status: currentPlayers.length + 1 >= 2 ? "PLAYING" : match.status,
+    updatedAt: serverTimestamp(),
+  };
+
+  if (match.gameType === "battleship" && !match.battleshipState?.p2Uid) {
+    updates["battleshipState.p2Uid"] = ghostUid;
+  }
+
+  await updateDoc(matchRef, updates);
+  return ghostUid;
+}
+
 export async function leaveArcadeMatch(
   matchId: string,
   playerUid: string

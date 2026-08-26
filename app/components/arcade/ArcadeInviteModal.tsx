@@ -71,8 +71,16 @@ export default function ArcadeInviteModal({
     ? `${origin}/room/${match.roomId}?matchId=${match.id}`
     : `${origin}/arcade?matchId=${match.id}`;
 
-  // WhatsApp "One-Tap Challenge" Hook (Viral Loop for hostel/friend group chats)
-  const whatsappChallengeText = `Match me in ${gameDisplayName} right now (no download needed). Mic is on: ${inviteUrl}`;
+  // WhatsApp Ego-Challenger Taunt Hooks (Top-of-Funnel Viral Spread)
+  const [selectedTauntIndex, setSelectedTauntIndex] = useState(0);
+
+  const tauntOptions = [
+    `I am 4-0 in ${gameDisplayName}. Stop hiding and join the arena (Mic ON, 0MB install): ${inviteUrl}`,
+    `Match me in ${gameDisplayName} right now (no download needed). Mic is on: ${inviteUrl}`,
+    `Bet you can't beat me in ${gameDisplayName}! ${match.stakes} Aura on the line (Voice Live): ${inviteUrl}`,
+  ];
+
+  const whatsappChallengeText = tauntOptions[selectedTauntIndex];
   const shareTitle = `🎮 Challenge me in ${gameDisplayName} on Echo!`;
 
   const handleCopyLink = async () => {
@@ -135,11 +143,34 @@ export default function ArcadeInviteModal({
         <div className="space-y-1 mb-4 border-b-2 border-white pb-3">
           <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-[#25D366]">
             <Flame className="w-4 h-4 text-emerald-400 animate-bounce" />
-            <span>// ONE-TAP WHATSAPP CHALLENGE</span>
+            <span>// EGO-CHALLENGER WHATSAPP HOOK</span>
           </div>
           <h2 className="text-base font-black uppercase text-white truncate">
             {match.title}
           </h2>
+        </div>
+
+        {/* Taunt Template Selector */}
+        <div className="space-y-2 mb-3">
+          <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">
+            CHOOSE VIRAL TAUNT STYLE:
+          </p>
+          <div className="grid grid-cols-3 gap-1.5">
+            {["🔥 EGO TAUNT", "⚡ INSTANT", "🏆 AURA STAKES"].map((label, idx) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => setSelectedTauntIndex(idx)}
+                className={`py-1.5 px-2 text-[10px] font-black uppercase rounded-lg border transition-all cursor-pointer ${
+                  selectedTauntIndex === idx
+                    ? "bg-white text-black border-white shadow-sm"
+                    : "bg-neutral-950 text-neutral-400 border-neutral-800 hover:border-neutral-600"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* 1-TAP WHATSAPP VIRAL CHALLENGE BUTTON */}
@@ -152,10 +183,10 @@ export default function ArcadeInviteModal({
             className="w-full py-3.5 px-4 bg-[#25D366] hover:bg-[#20bd5a] text-black font-black text-xs sm:text-sm uppercase tracking-wider rounded-xl transition-all shadow-[0_0_25px_rgba(37,211,102,0.4)] flex items-center justify-center gap-2.5 cursor-pointer hover:scale-[1.02] active:scale-95"
           >
             <span className="text-lg">💬</span>
-            <span>SHARE ON WHATSAPP (1-TAP)</span>
+            <span>SEND TAUNT ON WHATSAPP (1-TAP)</span>
           </a>
           <p className="text-[10px] text-neutral-400 text-center mt-1.5 font-bold">
-            Sends pre-filled invite directly to hostel & friends groups with zero sign-up friction!
+            Drops friends directly into the voice seat in under 2 seconds with zero install!
           </p>
         </div>
 

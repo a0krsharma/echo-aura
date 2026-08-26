@@ -39,6 +39,8 @@ import { FormattedText } from "@/app/components/FormattedText";
 import SpotifySyncDock from "@/app/components/SpotifySyncDock";
 import NeuralRadioDock from "@/app/components/NeuralRadioDock";
 import ArcadeRoomDock from "@/app/components/arcade/ArcadeRoomDock";
+import VoltronPresenceVault from "@/app/components/room/VoltronPresenceVault";
+import MicrophoneSoundCheckModal from "@/app/components/MicrophoneSoundCheckModal";
 import {
   getRoom,
   subscribeToRoom,
@@ -118,6 +120,7 @@ export default function RoomClient({ roomId }: RoomClientProps) {
   const [isOrbiting, setIsOrbiting] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
+  const [soundCheckOpen, setSoundCheckOpen] = useState(false);
 
   // Ensure Audio Engine is connected to this room
   useEffect(() => {
@@ -419,6 +422,15 @@ export default function RoomClient({ roomId }: RoomClientProps) {
             variant="button"
             className="px-2.5 py-1 text-[10px] sm:text-xs uppercase"
           />
+          <button
+            onClick={() => setSoundCheckOpen(true)}
+            className="flex items-center gap-1 text-neutral-300 hover:text-white border border-neutral-800 px-2.5 py-1 text-[10px] sm:text-xs uppercase font-bold transition-colors cursor-pointer bg-neutral-950"
+            title="Run 1-Tap Microphone Sound Check"
+          >
+            <Mic className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="hidden sm:inline">SOUND CHECK</span>
+          </button>
+
           {user?.uid === room.hostUid ? (
             <button
               onClick={handleHostEndRoom}
@@ -440,6 +452,14 @@ export default function RoomClient({ roomId }: RoomClientProps) {
 
       {/* ── Main Stage Area ── */}
       <main className="flex-1 max-w-5xl mx-auto w-full p-4 sm:p-6 space-y-6 pb-32">
+        {/* Voltron Multi-Presence Audio Key Vault */}
+        <VoltronPresenceVault
+          roomId={roomId}
+          participants={participants}
+          requiredKeys={3}
+          vaultTitle={`${room.name || "STAGE"} // VOLTRON MULTI-PRESENCE VAULT`}
+        />
+
         {/* Party Mode: Spotify Co-Listening Dock */}
         {room.broadcastEngine === "SPOTIFY" && (
           <SpotifySyncDock
@@ -999,6 +1019,12 @@ export default function RoomClient({ roomId }: RoomClientProps) {
           </div>
         </div>
       )}
+
+      {/* 1-Tap Microphone Sound Check Modal */}
+      <MicrophoneSoundCheckModal
+        isOpen={soundCheckOpen}
+        onClose={() => setSoundCheckOpen(false)}
+      />
     </div>
   );
 }
