@@ -1,6 +1,7 @@
 import React from "react";
 import RoboEchoMascot from "@/app/components/robo-echo/RoboEchoMascot";
 import AIVoiceConsole from "@/app/components/robo-echo/AIVoiceConsole";
+import AutonomousCompanionScene from "@/app/components/robo-echo/AutonomousCompanionScene";
 import LeftSidebar from "@/app/components/LeftSidebar";
 import BottomNav from "@/app/components/BottomNav";
 import Link from "next/link";
@@ -71,8 +72,9 @@ export default function EchoBotPage() {
           <RoboEchoMascot />
 
           {/* Gemini 2.5 Flash Echo-Proof Voice Chat Console */}
-          <div className="w-full max-w-4xl">
+          <div className="w-full max-w-4xl space-y-6">
             <AIVoiceConsole />
+            <AutonomousCompanionScene />
           </div>
         </div>
       </main>
