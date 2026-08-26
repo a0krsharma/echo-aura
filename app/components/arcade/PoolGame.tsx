@@ -1158,6 +1158,18 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
               <span className="text-emerald-400 font-bold block mb-0.5">31. 🪞 SPOT-ON-THE-WALL OPTICAL KICKING:</span>
               Planar mirror reflection: project target distance d past cushion nose (P_virtual = P_cushion + (P_cushion - P_target)) with dead-center stun!
             </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">32. 📏 1-CUSHION PARALLEL SHIFT SYSTEM:</span>
+              Baseline midpoint M ➔ 90° rail node ➔ lateral shift to CB. For unequal depths, shift aim &Delta;x &approx; |d1 - d2| / 4 toward closer ball!
+            </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">33. 📐 2-CUSHION PARALLEL SHIFT (CORNER INVERSION):</span>
+              Corner-to-target line: midpoint M ➔ corner vertex ➔ parallel shift to CB. Inverts rays parallel to corner line without math!
+            </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">34. ➕ PLUS SYSTEM (AIM = ARRIVAL - ORIGIN):</span>
+              Diamond arithmetic with 2-2.5 tips running English delivers exact multi-rail tracks; use Parallel Shift for rapid visual escapes.
+            </div>
           </div>
         )}
       </div>
