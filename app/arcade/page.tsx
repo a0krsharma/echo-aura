@@ -718,6 +718,17 @@ function ArcadeContent() {
                     </button>
                   )}
 
+                  {hasPostedVictory && (
+                    <Link
+                      href="/"
+                      target="_blank"
+                      className="px-3.5 py-2.5 border border-emerald-500/80 bg-emerald-950/60 hover:bg-emerald-900 text-emerald-300 font-bold text-xs uppercase transition-all rounded-xl cursor-pointer flex items-center gap-1 shadow-md animate-pulse"
+                      title="See your victory live on the Frequency feed"
+                    >
+                      <span>VIEW ON FEED ↗</span>
+                    </Link>
+                  )}
+
                   <button
                     type="button"
                     onClick={handleRematch}
