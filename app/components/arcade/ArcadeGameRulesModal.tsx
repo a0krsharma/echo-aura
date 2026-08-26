@@ -592,15 +592,15 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
     icon: "🎱",
     overview: "Official World Pool-Billiard Association (WPA) tournament rules. 15 object balls (Solids 1-7, Stripes 9-15, and the Black 8-Ball) racked with the apex on Foot Spot and 8-Ball in center. Break from behind the head string. Clear all 7 balls of your assigned group before pocketing the 8-Ball for victory.",
     howToPlay: [
-      "BREAK & OPEN TABLE: Breaking does not assign suits. The table remains open until a player legally pockets a called ball from their chosen group in regular play.",
-      "TURN CONTINUATION: Your turn continues uninterrupted as long as you legally pocket a ball from your assigned suit on each shot.",
+      "BREAK & THREE-POINT RULE: Sinking balls does not claim suits (Open Table). A legal break requires Break Score = Pocketed + Crossed >= 3. Soft breaks allow opponent to accept table or pass back.",
+      "TURN CONTINUATION & PUSH-OUT: Your turn continues as long as you legally pocket assigned balls. An optional Push-Out is allowed on Shot #2 immediately following the break.",
       "STANDARD FOULS & BALL-IN-HAND: Scratching the cue ball, hitting wrong suit first, or failing to drive a ball to a cushion yields Ball-in-Hand anywhere on the table for the opponent.",
-      "INSTANT LOSS CONDITIONS: Pocketing the 8-ball while scratching/fouling, or pocketing the 8-ball before clearing all 7 of your suit balls results in an immediate loss.",
-      "WPA PRO SHOT MECHANICS: Utilize Ghost-Ball trajectory math, 90° tangent cue deflection, Cut-Induced Throw (CIT) compensation, and Cushion Bank rebounds with rail grip."
+      "INSTANT LOSS CONDITIONS: Pocketing the 8-ball while scratching/fouling, or pocketing the 8-ball before clearing all 7 of your suit balls results in an immediate frame loss.",
+      "DIAMOND KICKING & RENVERSE: Use 1-Rail midpoint projections, 2-Rail Plus (Aim = Target - Origin), 3-Rail Corner-5 (Aim = Origin - Arrival), and Renverse Reverse Corner (Aim = Origin x Target / 100)!"
     ],
     voiceGuide: "Call pockets, declare bank shots, and engage in psychological banter over the mic.",
     scoring: "+250 Aura for legally pocketing the 8-Ball to win the match.",
-    proTip: "Master Gearing English (0.4 * R * sin(phi) tip offset) to completely eliminate Cut-Induced Throw on angled cuts!"
+    proTip: "Master the Renverse System (Aim = Origin x Target / 100 with max reverse spin) to convert braking spin into Super-Running English across the corner!"
   },
   "2048": {
     id: "2048",

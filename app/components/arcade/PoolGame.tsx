@@ -1054,6 +1054,10 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
               <span className="text-emerald-400 font-bold block mb-0.5">5. 🔄 THE TIKI SHOT (RAIL-FIRST CAROM):</span>
               Rail ➔ Object Ball ➔ Same Cushion. Squeeze clearance with inside spin and gap offset.
             </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">6. 🔀 THE RENVERSE (REVERSE CORNER SYSTEM):</span>
+              Aim = (Origin &times; Target) / 100 (Max Reverse English). 90° corner turn transforms reverse spin into Super-Running propulsion!
+            </div>
           </div>
         )}
       </div>
