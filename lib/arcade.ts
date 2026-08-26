@@ -2037,6 +2037,45 @@ export async function createArcadeMatch(params: {
   return matchId;
 }
 
+// ── Rematch / Replay Arcade Match ──────────────────────────────────────────
+export async function rematchArcadeMatch(
+  match: ArcadeMatch,
+  requestingUser: { uid: string; handle: string; avatar?: string }
+): Promise<string> {
+  const newMatchId = await createArcadeMatch({
+    gameType: match.gameType,
+    title: match.title.includes("[REMATCH]") ? match.title : `${match.title} [REMATCH]`,
+    hostUid: requestingUser.uid,
+    hostHandle: requestingUser.handle || "@PLAYER",
+    hostAvatar: requestingUser.avatar || "",
+    roomId: match.roomId,
+    mode: match.mode,
+    maxPlayers: match.maxPlayers,
+    enableVoice: match.enableVoice,
+    stakes: match.stakes,
+    difficulty: match.difficulty,
+  });
+
+  // If multiplayer, re-add other human players from the previous match
+  if (match.mode === "MULTIPLAYER" && match.players) {
+    for (const [pUid, p] of Object.entries(match.players)) {
+      if (pUid !== requestingUser.uid && !p.isBot) {
+        try {
+          await joinArcadeMatch(newMatchId, {
+            uid: p.uid,
+            handle: p.handle || "@ANON",
+            avatar: p.avatar,
+          });
+        } catch (e) {
+          console.warn("[Arcade] Auto-join rematch player:", e);
+        }
+      }
+    }
+  }
+
+  return newMatchId;
+}
+
 // ── Delete / Terminate Arcade Match ──────────────────────────────────────────
 export async function deleteArcadeMatch(matchId: string, hostUid?: string): Promise<void> {
   try {

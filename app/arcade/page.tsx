@@ -7,6 +7,7 @@ import { findOrJoinQueue } from "@/lib/arcadeQueue";
 import {
   createArcadeMatch,
   joinArcadeMatch,
+  rematchArcadeMatch,
   subscribeArcadeMatch,
   subscribeLobbyArcadeMatches,
   deleteArcadeMatch,
@@ -70,6 +71,7 @@ import {
   X,
   Mic2,
   ShoppingCart,
+  RotateCcw,
 } from "lucide-react";
 import Link from "next/link";
 import { updateArcadeElo } from "@/lib/userDoc";
@@ -337,6 +339,25 @@ function ArcadeContent() {
     }
   };
 
+  const [isRematching, setIsRematching] = useState(false);
+
+  const handleRematch = async () => {
+    if (!activeMatch || !user || isRematching) return;
+    try {
+      setIsRematching(true);
+      const newMatchId = await rematchArcadeMatch(activeMatch, {
+        uid: user.uid,
+        handle: user.handle || "@ANON",
+        avatar: user.photoUrl || user.photoURL,
+      });
+      setActiveMatchId(newMatchId);
+    } catch (e) {
+      console.error("Failed to trigger rematch:", e);
+    } finally {
+      setIsRematching(false);
+    }
+  };
+
   // Update Elo once per match on the Winner's client
   const eloUpdatedRef = useRef<string | null>(null);
   useEffect(() => {
@@ -468,6 +489,22 @@ function ArcadeContent() {
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
+                {/* Rematch Button */}
+                <button
+                  type="button"
+                  onClick={handleRematch}
+                  disabled={isRematching}
+                  className={`px-3 py-1.5 border font-black uppercase text-xs transition-all flex items-center gap-1.5 cursor-pointer rounded-lg shadow-md active:scale-95 ${
+                    activeMatch.status === "FINISHED"
+                      ? "border-emerald-400 bg-emerald-400 text-black hover:bg-emerald-300 animate-pulse"
+                      : "border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-white hover:text-white"
+                  }`}
+                  title="Trigger Immediate Rematch"
+                >
+                  <RotateCcw className={`w-3.5 h-3.5 ${isRematching ? "animate-spin" : ""}`} />
+                  <span>{isRematching ? "REMATCHING..." : "[ 🔄 REMATCH ]"}</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => handleOpenRules(activeMatch.gameType)}
@@ -498,6 +535,45 @@ function ArcadeContent() {
                 )}
               </div>
             </div>
+
+            {/* Universal Match Finished & Rematch Bar */}
+            {activeMatch.status === "FINISHED" && (
+              <div className="border-2 border-emerald-400 bg-gradient-to-r from-emerald-950/80 via-black to-neutral-950 p-4 sm:p-5 rounded-2xl flex items-center justify-between gap-4 flex-wrap shadow-[0_0_40px_rgba(52,211,153,0.3)] animate-in fade-in zoom-in-95">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-400 text-black flex items-center justify-center font-black text-xl shadow-lg">
+                    🏆
+                  </div>
+                  <div>
+                    <h3 className="text-sm sm:text-base font-black uppercase text-emerald-300 tracking-wider">
+                      MATCH CONCLUDED • {activeMatch.winnerHandle || "GAME OVER"}
+                    </h3>
+                    <p className="text-xs text-neutral-300 font-mono">
+                      Ready for another round? Replay with the same players and settings.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={handleRematch}
+                    disabled={isRematching}
+                    className="px-5 py-2.5 border-2 border-emerald-400 bg-emerald-400 text-black hover:bg-emerald-300 font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer rounded-xl shadow-lg active:scale-95"
+                  >
+                    <RotateCcw className={`w-4 h-4 ${isRematching ? "animate-spin" : ""}`} />
+                    <span>{isRematching ? "CREATING REMATCH..." : "[ 🔄 PLAY REMATCH NOW ]"}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleExitActiveMatch}
+                    className="px-4 py-2.5 border border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-white hover:text-white font-bold text-xs uppercase transition-all rounded-xl cursor-pointer"
+                  >
+                    [ EXIT TO LOBBY ]
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* In-Match Live Voice Channel */}
             {activeMatch.enableVoice !== false && (
@@ -536,7 +612,7 @@ function ArcadeContent() {
               <LudoGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
             )}
             {activeMatch.gameType === "carrom" && (
-              <CarromGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+              <CarromGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} onRematch={handleRematch} />
             )}
             {activeMatch.gameType === "pool" && (
               <PoolGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
