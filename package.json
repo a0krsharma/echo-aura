@@ -11,6 +11,8 @@
   "dependencies": {
     "@capacitor/android": "^8.5.0",
     "@capacitor/core": "^8.5.0",
+    "@react-three/drei": "^10.7.8",
+    "@react-three/fiber": "^9.7.0",
     "@types/three": "^0.185.4",
     "agora-access-token": "^2.0.4",
     "agora-chat": "^1.4.0",

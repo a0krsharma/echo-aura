@@ -1,5 +1,6 @@
 import React from "react";
 import RoboEchoMascot from "@/app/components/robo-echo/RoboEchoMascot";
+import AIVoiceConsole from "@/app/components/robo-echo/AIVoiceConsole";
 import LeftSidebar from "@/app/components/LeftSidebar";
 import BottomNav from "@/app/components/BottomNav";
 import Link from "next/link";
@@ -45,6 +46,12 @@ export default function EchoBotPage() {
 
           <div className="flex items-center gap-2">
             <Link
+              href="/wardrobe"
+              className="px-3 py-1.5 bg-amber-950/60 hover:bg-amber-900/60 border border-amber-700/60 text-amber-400 text-xs font-bold uppercase rounded-xl transition-all"
+            >
+              [ 🎨 WARDROBE ]
+            </Link>
+            <Link
               href="/rooms"
               className="px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-xs font-bold uppercase rounded-xl transition-all"
             >
@@ -60,8 +67,13 @@ export default function EchoBotPage() {
         </header>
 
         {/* Mascot Simulator Canvas & Interactive Arena */}
-        <div className="flex-1 p-4 md:p-8 flex flex-col items-center justify-center">
+        <div className="flex-1 p-4 md:p-8 flex flex-col items-center justify-center gap-8 max-w-6xl w-full mx-auto">
           <RoboEchoMascot />
+
+          {/* Gemini 2.5 Flash Echo-Proof Voice Chat Console */}
+          <div className="w-full max-w-4xl">
+            <AIVoiceConsole />
+          </div>
         </div>
       </main>
 
