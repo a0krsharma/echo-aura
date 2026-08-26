@@ -206,6 +206,26 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
     scoring: "+120 Aura to the winner.",
     proTip: "Build horizontal double-threats on row 3 so your opponent can only block one side!"
   },
+  monopoly: {
+    id: "monopoly",
+    name: "Tournament Monopoly & Real Estate Tycoon",
+    rank: 5,
+    category: "Tactical Boards & Grids",
+    icon: "🎩",
+    overview: "Official 40-tile circuit tournament board rules ($500x500mm), instant $1 property auctions, Markov Chain steady-state landing probabilities, the 3-house ROI explosion, and housing shortage inventory locks.",
+    howToPlay: [
+      "1. 40-TILE PERIMETER CIRCUIT: Standard 10-tile per side layout with $1,500 starting bankroll (2x$500, 2x$100, 2x$50, 6x$20, 5x$10, 5x$5, 5x$1).",
+      "2. MANDATORY AUCTION RULE: If a player lands on an unowned property and declines to buy at list price, the Banker immediately auctions it starting at $1 to all players (speeds up games 4x).",
+      "3. FREE PARKING IS SAFE REST: Official rules mandate zero cash jackpots on Free Parking. Taxes and fines go strictly to the Bank to prevent artificial inflation.",
+      "4. MARKOV CHAIN LANDING HEATMAP: Jail (Tile 10, 3.94% landing rate) makes the Orange set (Tiles 16, 18, 19: New York, Tennessee, St. James) and Illinois Ave (Tile 24, 3.18%) the highest ROI kill zones.",
+      "5. THE RULE OF 3 HOUSES: Upgrading from 2 to 3 houses creates a 300%-400% rent jump with the shortest capital recovery time (Orange recovers in 7.2 turns; Red in 8.4 turns).",
+      "6. HOUSING SHORTAGE LOCK: Strict inventory of 32 green houses and 12 red hotels. If the Bank runs out of houses, no player can build until houses are sold back.",
+      "7. LATE-GAME JAIL STRATEGY: In late game, stay in Jail for all 3 turns to collect rent from opponents while remaining safe from lethal hotel squares."
+    ],
+    voiceGuide: "Execute property trades, negotiate mortgage buyouts, and bid aggressively in instant auctions over live voice.",
+    scoring: "Winner bankrupts all opponents or holds highest net worth upon tournament shot clock expiration (+350 Aura).",
+    proTip: "Lock the 32-house bank inventory by parking 4 houses on your properties without upgrading to hotels!"
+  },
   sudoku: {
     id: "sudoku",
     name: "Sudoku Data Matrix",
