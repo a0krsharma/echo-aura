@@ -427,46 +427,101 @@ export default function CarromGame({ match, currentUid }: CarromGameProps) {
 
         activeShooterUidRef.current = botPlayer.uid;
         const botColor = playerUids[0] === botPlayer.uid ? "white" : "black";
-        let myTargets = targets.filter((p) => p.type === botColor);
-        if (cs.queenCoverAttempt) {
-          myTargets = targets.filter((p) => p.type === botColor);
-        } else if (targets.some((p) => p.type === "queen")) {
-          const queen = targets.find((p) => p.type === "queen");
-          if (queen) myTargets.unshift(queen);
+
+        // Multi-candidate evaluation: scan all candidate targets across all 4 pockets
+        interface ShotEvaluation {
+          target: typeof targets[0];
+          pocket: typeof POCKETS[0];
+          ghostX: number;
+          ghostY: number;
+          strikerX: number;
+          aimDx: number;
+          aimDy: number;
+          potProbability: number;
+          score: number;
         }
 
-        const chosenTarget = myTargets[0] || targets[0];
+        let bestShot: ShotEvaluation | null = null;
+        let highestScore = -99999;
 
-        // Ghost-ball aim toward nearest corner pocket
-        let bestPocket = POCKETS[0];
-        let minPktDist = 9999;
-        POCKETS.forEach((pkt) => {
-          const d = Math.hypot(pkt.x - chosenTarget.x, pkt.y - chosenTarget.y);
-          if (d < minPktDist) {
-            minPktDist = d;
-            bestPocket = pkt;
-          }
+        // Sample potential striker positions along top baseline for BOT (y = 55)
+        const botBaselineY = 55;
+        const sampleXPositions = [150, 200, 250, 300, 350, 400, 450, 500, 550];
+
+        targets.forEach((piece) => {
+          let pieceWeight = 10;
+          if (piece.type === "queen") pieceWeight = 25;
+          else if (piece.type === botColor) pieceWeight = 15;
+          else if (cs.queenCoverAttempt) pieceWeight = -50; // Must pot own color for cover
+          else pieceWeight = 5;
+
+          POCKETS.forEach((pkt) => {
+            const toPktX = pkt.x - piece.x;
+            const toPktY = pkt.y - piece.y;
+            const toPktDist = Math.hypot(toPktX, toPktY) || 1;
+            const normPktX = toPktX / toPktDist;
+            const normPktY = toPktY / toPktDist;
+
+            const ghostX = piece.x - normPktX * (piece.radius + striker.radius);
+            const ghostY = piece.y - normPktY * (piece.radius + striker.radius);
+
+            sampleXPositions.forEach((sx) => {
+              const sy = botBaselineY;
+              const aimDx = ghostX - sx;
+              const aimDy = ghostY - sy;
+              const aimDist = Math.hypot(aimDx, aimDy) || 1;
+              const normAimX = aimDx / aimDist;
+              const normAimY = aimDy / aimDist;
+
+              // Cut angle cosine: dot product of incident vector and piece-to-pocket vector
+              const cutCos = normAimX * normPktX + normAimY * normPktY;
+              if (cutCos <= 0.15) return; // Discard acute/impossible backwards cuts
+
+              // Pot probability estimation
+              const potProbability = Math.max(0, cutCos * (1 - toPktDist / (BOARD_SIZE * 1.2)) * (1 - aimDist / (BOARD_SIZE * 1.2)));
+
+              // ICF & Freestyle Utility: P(pot) * Value - ScratchRisk
+              let score = potProbability * pieceWeight * 10;
+              if (cs.queenCoverAttempt && piece.type === botColor) {
+                score += potProbability * 150; // Maximum urgency for Queen cover
+              }
+
+              if (score > highestScore) {
+                highestScore = score;
+                bestShot = {
+                  target: piece,
+                  pocket: pkt,
+                  ghostX,
+                  ghostY,
+                  strikerX: sx,
+                  aimDx,
+                  aimDy,
+                  potProbability,
+                  score,
+                };
+              }
+            });
+          });
         });
 
-        const toPktX = bestPocket.x - chosenTarget.x;
-        const toPktY = bestPocket.y - chosenTarget.y;
-        const toPktDist = Math.hypot(toPktX, toPktY) || 1;
-        const normPktX = toPktX / toPktDist;
-        const normPktY = toPktY / toPktDist;
+        if (bestShot) {
+          const bs = bestShot as ShotEvaluation;
+          striker.x = bs.strikerX;
+          striker.y = botBaselineY;
 
-        const ghostX = chosenTarget.x - normPktX * (chosenTarget.radius + striker.radius);
-        const ghostY = chosenTarget.y - normPktY * (chosenTarget.radius + striker.radius);
+          const aimDist = Math.hypot(bs.aimDx, bs.aimDy) || 1;
+          const speed = 12 + Math.random() * 4;
+          const accuracyJitter = (1 - bs.potProbability) * 0.4;
 
-        const aimDx = ghostX - striker.x;
-        const aimDy = ghostY - striker.y;
-        const aimDist = Math.hypot(aimDx, aimDy) || 1;
-
-        const speed = 11 + Math.random() * 4;
-        const impulseX = (aimDx / aimDist) * speed + (Math.random() - 0.5) * 0.6;
-        const impulseY = (aimDy / aimDist) * speed + (Math.random() - 0.5) * 0.6;
-
-        striker.vx = impulseX;
-        striker.vy = impulseY;
+          striker.vx = (bs.aimDx / aimDist) * speed + (Math.random() - 0.5) * accuracyJitter;
+          striker.vy = (bs.aimDy / aimDist) * speed + (Math.random() - 0.5) * accuracyJitter;
+        } else {
+          // Fallback direct center strike
+          striker.x = BOARD_SIZE / 2;
+          striker.y = botBaselineY;
+          striker.vx = (Math.random() - 0.5) * 4;
+          striker.vy = 12;
+        }
 
         soundSynth.playSnare();
         pocketedThisShotRef.current = [];
