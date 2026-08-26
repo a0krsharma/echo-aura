@@ -18,6 +18,7 @@ import {
   Users,
   HelpCircle,
   Crown,
+  RotateCcw,
 } from "lucide-react";
 import ArcadeInviteModal from "./ArcadeInviteModal";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
@@ -28,6 +29,7 @@ interface LudoGameProps {
   match: ArcadeMatch;
   currentUid: string;
   isHost: boolean;
+  onRematch?: () => void;
 }
 
 const TRACK_COORDS: [number, number][] = [
@@ -105,7 +107,7 @@ const THEME_CONFIG = {
   },
 };
 
-export default function LudoGame({ match, currentUid }: LudoGameProps) {
+export default function LudoGame({ match, currentUid, onRematch }: LudoGameProps) {
   const [rolling, setRolling] = useState(false);
   const [movingTokenId, setMovingTokenId] = useState<number | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -570,6 +572,18 @@ export default function LudoGame({ match, currentUid }: LudoGameProps) {
               ? "YOU DOMINATED THE BOARD AND REACHED HOME FIRST!"
               : `Match concluded! All 4 gotis reached home.`}
           </p>
+          {onRematch && (
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={onRematch}
+                className="px-6 py-2.5 border-2 border-amber-400 bg-amber-400 text-black hover:bg-amber-300 font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 mx-auto rounded-xl shadow-lg active:scale-95 cursor-pointer"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span>[ 🔄 PLAY REMATCH ]</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
 

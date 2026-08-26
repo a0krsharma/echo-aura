@@ -23,6 +23,7 @@ interface PoolGameProps {
   match: ArcadeMatch;
   currentUid: string;
   isHost: boolean;
+  onRematch?: () => void;
 }
 
 const TABLE_WIDTH = 380;
@@ -192,7 +193,7 @@ export function createDisciplineRack(discipline: PoolDiscipline): PoolBall[] {
   return balls;
 }
 
-export default function PoolGame({ match, currentUid }: PoolGameProps) {
+export default function PoolGame({ match, currentUid, onRematch }: PoolGameProps) {
   const [discipline, setDiscipline] = useState<PoolDiscipline>("8_BALL");
   const [inviteOpen, setInviteOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
@@ -1759,6 +1760,18 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
               ? `VICTORY! You dominated the table in ${activeDisciplineConfig.name} and earned +${match.stakes * 2} Aura Points!`
               : `Match concluded! Winner: ${match.winnerHandle || "@PLAYER"}`}
           </p>
+          {onRematch && (
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={onRematch}
+                className="px-6 py-2.5 border-2 border-emerald-400 bg-emerald-400 text-black hover:bg-emerald-300 font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 mx-auto rounded-xl shadow-lg active:scale-95 cursor-pointer"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span>[ 🔄 PLAY REMATCH ]</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
 

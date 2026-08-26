@@ -167,21 +167,25 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
   },
   ludo: {
     id: "ludo",
-    name: "15x15 Cyber Ludo",
+    name: "Tournament 15x15 Cyber Ludo (Solo & 2v2 Doubles)",
     rank: 4,
     category: "Tactical Boards & Grids",
     icon: "🎲",
-    overview: "Classic 4-player race to the center home terminal. Roll 6 to deploy nodes, capture opponent tokens on open track cells, and navigate safely on star-shielded checkpoints.",
+    overview: "Official 15x15 tournament board architecture with 57-step trajectories, 8 safe star checkpoints, 2v2 doubles tactical team dynamics (joint blockades, pincer traps & proxy rolling), and stochastic expectiminimax AI heuristics.",
     howToPlay: [
-      "Roll the 3D die on your turn.",
-      "A roll of 6 allows you to deploy a token from base to the starting track and grants a bonus roll.",
-      "Move tokens clockwise around the 52-cell track.",
-      "Landing on an opponent token on non-safe tiles captures them back to base.",
-      "Navigate all 4 tokens into the central home triangle to win."
+      "1. 15x15 BOARD GEOMETRY & 57 STEPS: Symmetrical 450x450mm layout. Pawns follow a 57-step path: 51 outer perimeter cells + 5 private home corridor steps (H1 to H5) + 1 final central Home step.",
+      "2. 8 ABSOLUTE SAFE STAR CELLS: Cells 01 (Red Start), 09 (NW Star), 14 (Green Start), 22 (NE Star), 27 (Yellow Start), 35 (SE Star), 40 (Blue Start), 48 (SW Star) provide complete immunity from captures.",
+      "3. 2v2 PARTNER DOUBLES: Team A (Red & Yellow) vs Team B (Green & Blue). Clockwise rotation: Red (A1) -> Blue (B1) -> Yellow (A2) -> Green (B2). Victory requires clearing all 8 team pawns into Home.",
+      "4. SHARED KILL (PAKAAI): In doubles, a single capture by either partner unlocks the private colored home corridor for both team members.",
+      "5. JOINT BLOCKADES (GODI): Teammates landing on the same square do not capture; they form a joint blockade that single opponent pawns cannot jump over or land on.",
+      "6. PARTNER PROXY ROLLING (ENDGAME RELAY): When Player A clears all 4 pawns home, they continue rolling on their turn to control and move their partner's remaining pawns (doubling rolling frequency).",
+      "7. 3 CONSECUTIVE SIXES VOIDANCE: Rolling two 6s grants bonus rolls. Rolling a 3rd consecutive 6 (6-6-6) cancels the 3rd roll immediately and passes the turn clockwise.",
+      "8. EXACT HOME COUNT & CAPTURE BONUSES: Home entry requires an exact dice roll (overrun void). Sinking a pawn in Home or capturing an opponent pawn awards an immediate +1 Bonus Roll.",
+      "9. COOPERATIVE TRAPS: (A) Pincer Trap (trap runner between partners 4-6 steps apart). (B) Revenge Baiting (lure opponent off safe star for immediate counter-capture). (C) Escort Caravan."
     ],
-    voiceGuide: "Use open voice for banter, negotiating non-aggression pacts, and celebrating lucky rolls.",
-    scoring: "Winner gets +200 Aura Points; capturing opponent tokens awards +25 Aura bonus.",
-    proTip: "Keep tokens paired on safe stars until you can strike vulnerable opponent leads!"
+    voiceGuide: "Coordinate partner pincer traps, announce blockade formations, call 'Godi' shields, and coordinate proxy rolling over live voice chat.",
+    scoring: "Solo: Winner gets +200 Aura Points. 2v2 Doubles: Winning team splits +400 Aura. Captures award +25 Aura bonus.",
+    proTip: "In 2v2, never run solo in open field—anchor behind your partner's safe blockade to set up high-probability revenge counter-kills!"
   },
   connect4: {
     id: "connect4",

@@ -30,6 +30,7 @@ interface GlowHockeyGameProps {
   match: ArcadeMatch;
   currentUid: string;
   isHost: boolean;
+  onRematch?: () => void;
 }
 
 const WIDTH = 340;
@@ -101,7 +102,7 @@ function playProceduralHit(audioCtx: AudioContext | null, impactSpeed: number) {
   } catch (_) {}
 }
 
-export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockeyGameProps) {
+export default function GlowHockeyGame({ match, currentUid, isHost, onRematch }: GlowHockeyGameProps) {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [showProTips, setShowProTips] = useState(false);
@@ -1024,6 +1025,18 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
               ? `VICTORY! You dominated the table with ${targetScore} points and earned +${match.stakes * 2} Aura!`
               : `Match concluded! Final Score: ${p1Score} - ${p2Score}`}
           </p>
+          {onRematch && (
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={onRematch}
+                className="px-6 py-2.5 border-2 border-white bg-white text-black hover:bg-neutral-200 font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 mx-auto rounded-xl shadow-lg active:scale-95 cursor-pointer"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span>[ 🔄 PLAY REMATCH ]</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
 
