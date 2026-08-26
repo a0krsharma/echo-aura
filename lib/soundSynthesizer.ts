@@ -329,6 +329,110 @@ class SoundSynthesizer {
     }
   }
 
+  playRobotPoke() {
+    try {
+      const ctx = this.getContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(600, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1400, ctx.currentTime + 0.08);
+      osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.22);
+      gain.gain.setValueAtTime(0.4, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.22);
+    } catch (e) {
+      console.warn("Synth play error:", e);
+    }
+  }
+
+  playRobotSlap() {
+    try {
+      const ctx = this.getContext();
+      // Metallic slap noise
+      const bufferSize = ctx.sampleRate * 0.15;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.04));
+      }
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+      const filter = ctx.createBiquadFilter();
+      filter.type = "bandpass";
+      filter.frequency.setValueAtTime(2800, ctx.currentTime);
+      filter.Q.setValueAtTime(3, ctx.currentTime);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.7, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+      noise.start(ctx.currentTime);
+
+      // Springy wobble after slap
+      const osc = ctx.createOscillator();
+      const oscGain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(400, ctx.currentTime + 0.05);
+      osc.frequency.linearRampToValueAtTime(180, ctx.currentTime + 0.35);
+      oscGain.gain.setValueAtTime(0.4, ctx.currentTime + 0.05);
+      oscGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+      osc.connect(oscGain);
+      oscGain.connect(ctx.destination);
+      osc.start(ctx.currentTime + 0.05);
+      osc.stop(ctx.currentTime + 0.35);
+    } catch (e) {
+      console.warn("Synth play error:", e);
+    }
+  }
+
+  playRobotTickle() {
+    try {
+      const ctx = this.getContext();
+      const notes = [523.25, 659.25, 783.99, 1046.5, 1318.5];
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.04);
+        gain.gain.setValueAtTime(0.2, ctx.currentTime + idx * 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.04 + 0.08);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + idx * 0.04);
+        osc.stop(ctx.currentTime + idx * 0.04 + 0.08);
+      });
+    } catch (e) {
+      console.warn("Synth play error:", e);
+    }
+  }
+
+  playPlasmaCharge() {
+    try {
+      const ctx = this.getContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(80, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1800, ctx.currentTime + 0.4);
+      gain.gain.setValueAtTime(0.01, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + 0.25);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.45);
+    } catch (e) {
+      console.warn("Synth play error:", e);
+    }
+  }
+
   // Universal Player by Sound ID
   playById(id: string) {
     const cleanId = id.toLowerCase();

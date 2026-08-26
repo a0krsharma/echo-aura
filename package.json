@@ -11,6 +11,7 @@
   "dependencies": {
     "@capacitor/android": "^8.5.0",
     "@capacitor/core": "^8.5.0",
+    "@types/three": "^0.185.4",
     "agora-access-token": "^2.0.4",
     "agora-chat": "^1.4.0",
     "agora-rtc-react": "^2.5.1",
@@ -24,6 +25,7 @@
     "next": "16.3.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "three": "^0.185.1",
     "ws": "^8.21.3"
   },
   "devDependencies": {

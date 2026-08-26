@@ -74,6 +74,7 @@ import {
   Mic2,
   ShoppingCart,
   RotateCcw,
+  Bot,
 } from "lucide-react";
 import Link from "next/link";
 import { updateArcadeElo } from "@/lib/userDoc";
@@ -545,6 +546,15 @@ function ArcadeContent() {
             </div>
 
             <div className="flex items-center gap-2 text-xs shrink-0">
+              <Link
+                href="/echo-bot"
+                className="px-2.5 sm:px-3 py-1.5 border border-emerald-500/80 bg-emerald-950/60 text-emerald-300 hover:bg-emerald-900 font-black text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer rounded-lg shadow-[0_0_15px_rgba(16,185,129,0.2)] active:scale-95"
+                title="3D Robo-Echo Talking Mascot"
+              >
+                <Bot className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                <span className="hidden sm:inline">ROBO-ECHO 🤖</span>
+              </Link>
+
               <button
                 type="button"
                 onClick={() => setSoundCheckOpen(true)}
