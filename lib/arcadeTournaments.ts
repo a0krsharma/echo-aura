@@ -55,6 +55,8 @@ export interface ArcadeTournament {
   stakes: number; // Entry fee per player in Aura
   totalPot: number; // Total Aura Prize Pool
   status: TournamentStatus;
+  format?: "SINGLE_ELIMINATION" | "DOUBLE_ELIMINATION";
+  scheduledStartTime?: number; // Epoch timestamp ms
   registeredPlayers: { [uid: string]: TournamentPlayerSlot };
   slots: (TournamentPlayerSlot | null)[];
   nodes: TournamentMatchNode[];
@@ -137,6 +139,8 @@ export async function createArcadeTournament(params: {
   hostAvatar?: string;
   size: TournamentSize;
   stakes?: number;
+  format?: "SINGLE_ELIMINATION" | "DOUBLE_ELIMINATION";
+  scheduledStartTime?: number;
 }): Promise<string> {
   const db = getFirebaseDb();
   const tourRef = doc(collection(db, TOURNAMENT_COLLECTION));
@@ -145,6 +149,8 @@ export async function createArcadeTournament(params: {
   const size = params.size || 8;
   const stakes = params.stakes || 50;
   const totalPot = stakes * size;
+  const format = params.format || "SINGLE_ELIMINATION";
+  const scheduledStartTime = params.scheduledStartTime || Date.now();
 
   // Initialize slots
   const slots: (TournamentPlayerSlot | null)[] = Array(size).fill(null);
@@ -197,6 +203,8 @@ export async function createArcadeTournament(params: {
     size,
     stakes,
     totalPot,
+    format,
+    scheduledStartTime,
     status: "REGISTRATION",
     registeredPlayers,
     slots,
@@ -207,6 +215,103 @@ export async function createArcadeTournament(params: {
 
   await setDoc(tourRef, tournamentData);
   return tournamentId;
+}
+
+/**
+ * Unregister / Leave Tournament Queue Slot
+ */
+export async function leaveTournamentSlot(
+  tournamentId: string,
+  uid: string
+): Promise<void> {
+  const db = getFirebaseDb();
+  const tourRef = doc(db, TOURNAMENT_COLLECTION, tournamentId);
+  const snap = await getDoc(tourRef);
+  if (!snap.exists()) return;
+
+  const tournament = snap.data() as ArcadeTournament;
+  if (tournament.status !== "REGISTRATION" || tournament.hostUid === uid) return;
+
+  const slots = tournament.slots.map((s) => (s && s.uid === uid ? null : s));
+  const registeredPlayers = { ...tournament.registeredPlayers };
+  delete registeredPlayers[uid];
+
+  const nodes = tournament.nodes.map((n) => {
+    let p1 = n.player1;
+    let p2 = n.player2;
+    if (p1?.uid === uid) p1 = null;
+    if (p2?.uid === uid) p2 = null;
+    return { ...n, player1: p1, player2: p2 };
+  });
+
+  await updateDoc(tourRef, {
+    slots,
+    registeredPlayers,
+    nodes,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * Host immediately launches tournament, auto-seeding remaining slots with Bots
+ */
+export async function startTournamentNow(
+  tournamentId: string,
+  hostUid: string
+): Promise<void> {
+  const db = getFirebaseDb();
+  const tourRef = doc(db, TOURNAMENT_COLLECTION, tournamentId);
+  const snap = await getDoc(tourRef);
+  if (!snap.exists()) throw new Error("Tournament not found");
+
+  const tournament = snap.data() as ArcadeTournament;
+  if (tournament.hostUid !== hostUid) throw new Error("Only host can launch tournament");
+
+  const BOT_NAMES = ["CYBER_TITAN", "NEO_BOT", "ALGO_VIPER", "ECHO_AI", "VALKYRIE", "TURBO_ACE", "MATRIX_BOT"];
+  const slots = [...tournament.slots];
+  const registeredPlayers = { ...tournament.registeredPlayers };
+  const nodes = [...tournament.nodes];
+
+  // Fill remaining empty slots with bots
+  for (let i = 0; i < tournament.size; i++) {
+    if (!slots[i]) {
+      const botUid = `bot_${tournament.id}_${i}`;
+      const botName = `@${BOT_NAMES[i % BOT_NAMES.length]}`;
+      const botSlot: TournamentPlayerSlot = {
+        slotIndex: i,
+        uid: botUid,
+        handle: botName,
+        isBot: true,
+        registeredAt: Date.now(),
+      };
+      slots[i] = botSlot;
+      registeredPlayers[botUid] = botSlot;
+
+      // Assign to bracket node
+      const matchIdx = Math.floor(i / 2);
+      const isPlayer2 = i % 2 === 1;
+      const firstRound = tournament.size === 16 ? 1 : tournament.size === 8 ? 2 : 3;
+      const firstRoundNodes = nodes.filter((n) => n.round === firstRound);
+      if (firstRoundNodes[matchIdx]) {
+        const target = nodes.find((n) => n.id === firstRoundNodes[matchIdx].id);
+        if (target) {
+          if (isPlayer2) {
+            target.player2 = { uid: botUid, handle: botName };
+          } else {
+            target.player1 = { uid: botUid, handle: botName };
+          }
+        }
+      }
+    }
+  }
+
+  await updateDoc(tourRef, {
+    slots,
+    registeredPlayers,
+    nodes,
+    status: "IN_PROGRESS",
+    updatedAt: serverTimestamp(),
+  });
 }
 
 /**

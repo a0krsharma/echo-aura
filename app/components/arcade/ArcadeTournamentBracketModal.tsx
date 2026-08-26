@@ -6,6 +6,8 @@ import {
   subscribeActiveTournaments,
   subscribeArcadeTournament,
   joinTournamentSlot,
+  leaveTournamentSlot,
+  startTournamentNow,
   advanceTournamentWinner,
   type ArcadeTournament,
   type TournamentMatchNode,
@@ -29,7 +31,11 @@ import {
   Plus,
   Copy,
   Check,
-  Smartphone,
+  Clock,
+  Zap,
+  ArrowRight,
+  ShieldCheck,
+  Award,
 } from "lucide-react";
 
 interface ArcadeTournamentBracketModalProps {
@@ -52,7 +58,7 @@ const MEME_SOUNDS = [
 export default function ArcadeTournamentBracketModal({
   isOpen,
   onClose,
-  gameType = "hand_cricket",
+  gameType = "monopoly",
   hostUid,
   currentUid,
   initialTournamentId,
@@ -62,6 +68,7 @@ export default function ArcadeTournamentBracketModal({
   const [activeTournament, setActiveTournament] = useState<ArcadeTournament | null>(null);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [activeTab, setActiveTab] = useState<"LIVE" | "SCHEDULED" | "FINISHED">("LIVE");
 
   // Subscribe to all live campus tournaments
   useEffect(() => {
@@ -98,8 +105,8 @@ export default function ArcadeTournamentBracketModal({
   const tournamentUrl = activeTournament ? `${origin}/arcade?tournamentId=${activeTournament.id}` : origin;
   
   const whatsappTournamentInvite = activeTournament
-    ? `🏆 Register for my ${activeTournament.title} (${activeTournament.size}-Player Bracket Tournament) on Echo! Entry Pot: +${activeTournament.totalPot} Aura. Mic is on: ${tournamentUrl}`
-    : `🏆 Join Campus Night Battles Tournament on Echo! Mic is on: ${tournamentUrl}`;
+    ? `🏆 Register for my ${activeTournament.title} (${activeTournament.size}-Player Bracket Tournament) on Echo Club! Entry Pot: +${activeTournament.totalPot} Aura. Join the queue: ${tournamentUrl}`
+    : `🏆 Join Championship Tournaments on Echo Club! Join here: ${tournamentUrl}`;
 
   const handleCopyLink = async () => {
     try {
@@ -126,6 +133,26 @@ export default function ArcadeTournamentBracketModal({
     }
   };
 
+  const handleLeaveSlot = async () => {
+    if (!activeTournament || !currentUid) return;
+    soundSynth.playSubtlePop();
+    try {
+      await leaveTournamentSlot(activeTournament.id, currentUid);
+    } catch (err: any) {
+      alert(err.message || "Failed to leave tournament");
+    }
+  };
+
+  const handleStartNow = async () => {
+    if (!activeTournament || !currentUid) return;
+    soundSynth.playFanfare();
+    try {
+      await startTournamentNow(activeTournament.id, currentUid);
+    } catch (err: any) {
+      alert(err.message || "Failed to start tournament");
+    }
+  };
+
   const handleAdvance = async (nodeId: string, winnerUid: string) => {
     if (!activeTournament) return;
     try {
@@ -136,29 +163,37 @@ export default function ArcadeTournamentBracketModal({
   };
 
   const nodes = activeTournament?.nodes || [];
+  const registeredCount = Object.keys(activeTournament?.registeredPlayers || {}).length;
+  const isRegistered = !!activeTournament?.registeredPlayers?.[currentUid];
+
+  const liveTournaments = tournaments.filter((t) => t.status === "IN_PROGRESS");
+  const scheduledTournaments = tournaments.filter((t) => t.status === "REGISTRATION");
+  const completedTournaments = tournaments.filter((t) => t.status === "FINISHED");
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-5xl bg-black border-2 border-white p-4 sm:p-6 font-mono text-white shadow-[0_0_60px_rgba(255,255,255,0.25)] select-none max-h-[94vh] overflow-y-auto">
+      <div className="relative w-full max-w-5xl bg-neutral-950 border-2 border-neutral-700 p-4 sm:p-6 font-mono text-white shadow-[0_0_60px_rgba(255,255,255,0.2)] select-none max-h-[94vh] overflow-y-auto rounded-3xl">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 border border-neutral-800 text-neutral-400 hover:text-white hover:border-white transition-colors cursor-pointer"
+          className="absolute top-4 right-4 p-2 border border-neutral-800 text-neutral-400 hover:text-white hover:border-white transition-colors cursor-pointer rounded-xl"
           title="Close"
         >
           <X className="w-4 h-4" />
         </button>
 
         {/* Tournament Header */}
-        <div className="flex items-center justify-between border-b-2 border-white pb-3 mb-4 flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            <Moon className="w-5 h-5 text-amber-400 animate-pulse" />
+        <div className="flex items-center justify-between border-b border-neutral-800 pb-3 mb-4 flex-wrap gap-2">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-400/10 border border-amber-400/40 flex items-center justify-center text-xl">
+              🏆
+            </div>
             <div>
-              <h2 className="text-base sm:text-lg font-black uppercase text-white tracking-widest flex items-center gap-2">
-                <span>CAMPUS NIGHT BATTLES // TOURNAMENT BRACKET</span>
+              <h2 className="text-base sm:text-lg font-black uppercase text-white tracking-wider flex items-center gap-2">
+                <span>ECHO CLUB // CHAMPIONSHIP ARENA</span>
               </h2>
-              <p className="text-[10px] text-neutral-400 uppercase font-bold">
-                11 PM – 2 AM HOSTEL TOURNAMENT SUITE • OPEN AUDIO COMMENTARY
+              <p className="text-[10px] text-neutral-400 font-bold uppercase">
+                SCHEDULED CUPS • LIVE BRACKET SEEDING • AURA REWARD POOLS
               </p>
             </div>
           </div>
@@ -168,96 +203,304 @@ export default function ArcadeTournamentBracketModal({
             <button
               type="button"
               onClick={() => setCreateModalOpen(true)}
-              className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs uppercase rounded-lg transition-all shadow-[0_0_20px_rgba(245,158,11,0.3)] flex items-center gap-1.5 cursor-pointer active:scale-95"
+              className="px-3.5 py-2 bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-black font-black text-xs uppercase rounded-xl transition-all shadow-[0_0_20px_rgba(245,158,11,0.3)] flex items-center gap-1.5 cursor-pointer active:scale-95"
             >
               <Plus className="w-4 h-4" />
-              <span>[ + CREATE TOURNAMENT ]</span>
+              <span>[ + HOST TOURNAMENT ]</span>
             </button>
-
-            {activeTournament && (
-              <span className="px-2.5 py-1 bg-neutral-900 border border-neutral-700 text-yellow-400 font-black text-xs uppercase rounded">
-                🏆 POT: {activeTournament.totalPot} AURA
-              </span>
-            )}
           </div>
         </div>
 
-        {/* Active Campus Tournament Selector Tabs */}
-        {tournaments.length > 0 && (
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-3">
-            <span className="text-[10px] text-neutral-500 font-bold uppercase shrink-0">
-              ACTIVE CUPS:
-            </span>
-            {tournaments.map((tour) => (
-              <button
-                key={tour.id}
-                type="button"
-                onClick={() => setSelectedTournamentId(tour.id)}
-                className={`px-3 py-1 text-xs font-black uppercase rounded-lg border transition-all shrink-0 cursor-pointer ${
-                  selectedTournamentId === tour.id
-                    ? "border-amber-400 bg-amber-950/50 text-white shadow-md"
-                    : "border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-600"
-                }`}
-              >
-                {tour.title} ({Object.keys(tour.registeredPlayers || {}).length}/{tour.size}P)
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* 1-Tap WhatsApp Tournament Registration & Link Bar */}
+        {/* ── Active Tournament Stage & Browser ── */}
         {activeTournament && (
-          <div className="bg-neutral-950 border border-neutral-800 p-3 rounded-xl mb-4 flex items-center justify-between flex-wrap gap-2">
-            <div className="space-y-0.5">
-              <span className="text-xs font-black uppercase text-white flex items-center gap-2">
-                <span>{activeTournament.title}</span>
-                <span className="text-[10px] text-neutral-400 border border-neutral-800 px-1.5 py-0.5 rounded">
-                  {activeTournament.gameType.toUpperCase()}
-                </span>
-                <span className="text-[10px] text-amber-400 font-bold">
-                  STATUS: {activeTournament.status}
-                </span>
-              </span>
-              <p className="text-[10px] text-neutral-400 font-bold">
-                Host: {activeTournament.hostHandle} • Entry: {activeTournament.stakes} Aura • Prize: +{activeTournament.totalPot} Aura
-              </p>
-            </div>
+          <div className="space-y-4 mb-6">
+            {/* Active Tournament Hero Banner */}
+            <div className="bg-gradient-to-r from-neutral-900 via-neutral-950 to-black border border-neutral-800 p-4 rounded-2xl flex items-center justify-between flex-wrap gap-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-sm sm:text-base font-black uppercase text-white tracking-wide">
+                    {activeTournament.title}
+                  </h3>
+                  <span className="text-[10px] text-amber-400 border border-amber-400/40 px-2 py-0.5 rounded-full font-bold bg-amber-950/40">
+                    {activeTournament.gameType.toUpperCase()}
+                  </span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
+                    activeTournament.status === "IN_PROGRESS"
+                      ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 animate-pulse"
+                      : activeTournament.status === "FINISHED"
+                      ? "bg-yellow-500/20 text-yellow-300 border border-yellow-500/40"
+                      : "bg-blue-500/20 text-blue-300 border border-blue-500/40"
+                  }`}>
+                    {activeTournament.status === "IN_PROGRESS" ? "🔥 LIVE BRACKET" : activeTournament.status === "FINISHED" ? "🏆 FINISHED" : "⏳ QUEUE OPEN"}
+                  </span>
+                </div>
+                <p className="text-[11px] text-neutral-400 flex items-center gap-2 flex-wrap">
+                  <span>HOST: {activeTournament.hostHandle}</span>
+                  <span>•</span>
+                  <span>FORMAT: {activeTournament.format === "DOUBLE_ELIMINATION" ? "DOUBLE ELIMINATION" : "SINGLE KNOCKOUT"}</span>
+                  <span>•</span>
+                  <span className="text-yellow-400 font-bold">PRIZE POT: +{activeTournament.totalPot} AURA</span>
+                </p>
+              </div>
 
-            <div className="flex items-center gap-2">
-              <a
-                href={`https://api.whatsapp.com/send?text=${encodeURIComponent(whatsappTournamentInvite)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => soundSynth.playAirhorn()}
-                className="px-3 py-1.5 bg-[#25D366] hover:bg-[#20bd5a] text-black font-black text-xs uppercase rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
-              >
-                <span>💬 INVITE ON WHATSAPP</span>
-              </a>
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <a
+                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(whatsappTournamentInvite)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => soundSynth.playAirhorn()}
+                  className="px-3 py-1.5 bg-[#25D366] hover:bg-[#20bd5a] text-black font-black text-xs uppercase rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  <span>SHARE WHATSAPP</span>
+                </a>
 
-              <button
-                type="button"
-                onClick={handleCopyLink}
-                className="px-3 py-1.5 border border-neutral-700 bg-neutral-900 hover:border-white text-white font-bold text-xs uppercase rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
-              >
-                {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copied ? "COPIED!" : "COPY LINK"}</span>
-              </button>
-
-              {!activeTournament?.registeredPlayers?.[currentUid] && activeTournament?.status === "REGISTRATION" && (
                 <button
                   type="button"
-                  onClick={() => handleJoinSlot()}
-                  className="px-4 py-1.5 bg-white hover:bg-neutral-200 text-black font-black text-xs uppercase rounded-lg transition-all shadow-md cursor-pointer active:scale-95"
+                  onClick={handleCopyLink}
+                  className="px-3 py-1.5 border border-neutral-700 bg-neutral-900 hover:border-white text-white font-bold text-xs uppercase rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
                 >
-                  [ 🎮 CLAIM BRACKET SLOT ]
+                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copied ? "COPIED!" : "COPY LINK"}</span>
                 </button>
-              )}
+
+                {activeTournament.status === "REGISTRATION" && (
+                  <>
+                    {!isRegistered ? (
+                      <button
+                        type="button"
+                        onClick={() => handleJoinSlot()}
+                        className="px-4 py-1.5 bg-white hover:bg-neutral-200 text-black font-black text-xs uppercase rounded-xl transition-all shadow-md cursor-pointer active:scale-95"
+                      >
+                        [ 🎮 JOIN WAITING QUEUE ]
+                      </button>
+                    ) : (
+                      !isHost && (
+                        <button
+                          type="button"
+                          onClick={() => handleLeaveSlot()}
+                          className="px-3 py-1.5 border border-red-800 bg-red-950/60 hover:bg-red-800 text-red-300 font-bold text-xs uppercase rounded-xl transition-all cursor-pointer"
+                        >
+                          LEAVE QUEUE
+                        </button>
+                      )
+                    )}
+
+                    {isHost && (
+                      <button
+                        type="button"
+                        onClick={() => handleStartNow()}
+                        className="px-4 py-1.5 bg-gradient-to-r from-emerald-400 to-green-500 hover:from-emerald-300 hover:to-green-400 text-black font-black text-xs uppercase rounded-xl transition-all shadow-md cursor-pointer active:scale-95"
+                      >
+                        [ ⚡ LAUNCH BRACKET NOW ]
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
+
+            {/* ── Waiting Queue View (If Registration Stage) ── */}
+            {activeTournament.status === "REGISTRATION" && (
+              <div className="bg-neutral-900/60 border border-neutral-800 p-4 rounded-2xl space-y-3">
+                <div className="flex items-center justify-between text-xs font-bold uppercase text-neutral-300">
+                  <span className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-amber-400" />
+                    <span>WAITING QUEUE ROSTER ({registeredCount} / {activeTournament.size} SEEDS)</span>
+                  </span>
+                  <span className="text-[11px] text-neutral-400 font-mono">
+                    {registeredCount >= activeTournament.size
+                      ? "QUEUE FULL • READY TO LAUNCH"
+                      : `${activeTournament.size - registeredCount} SLOTS REMAINING`}
+                  </span>
+                </div>
+
+                {/* Queue Slots Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {activeTournament.slots.map((slot, idx) => (
+                    <div
+                      key={idx}
+                      className={`p-2.5 rounded-xl border flex items-center justify-between text-xs ${
+                        slot
+                          ? "bg-neutral-950 border-neutral-700 text-white"
+                          : "bg-neutral-950/40 border-neutral-800 border-dashed text-neutral-500"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        <span className="text-[10px] font-mono text-neutral-500">#{idx + 1}</span>
+                        <span className="font-bold truncate">
+                          {slot ? slot.handle : "OPEN QUEUE SLOT"}
+                        </span>
+                      </div>
+                      {slot?.uid === currentUid && (
+                        <span className="text-[9px] px-1.5 py-0.5 bg-amber-400 text-black font-black rounded">
+                          YOU
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ── Visual Bracket Tree (If In Progress or Finished) ── */}
+            {(activeTournament.status === "IN_PROGRESS" || activeTournament.status === "FINISHED") && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                  {/* Column 1: Quarterfinals / Round of 16 */}
+                  <div className="space-y-3">
+                    <div className="text-xs font-black uppercase text-neutral-400 text-center border-b border-neutral-800 pb-1">
+                      {activeTournament.size === 16 ? "ROUND OF 16" : "QUARTERFINALS"}
+                    </div>
+                    {(nodes.filter((n) => n.round === (activeTournament.size === 16 ? 1 : 2)).length > 0
+                      ? nodes.filter((n) => n.round === (activeTournament.size === 16 ? 1 : 2))
+                      : []
+                    ).map((node, idx) => (
+                      <div
+                        key={node.id}
+                        className={`p-2.5 border-2 rounded-xl space-y-1.5 transition-all ${
+                          node.status === "LIVE"
+                            ? "border-emerald-400 bg-emerald-950/30 shadow-[0_0_15px_rgba(16,185,129,0.3)] animate-pulse"
+                            : "border-neutral-800 bg-neutral-950"
+                        }`}
+                      >
+                        <div className="flex justify-between items-center text-[10px] font-bold text-neutral-400">
+                          <span>MATCH {idx + 1}</span>
+                          <span className={node.status === "LIVE" ? "text-emerald-400 font-black" : ""}>
+                            {node.status}
+                          </span>
+                        </div>
+
+                        {/* Player 1 */}
+                        <div
+                          className={`flex justify-between items-center p-1.5 rounded text-xs font-black ${
+                            node.winnerUid === node.player1?.uid
+                              ? "bg-white text-black font-black"
+                              : "text-white bg-black/40"
+                          }`}
+                        >
+                          <span className="truncate">{node.player1?.handle || "OPEN SLOT"}</span>
+                          {node.winnerUid === node.player1?.uid && <Crown className="w-3.5 h-3.5 text-amber-500" />}
+                        </div>
+
+                        {/* Player 2 */}
+                        <div
+                          className={`flex justify-between items-center p-1.5 rounded text-xs font-black ${
+                            node.winnerUid === node.player2?.uid
+                              ? "bg-white text-black font-black"
+                              : "text-white bg-black/40"
+                          }`}
+                        >
+                          <span className="truncate">{node.player2?.handle || "OPEN SLOT"}</span>
+                          {node.winnerUid === node.player2?.uid && <Crown className="w-3.5 h-3.5 text-amber-500" />}
+                        </div>
+
+                        {/* Host Winner Advancement Controls */}
+                        {isHost && activeTournament.status === "IN_PROGRESS" && (
+                          <div className="grid grid-cols-2 gap-1 pt-1">
+                            {node.player1 && (
+                              <button
+                                type="button"
+                                onClick={() => handleAdvance(node.id, node.player1?.uid || "")}
+                                className="py-1 bg-emerald-600 hover:bg-emerald-500 text-black font-black text-[9px] uppercase rounded cursor-pointer"
+                              >
+                                ADV P1
+                              </button>
+                            )}
+                            {node.player2 && (
+                              <button
+                                type="button"
+                                onClick={() => handleAdvance(node.id, node.player2?.uid || "")}
+                                className="py-1 bg-emerald-600 hover:bg-emerald-500 text-black font-black text-[9px] uppercase rounded cursor-pointer"
+                              >
+                                ADV P2
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Column 2: Semifinals */}
+                  <div className="space-y-6">
+                    <div className="text-xs font-black uppercase text-neutral-400 text-center border-b border-neutral-800 pb-1">
+                      SEMIFINALS (4P)
+                    </div>
+                    {nodes.filter((n) => n.round === 3).map((node, idx) => (
+                      <div
+                        key={node.id}
+                        className="p-3 border-2 border-neutral-800 bg-neutral-950 rounded-xl space-y-2"
+                      >
+                        <div className="text-[10px] font-bold text-neutral-400">SEMI-FINAL {idx + 1}</div>
+                        <div className="p-1.5 bg-neutral-900 rounded text-xs font-black text-white flex justify-between">
+                          <span>{node.player1?.handle || "WINNER MATCH 1"}</span>
+                          {node.winnerUid === node.player1?.uid && <Crown className="w-3.5 h-3.5 text-amber-500" />}
+                        </div>
+                        <div className="p-1.5 bg-neutral-900 rounded text-xs font-black text-white flex justify-between">
+                          <span>{node.player2?.handle || "WINNER MATCH 2"}</span>
+                          {node.winnerUid === node.player2?.uid && <Crown className="w-3.5 h-3.5 text-amber-500" />}
+                        </div>
+
+                        {isHost && activeTournament.status === "IN_PROGRESS" && (node.player1 || node.player2) && (
+                          <div className="grid grid-cols-2 gap-1 pt-1">
+                            {node.player1 && (
+                              <button
+                                type="button"
+                                onClick={() => handleAdvance(node.id, node.player1?.uid || "")}
+                                className="py-1 bg-emerald-600 hover:bg-emerald-500 text-black font-black text-[9px] uppercase rounded cursor-pointer"
+                              >
+                                ADV P1
+                              </button>
+                            )}
+                            {node.player2 && (
+                              <button
+                                type="button"
+                                onClick={() => handleAdvance(node.id, node.player2?.uid || "")}
+                                className="py-1 bg-emerald-600 hover:bg-emerald-500 text-black font-black text-[9px] uppercase rounded cursor-pointer"
+                              >
+                                ADV P2
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Column 3: Grand Final & Champion */}
+                  <div className="space-y-4">
+                    <div className="text-xs font-black uppercase text-amber-400 text-center border-b border-amber-400/40 pb-1">
+                      👑 GRAND FINAL &amp; CHAMPION
+                    </div>
+                    <div className="p-4 border-4 border-amber-400 bg-neutral-950 rounded-2xl text-center space-y-3 shadow-[0_0_30px_rgba(245,158,11,0.2)]">
+                      <Trophy className="w-10 h-10 text-yellow-400 mx-auto animate-bounce" />
+                      <div className="space-y-1">
+                        <div className="text-xs font-black text-yellow-400 uppercase">
+                          CHAMPIONSHIP DUEL
+                        </div>
+                        <div className="p-2 bg-black border border-neutral-800 rounded-xl font-black text-sm text-white">
+                          {activeTournament.winnerHandle ? (
+                            <span className="text-emerald-400">👑 {activeTournament.winnerHandle} CROWNED CHAMPION!</span>
+                          ) : (
+                            <span>FINAL MATCH IN PROGRESS</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-[10px] text-neutral-400 uppercase font-bold">
+                        Winner takes +{activeTournament.totalPot} Aura Points &amp; Championship Trophy!
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Spectator Soundboard for Eliminated Players & Audience */}
-        <div className="bg-neutral-950 border border-neutral-800 p-3 rounded-xl mb-4 space-y-2">
+        {/* Spectator Soundboard */}
+        <div className="bg-neutral-900/60 border border-neutral-800 p-3 rounded-2xl mb-6 space-y-2">
           <div className="flex items-center justify-between text-xs font-black text-neutral-300">
             <span className="flex items-center gap-1.5 uppercase">
               <Radio className="w-4 h-4 text-red-500 animate-pulse" />
@@ -274,7 +517,7 @@ export default function ArcadeTournamentBracketModal({
                 key={meme.name}
                 type="button"
                 onClick={() => meme.action()}
-                className="px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 hover:border-white text-white font-black text-[11px] uppercase rounded-lg transition-all cursor-pointer active:scale-95 flex items-center gap-1.5"
+                className="px-3 py-1.5 bg-neutral-950 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-600 text-white font-black text-[11px] uppercase rounded-xl transition-all cursor-pointer active:scale-95 flex items-center gap-1.5"
               >
                 <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
                 <span>{meme.name}</span>
@@ -283,164 +526,108 @@ export default function ArcadeTournamentBracketModal({
           </div>
         </div>
 
-        {/* Visual Interactive Bracket Tree */}
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-            {/* Column 1: Quarterfinals / Round of 16 */}
-            <div className="space-y-3">
-              <div className="text-xs font-black uppercase text-neutral-400 text-center border-b border-neutral-800 pb-1">
-                {activeTournament?.size === 16 ? "ROUND OF 16" : "QUARTERFINALS"}
-              </div>
-              {(nodes.filter((n) => n.round === (activeTournament?.size === 16 ? 1 : 2)).length > 0
-                ? nodes.filter((n) => n.round === (activeTournament?.size === 16 ? 1 : 2))
-                : [
-                    { id: "qf1", round: 2, matchIndex: 1, player1: { uid: "p1", handle: "@ROHIT_IIT" }, player2: { uid: "p2", handle: "@ABHISHEK_07" }, status: "COMPLETED" as const, winnerUid: "p2" },
-                    { id: "qf2", round: 2, matchIndex: 2, player1: { uid: "p3", handle: "@NEURAL_BOT" }, player2: { uid: "p4", handle: "@PRIYA_HOSTEL" }, status: "COMPLETED" as const, winnerUid: "p4" },
-                    { id: "qf3", round: 2, matchIndex: 3, player1: { uid: "p5", handle: "@VIKRAM_NIT" }, player2: { uid: "p6", handle: "@KABIR_99" }, status: "LIVE" as const },
-                    { id: "qf4", round: 2, matchIndex: 4, player1: { uid: "p7", handle: "@ANANYA_BITS" }, player2: { uid: "p8", handle: "@RISHI_ROOM4" }, status: "PENDING" as const },
-                  ]
-              ).map((node, idx) => (
-                <div
-                  key={node.id}
-                  className={`p-2.5 border-2 rounded-xl space-y-1.5 transition-all ${
-                    node.status === "LIVE"
-                      ? "border-emerald-400 bg-emerald-950/30 shadow-[0_0_15px_rgba(16,185,129,0.3)] animate-pulse"
-                      : "border-neutral-800 bg-neutral-950"
-                  }`}
-                >
-                  <div className="flex justify-between items-center text-[10px] font-bold text-neutral-400">
-                    <span>MATCH {idx + 1}</span>
-                    <span className={node.status === "LIVE" ? "text-emerald-400 font-black" : ""}>
-                      {node.status}
-                    </span>
-                  </div>
+        {/* ── World-Class Tournament Browser List (Below Stage) ── */}
+        <div className="space-y-3 border-t border-neutral-800 pt-5">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <h3 className="text-xs font-black uppercase text-white tracking-wider flex items-center gap-2">
+              <Flame className="w-4 h-4 text-amber-400" />
+              <span>ALL TOURNAMENTS &amp; SCHEDULED QUEUES ({tournaments.length})</span>
+            </h3>
 
-                  {/* Player 1 */}
-                  <div
-                    className={`flex justify-between items-center p-1.5 rounded text-xs font-black ${
-                      node.winnerUid === node.player1?.uid
-                        ? "bg-white text-black font-black"
-                        : "text-white bg-black/40"
-                    }`}
-                  >
-                    <span className="truncate">{node.player1?.handle || "OPEN SLOT"}</span>
-                    {node.winnerUid === node.player1?.uid && <Crown className="w-3.5 h-3.5 text-amber-500" />}
-                  </div>
-
-                  {/* Player 2 */}
-                  <div
-                    className={`flex justify-between items-center p-1.5 rounded text-xs font-black ${
-                      node.winnerUid === node.player2?.uid
-                        ? "bg-white text-black font-black"
-                        : "text-white bg-black/40"
-                    }`}
-                  >
-                    <span className="truncate">{node.player2?.handle || "OPEN SLOT"}</span>
-                    {node.winnerUid === node.player2?.uid && <Crown className="w-3.5 h-3.5 text-amber-500" />}
-                  </div>
-
-                  {/* Host Winner Advancement Controls */}
-                  {isHost && (
-                    <div className="grid grid-cols-2 gap-1 pt-1">
-                      {node.player1 && (
-                        <button
-                          type="button"
-                          onClick={() => handleAdvance(node.id, node.player1?.uid || "")}
-                          className="py-1 bg-emerald-600 hover:bg-emerald-500 text-black font-black text-[9px] uppercase rounded cursor-pointer"
-                        >
-                          ADV P1
-                        </button>
-                      )}
-                      {node.player2 && (
-                        <button
-                          type="button"
-                          onClick={() => handleAdvance(node.id, node.player2?.uid || "")}
-                          className="py-1 bg-emerald-600 hover:bg-emerald-500 text-black font-black text-[9px] uppercase rounded cursor-pointer"
-                        >
-                          ADV P2
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Column 2: Semifinals */}
-            <div className="space-y-6">
-              <div className="text-xs font-black uppercase text-neutral-400 text-center border-b border-neutral-800 pb-1">
-                SEMIFINALS (4P)
-              </div>
-              {(nodes.filter((n) => n.round === 3).length > 0
-                ? nodes.filter((n) => n.round === 3)
-                : [
-                    { id: "sf1", round: 3, matchIndex: 1, player1: { uid: "p2", handle: "@ABHISHEK_07" }, player2: { uid: "p4", handle: "@PRIYA_HOSTEL" }, status: "PENDING" as const },
-                    { id: "sf2", round: 3, matchIndex: 2, player1: null, player2: null, status: "PENDING" as const },
-                  ]
-              ).map((node, idx) => (
-                <div
-                  key={node.id}
-                  className="p-3 border-2 border-neutral-800 bg-neutral-950 rounded-xl space-y-2"
-                >
-                  <div className="text-[10px] font-bold text-neutral-400">SEMI-FINAL {idx + 1}</div>
-                  <div className="p-1.5 bg-neutral-900 rounded text-xs font-black text-white flex justify-between">
-                    <span>{node.player1?.handle || "WINNER MATCH 1"}</span>
-                  </div>
-                  <div className="p-1.5 bg-neutral-900 rounded text-xs font-black text-white flex justify-between">
-                    <span>{node.player2?.handle || "WINNER MATCH 2"}</span>
-                  </div>
-
-                  {isHost && (node.player1 || node.player2) && (
-                    <div className="grid grid-cols-2 gap-1 pt-1">
-                      {node.player1 && (
-                        <button
-                          type="button"
-                          onClick={() => handleAdvance(node.id, node.player1?.uid || "")}
-                          className="py-1 bg-emerald-600 hover:bg-emerald-500 text-black font-black text-[9px] uppercase rounded cursor-pointer"
-                        >
-                          ADV P1
-                        </button>
-                      )}
-                      {node.player2 && (
-                        <button
-                          type="button"
-                          onClick={() => handleAdvance(node.id, node.player2?.uid || "")}
-                          className="py-1 bg-emerald-600 hover:bg-emerald-500 text-black font-black text-[9px] uppercase rounded cursor-pointer"
-                        >
-                          ADV P2
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Column 3: Grand Final & Champion */}
-            <div className="space-y-4">
-              <div className="text-xs font-black uppercase text-amber-400 text-center border-b border-amber-400/40 pb-1">
-                👑 GRAND FINAL & CHAMPION
-              </div>
-              <div className="p-4 border-4 border-amber-400 bg-neutral-950 rounded-2xl text-center space-y-3 shadow-[0_0_30px_rgba(245,158,11,0.2)]">
-                <Trophy className="w-10 h-10 text-yellow-400 mx-auto animate-bounce" />
-                <div className="space-y-1">
-                  <div className="text-xs font-black text-yellow-400 uppercase">
-                    CHAMPIONSHIP DUEL
-                  </div>
-                  <div className="p-2 bg-black border border-neutral-800 rounded font-black text-sm text-white">
-                    {activeTournament?.winnerHandle ? (
-                      <span className="text-emerald-400">👑 {activeTournament.winnerHandle} CROWNED CHAMPION!</span>
-                    ) : (
-                      <span>FINAL MATCH IN PROGRESS</span>
-                    )}
-                  </div>
-                </div>
-                <div className="text-[10px] text-neutral-400 uppercase font-bold">
-                  Winner takes +{activeTournament?.totalPot || 1600} Aura Points & Campus Champion Badge!
-                </div>
-              </div>
+            {/* Filter Tabs */}
+            <div className="flex items-center gap-1 bg-neutral-900 p-1 rounded-xl border border-neutral-800 text-xs">
+              <button
+                type="button"
+                onClick={() => setActiveTab("LIVE")}
+                className={`px-3 py-1 rounded-lg font-bold transition-all ${
+                  activeTab === "LIVE" ? "bg-white text-black font-black shadow" : "text-neutral-400 hover:text-white"
+                }`}
+              >
+                🔥 LIVE ({liveTournaments.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("SCHEDULED")}
+                className={`px-3 py-1 rounded-lg font-bold transition-all ${
+                  activeTab === "SCHEDULED" ? "bg-white text-black font-black shadow" : "text-neutral-400 hover:text-white"
+                }`}
+              >
+                ⏳ QUEUE ({scheduledTournaments.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("FINISHED")}
+                className={`px-3 py-1 rounded-lg font-bold transition-all ${
+                  activeTab === "FINISHED" ? "bg-white text-black font-black shadow" : "text-neutral-400 hover:text-white"
+                }`}
+              >
+                🏆 FINISHED ({completedTournaments.length})
+              </button>
             </div>
           </div>
+
+          {/* Tournament Cards Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {(activeTab === "LIVE" ? liveTournaments : activeTab === "SCHEDULED" ? scheduledTournaments : completedTournaments).map((tour) => {
+              const regCount = Object.keys(tour.registeredPlayers || {}).length;
+              const isSelected = selectedTournamentId === tour.id;
+
+              return (
+                <div
+                  key={tour.id}
+                  onClick={() => setSelectedTournamentId(tour.id)}
+                  className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
+                    isSelected
+                      ? "bg-neutral-900 border-amber-400 ring-1 ring-amber-400/50 shadow-lg"
+                      : "bg-neutral-950/80 hover:bg-neutral-900 border-neutral-800 hover:border-neutral-700"
+                  }`}
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <h4 className="font-black text-xs uppercase text-white tracking-wide truncate">
+                        {tour.title}
+                      </h4>
+                      <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold shrink-0 ${
+                        tour.status === "IN_PROGRESS"
+                          ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                          : tour.status === "FINISHED"
+                          ? "bg-yellow-500/20 text-yellow-300 border border-yellow-500/40"
+                          : "bg-blue-500/20 text-blue-300 border border-blue-500/40"
+                      }`}>
+                        {tour.status === "IN_PROGRESS" ? "LIVE" : tour.status === "FINISHED" ? "FINISHED" : `${regCount}/${tour.size}P`}
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-neutral-400 font-mono">
+                      Game: <span className="text-white font-bold">{tour.gameType.toUpperCase()}</span> • Pot: <span className="text-yellow-400 font-bold">+{tour.totalPot} Aura</span>
+                    </p>
+                    <p className="text-[10px] text-neutral-500">
+                      Host: {tour.hostHandle}
+                    </p>
+                  </div>
+
+                  <div className="pt-3 border-t border-neutral-900 mt-3 flex items-center justify-between">
+                    <span className="text-[10px] text-neutral-400 font-bold">
+                      {tour.format === "DOUBLE_ELIMINATION" ? "DOUBLE ELIM" : "SINGLE KNOCKOUT"}
+                    </span>
+                    <button
+                      type="button"
+                      className="px-3 py-1 bg-white hover:bg-neutral-200 text-black font-black text-[10px] uppercase rounded-lg transition-all"
+                    >
+                      {tour.status === "REGISTRATION" ? "JOIN QUEUE" : "VIEW ARENA"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {(activeTab === "LIVE" ? liveTournaments : activeTab === "SCHEDULED" ? scheduledTournaments : completedTournaments).length === 0 && (
+            <div className="border border-neutral-800 bg-neutral-950 p-6 text-center rounded-2xl space-y-1">
+              <p className="text-xs font-bold text-neutral-400 uppercase">NO TOURNAMENTS IN THIS TAB</p>
+              <p className="text-[11px] text-neutral-500">Click &quot;+ HOST TOURNAMENT&quot; to create a new championship queue!</p>
+            </div>
+          )}
         </div>
 
         {/* User Tournament Creator Modal Sub-Component */}
