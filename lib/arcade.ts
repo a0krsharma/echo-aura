@@ -283,7 +283,10 @@ export interface CarromState {
   p2Score: number;
   p1Due?: number;
   p2Due?: number;
+  dueCount?: number;
   hasQueen: string | null;
+  queenCovered?: boolean;
+  queenCoverAttempt?: boolean;
   queenPendingUid?: string | null;
   playerColors?: Record<string, "WHITE" | "BLACK">;
   foulCount?: Record<string, number>;
@@ -2745,7 +2748,10 @@ export async function fireCarromShot(
     p2Score?: number;
     p1Due?: number;
     p2Due?: number;
+    dueCount?: number;
     hasQueen?: string | null;
+    queenCovered?: boolean;
+    queenCoverAttempt?: boolean;
     queenPendingUid?: string | null;
     actionLog?: string;
     isGameOver?: boolean;
@@ -2776,7 +2782,10 @@ export async function fireCarromShot(
   if (options?.p2Score !== undefined) updates["carromState.p2Score"] = options.p2Score;
   if (options?.p1Due !== undefined) updates["carromState.p1Due"] = options.p1Due;
   if (options?.p2Due !== undefined) updates["carromState.p2Due"] = options.p2Due;
+  if (options?.dueCount !== undefined) updates["carromState.dueCount"] = options.dueCount;
   if (options?.hasQueen !== undefined) updates["carromState.hasQueen"] = options.hasQueen;
+  if (options?.queenCovered !== undefined) updates["carromState.queenCovered"] = options.queenCovered;
+  if (options?.queenCoverAttempt !== undefined) updates["carromState.queenCoverAttempt"] = options.queenCoverAttempt;
   if (options?.queenPendingUid !== undefined) updates["carromState.queenPendingUid"] = options.queenPendingUid;
 
   if (options?.isGameOver || remainingTargets.length === 0) {

@@ -567,22 +567,23 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
   },
   carrom: {
     id: "carrom",
-    name: "Championship Carrom (Official ICF Tournament Rules)",
+    name: "Championship Carrom (Official ICF Tournament Laws)",
     rank: 6,
     category: "2D Physics & Tabletop",
     icon: "⚪",
-    overview: "Official International Carrom Federation (ICF) tournament rules. Played with 9 White pieces, 9 Black pieces, 1 Red Queen (3 pts), and 1 Striker. Player who breaks plays White; opponent plays Black. Clear all pieces plus the Queen to claim board victory.",
+    overview: "Official International Carrom Federation (ICF) tournament rules and laws. 19 pieces (9 White, 9 Black, 1 Red Queen) on 74x74 cm lacquered board with 4 corner drop pockets. Breaker plays White. Features White/Black Slam adjudication, 4 striking grips, powder dynamics (Boric vs Disco), and tactical defense.",
     howToPlay: [
-      "STRIKING & TURN: Position striker on baseline touching both front/back lines. Turn continues as long as you legally pocket at least 1 assigned colored piece.",
-      "QUEEN & COVER: Pocket Queen after sinking at least 1 of your pieces. You MUST pocket a cover piece of your color on the very next shot (or same shot) to secure Queen. If cover fails, Queen returns to center.",
-      "LAST PIECE RULE: You cannot pocket the Queen as your last piece. Clearing all 9 pieces while Queen remains on the board results in an immediate loss!",
-      "FOULS & PENALTIES: Pocketing striker (scratch) ends turn + 1 of your pocketed pieces returns to center as Due penalty. If 0 pieces in bank, 1 Due is marked and deducted upon your next pocket.",
-      "OPPONENT PIECE: Sinking only opponent's coin leaves it pocketed but ends your turn. Sinking opponent + own coin keeps both and continues your turn.",
-      "SCORING & 21-PT CAP: Winner earns 1 pt per remaining opponent piece + 3 pts for Queen. Under ICF rules, 3-pt Queen bonus is not added once score reaches 21+ points."
+      "1. STRIKER PLACEMENT & STRIKING: Striker must touch both front and rear baseline edges (or fully cover a base circle). Single forward flick using finger/thumb; dragging or pushing is a foul.",
+      "2. 4 CORE STRIKING GRIPS: Index Finger Flick (direct accuracy & push pots), Middle Straight (+25% kinetic impulse for breaks & pack splitting), Scissors / Kainchi (sharp 60°+ tangent slices), Thumb Flick (reverse & baseline edge shots).",
+      "3. THE QUEEN & MANDATORY COVER: Queen (3 pts) can be pocketed anytime after first pot. Must be covered by pocketing own color on the same or immediate next stroke. If cover fails, Queen returns to center circle.",
+      "4. LAST PIECE SEQUENCE: You cannot pocket the Queen as your last piece. Clearing all 9 pieces while Queen remains on the board results in an immediate automatic frame loss!",
+      "5. WHITE SLAM & BLACK SLAM (INNING 1 RUNOUT): White Slam = Breaker clears all 9 White + Queen in Turn 1 (+12 pts). Black Slam = Non-breaker clears all 9 Black + Queen in Turn 1 (+12 pts). Recorded as 'WS' / 'BS' on official ICF scorecards.",
+      "6. FOULS & DUE MATRIX: Pocketing striker (scratch) ends turn + 1 piece returned to center as Due penalty. Pocketing striker + own piece = 2 pieces returned (potted + 1 Due).",
+      "7. 22-POINT QUEEN CAP RULE (ICF LAW 25.4): Once cumulative match score reaches 22+ pts, the 3-pt Queen bonus is no longer added. Single board max score is 12 pts (9 pieces + 3 Queen). Match won at 25 pts."
     ],
-    voiceGuide: "Call shots, announce Queens, and engage in tactical board banter over the mic.",
-    scoring: "1 pt per opponent piece on board + 3 pts for Queen (subject to 21-pt cap). Match won at 25 pts.",
-    proTip: "Master the 4 ICF Pro Shots: 1. Thumbing (reverse angles) 2. Board Cuts (thin/thick deflection) 3. Rebound Bank Shots (cushion reflection) 4. Cannons (double touch)."
+    voiceGuide: "Call shots, announce 'Covered' / 'Due' umpire codes, and coordinate defensive locks on live voice chat.",
+    scoring: "Board Pts = Remaining Opponent Pieces + (3 pts for Queen if covered and score < 22). Slams award 12 pts.",
+    proTip: "Use the top Grip selector (Index, Middle, Kainchi, Thumb) and Powder Chemistry selector (Boric Acid vs Disco Super-Glide) to fine-tune kinetic power and acute tangent slices!"
   },
   pool: {
     id: "pool",
