@@ -1102,6 +1102,10 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
               <span className="text-emerald-400 font-bold block mb-0.5">17. 🛡️ CUSHION-FIRST BRICOLE REVERSE CAROM:</span>
               Aim = ((Origin + Projection_OB1) / 2) - C_rev. Reverse spin checks 1st rail to pocket or carom blocked, tucked balls!
             </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">18. 🎯 PIQUÉ (VERTICAL MASSÉ &amp; HOOK ESCAPES):</span>
+              60°-85° cue elevation dart strike imparts heavy rotation with low translation, curving around snookers via cloth friction!
+            </div>
           </div>
         )}
       </div>

@@ -596,11 +596,11 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
       "TURN CONTINUATION & PUSH-OUT: Your turn continues as long as you legally pocket assigned balls. An optional Push-Out is allowed on Shot #2 immediately following the break.",
       "STANDARD FOULS & BALL-IN-HAND: Scratching the cue ball, hitting wrong suit first, or failing to drive a ball to a cushion yields Ball-in-Hand anywhere on the table for the opponent.",
       "INSTANT LOSS CONDITIONS: Pocketing the 8-ball while scratching/fouling, or pocketing the 8-ball before clearing all 7 of your suit balls results in an immediate frame loss.",
-      "DIAMOND & CAROM MASTER SUITE: 1-Rail midpoint, Plus-Two, Corner-5, Renverse, Grand Traverse, Umbrella, Butterfly, K-System, Dead-Ball stun, Five-Ball, Rojano, Sarda, and Cushion-First Reverse Bricole!"
+      "DIAMOND & CAROM MASTER SUITE: 1-Rail midpoint, Plus-Two, Corner-5, Renverse, Grand Traverse, Umbrella, Butterfly, K-System, Dead-Ball stun, Five-Ball, Rojano, Sarda, Reverse Bricole, and Piqué vertical massé!"
     ],
     voiceGuide: "Call pockets, declare bank shots, and engage in psychological banter over the mic.",
     scoring: "+250 Aura for legally pocketing the 8-Ball to win the match.",
-    proTip: "Use the Reverse Bricole System (Aim = ((Origin + Projection) / 2) - C_rev) with reverse English to check 1st-rail reflection and bypass blocker balls!"
+    proTip: "Use the Piqué technique (60°-85° cue elevation dart strike) to impart high rotational spin with low forward roll, carving tight parabolic swerve curves around snookers!"
   },
   "2048": {
     id: "2048",
