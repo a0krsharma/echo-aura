@@ -208,25 +208,25 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
   },
   monopoly: {
     id: "monopoly",
-    name: "Tournament Monopoly & Real Estate Tycoon",
+    name: "Tournament Monopoly & Quantitative Real Estate Engine",
     rank: 5,
     category: "Tactical Boards & Grids",
     icon: "🎩",
-    overview: "Official 40-tile circuit tournament rules ($500x500mm), instant $1 property auctions, Markov Chain steady-state landing probabilities, DCF property valuation, Strategic Denial blocking value (V_block), and Nash Bargaining trade protocols.",
+    overview: "Official 40-tile circuit tournament rules ($500x500mm), 120-state Markov Chain stochastic model, DCF property valuation, 32-house supply starvation lockouts, Capital Efficiency Ratio (CER) mortgage liquidation, and Nash Bargaining auction game theory.",
     howToPlay: [
       "1. 40-TILE PERIMETER CIRCUIT: Standard 10-tile per side layout with $1,500 starting bankroll (2x$500, 2x$100, 2x$50, 6x$20, 5x$10, 5x$5, 5x$1).",
-      "2. MANDATORY AUCTION RULE: If a player declines to buy unowned property at list price, Banker immediately auctions it starting at $1 to all players (speeds up games 4x).",
-      "3. FREE PARKING IS SAFE REST: Zero cash jackpots on Free Parking. Taxes and fines go strictly to the Bank to prevent artificial inflation.",
-      "4. MARKOV CHAIN LANDING HEATMAP: Jail (Tile 10, 3.94% landing rate) makes the Orange set (Tiles 16, 18, 19: New York, Tennessee, St. James) and Illinois Ave (Tile 24, 3.18%) the highest ROI kill zones.",
-      "5. INTRINSIC DCF VALUATION: Property net present value is modeled as V_intrinsic = Σ (γ^t * π_i * Rent * N_opp). Completing a monopoly unlocks 3-house upgrades (300%-400% rent explosion; Orange recovers in 7.2 turns).",
-      "6. STRATEGIC DENIAL VALUE (V_block): Never trade a monopoly-completing deed to an opponent unless compensation exceeds V_block + V_intrinsic (expected damage penalty).",
-      "7. NASH BARGAINING TRADE PROTOCOL: Trade proposals require Pareto surplus (ΔU_AI > 0 and ΔU_Opp > 0). Add cash sweeteners to balance Nash surplus parity.",
-      "8. HOUSING SHORTAGE LOCK: Strict 32 green house / 12 red hotel inventory. Park 4 houses per tile to lock bank inventory and block opponent development.",
-      "9. LATE-GAME JAIL STRATEGY: Stay in Jail for all 3 turns to collect rent from opponents while remaining immune to landing on lethal hotel squares."
+      "2. 120-STATE MARKOV CHAIN: State space S=(t,d) tracks tile position t in [0..39] and doubles counter d in [0..2]. Rolling 3 consecutive doubles triggers immediate transition to Jail (Tile 10, pi=3.94%).",
+      "3. 32-HOUSE SUPPLY STARVATION LOCK: Strict global inventory of exactly 32 green houses and 12 hotels. Building 4 houses per deed across 2-3 sets hoards 100% of global houses, permanently blocking opponent building upgrades without releasing houses via hotels.",
+      "4. MANDATORY AUCTION & SOLVENCY SQUEEZE: Declining to buy unowned property triggers an instant open auction starting at $1. Winning bid formula: B* = min(V_AI, max(Cash_Opp + Borrowing_Cap) + $1) to extract maximum consumer surplus.",
+      "5. CAPITAL EFFICIENCY RATIO (CER) MORTGAGE HIERARCHY: When raising emergency cash, liquidate in order of lowest CER (income sacrificed per dollar raised): Utilities (0.0014) -> Browns (0.0022) -> Isolated Greens (0.0031). NEVER mortgage completed monopolies.",
+      "6. INTRINSIC DCF VALUATION: Property net present value is modeled as V_intrinsic = Σ (γ^t * π_i * Rent * N_opp). Completing a monopoly unlocks 3-house upgrades (Orange recovers in 7.2 turns; Red in 8.4 turns).",
+      "7. STRATEGIC DENIAL VALUE (V_block): Never trade a monopoly-completing deed to an opponent unless compensation exceeds V_block + V_intrinsic (expected damage penalty).",
+      "8. LIQUIDITY WATERFALL & RESOLUTION: Unmortgaging incurs 10% interest fee. Bankruptcies transfer assets with mandatory 10% interest to creditor, or public unmortgaged auction upon bankruptcy to Bank.",
+      "9. GAME-PHASE TRANSITIONS: Early Phase (buy everything, pay $50 to exit jail) -> Mid Phase (race to 3 houses, trade for Orange/Red) -> Late Phase (stay in Jail full 3 turns, hoard 32 houses, force liquidity collapses)."
     ],
     voiceGuide: "Execute property trades, negotiate mortgage buyouts, and bid aggressively in instant auctions over live voice.",
     scoring: "Winner bankrupts all opponents or holds highest net worth upon tournament shot clock expiration (+350 Aura).",
-    proTip: "Lock the 32-house bank inventory by parking 4 houses on your properties without upgrading to hotels!"
+    proTip: "Once you control 2 complete color groups, build to exactly 4 houses per property and refuse hotel upgrades to starve the entire table of housing inventory!"
   },
   sudoku: {
     id: "sudoku",
