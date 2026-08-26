@@ -1114,6 +1114,14 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
               <span className="text-emerald-400 font-bold block mb-0.5">20. 📹 REFEREE FROZEN-BALL &amp; VAR PROTOCOL:</span>
               Gap &lt; 5mm requires &ge; 45° elevation or 90° tangent cut to avoid double-hit foul. 120-1000 fps high-speed VAR review standard.
             </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">21. 🚀 JUMP BALLISTICS &amp; PARABOLIC TRAJECTORY:</span>
+              v0x = J cos(&theta;)/m, v0z = e_slate &times; J sin(&theta;)/m. Parabolic arc clears 57.15mm blockers with downward compression!
+            </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">22. 🪂 TOUCHDOWN DAMPENING &amp; POST-LANDING SPIN:</span>
+              Micro-hops decay by ~50% per bounce. Airborne spin L = I&omega; is conserved in flight, engaging draw/follow/swerve on touchdown!
+            </div>
           </div>
         )}
       </div>
