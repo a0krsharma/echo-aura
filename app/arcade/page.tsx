@@ -160,10 +160,6 @@ function ArcadeContent() {
 
   const [soundCheckOpen, setSoundCheckOpen] = useState(false);
   const [ghostTimerSec, setGhostTimerSec] = useState<number | null>(null);
-
-  const rtcClient = useMemo(() => {
-    return AgoraRTC.createClient({ codec: "vp8", mode: "rtc" });
-  }, [activeMatchId]);
   const [rawMicStream, setRawMicStream] = useState<MediaStream | null>(null);
 
   // 1. Zero-Install Deep Links Engine (Under 2 seconds auto-mount)
@@ -658,13 +654,11 @@ function ArcadeContent() {
 
             {/* In-Match Live Voice Channel */}
             {activeMatch.enableVoice !== false && (
-              <AgoraRTCProvider client={rtcClient}>
-                <ArcadeVoiceChannel
-                  matchId={activeMatch.id}
-                  isSpectator={Boolean(user && !activeMatch.players?.[user.uid])}
-                  processedStream={rawMicStream}
-                />
-              </AgoraRTCProvider>
+              <ArcadeVoiceChannel
+                matchId={activeMatch.id}
+                isSpectator={Boolean(user && !activeMatch.players?.[user.uid])}
+                processedStream={rawMicStream}
+              />
             )}
 
             {/* Voice Party Games Renderers */}
@@ -1172,9 +1166,16 @@ function ArcadeContent() {
 }
 
 export default function ArcadePage() {
+  const rtcClient = useMemo(
+    () => AgoraRTC.createClient({ codec: "vp8", mode: "rtc" }),
+    []
+  );
+
   return (
     <Suspense fallback={<div className="min-h-screen bg-black text-white font-mono p-8 text-center text-xs">Loading Echo Club...</div>}>
-      <ArcadeContent />
+      <AgoraRTCProvider client={rtcClient}>
+        <ArcadeContent />
+      </AgoraRTCProvider>
     </Suspense>
   );
 }
