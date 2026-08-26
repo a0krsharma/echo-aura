@@ -19,6 +19,7 @@ import {
   CircleDot,
   Flame,
   ShieldAlert,
+  ArrowLeftRight,
 } from "lucide-react";
 
 interface PoolGameProps {
@@ -85,8 +86,8 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const [dragCurrent, setDragCurrent] = useState<{ x: number; y: number } | null>(null);
   const [power, setPower] = useState(0);
-  const [englishSpin, setEnglishSpin] = useState<{ x: number; y: number }>({ x: 0, y: 0 }); // Spin pad (-1 to 1)
   const [isBallInHand, setIsBallInHand] = useState(false);
+  const [isPushOutDeclared, setIsPushOutDeclared] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
 
   // Local physics pieces state
@@ -95,6 +96,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
   const pocketedThisShotRef = useRef<PoolBall[]>([]);
   const cueScratchRef = useRef(false);
   const firstContactBallRef = useRef<PoolBall | null>(null);
+  const isBreakShotRef = useRef(false);
 
   // Sync balls from match state
   useEffect(() => {
@@ -290,6 +292,28 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
       ctx.lineWidth = 2.5;
       ctx.strokeRect(CUSHION, CUSHION, TABLE_WIDTH - CUSHION * 2, TABLE_HEIGHT - CUSHION * 2);
 
+      // Pearl Sight Diamonds along Rails
+      const diamondRadius = 2.5;
+      ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
+
+      // Top & Bottom Rail Diamonds (3 each side)
+      [1, 2, 3].forEach((i) => {
+        const x = CUSHION + ((TABLE_WIDTH - CUSHION * 2) * i) / 4;
+        ctx.beginPath();
+        ctx.arc(x, CUSHION / 2, diamondRadius, 0, Math.PI * 2);
+        ctx.arc(x, TABLE_HEIGHT - CUSHION / 2, diamondRadius, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Left & Right Rail Diamonds (7 each side)
+      [1, 2, 3, 4, 5, 6, 7].forEach((i) => {
+        const y = CUSHION + ((TABLE_HEIGHT - CUSHION * 2) * i) / 8;
+        ctx.beginPath();
+        ctx.arc(CUSHION / 2, y, diamondRadius, 0, Math.PI * 2);
+        ctx.arc(TABLE_WIDTH - CUSHION / 2, y, diamondRadius, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
       // C. 6 Tournament Pockets with Brass Rim Plates & Depth Nets
       POCKETS.forEach((pkt) => {
         // Brass Rim Plate
@@ -311,7 +335,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         ctx.fill();
       });
 
-      // Head String & Foot Spot Markings
+      // Head String Line & Foot Spot Markings
       ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -641,6 +665,11 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         pocketedThisShotRef.current = [];
         cueScratchRef.current = false;
         firstContactBallRef.current = null;
+
+        // Check if this is the Break Shot
+        const totalRemaining = ballsRef.current.filter((b) => b.type !== "cue" && !b.isPocketed).length;
+        isBreakShotRef.current = totalRemaining === 15;
+
         isSimulatingRef.current = true;
         setIsSimulating(true);
       }
@@ -652,12 +681,12 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
     setPower(0);
   };
 
-  // Finalize Shot and Apply Official WPA 8-Ball Rules
+  // Finalize Shot and Apply Official WPA 8-Ball Rules & Three-Point Break
   const finalizeShotTurn = useCallback(async () => {
     const pocketed = pocketedThisShotRef.current;
     const isScratch = cueScratchRef.current;
     const balls = ballsRef.current;
-    const firstContact = firstContactBallRef.current;
+    const isBreak = isBreakShotRef.current;
 
     let nextTurnUid = ps?.currentTurnUid || currentUid;
     let newP1Score = ps?.p1Score || 0;
@@ -691,7 +720,22 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
     const myCurrentSuit = isPlayer1 ? newP1Type : newP2Type;
     const myRemainingGroupCount = myCurrentSuit === "SOLIDS" ? remainingSolids : myCurrentSuit === "STRIPES" ? remainingStripes : remainingSolids + remainingStripes;
 
-    // ── 1. Check Scratch & Foul Conditions ──
+    // ── 1. Three-Point Break Rule Evaluation on Break Shot ──
+    if (isBreak) {
+      const totalPocketedOnBreak = solidsPocketed + stripesPocketed + (eightBallPocketed ? 1 : 0);
+      const ballsCrossedHeadString = balls.filter((b) => b.type !== "cue" && !b.isPocketed && b.y > TABLE_HEIGHT - 120).length;
+      const breakScore = totalPocketedOnBreak + ballsCrossedHeadString;
+
+      if (breakScore >= 3 && !isScratch) {
+        actionLog = `⚡ THREE-POINT BREAK PASSED (${totalPocketedOnBreak} pocketed + ${ballsCrossedHeadString} crossed)! Legal break.`;
+      } else if (isScratch) {
+        actionLog = `⚠️ BREAK SCRATCH! Opponent awarded Ball-in-Hand anywhere on table!`;
+      } else {
+        actionLog = `⚠️ SOFT BREAK (Score: ${breakScore}/3). Opponent may accept or pass back!`;
+      }
+    }
+
+    // ── 2. Check Scratch & Foul Conditions ──
     if (isScratch) {
       soundSynth.playBuzzer();
       if (eightBallPocketed) {
@@ -705,7 +749,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         nextTurnUid = opponentUid;
       }
     } else if (eightBallPocketed) {
-      // ── 2. Eight Ball Pocketed ──
+      // ── 3. Eight Ball Pocketed ──
       if (myCurrentSuit && myRemainingGroupCount === 0) {
         // Legal Win! Cleared all assigned balls before pocketing 8-Ball
         actionLog = "🏆 8-BALL POCKETED LEGALLY! WPA CHAMPIONSHIP VICTORY!";
@@ -720,7 +764,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         soundSynth.playBuzzer();
       }
     } else if (solidsPocketed > 0 || stripesPocketed > 0) {
-      // ── 3. Open Table Suit Assignment & Turn Continuation ──
+      // ── 4. Open Table Suit Assignment & Turn Continuation ──
       if (!newP1Type && !newP2Type) {
         // First legal ball claims suit!
         if (solidsPocketed > 0 && stripesPocketed === 0) {
@@ -754,10 +798,11 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         nextTurnUid = opponentUid;
       }
     } else {
-      // ── 4. Blank Shot: Turn Passes ──
+      // ── 5. Blank Shot: Turn Passes ──
       const opponentUid = playerUids.find((id) => id !== currentUid) || currentUid;
       nextTurnUid = opponentUid;
-      actionLog = "No ball pocketed. Turn passes.";
+      actionLog = isPushOutDeclared ? "✋ PUSH-OUT EXECUTED! Opponent may accept table or pass back." : "No ball pocketed. Turn passes.";
+      setIsPushOutDeclared(false);
     }
 
     await firePoolShot(
@@ -775,7 +820,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         winnerUid,
       }
     );
-  }, [currentUid, isPlayer1, match.id, match.players, playerUids, ps]);
+  }, [currentUid, isPlayer1, isPushOutDeclared, match.id, match.players, playerUids, ps]);
 
   // Inventory of remaining balls
   const balls = ballsRef.current;
@@ -800,7 +845,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
                 8-BALL POOL PRO
               </span>
               <span className="px-1.5 py-0.2 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9px] font-bold rounded">
-                WPA OFFICIAL
+                WPA TOURNAMENT
               </span>
             </div>
             <p className="text-[10px] text-neutral-400">
@@ -810,6 +855,26 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Push-Out Declaration Button */}
+          {isMyTurn && !isSimulating && (
+            <button
+              type="button"
+              onClick={() => {
+                setIsPushOutDeclared(!isPushOutDeclared);
+                soundSynth.playSubtlePop();
+              }}
+              className={`px-2.5 py-1.5 border font-bold text-[10px] uppercase rounded transition-all cursor-pointer flex items-center gap-1 ${
+                isPushOutDeclared
+                  ? "bg-amber-500 text-black border-amber-400 font-black shadow-md animate-pulse"
+                  : "border-neutral-700 bg-black hover:border-amber-400 text-amber-300"
+              }`}
+              title="Declare Push-Out shot immediately after break"
+            >
+              <ArrowLeftRight className="w-3 h-3" />
+              <span>{isPushOutDeclared ? "PUSH ACTIVE" : "PUSH-OUT"}</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => setRulesOpen(true)}
@@ -818,6 +883,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
             <HelpCircle className="w-3 h-3" />
             <span>RULES</span>
           </button>
+
           <button
             type="button"
             onClick={() => {
@@ -952,7 +1018,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         </p>
       </div>
 
-      {/* ── WPA Pro Physics Master Guide HUD ── */}
+      {/* ── WPA Pro Diamond Kicking & Advanced Physics Guide HUD ── */}
       <div className="border border-neutral-800 bg-neutral-950 rounded-xl overflow-hidden">
         <button
           type="button"
@@ -961,7 +1027,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         >
           <span className="flex items-center gap-1.5 uppercase">
             <Compass className="w-4 h-4 text-emerald-400" />
-            🎱 WPA PRO POOL PHYSICS (GHOST-BALL, SIDESPIN, CIT &amp; BANKS)
+            🎱 WPA PRO DIAMOND SYSTEMS (CORNER-5, PLUS SYSTEM &amp; 3-POINT BREAK)
           </span>
           {showProPhysics ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </button>
@@ -969,20 +1035,20 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         {showProPhysics && (
           <div className="p-3 border-t border-neutral-800 space-y-2.5 text-xs text-neutral-400 font-mono bg-black/50">
             <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
-              <span className="text-emerald-400 font-bold block mb-0.5">1. 🎯 GHOST-BALL &amp; 90° TANGENT:</span>
-              The aiming guide calculates exact line-of-centers trajectory and orthogonal cue ball deflection.
+              <span className="text-emerald-400 font-bold block mb-0.5">1. ⚡ THREE-POINT BREAK RULE:</span>
+              Total score: Pocketed Balls + Crossed Head-String Balls &ge; 3. Prevents soft breaking!
             </div>
             <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
-              <span className="text-emerald-400 font-bold block mb-0.5">2. 🌪️ CUT-INDUCED THROW (CIT):</span>
-              Friction between cue and object ball pushes cuts 1°-5° off line; outside English counteracts throw.
+              <span className="text-emerald-400 font-bold block mb-0.5">2. 📐 1-RAIL KICKING (MIDPOINT &amp; PARALLEL SHIFT):</span>
+              Drop perpendicular projections from cue and target ball to cushion; aim through midpoint $M$.
             </div>
             <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
-              <span className="text-emerald-400 font-bold block mb-0.5">3. 🪞 CUSHION BANK &amp; RAIL GRIP:</span>
-              Cushion compression and tangential friction govern bank angles and sidespin reversal.
+              <span className="text-emerald-400 font-bold block mb-0.5">3. 🪞 2-RAIL PLUS SYSTEM (SHORT ➔ LONG):</span>
+              Formula: 1st Rail Aim = Target Arrival - Cue Origin (with running English).
             </div>
             <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
-              <span className="text-emerald-400 font-bold block mb-0.5">4. ⚡ 8-BALL VICTORY CONDITIONS:</span>
-              Clear all 7 of your suit (Solids or Stripes) before legally potting the 8-Ball for victory!
+              <span className="text-emerald-400 font-bold block mb-0.5">4. 🎯 3-RAIL CORNER-5 SYSTEM (LONG ➔ SHORT ➔ LONG):</span>
+              Formula: 1st Rail Aim = Origin (Start) - 3rd Rail Arrival (Target). Corner 50 track.
             </div>
           </div>
         )}
