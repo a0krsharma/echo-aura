@@ -593,14 +593,14 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
     overview: "Official World Pool-Billiard Association (WPA) tournament rules. 15 object balls (Solids 1-7, Stripes 9-15, and the Black 8-Ball) racked with the apex on Foot Spot and 8-Ball in center. Break from behind the head string. Clear all 7 balls of your assigned group before pocketing the 8-Ball for victory.",
     howToPlay: [
       "BREAK & THREE-POINT RULE: Sinking balls does not claim suits (Open Table). A legal break requires Break Score = Pocketed + Crossed >= 3. Soft breaks allow opponent to accept table or pass back.",
-      "TURN CONTINUATION & PUSH-OUT: Your turn continues as long as you legally pocket assigned balls. An optional Push-Out is allowed on Shot #2 immediately following the break.",
+      "TURN CONTINUATION & PUSH-OUT: Your turn continues as long as you legally pocket assigned balls. Shot #2 Push-Out operates on Cake-Cutting game theory (I cut, you choose) where EV_Opponent = EV_Shooter.",
       "STANDARD FOULS & BALL-IN-HAND: Scratching the cue ball, hitting wrong suit first, or failing to drive a ball to a cushion yields Ball-in-Hand anywhere on the table for the opponent.",
       "INSTANT LOSS CONDITIONS: Pocketing the 8-ball while scratching/fouling, or pocketing the 8-ball before clearing all 7 of your suit balls results in an immediate frame loss.",
-      "BREAK CUE ENGINEERING & 10-BALL CONTROL: Carbon fiber shafts (E=130-230 GPa, 12-16g end-mass) transfer 92-96% kinetic energy. Break at 19.5-22.5 mph with a 3°-5.5° cut angle to park the cue ball center and drive the 1-ball to the side pocket!"
+      "PRO SUITE & SPOT-ON-THE-WALL: Template racks transmit 1,500 m/s acoustic shockwaves (90-95% efficiency); Matchroom Break Box enforces central attacks; Spot-on-the-Wall optical planar mirror calculates 1-rail kicks!"
     ],
     voiceGuide: "Call pockets, declare bank shots, and engage in psychological banter over the mic.",
     scoring: "+250 Aura for legally pocketing the 8-Ball to win the match.",
-    proTip: "Avoid over-breaking (>23 mph): an 80% power break (19.5-22.5 mph) with carbon fiber stiffness maximizes energy transfer (92-96%) while keeping the cue ball parked dead in the center table box!"
+    proTip: "Master the Spot-on-the-Wall mirror principle: project target distance d past the rubber cushion nose (P_virtual = P_cushion + (P_cushion - P_target)) and shoot dead-center stun for 1:1 specular reflection!"
   },
   "2048": {
     id: "2048",

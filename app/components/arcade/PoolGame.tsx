@@ -1138,6 +1138,26 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
               <span className="text-emerald-400 font-bold block mb-0.5">26. 💥 10-BALL BREAK CONTROL DYNAMICS:</span>
               Controlled 19.5-22.5 mph speed with 3°-5.5° cut angle transfers 92-96% energy, parking the cue ball center while potting the 1-ball side!
             </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">27. 📄 TEMPLATE RACKS &amp; 1,500 M/S SHOCKWAVE:</span>
+              Mylar cutouts establish 100% frozen tangency (&delta;=0). Impulse propagates at 1,500 m/s with 90-95% efficiency, eliminating slug racks!
+            </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">28. 📦 MATCHROOM BREAK BOX &amp; 3-POINT RULE:</span>
+              Break Box (central 50% width inside kitchen) + 3-Point Rule (Pocketed + Crossed &ge; 3) eliminates soft breaks and guarantees high-energy dispersion!
+            </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">29. ✋ PUSH-OUT GAME THEORY &amp; EV EQUILIBRIUM:</span>
+              Shot #2 Cake-Cutting principle targets EV_Opponent &approx; EV_Shooter. Exploit asymmetric jump, kick, and safety skill advantages!
+            </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">30. 🛡️ 5 ELITE SAFETY COUNTER-STRATEGIES:</span>
+              1. Full-Table Split 2. Thin Feather Snooker 3. Rail-Freeze Drag (draw cancels bounce) 4. Pocket-Jaw Trap 5. Two-Way Containment!
+            </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">31. 🪞 SPOT-ON-THE-WALL OPTICAL KICKING:</span>
+              Planar mirror reflection: project target distance d past cushion nose (P_virtual = P_cushion + (P_cushion - P_target)) with dead-center stun!
+            </div>
           </div>
         )}
       </div>
