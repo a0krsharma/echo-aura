@@ -1082,6 +1082,18 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
               <span className="text-emerald-400 font-bold block mb-0.5">12. ⚪ DEAD-BALL (NO-SPIN SPECULAR):</span>
               Aim = (Origin + Arrival) / 2. Center-ball stun eliminates squirt/swerve with pure specular reflection.
             </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">13. 🖐️ FIVE-BALL SYSTEM (STUN 90° TANGENT):</span>
+              Aim = (Origin &times; Arrival_2) / 5. Pure sliding stun (-0.5 tips low, 0 sidespin) for exact 90° tangent caroms.
+            </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">14. ⚡ ROJANO SYSTEM (REVERSE-STUN CAROMS):</span>
+              Aim = Origin - Arrival. Low reverse English checks 1st cushion and inverts to running on 2nd rail.
+            </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-emerald-400 font-bold block mb-0.5">15. 🪞 SARDA SYSTEM (LONG-RAIL REVERSE WRAP):</span>
+              Aim (Long Rail) = Origin - (Arrival_3 &times; 1.5). Long ➔ Short ➔ Long carom with max reverse English.
+            </div>
           </div>
         )}
       </div>
