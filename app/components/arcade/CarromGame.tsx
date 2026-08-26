@@ -1402,20 +1402,23 @@ export default function CarromGame({ match, currentUid }: CarromGameProps) {
             <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
               <span className="text-amber-400 font-bold block mb-0.5">2. 👥 2v2 DOUBLES &amp; FEEDING MECHANICS:</span>
               • Seating: Teammates sit opposite (South A1 &amp; North A2); clockwise rotation.<br/>
-              • Baseline Feed: Nudge pieces toward partner's baseline box for an unmissable 0° pot.<br/>
-              • Immediate Opponent Freeze: Drive opponent pieces flat against the next shooter's side rail (0mm gap) to kill their cut angles!
+              • 15s Consultation: Max 5s verbal check before setting; zero speech once hands are on baseline.<br/>
+              • Baseline Feed &amp; Lip Rest: Nudge pieces to partner's quadrant for unmissable 0° pots.<br/>
+              • Immediate Opponent Freeze: Pin opponent pieces flat against next shooter's side rail (0mm gap)!
             </div>
             <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
-              <span className="text-amber-400 font-bold block mb-0.5">3. ☝️ 4 CORE STRIKING GRIPS:</span>
+              <span className="text-amber-400 font-bold block mb-0.5">3. 🚀 3 SPECIALIZED DOUBLES BREAKS:</span>
+              • North-Feed Spread: 70-80% power on right apex to propel White pieces to Partner A2.<br/>
+              • Defensive Cluster Lock: 30-40% soft strike to leave pack closed and trap Opponent B1.<br/>
+              • Queen-Release Wedge: Center gap strike to release Queen for tag-team cover.
+            </div>
+            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <span className="text-amber-400 font-bold block mb-0.5">4. ☝️ 4 CORE STRIKING GRIPS:</span>
               Index (Direct accuracy), Middle Straight (100% kinetic break power), Scissors/Kainchi (Sharp 60°+ tangent slices), Thumb (Reverse baseline shots).
             </div>
             <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
-              <span className="text-amber-400 font-bold block mb-0.5">4. 🧪 POWDER CHEMISTRY (BORIC ACID VS DISCO):</span>
-              Boric Acid (H3BO3) forms crystalline slip planes (μk ≈ 0.08–0.12) for tactile cut control; Disco polymer spheres roll with μk &lt; 0.04.
-            </div>
-            <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-800">
-              <span className="text-amber-400 font-bold block mb-0.5">5. 👑 QUEEN COVERING &amp; 22-POINT CAP RULE:</span>
-              Queen must be covered by sinking your piece on the same or immediate next shot. Once score reaches 22+ pts, Queen awards 0 bonus pts.
+              <span className="text-amber-400 font-bold block mb-0.5">5. 🧪 POWDER CHEMISTRY &amp; QUEEN RULES:</span>
+              Boric Acid (μk ≈ 0.08–0.12) vs Disco Polymer (μk &lt; 0.04). Queen must be covered immediately. 22-pt cap removes Queen bonus.
             </div>
           </div>
         )}
