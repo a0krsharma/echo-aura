@@ -310,19 +310,9 @@ function ShellContent({ children }: { children: React.ReactNode }) {
       {/* RIGHT SIDEBAR — desktop lg+ (hidden on /room/ and /wire for full focus) */}
       {!pathname.startsWith("/room/") && !pathname.startsWith("/wire") && <RightSidebar />}
 
-      {/* FLOATING SHOP & ARCADE GAME QUICK DOCK */}
+      {/* FLOATING ECHO CLUB QUICK LAUNCHER */}
       {!pathname.startsWith("/arcade") && !pathname.startsWith("/shop") && !pathname.startsWith("/room") && !pathname.startsWith("/stage") && !pathname.startsWith("/wire") && (
         <div className="fixed bottom-36 md:bottom-20 right-4 md:right-6 z-40 flex flex-col items-end gap-2.5">
-          {/* Clean White Shop Icon (On top of Game Icon) */}
-          <Link
-            href="/shop"
-            className="bg-black text-white hover:bg-white hover:text-black border-2 border-white p-3 rounded-full shadow-2xl transition-all duration-200 hover:scale-110 flex items-center justify-center cursor-pointer group"
-            aria-label="Aura Shop"
-            title="Aura Shop"
-          >
-            <ShoppingCart className="w-4 h-4 text-white group-hover:text-black transition-colors" />
-          </Link>
-
           {/* Echo Club Launcher Icon */}
           <Link
             href="/arcade"
