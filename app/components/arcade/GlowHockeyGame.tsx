@@ -178,8 +178,8 @@ export default function GlowHockeyGame({ match, currentUid, isHost }: GlowHockey
         y: (targetP2.y - p2Pos.y) * (isVsBot ? 6 : 15),
       });
 
-      // 2. Step Physics Engine
-      Matter.Engine.update(engine, dt * 1000);
+      // 2. Step Physics Engine (Fixed 60fps delta recommended by Matter.js)
+      Matter.Engine.update(engine, 1000 / 60);
 
       // Clamp puck speed
       const pVel = puck.velocity;

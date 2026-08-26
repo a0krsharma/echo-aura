@@ -13,7 +13,7 @@
 
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, type Auth } from "firebase/auth";
-import { getFirestore, type Firestore } from "firebase/firestore";
+import { initializeFirestore, getFirestore, type Firestore } from "firebase/firestore";
 import { getAnalytics, isSupported, type Analytics } from "firebase/analytics";
 
 function cleanEnv(val: string | undefined): string | undefined {
@@ -42,9 +42,19 @@ export function getFirebaseAuth(): Auth {
   return getAuth(getFirebaseApp());
 }
 
-// ── Firestore ─────────────────────────────────────────────────────
+// ── Firestore (with QUIC network resilience & auto long-polling) ───
+let _db: Firestore | null = null;
 export function getFirebaseDb(): Firestore {
-  return getFirestore(getFirebaseApp());
+  if (_db) return _db;
+  const app = getFirebaseApp();
+  try {
+    _db = initializeFirestore(app, {
+      experimentalAutoDetectLongPolling: true,
+    });
+  } catch {
+    _db = getFirestore(app);
+  }
+  return _db;
 }
 
 // ── Analytics ─────────────────────────────────────────────────────
