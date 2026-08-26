@@ -3,9 +3,8 @@
 /**
  * app/radar/components/LiveRadarFeed.tsx
  * ─────────────────────────────────────────────────────
- * Real-time terminal feed subscribing to aggregated category telemetry & live rooms.
- * Supports regional focus (India / World).
- * Hardcore pure monochrome (Black & White).
+ * Real-time Acoustic Velocity Radar & Trending Hashtags Feed.
+ * Clean, minimal, world-class luxury audio discovery.
  */
 
 import React, { useEffect, useState, useRef } from 'react';
@@ -14,7 +13,7 @@ import { doc, collection, onSnapshot, query, limit } from 'firebase/firestore';
 import { getFirebaseDb } from '@/lib/firebase';
 import { RadarCategoryId, RadarRegion, RadarTopicItem, getRadarFeedDocId } from '@/lib/categories';
 import { aggregateRadarCategory } from '@/lib/radarAggregator';
-import { Play, Pause, Flame, ArrowRight, Radio, Globe } from 'lucide-react';
+import { Play, Pause, Flame, ArrowRight, Radio, Volume2, Sparkles, MessageSquare, Heart } from 'lucide-react';
 
 interface LiveRadarFeedProps {
   category?: RadarCategoryId;
@@ -30,7 +29,6 @@ export default function LiveRadarFeed({
   const router = useRouter();
   const [feedData, setFeedData] = useState<RadarTopicItem[]>([]);
   const [liveRoomsMap, setLiveRoomsMap] = useState<Record<string, { count: number; roomId?: string; roomName?: string }>>({});
-  const [isUpdating, setIsUpdating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [playingTag, setPlayingTag] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -48,15 +46,13 @@ export default function LiveRadarFeed({
         if (docSnap.exists()) {
           const data = docSnap.data();
           if (Array.isArray(data?.topics) && data.topics.length > 0) {
-            setIsUpdating(true);
             setFeedData(data.topics);
             setLoading(false);
-            setTimeout(() => setIsUpdating(false), 500);
             return;
           }
         }
 
-        // Fallback: If document not populated yet, trigger background aggregation
+        // Fallback: Trigger background aggregation
         aggregateRadarCategory(category, region).then((topics) => {
           setFeedData(topics);
           setLoading(false);
@@ -74,7 +70,7 @@ export default function LiveRadarFeed({
     return () => unsub();
   }, [category, region]);
 
-  // 2. Real-time Active Rooms Subscription (Instant 0ms Stage/Room Updates)
+  // 2. Real-time Active Rooms Subscription
   useEffect(() => {
     const db = getFirebaseDb();
     const roomsRef = collection(db, 'rooms');
@@ -150,48 +146,46 @@ export default function LiveRadarFeed({
     : feedData;
 
   return (
-    <div className={`space-y-4 font-mono ${isUpdating ? 'opacity-80' : 'opacity-100'} transition-opacity duration-300`}>
+    <div className="space-y-4 font-mono">
       <audio
         ref={audioRef}
         onEnded={() => setPlayingTag(null)}
         className="hidden"
       />
 
-      {/* Telemetry Header (Pure Monochrome) */}
-      <div className="border-b border-neutral-900 pb-2.5 flex justify-between items-center text-xs text-neutral-500">
+      {/* Telemetry Header */}
+      <div className="flex justify-between items-center text-xs pb-1">
         <div className="flex items-center gap-2">
-          <span className="text-white font-bold tracking-widest uppercase">
-            &gt;&gt; TRACKING: [ {region.toUpperCase()} • {category.toUpperCase()} ]
+          <span className="text-white font-black tracking-widest uppercase">
+            LIVE ACOUSTIC RADAR
           </span>
-          <span className="text-[10px] text-neutral-600 hidden sm:inline font-mono">
-            // ACOUSTIC VELOCITY ENGINE
+          <span className="text-[10px] text-neutral-500 font-bold hidden sm:inline">
+            • {region.toUpperCase()} • {category.toUpperCase()}
           </span>
         </div>
-        <div className="flex items-center gap-2 text-[11px] text-white font-mono">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
-          </span>
-          <span>● LIVE SOCKET</span>
+        <div className="flex items-center gap-2 text-xs text-emerald-400 font-bold">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span>REAL-TIME STREAM</span>
         </div>
       </div>
 
       {loading && feedData.length === 0 ? (
-        <div className="p-8 border border-neutral-900 bg-neutral-950 text-center space-y-2">
-          <div className="text-neutral-400 text-xs animate-pulse tracking-widest uppercase">
-            CALCULATING {region.toUpperCase()} ACOUSTIC VELOCITY...
+        <div className="p-12 border border-neutral-900 bg-neutral-950/60 rounded-3xl text-center space-y-2">
+          <Radio className="w-6 h-6 text-neutral-600 animate-pulse mx-auto" />
+          <div className="text-white text-xs font-black tracking-widest uppercase">
+            SCANNING {region.toUpperCase()} FREQUENCIES...
           </div>
-          <div className="text-[10px] text-neutral-600 font-mono">
-            GRAVITY DECAY RUNNING // SCANNING ACTIVE NODES
+          <div className="text-[10px] text-neutral-500 font-sans">
+            Calculating real-time acoustic velocity across active rooms
           </div>
         </div>
       ) : filteredData.length === 0 ? (
-        <div className="p-8 border border-neutral-900 bg-neutral-950 text-center space-y-2">
-          <div className="text-neutral-400 text-xs tracking-widest uppercase">
-            NO FREQUENCIES MATCHED &quot;{searchQuery}&quot;
+        <div className="p-12 border border-neutral-900 bg-neutral-950/60 rounded-3xl text-center space-y-2">
+          <div className="text-white text-xs font-bold tracking-widest uppercase">
+            NO FREQUENCIES FOUND FOR &quot;{searchQuery}&quot;
           </div>
-          <p className="text-[10px] text-neutral-600">
-            TRY SEARCHING FOR OTHER AUDIO HASHTAGS OR BROADCAST A NEW FREQUENCY
+          <p className="text-[11px] text-neutral-500 font-sans">
+            Try searching another topic or create an echo with this hashtag.
           </p>
         </div>
       ) : (
@@ -206,78 +200,70 @@ export default function LiveRadarFeed({
               <div
                 key={topic.tag}
                 onClick={() => handleInterceptFrequency(topic)}
-                className="border border-neutral-900 bg-black p-4 relative group hover:border-white transition-all cursor-pointer"
+                className="p-5 rounded-3xl border border-neutral-900 bg-neutral-950/80 hover:bg-neutral-950 hover:border-neutral-700 transition-all cursor-pointer space-y-3 shadow-md group relative overflow-hidden"
               >
-                {/* Live Audio Indicator Beacon (Pure Monochrome) */}
-                {hasLiveNodes && (
-                  <div className="absolute top-3.5 right-3.5 text-[10px] text-black bg-white flex items-center gap-1.5 font-bold tracking-wider px-2 py-0.5 border border-white">
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-black animate-pulse"></span>
-                    {realTimeLiveCount} {realTimeLiveCount === 1 ? 'LIVE NODE' : 'LIVE NODES'}
+                {/* Top Row: Rank Badge, Live Indicator & Velocity */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-7 h-7 rounded-xl bg-neutral-900 border border-neutral-800 text-white font-black text-xs flex items-center justify-center shrink-0">
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
+                    <h3 className="text-base sm:text-lg font-black text-white group-hover:text-amber-400 transition-colors tracking-tight">
+                      {topic.tag}
+                    </h3>
                   </div>
-                )}
 
-                {/* Index, Region, and Velocity Score */}
-                <div className="flex items-center gap-2 text-xs text-neutral-500 mb-1.5">
-                  <span className="font-bold text-neutral-400">
-                    {String(index + 1).padStart(2, '0')}
-                  </span>
-                  <span>//</span>
-                  <span className="uppercase text-[10px] text-neutral-400 border border-neutral-900 px-1 py-0.5">
-                    {topic.region || region}
-                  </span>
-                  <span>•</span>
-                  <span className="text-neutral-400 flex items-center gap-1">
-                    <Flame className="w-3 h-3 text-neutral-400 inline" />
-                    VELOCITY: <strong className="text-white">{topic.velocity_score}</strong>
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {hasLiveNodes && (
+                      <span className="px-2.5 py-1 bg-emerald-950/90 border border-emerald-500 text-emerald-400 text-[10px] font-black uppercase rounded-full flex items-center gap-1.5 shadow-[0_0_12px_rgba(52,211,153,0.3)] animate-pulse">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        <span>{realTimeLiveCount} LIVE {realTimeLiveCount === 1 ? 'ROOM' : 'ROOMS'}</span>
+                      </span>
+                    )}
+                    <span className="px-2.5 py-1 bg-neutral-900 border border-neutral-800 text-neutral-300 text-[10px] font-black uppercase rounded-full flex items-center gap-1">
+                      <Flame className="w-3 h-3 text-amber-400" />
+                      <span>{topic.velocity_score.toLocaleString()} VELOCITY</span>
+                    </span>
+                  </div>
                 </div>
 
-                {/* Hashtag / Topic Title */}
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-bold text-white tracking-tight group-hover:text-white transition-colors">
-                    {topic.tag}
-                  </h3>
-                </div>
-
-                {/* Topic Headline / Summary */}
+                {/* Headline or Quote */}
                 {topic.headline && (
-                  <p className="mt-1.5 text-xs text-neutral-400 leading-relaxed line-clamp-2">
+                  <p className="text-xs text-neutral-300 font-sans leading-relaxed line-clamp-2">
                     {topic.headline}
                   </p>
                 )}
 
-                {/* Acoustic & Engagement Telemetry */}
-                <div className="mt-3.5 flex flex-wrap items-center gap-3 text-[11px] text-neutral-400 border-t border-neutral-900 pt-2.5">
-                  <span className="bg-neutral-950 px-2 py-0.5 border border-neutral-800 text-neutral-300">
-                    [ {topic.voice_replies || 0} REVERBS ]
-                  </span>
-                  <span className="bg-neutral-950 px-2 py-0.5 border border-neutral-800 text-neutral-300">
-                    [ {topic.total_pulses || 0} PULSES ]
-                  </span>
-                  {topic.shares !== undefined && topic.shares > 0 && (
-                    <span className="bg-neutral-950 px-2 py-0.5 border border-neutral-800 text-neutral-400 hidden sm:inline">
-                      [ {topic.shares} ORBITS ]
+                {/* Bottom Row: Telemetry Pills & Audio Preview */}
+                <div className="flex items-center justify-between gap-2 pt-2 border-t border-neutral-900/80">
+                  <div className="flex items-center gap-2 text-[10px] text-neutral-400 font-bold uppercase">
+                    <span className="px-2 py-0.5 bg-neutral-900/80 border border-neutral-800/80 rounded-md">
+                      💬 {topic.voice_replies || 0} REVERBS
                     </span>
-                  )}
-                  {topic.sample_audio_url && (
-                    <button
-                      onClick={(e) => handlePlayAudio(e, topic)}
-                      className="ml-auto flex items-center gap-1 text-[10px] px-2 py-0.5 border border-neutral-700 text-white hover:bg-white hover:text-black transition-colors cursor-pointer"
-                    >
-                      {isPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-                      <span>{isPlaying ? 'PAUSE CLAMP' : 'PREVIEW CLIP'}</span>
-                    </button>
-                  )}
-                </div>
+                    <span className="px-2 py-0.5 bg-neutral-900/80 border border-neutral-800/80 rounded-md">
+                      ⚡ {topic.total_pulses || 0} PULSES
+                    </span>
+                  </div>
 
-                {/* Hover Action Trigger Bar */}
-                <div className="mt-3 pt-2 border-t border-neutral-900 flex justify-between items-center opacity-80 group-hover:opacity-100 transition-opacity">
-                  <span className="text-[10px] text-neutral-500 font-mono">
-                    {hasLiveNodes ? '>> ACTIVE AUDIO ROOM RUNNING' : '>> FREQUENCY ARCHIVES & DISPATCHES'}
-                  </span>
-                  <span className="text-xs font-bold text-white flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                    &gt;&gt; INTERCEPT FREQUENCY <ArrowRight className="w-3.5 h-3.5" />
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {topic.sample_audio_url && (
+                      <button
+                        onClick={(e) => handlePlayAudio(e, topic)}
+                        className={`px-3 py-1 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer ${
+                          isPlaying
+                            ? 'bg-white text-black shadow-md'
+                            : 'bg-neutral-900 text-neutral-300 hover:text-white hover:bg-neutral-800 border border-neutral-800'
+                        }`}
+                      >
+                        {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                        <span>{isPlaying ? 'PAUSE' : 'PREVIEW'}</span>
+                      </button>
+                    )}
+
+                    <span className="text-xs font-bold text-white group-hover:text-amber-400 transition-colors flex items-center gap-1">
+                      EXPLORE →
+                    </span>
+                  </div>
                 </div>
               </div>
             );
