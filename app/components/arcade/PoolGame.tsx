@@ -15,11 +15,8 @@ import {
   Compass,
   ChevronDown,
   ChevronUp,
-  CircleDot,
-  Flame,
-  ShieldAlert,
+  RotateCcw,
   ArrowLeftRight,
-  Target,
 } from "lucide-react";
 
 interface PoolGameProps {
@@ -202,9 +199,9 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const ps = match.poolState;
-  const isMyTurn = (ps?.currentTurnUid === currentUid || !ps?.currentTurnUid) && match.status === "PLAYING";
   const playerUids = Object.keys(match.players || {});
   const isPlayer1 = playerUids[0] === currentUid;
+  const isMyTurn = (ps?.currentTurnUid === currentUid || !ps?.currentTurnUid) && match.status === "PLAYING";
 
   // Aiming, Spin and Controls State
   const [isAiming, setIsAiming] = useState(false);
@@ -214,6 +211,25 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
   const [isBallInHand, setIsBallInHand] = useState(false);
   const [isPushOutDeclared, setIsPushOutDeclared] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
+
+  // ── Stable Sync Refs (Prevents Any Stale Closure in Physics/RAF Loop) ──
+  const matchRef = useRef(match);
+  matchRef.current = match;
+  const psRef = useRef(ps);
+  psRef.current = ps;
+  const currentUidRef = useRef(currentUid);
+  currentUidRef.current = currentUid;
+  const disciplineRef = useRef(discipline);
+  disciplineRef.current = discipline;
+
+  const dragStartRef = useRef(dragStart);
+  dragStartRef.current = dragStart;
+  const dragCurrentRef = useRef(dragCurrent);
+  dragCurrentRef.current = dragCurrent;
+  const isAimingRef = useRef(isAiming);
+  isAimingRef.current = isAiming;
+  const powerRef = useRef(power);
+  powerRef.current = power;
 
   // Local physics pieces state
   const ballsRef = useRef<PoolBall[]>([]);
@@ -226,20 +242,19 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
   const isBreakShotRef = useRef(false);
   const pocketLocationsThisShotRef = useRef<{ ball: PoolBall; pocketName: string }[]>([]);
 
-  // Start Safety Watchdog Timer (Forces settlement if balls jitter past 4 seconds)
-  const startWatchdog = useCallback(() => {
-    if (watchdogTimerRef.current) clearTimeout(watchdogTimerRef.current);
-    watchdogTimerRef.current = setTimeout(() => {
-      if (isSimulatingRef.current) {
-        ballsRef.current.forEach((b) => {
-          b.vx = 0;
-          b.vy = 0;
-        });
-        isSimulatingRef.current = false;
-        setIsSimulating(false);
-        finalizeShotTurn();
-      }
-    }, 4000);
+  // Safety Unlock Failsafe (Forces game to unlock if ever stuck)
+  const forceUnlockTurn = useCallback(() => {
+    ballsRef.current.forEach((b) => {
+      b.vx = 0;
+      b.vy = 0;
+    });
+    isSimulatingRef.current = false;
+    setIsSimulating(false);
+    setIsAiming(false);
+    setDragStart(null);
+    setDragCurrent(null);
+    setPower(0);
+    soundSynth.playSubtlePop();
   }, []);
 
   // Initialize or Sync balls from match state
@@ -261,6 +276,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
   // Handle Switching Discipline
   const handleSelectDiscipline = useCallback(async (newDiscipline: PoolDiscipline) => {
     setDiscipline(newDiscipline);
+    disciplineRef.current = newDiscipline;
     soundSynth.playSubtlePop();
     const newRack = createDisciplineRack(newDiscipline);
     ballsRef.current = newRack;
@@ -302,6 +318,273 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
     return unpocketed.reduce((min, b) => ((b.number || 99) < (min.number || 99) ? b : min), unpocketed[0]);
   }, [ballsRef.current, ps?.ballsStr]);
 
+  // Finalize Shot and Apply Official Rules using Latest Match State
+  const finalizeShotTurn = useCallback(async () => {
+    const latestMatch = matchRef.current;
+    const latestPs = latestMatch.poolState;
+    const currentActiveUid = currentUidRef.current;
+    const activeDiscipline = disciplineRef.current;
+
+    const pocketed = [...pocketedThisShotRef.current];
+    const pocketLocations = [...pocketLocationsThisShotRef.current];
+    const isScratch = cueScratchRef.current;
+    const balls = ballsRef.current;
+    const isBreak = isBreakShotRef.current;
+    const firstHit = firstContactBallRef.current;
+
+    const currentPlayersList = Object.keys(latestMatch.players || {});
+    const shooterUid = activeShooterUidRef.current || latestPs?.currentTurnUid || currentActiveUid;
+    const isShooterP1 = currentPlayersList[0] === shooterUid;
+    const otherPlayerUid = currentPlayersList.find((id) => id !== shooterUid) || currentActiveUid;
+    const shooterHandle = latestMatch.players[shooterUid]?.handle || "Shooter";
+
+    let nextTurnUid = otherPlayerUid;
+    let newP1Score = latestPs?.p1Score || 0;
+    let newP2Score = latestPs?.p2Score || 0;
+    let newP1Type = latestPs?.p1Type || null;
+    let newP2Type = latestPs?.p2Type || null;
+    let actionLog = "";
+    let isGameOver = false;
+    let winnerUid = shooterUid;
+
+    // Reset Cue Ball if Scratched
+    const cueBall = balls.find((b) => b.type === "cue");
+    if (cueBall) {
+      cueBall.isPocketed = false;
+      cueBall.vx = 0;
+      cueBall.vy = 0;
+      if (isScratch) {
+        cueBall.x = TABLE_WIDTH / 2;
+        cueBall.y = TABLE_HEIGHT - 110;
+        if (otherPlayerUid === currentActiveUid) {
+          setIsBallInHand(true);
+        }
+      }
+    }
+
+    // ── 8-BALL DISCIPLINE ──
+    if (activeDiscipline === "8_BALL") {
+      const eightBallPocketed = pocketed.some((b) => b.type === "8ball");
+      const solidsPocketed = pocketed.filter((b) => b.type === "solid").length;
+      const stripesPocketed = pocketed.filter((b) => b.type === "stripe").length;
+      const remainingSolids = balls.filter((b) => b.type === "solid" && !b.isPocketed).length;
+      const remainingStripes = balls.filter((b) => b.type === "stripe" && !b.isPocketed).length;
+
+      const shooterSuit = isShooterP1 ? newP1Type : newP2Type;
+      const shooterRemainingGroup = shooterSuit === "SOLIDS" ? remainingSolids : shooterSuit === "STRIPES" ? remainingStripes : remainingSolids + remainingStripes;
+
+      if (isBreak) {
+        const totalPocketedOnBreak = solidsPocketed + stripesPocketed + (eightBallPocketed ? 1 : 0);
+        const ballsCrossedHeadString = balls.filter((b) => b.type !== "cue" && !b.isPocketed && b.y > TABLE_HEIGHT - 120).length;
+        const breakScore = totalPocketedOnBreak + ballsCrossedHeadString;
+        if (breakScore >= 3 && !isScratch) {
+          actionLog = `⚡ THREE-POINT BREAK PASSED (${totalPocketedOnBreak} pocketed + ${ballsCrossedHeadString} crossed)! Legal break.`;
+        } else if (isScratch) {
+          actionLog = `⚠️ BREAK SCRATCH by ${shooterHandle}! Ball-in-Hand for next shooter.`;
+        } else {
+          actionLog = `⚠️ SOFT BREAK by ${shooterHandle} (${breakScore}/3 points).`;
+        }
+      }
+
+      if (isScratch) {
+        soundSynth.playBuzzer();
+        if (eightBallPocketed) {
+          actionLog = `❌ 8-BALL SCRATCH FOUL by ${shooterHandle}! Instant game loss.`;
+          isGameOver = true;
+          winnerUid = otherPlayerUid;
+        } else {
+          actionLog = `⚠️ SCRATCH by ${shooterHandle}! Turn passes with Ball-in-Hand.`;
+          nextTurnUid = otherPlayerUid;
+        }
+      } else if (eightBallPocketed) {
+        if (shooterSuit && shooterRemainingGroup === 0) {
+          actionLog = `🏆 8-BALL POCKETED LEGALLY by ${shooterHandle}! CHAMPIONSHIP VICTORY!`;
+          isGameOver = true;
+          winnerUid = shooterUid;
+          soundSynth.playFanfare();
+        } else {
+          actionLog = `❌ 8-Ball pocketed prematurely by ${shooterHandle}! Automatic frame loss.`;
+          isGameOver = true;
+          winnerUid = otherPlayerUid;
+          soundSynth.playBuzzer();
+        }
+      } else if (solidsPocketed > 0 || stripesPocketed > 0) {
+        // Suit Assignment on Open Table
+        if (!newP1Type && !newP2Type) {
+          if (solidsPocketed > 0 && stripesPocketed === 0) {
+            if (isShooterP1) { newP1Type = "SOLIDS"; newP2Type = "STRIPES"; }
+            else { newP2Type = "SOLIDS"; newP1Type = "STRIPES"; }
+            actionLog = `${shooterHandle} claimed SOLIDS!`;
+          } else if (stripesPocketed > 0 && solidsPocketed === 0) {
+            if (isShooterP1) { newP1Type = "STRIPES"; newP2Type = "SOLIDS"; }
+            else { newP2Type = "STRIPES"; newP1Type = "SOLIDS"; }
+            actionLog = `${shooterHandle} claimed STRIPES!`;
+          }
+        }
+
+        const currentShooterSuit = isShooterP1 ? newP1Type : newP2Type;
+        const assignedTargetPocketed =
+          (currentShooterSuit === "SOLIDS" && solidsPocketed > 0) ||
+          (currentShooterSuit === "STRIPES" && stripesPocketed > 0) ||
+          (!currentShooterSuit);
+
+        if (assignedTargetPocketed) {
+          const count = solidsPocketed + stripesPocketed;
+          if (isShooterP1) newP1Score += count * 10;
+          else newP2Score += count * 10;
+          actionLog = `${shooterHandle} pocketed ${count} ball(s)! Turn continues!`;
+          nextTurnUid = shooterUid; // GOALED -> KEEPS SHOOTING!
+        } else {
+          actionLog = `${shooterHandle} pocketed opponent's ball. Turn passes.`;
+          nextTurnUid = otherPlayerUid;
+        }
+      } else {
+        nextTurnUid = otherPlayerUid; // MISSED -> PASSES TURN!
+        actionLog = `${shooterHandle} missed. Turn passes.`;
+      }
+    } else if (activeDiscipline === "9_BALL") {
+      const unpocketed = balls.filter((b) => b.type !== "cue" && !b.isPocketed && b.number !== undefined);
+      const curLowest = unpocketed.reduce((min, b) => ((b.number || 99) < (min.number || 99) ? b : min), unpocketed[0]);
+      const nineBallPocketed = pocketed.some((b) => b.number === 9);
+      const isLegalHit = !firstHit || (curLowest && firstHit.number === curLowest.number);
+
+      if (isScratch || !isLegalHit) {
+        soundSynth.playBuzzer();
+        actionLog = isScratch ? `⚠️ SCRATCH by ${shooterHandle}! Ball-in-Hand for opponent.` : `⚠️ FOUL by ${shooterHandle}! Failed to hit lowest ball (#${curLowest?.number}) first.`;
+        nextTurnUid = otherPlayerUid;
+      } else if (nineBallPocketed) {
+        actionLog = `🏆 9-BALL LEGALLY POCKETED by ${shooterHandle}! VICTORY!`;
+        isGameOver = true;
+        winnerUid = shooterUid;
+        soundSynth.playFanfare();
+      } else if (pocketed.length > 0) {
+        const count = pocketed.length;
+        if (isShooterP1) newP1Score += count * 10;
+        else newP2Score += count * 10;
+        actionLog = `${shooterHandle} legally pocketed ${count} ball(s)! Turn continues!`;
+        nextTurnUid = shooterUid;
+      } else {
+        nextTurnUid = otherPlayerUid;
+        actionLog = `${shooterHandle} missed. Turn passes.`;
+      }
+    } else if (activeDiscipline === "10_BALL") {
+      const unpocketed = balls.filter((b) => b.type !== "cue" && !b.isPocketed && b.number !== undefined);
+      const curLowest = unpocketed.reduce((min, b) => ((b.number || 99) < (min.number || 99) ? b : min), unpocketed[0]);
+      const tenBallPocketed = pocketed.some((b) => b.number === 10);
+      const isLegalHit = !firstHit || (curLowest && firstHit.number === curLowest.number);
+
+      if (isScratch || !isLegalHit) {
+        soundSynth.playBuzzer();
+        actionLog = isScratch ? `⚠️ SCRATCH by ${shooterHandle}! Ball-in-Hand for opponent.` : `⚠️ FOUL by ${shooterHandle}! Failed to hit lowest ball (#${curLowest?.number}) first.`;
+        nextTurnUid = otherPlayerUid;
+      } else if (tenBallPocketed) {
+        actionLog = `🏆 10-BALL LEGALLY POCKETED by ${shooterHandle}! CHAMPIONSHIP VICTORY!`;
+        isGameOver = true;
+        winnerUid = shooterUid;
+        soundSynth.playFanfare();
+      } else if (pocketed.length > 0) {
+        const count = pocketed.length;
+        if (isShooterP1) newP1Score += count * 10;
+        else newP2Score += count * 10;
+        actionLog = `${shooterHandle} legally pocketed ${count} ball(s)! Turn continues!`;
+        nextTurnUid = shooterUid;
+      } else {
+        nextTurnUid = otherPlayerUid;
+        actionLog = `${shooterHandle} missed. Turn passes.`;
+      }
+    } else if (activeDiscipline === "STRAIGHT_POOL") {
+      if (isScratch) {
+        soundSynth.playBuzzer();
+        actionLog = `⚠️ SCRATCH by ${shooterHandle}! -1 pt penalty.`;
+        if (isShooterP1) newP1Score = Math.max(0, newP1Score - 1);
+        else newP2Score = Math.max(0, newP2Score - 1);
+        nextTurnUid = otherPlayerUid;
+      } else if (pocketed.length > 0) {
+        const count = pocketed.length;
+        if (isShooterP1) newP1Score += count;
+        else newP2Score += count;
+        actionLog = `${shooterHandle} scored +${count} pt(s)! High run continues!`;
+        nextTurnUid = shooterUid;
+
+        const remainingCount = balls.filter((b) => b.type !== "cue" && !b.isPocketed).length;
+        if (remainingCount <= 1 || newP1Score >= 15 || newP2Score >= 15) {
+          actionLog = `🏆 STRAIGHT POOL TARGET REACHED! Winner: ${shooterHandle}!`;
+          isGameOver = true;
+          winnerUid = shooterUid;
+          soundSynth.playFanfare();
+        }
+      } else {
+        nextTurnUid = otherPlayerUid;
+        actionLog = `${shooterHandle} missed. Turn passes.`;
+      }
+    } else if (activeDiscipline === "ONE_POCKET") {
+      const shooterDesignatedPocket = isShooterP1 ? "BOT_LEFT" : "BOT_RIGHT";
+      const legalScored = pocketLocations.filter((item) => item.pocketName === shooterDesignatedPocket).length;
+
+      if (isScratch) {
+        soundSynth.playBuzzer();
+        actionLog = `⚠️ SCRATCH by ${shooterHandle}! Turn passes.`;
+        nextTurnUid = otherPlayerUid;
+      } else if (legalScored > 0) {
+        if (isShooterP1) newP1Score += legalScored;
+        else newP2Score += legalScored;
+        actionLog = `${shooterHandle} scored +${legalScored} ball(s) in designated pocket!`;
+        nextTurnUid = shooterUid;
+
+        const currentScore = isShooterP1 ? newP1Score : newP2Score;
+        if (currentScore >= 8) {
+          actionLog = `🏆 8 BALLS SCORED IN DESIGNATED POCKET! ${shooterHandle} WINS!`;
+          isGameOver = true;
+          winnerUid = shooterUid;
+          soundSynth.playFanfare();
+        }
+      } else {
+        nextTurnUid = otherPlayerUid;
+        actionLog = `${shooterHandle} did not score in designated pocket. Turn passes.`;
+      }
+    }
+
+    // Unlock UI immediately
+    isSimulatingRef.current = false;
+    setIsSimulating(false);
+
+    try {
+      await firePoolShot(
+        latestMatch.id,
+        currentActiveUid,
+        0,
+        0,
+        balls,
+        {
+          nextTurnUid,
+          p1Score: newP1Score,
+          p2Score: newP2Score,
+          p1Type: newP1Type,
+          p2Type: newP2Type,
+          actionLog,
+          isGameOver,
+          winnerUid,
+        }
+      );
+    } catch (err) {
+      console.error("Failed to fire pool shot turn:", err);
+    }
+  }, []);
+
+  // Start Safety Watchdog Timer (Forces settlement if balls jitter past 3.5 seconds)
+  const startWatchdog = useCallback(() => {
+    if (watchdogTimerRef.current) clearTimeout(watchdogTimerRef.current);
+    watchdogTimerRef.current = setTimeout(() => {
+      if (isSimulatingRef.current) {
+        ballsRef.current.forEach((b) => {
+          b.vx = 0;
+          b.vy = 0;
+        });
+        finalizeShotTurn();
+      }
+    }, 3500);
+  }, [finalizeShotTurn]);
+
   // Intelligent AI Bot Shot in VS_COMPUTER mode
   useEffect(() => {
     if (!ps || match.status !== "PLAYING" || match.mode !== "VS_COMPUTER") return;
@@ -319,7 +602,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         // Mark bot as active shooter
         activeShooterUidRef.current = botPlayer.uid;
 
-        // 1. Pick target ball based on active discipline
+        // Pick target ball based on active discipline
         let target = targets[0];
         if ((discipline === "9_BALL" || discipline === "10_BALL") && lowestBallOnTable) {
           target = lowestBallOnTable;
@@ -337,7 +620,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
           target = targets[Math.floor(Math.random() * targets.length)];
         }
 
-        // 2. Intelligent Ghost-Ball Aiming toward best pocket
+        // Intelligent Ghost-Ball Aiming toward best pocket
         let bestPocket = POCKETS[0];
         let minPktDist = 9999;
         POCKETS.forEach((pkt) => {
@@ -387,7 +670,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
     }
   }, [match, ps?.currentTurnUid, isSimulating, discipline, lowestBallOnTable, playerUids, ps, startWatchdog]);
 
-  // Main Canvas & Continuous Physics Render Loop
+  // Main Canvas & Continuous Physics Render Loop (Ref-Based, Never Tears Down On Pointer Moves)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -398,6 +681,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
 
     const updatePhysicsAndRender = () => {
       const balls = ballsRef.current;
+      const activeDisc = disciplineRef.current;
       let anyMoving = false;
 
       // 1. Physics Sub-Stepping for High Accuracy & Continuous Collision
@@ -520,8 +804,6 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
       // Check if Simulation Finished
       if (isSimulatingRef.current && !anyMoving) {
         if (watchdogTimerRef.current) clearTimeout(watchdogTimerRef.current);
-        isSimulatingRef.current = false;
-        setIsSimulating(false);
         finalizeShotTurn();
       }
 
@@ -613,7 +895,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
       });
 
       // Highlight Designated Pockets in ONE POCKET mode
-      if (discipline === "ONE_POCKET") {
+      if (activeDisc === "ONE_POCKET") {
         ctx.save();
         ctx.strokeStyle = "#34d399";
         ctx.lineWidth = 2.5;
@@ -635,6 +917,9 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
       }
 
       // D. Draw Tournament Balls
+      const unpocketedRot = balls.filter((b) => b.type !== "cue" && !b.isPocketed && b.number !== undefined);
+      const lowestRotBall = unpocketedRot.length > 0 ? unpocketedRot.reduce((min, b) => ((b.number || 99) < (min.number || 99) ? b : min), unpocketedRot[0]) : null;
+
       balls.forEach((b) => {
         if (b.isPocketed) return;
 
@@ -645,7 +930,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         ctx.fill();
 
         // Pulsing Gold Target Halo for Lowest Ball in Rotation Games
-        if ((discipline === "9_BALL" || discipline === "10_BALL") && lowestBallOnTable && lowestBallOnTable.id === b.id) {
+        if ((activeDisc === "9_BALL" || activeDisc === "10_BALL") && lowestRotBall && lowestRotBall.id === b.id) {
           ctx.beginPath();
           ctx.arc(b.x, b.y, b.radius + 4, 0, Math.PI * 2);
           ctx.strokeStyle = "#fbbf24";
@@ -738,12 +1023,12 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         ctx.restore();
       });
 
-      // E. Mathematical Ghost Ball & Tangent Trajectory System
-      if (isAiming && dragStart && dragCurrent) {
+      // E. Mathematical Ghost Ball & Tangent Trajectory System (Using Active Drag Refs)
+      if (isAimingRef.current && dragStartRef.current && dragCurrentRef.current) {
         const cueBall = balls.find((b) => b.type === "cue");
         if (cueBall && !cueBall.isPocketed) {
-          const pullDx = dragStart.x - dragCurrent.x;
-          const pullDy = dragStart.y - dragCurrent.y;
+          const pullDx = dragStartRef.current.x - dragCurrentRef.current.x;
+          const pullDy = dragStartRef.current.y - dragCurrentRef.current.y;
           const aimDist = Math.hypot(pullDx, pullDy);
 
           if (aimDist > 2) {
@@ -837,7 +1122,8 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
             // F. Tournament Cue Stick
             ctx.save();
             const cueStickLength = 160;
-            const cueOffset = 18 + power * 0.4;
+            const curPwr = powerRef.current;
+            const cueOffset = 18 + curPwr * 0.4;
             const stickStartX = cueBall.x - dirX * cueOffset;
             const stickStartY = cueBall.y - dirY * cueOffset;
             const stickEndX = cueBall.x - dirX * (cueOffset + cueStickLength);
@@ -872,11 +1158,12 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
       cancelAnimationFrame(animId);
       if (watchdogTimerRef.current) clearTimeout(watchdogTimerRef.current);
     };
-  }, [discipline, isAiming, dragStart, dragCurrent, power, lowestBallOnTable]);
+  }, [finalizeShotTurn]);
 
   // Pointer Interaction Handlers with Touch Capture
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!isMyTurn || isSimulating) return;
+    const isTurn = (psRef.current?.currentTurnUid === currentUidRef.current || !psRef.current?.currentTurnUid) && matchRef.current.status === "PLAYING";
+    if (!isTurn || isSimulatingRef.current) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -910,16 +1197,20 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
     if (cueBall && !cueBall.isPocketed) {
       cueBall.vx = 0;
       cueBall.vy = 0;
-      activeShooterUidRef.current = currentUid;
+      activeShooterUidRef.current = currentUidRef.current;
       setIsAiming(true);
+      isAimingRef.current = true;
       setDragStart({ x: clickX, y: clickY });
+      dragStartRef.current = { x: clickX, y: clickY };
       setDragCurrent({ x: clickX, y: clickY });
+      dragCurrentRef.current = { x: clickX, y: clickY };
       setPower(0);
+      powerRef.current = 0;
     }
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!isAiming || !dragStart) return;
+    if (!isAimingRef.current || !dragStartRef.current) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -930,10 +1221,12 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
     const curY = (e.clientY - rect.top) * scaleY;
 
     setDragCurrent({ x: curX, y: curY });
+    dragCurrentRef.current = { x: curX, y: curY };
 
-    const dist = Math.hypot(dragStart.x - curX, dragStart.y - curY);
+    const dist = Math.hypot(dragStartRef.current.x - curX, dragStartRef.current.y - curY);
     const calculatedPower = Math.min(100, Math.round((dist / 140) * 100));
     setPower(calculatedPower);
+    powerRef.current = calculatedPower;
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -941,15 +1234,16 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
       (e.target as HTMLElement).releasePointerCapture(e.pointerId);
     } catch (_) {}
 
-    if (!isAiming || !dragStart || !dragCurrent) {
+    if (!isAimingRef.current || !dragStartRef.current || !dragCurrentRef.current) {
       setIsAiming(false);
+      isAimingRef.current = false;
       return;
     }
 
     const cueBall = ballsRef.current.find((b) => b.type === "cue");
     if (cueBall) {
-      const pullDx = dragStart.x - dragCurrent.x;
-      const pullDy = dragStart.y - dragCurrent.y;
+      const pullDx = dragStartRef.current.x - dragCurrentRef.current.x;
+      const pullDy = dragStartRef.current.y - dragCurrentRef.current.y;
       const pullDist = Math.hypot(pullDx, pullDy);
 
       if (pullDist > 4) {
@@ -957,7 +1251,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         const impulseX = pullDx * forceMultiplier;
         const impulseY = pullDy * forceMultiplier;
 
-        activeShooterUidRef.current = currentUid;
+        activeShooterUidRef.current = currentUidRef.current;
         cueBall.vx = impulseX;
         cueBall.vy = impulseY;
 
@@ -968,7 +1262,7 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         firstContactBallRef.current = null;
 
         const totalRemaining = ballsRef.current.filter((b) => b.type !== "cue" && !b.isPocketed).length;
-        isBreakShotRef.current = totalRemaining === POOL_DISCIPLINES[discipline].ballsCount;
+        isBreakShotRef.current = totalRemaining === POOL_DISCIPLINES[disciplineRef.current].ballsCount;
 
         isSimulatingRef.current = true;
         setIsSimulating(true);
@@ -977,251 +1271,14 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
     }
 
     setIsAiming(false);
+    isAimingRef.current = false;
     setDragStart(null);
+    dragStartRef.current = null;
     setDragCurrent(null);
+    dragCurrentRef.current = null;
     setPower(0);
+    powerRef.current = 0;
   };
-
-  // Finalize Shot and Apply Official Rules with Strict Turn Continuation & Alternation
-  const finalizeShotTurn = useCallback(async () => {
-    const pocketed = pocketedThisShotRef.current;
-    const pocketLocations = pocketLocationsThisShotRef.current;
-    const isScratch = cueScratchRef.current;
-    const balls = ballsRef.current;
-    const isBreak = isBreakShotRef.current;
-    const firstHit = firstContactBallRef.current;
-
-    const shooterUid = activeShooterUidRef.current || ps?.currentTurnUid || currentUid;
-    const isShooterP1 = playerUids[0] === shooterUid;
-    const otherPlayerUid = playerUids.find((id) => id !== shooterUid) || currentUid;
-    const shooterHandle = match.players[shooterUid]?.handle || "Shooter";
-
-    let nextTurnUid = otherPlayerUid;
-    let newP1Score = ps?.p1Score || 0;
-    let newP2Score = ps?.p2Score || 0;
-    let newP1Type = ps?.p1Type || null;
-    let newP2Type = ps?.p2Type || null;
-    let actionLog = "";
-    let isGameOver = false;
-    let winnerUid = shooterUid;
-
-    // Reset Cue Ball if Scratched
-    const cueBall = balls.find((b) => b.type === "cue");
-    if (cueBall) {
-      cueBall.isPocketed = false;
-      cueBall.vx = 0;
-      cueBall.vy = 0;
-      if (isScratch) {
-        cueBall.x = TABLE_WIDTH / 2;
-        cueBall.y = TABLE_HEIGHT - 110;
-        if (otherPlayerUid === currentUid) {
-          setIsBallInHand(true);
-        }
-      }
-    }
-
-    // ── DISCIPLINE RULES RESOLUTION ──
-
-    if (discipline === "8_BALL") {
-      const eightBallPocketed = pocketed.some((b) => b.type === "8ball");
-      const solidsPocketed = pocketed.filter((b) => b.type === "solid").length;
-      const stripesPocketed = pocketed.filter((b) => b.type === "stripe").length;
-      const remainingSolids = balls.filter((b) => b.type === "solid" && !b.isPocketed).length;
-      const remainingStripes = balls.filter((b) => b.type === "stripe" && !b.isPocketed).length;
-
-      const shooterSuit = isShooterP1 ? newP1Type : newP2Type;
-      const shooterRemainingGroup = shooterSuit === "SOLIDS" ? remainingSolids : shooterSuit === "STRIPES" ? remainingStripes : remainingSolids + remainingStripes;
-
-      if (isBreak) {
-        const totalPocketedOnBreak = solidsPocketed + stripesPocketed + (eightBallPocketed ? 1 : 0);
-        const ballsCrossedHeadString = balls.filter((b) => b.type !== "cue" && !b.isPocketed && b.y > TABLE_HEIGHT - 120).length;
-        const breakScore = totalPocketedOnBreak + ballsCrossedHeadString;
-        if (breakScore >= 3 && !isScratch) {
-          actionLog = `⚡ THREE-POINT BREAK PASSED (${totalPocketedOnBreak} pocketed + ${ballsCrossedHeadString} crossed)! Legal break.`;
-        } else if (isScratch) {
-          actionLog = `⚠️ BREAK SCRATCH by ${shooterHandle}! Ball-in-Hand for next shooter.`;
-        } else {
-          actionLog = `⚠️ SOFT BREAK by ${shooterHandle} (${breakScore}/3 points).`;
-        }
-      }
-
-      if (isScratch) {
-        soundSynth.playBuzzer();
-        if (eightBallPocketed) {
-          actionLog = `❌ 8-BALL SCRATCH FOUL by ${shooterHandle}! Instant game loss.`;
-          isGameOver = true;
-          winnerUid = otherPlayerUid;
-        } else {
-          actionLog = `⚠️ SCRATCH by ${shooterHandle}! Turn passes with Ball-in-Hand.`;
-          nextTurnUid = otherPlayerUid;
-        }
-      } else if (eightBallPocketed) {
-        if (shooterSuit && shooterRemainingGroup === 0) {
-          actionLog = `🏆 8-BALL POCKETED LEGALLY by ${shooterHandle}! CHAMPIONSHIP VICTORY!`;
-          isGameOver = true;
-          winnerUid = shooterUid;
-          soundSynth.playFanfare();
-        } else {
-          actionLog = `❌ 8-Ball pocketed prematurely by ${shooterHandle}! Automatic frame loss.`;
-          isGameOver = true;
-          winnerUid = otherPlayerUid;
-          soundSynth.playBuzzer();
-        }
-      } else if (solidsPocketed > 0 || stripesPocketed > 0) {
-        // Suit Assignment on Open Table
-        if (!newP1Type && !newP2Type) {
-          if (solidsPocketed > 0 && stripesPocketed === 0) {
-            if (isShooterP1) { newP1Type = "SOLIDS"; newP2Type = "STRIPES"; }
-            else { newP2Type = "SOLIDS"; newP1Type = "STRIPES"; }
-            actionLog = `${shooterHandle} claimed SOLIDS!`;
-          } else if (stripesPocketed > 0 && solidsPocketed === 0) {
-            if (isShooterP1) { newP1Type = "STRIPES"; newP2Type = "SOLIDS"; }
-            else { newP2Type = "STRIPES"; newP1Type = "SOLIDS"; }
-            actionLog = `${shooterHandle} claimed STRIPES!`;
-          }
-        }
-
-        const currentShooterSuit = isShooterP1 ? newP1Type : newP2Type;
-        const assignedTargetPocketed =
-          (currentShooterSuit === "SOLIDS" && solidsPocketed > 0) ||
-          (currentShooterSuit === "STRIPES" && stripesPocketed > 0) ||
-          (!currentShooterSuit);
-
-        if (assignedTargetPocketed) {
-          const count = solidsPocketed + stripesPocketed;
-          if (isShooterP1) newP1Score += count * 10;
-          else newP2Score += count * 10;
-          actionLog = `${shooterHandle} pocketed ${count} ball(s)! Turn continues!`;
-          nextTurnUid = shooterUid; // GOALED -> KEEPS SHOOTING!
-        } else {
-          actionLog = `${shooterHandle} pocketed opponent's ball. Turn passes.`;
-          nextTurnUid = otherPlayerUid;
-        }
-      } else {
-        nextTurnUid = otherPlayerUid; // MISSED -> PASSES TURN!
-        actionLog = isPushOutDeclared ? `✋ PUSH-OUT EXECUTED by ${shooterHandle}! Opponent may accept table.` : `${shooterHandle} missed. Turn passes.`;
-        setIsPushOutDeclared(false);
-      }
-    } else if (discipline === "9_BALL") {
-      const nineBallPocketed = pocketed.some((b) => b.number === 9);
-      const isLegalHit = !firstHit || (lowestBallOnTable && firstHit.number === lowestBallOnTable.number);
-
-      if (isScratch || !isLegalHit) {
-        soundSynth.playBuzzer();
-        actionLog = isScratch ? `⚠️ SCRATCH by ${shooterHandle}! Ball-in-Hand for opponent.` : `⚠️ FOUL by ${shooterHandle}! Failed to hit lowest ball (#${lowestBallOnTable?.number}) first.`;
-        nextTurnUid = otherPlayerUid;
-      } else if (nineBallPocketed) {
-        actionLog = `🏆 9-BALL LEGALLY POCKETED by ${shooterHandle}! VICTORY!`;
-        isGameOver = true;
-        winnerUid = shooterUid;
-        soundSynth.playFanfare();
-      } else if (pocketed.length > 0) {
-        const count = pocketed.length;
-        if (isShooterP1) newP1Score += count * 10;
-        else newP2Score += count * 10;
-        actionLog = `${shooterHandle} legally pocketed ${count} ball(s)! Turn continues!`;
-        nextTurnUid = shooterUid;
-      } else {
-        nextTurnUid = otherPlayerUid;
-        actionLog = `${shooterHandle} missed. Turn passes.`;
-      }
-    } else if (discipline === "10_BALL") {
-      const tenBallPocketed = pocketed.some((b) => b.number === 10);
-      const isLegalHit = !firstHit || (lowestBallOnTable && firstHit.number === lowestBallOnTable.number);
-
-      if (isScratch || !isLegalHit) {
-        soundSynth.playBuzzer();
-        actionLog = isScratch ? `⚠️ SCRATCH by ${shooterHandle}! Ball-in-Hand for opponent.` : `⚠️ FOUL by ${shooterHandle}! Failed to hit lowest ball (#${lowestBallOnTable?.number}) first.`;
-        nextTurnUid = otherPlayerUid;
-      } else if (tenBallPocketed) {
-        actionLog = `🏆 10-BALL LEGALLY POCKETED by ${shooterHandle}! CHAMPIONSHIP VICTORY!`;
-        isGameOver = true;
-        winnerUid = shooterUid;
-        soundSynth.playFanfare();
-      } else if (pocketed.length > 0) {
-        const count = pocketed.length;
-        if (isShooterP1) newP1Score += count * 10;
-        else newP2Score += count * 10;
-        actionLog = `${shooterHandle} legally pocketed ${count} ball(s)! Turn continues!`;
-        nextTurnUid = shooterUid;
-      } else {
-        nextTurnUid = otherPlayerUid;
-        actionLog = `${shooterHandle} missed. Turn passes.`;
-      }
-    } else if (discipline === "STRAIGHT_POOL") {
-      if (isScratch) {
-        soundSynth.playBuzzer();
-        actionLog = `⚠️ SCRATCH by ${shooterHandle}! -1 pt penalty.`;
-        if (isShooterP1) newP1Score = Math.max(0, newP1Score - 1);
-        else newP2Score = Math.max(0, newP2Score - 1);
-        nextTurnUid = otherPlayerUid;
-      } else if (pocketed.length > 0) {
-        const count = pocketed.length;
-        if (isShooterP1) newP1Score += count;
-        else newP2Score += count;
-        actionLog = `${shooterHandle} scored +${count} pt(s)! High run continues!`;
-        nextTurnUid = shooterUid;
-
-        const remainingCount = balls.filter((b) => b.type !== "cue" && !b.isPocketed).length;
-        if (remainingCount <= 1 || newP1Score >= 15 || newP2Score >= 15) {
-          actionLog = `🏆 STRAIGHT POOL TARGET REACHED! Winner: ${shooterHandle}!`;
-          isGameOver = true;
-          winnerUid = shooterUid;
-          soundSynth.playFanfare();
-        }
-      } else {
-        nextTurnUid = otherPlayerUid;
-        actionLog = `${shooterHandle} missed. Turn passes.`;
-      }
-    } else if (discipline === "ONE_POCKET") {
-      const shooterDesignatedPocket = isShooterP1 ? "BOT_LEFT" : "BOT_RIGHT";
-      const legalScored = pocketLocations.filter((item) => item.pocketName === shooterDesignatedPocket).length;
-
-      if (isScratch) {
-        soundSynth.playBuzzer();
-        actionLog = `⚠️ SCRATCH by ${shooterHandle}! Turn passes.`;
-        nextTurnUid = otherPlayerUid;
-      } else if (legalScored > 0) {
-        if (isShooterP1) newP1Score += legalScored;
-        else newP2Score += legalScored;
-        actionLog = `${shooterHandle} scored +${legalScored} ball(s) in designated pocket!`;
-        nextTurnUid = shooterUid;
-
-        const currentScore = isShooterP1 ? newP1Score : newP2Score;
-        if (currentScore >= 8) {
-          actionLog = `🏆 8 BALLS SCORED IN DESIGNATED POCKET! ${shooterHandle} WINS!`;
-          isGameOver = true;
-          winnerUid = shooterUid;
-          soundSynth.playFanfare();
-        }
-      } else {
-        nextTurnUid = otherPlayerUid;
-        actionLog = `${shooterHandle} did not score in designated pocket. Turn passes.`;
-      }
-    }
-
-    try {
-      await firePoolShot(
-        match.id,
-        currentUid,
-        0,
-        0,
-        balls,
-        {
-          nextTurnUid,
-          p1Score: newP1Score,
-          p2Score: newP2Score,
-          p1Type: newP1Type,
-          p2Type: newP2Type,
-          actionLog,
-          isGameOver,
-          winnerUid,
-        }
-      );
-    } catch (err) {
-      console.error("Failed to fire pool shot turn:", err);
-    }
-  }, [currentUid, discipline, isBreakShotRef, lowestBallOnTable, match.id, match.players, playerUids, ps]);
 
   // Inventory of remaining balls
   const balls = ballsRef.current;
@@ -1257,7 +1314,20 @@ export default function PoolGame({ match, currentUid }: PoolGameProps) {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Push-Out Declaration Button (Available on Shot #2) */}
+          {/* Safety Unlock Button (Always Available If Ever Needed) */}
+          {isSimulating && (
+            <button
+              type="button"
+              onClick={forceUnlockTurn}
+              className="px-2 py-1.5 border border-amber-500/50 bg-amber-950/40 hover:bg-amber-900 text-amber-300 font-bold text-[9px] uppercase rounded transition-all cursor-pointer flex items-center gap-1"
+              title="Unlock cue if physics settled"
+            >
+              <RotateCcw className="w-3 h-3 animate-spin" />
+              <span>UNLOCK</span>
+            </button>
+          )}
+
+          {/* Push-Out Declaration Button */}
           {isMyTurn && !isSimulating && (
             <button
               type="button"
