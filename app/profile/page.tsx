@@ -293,6 +293,8 @@ export default function ProfilePage() {
 
   // 3D Avatar Studio state
   const [avatarStudioOpen, setAvatarStudioOpen] = useState(false);
+  const [avatarDisplayMode, setAvatarDisplayMode] = useState<"3D" | "PHOTO">("3D");
+  const [equippedItems, setEquippedItems] = useState<Record<string, string | null>>({});
   const [avatarConfig, setAvatarConfig] = useState<AvatarConfig>(() => {
     if (typeof window !== "undefined") {
       try {
@@ -329,6 +331,12 @@ export default function ProfilePage() {
     const unsub = onSnapshot(doc(db, "users", user.uid), (snap) => {
       if (snap.exists()) {
         const data = snap.data();
+        if (data.avatarConfig) {
+          setAvatarConfig(data.avatarConfig);
+        }
+        if (data.equipped) {
+          setEquippedItems(data.equipped);
+        }
         if (data.voiceBioUrl) {
           setSavedVoiceBioUrl(data.voiceBioUrl);
           setSavedVoiceBioDuration(data.voiceBioDuration || "30s");
@@ -885,28 +893,53 @@ export default function ProfilePage() {
                 </button>
               )}
 
-              {/* Avatar Aperture */}
+              {/* Avatar Aperture with Shopped Neon Border / Equipped Suits */}
               <div className="relative group mt-2">
-                <div className={`w-20 h-20 sm:w-22 sm:h-22 rounded-full border-2 overflow-hidden flex items-center justify-center text-2xl font-mono bg-neutral-950 ${
-                  vibeRead ? "border-white shadow-lg shadow-white/10" : "border-neutral-700"
+                <div className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 overflow-hidden flex items-center justify-center text-2xl font-mono bg-black relative transition-all ${
+                  equippedItems.border === "cosmetic_neon_border"
+                    ? "border-emerald-400 ring-4 ring-emerald-400/80 ring-offset-2 ring-offset-black shadow-[0_0_35px_rgba(52,211,153,0.7)] animate-pulse"
+                    : vibeRead
+                    ? "border-white shadow-lg shadow-white/20"
+                    : "border-neutral-700"
                 }`}>
-                  {user?.photoURL || user?.avatarUrl || avatarPreview ? (
+                  {avatarDisplayMode === "PHOTO" && (user?.photoURL || user?.avatarUrl || avatarPreview) ? (
                     <img
                       src={avatarPreview || user?.photoURL || user?.avatarUrl}
                       alt={handle}
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <span className="text-white font-bold">{handle.charAt(1).toUpperCase()}</span>
+                    <ExpressiveAvatar
+                      config={avatarConfig}
+                      gesture="IDLE"
+                      size={96}
+                      className="w-full h-full"
+                      onClick={() => setAvatarStudioOpen(true)}
+                    />
                   )}
                 </div>
-                <button
-                  onClick={() => setEditProfileOpen(true)}
-                  className="absolute bottom-0 right-0 w-6 h-6 bg-white text-black rounded-full flex items-center justify-center shadow-md cursor-pointer hover:bg-neutral-200 transition-colors"
-                  title="Upload profile picture"
-                >
-                  <Camera className="w-3.5 h-3.5" />
-                </button>
+
+                {/* Edit / 3D Toggle Quick Buttons */}
+                <div className="absolute -bottom-1 -right-1 flex items-center gap-1">
+                  {(user?.photoURL || user?.avatarUrl || avatarPreview) && (
+                    <button
+                      type="button"
+                      onClick={() => setAvatarDisplayMode(avatarDisplayMode === "3D" ? "PHOTO" : "3D")}
+                      className="w-6 h-6 bg-neutral-900 border border-neutral-700 text-white rounded-full flex items-center justify-center shadow-md cursor-pointer hover:border-white transition-all text-[9px] font-black"
+                      title={`Switch to ${avatarDisplayMode === "3D" ? "Uploaded Photo" : "3D Expressive Avatar"}`}
+                    >
+                      {avatarDisplayMode === "3D" ? "📷" : "👤"}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setAvatarStudioOpen(true)}
+                    className="w-6 h-6 bg-white text-black rounded-full flex items-center justify-center shadow-md cursor-pointer hover:bg-neutral-200 transition-colors"
+                    title="Customize 3D Avatar & Suits"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -968,7 +1001,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Identity & Domain Metadata */}
-          <div className="space-y-1 pt-1">
+          <div className="space-y-1.5 pt-1">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="font-mono text-base font-bold text-white tracking-wide">
                 {user?.displayName || handle}
@@ -979,6 +1012,23 @@ export default function ProfilePage() {
                 </span>
               )}
               <span className={`w-2 h-2 rounded-full ${signalStatus === "ONLINE" ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
+
+              {/* Equipped Shopped Title */}
+              {equippedItems.title === "title_shadow_broker" && (
+                <span className="px-2 py-0.5 bg-purple-950 border border-purple-500 text-purple-300 font-mono text-[9px] uppercase font-black rounded-md shadow-sm">
+                  🕵️ SHADOW BROKER
+                </span>
+              )}
+              {equippedItems.title === "title_grandmaster" && (
+                <span className="px-2 py-0.5 bg-amber-950 border border-amber-400 text-yellow-400 font-mono text-[9px] uppercase font-black rounded-md shadow-sm">
+                  👑 GRANDMASTER TYCOON
+                </span>
+              )}
+              {equippedItems.suit && (
+                <span className="px-2 py-0.5 bg-neutral-900 border border-neutral-700 text-white font-mono text-[9px] uppercase font-bold rounded-md shadow-sm">
+                  🥋 {equippedItems.suit.replace('suit_', '').replace(/_/g, ' ').toUpperCase()}
+                </span>
+              )}
             </div>
             <p className="font-mono text-xs text-neutral-300 whitespace-pre-line leading-relaxed">
               {user?.bio || "Authenticated Voice Node on Echo"}
@@ -1000,7 +1050,7 @@ export default function ProfilePage() {
           {/* ── PERMANENT VOICE BIO (PUBLIC TO EVERYONE) ── */}
           <div className="pt-1">
             {savedVoiceBioUrl ? (
-              <div className="p-3 border border-neutral-800 bg-neutral-950 space-y-2">
+              <div className="p-3 border border-neutral-800 bg-neutral-950 space-y-2 rounded-xl">
                 <div className="flex items-center justify-between">
                   <span className="font-mono text-[10px] text-white font-bold flex items-center gap-1.5 uppercase">
                     <Mic2 className="w-3.5 h-3.5 text-white" /> PERMANENT VOICE BIO ({savedVoiceBioDuration || "15S"})
@@ -1012,21 +1062,21 @@ export default function ProfilePage() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleToggleBioPlay}
-                    className="flex-1 py-1.5 px-3 bg-white text-black font-mono text-xs font-bold uppercase tracking-wider hover:bg-neutral-200 transition-colors cursor-pointer flex items-center justify-center gap-2"
+                    className="flex-1 py-1.5 px-3 bg-white text-black font-mono text-xs font-bold uppercase tracking-wider hover:bg-neutral-200 transition-colors cursor-pointer flex items-center justify-center gap-2 rounded-lg"
                   >
                     {isPlayingBio ? <Pause className="w-3.5 h-3.5 fill-black text-black" /> : <Play className="w-3.5 h-3.5 fill-black text-black" />}
                     <span>{isPlayingBio ? "PAUSE VOICE BIO" : "PLAY VOICE BIO"}</span>
                   </button>
                   <button
                     onClick={() => setBioModalOpen(true)}
-                    className="py-1.5 px-3 border border-neutral-700 hover:border-white text-neutral-300 hover:text-white font-mono text-xs uppercase transition-colors cursor-pointer"
+                    className="py-1.5 px-3 border border-neutral-700 hover:border-white text-neutral-300 hover:text-white font-mono text-xs uppercase transition-colors cursor-pointer rounded-lg"
                     title="Re-record voice bio"
                   >
                     ↺ UPDATE
                   </button>
                   <button
                     onClick={handleDeleteBio}
-                    className="py-1.5 px-3 border border-neutral-800 hover:border-red-500 text-neutral-500 hover:text-red-400 font-mono text-xs uppercase transition-colors cursor-pointer"
+                    className="py-1.5 px-3 border border-neutral-800 hover:border-red-500 text-neutral-500 hover:text-red-400 font-mono text-xs uppercase transition-colors cursor-pointer rounded-lg"
                     title="Delete voice bio"
                   >
                     ✕
@@ -1036,7 +1086,7 @@ export default function ProfilePage() {
             ) : (
               <button
                 onClick={() => setBioModalOpen(true)}
-                className="w-full p-3 border border-dashed border-neutral-700 hover:border-white bg-neutral-950/60 hover:bg-neutral-950 text-left transition-colors cursor-pointer group space-y-1"
+                className="w-full p-3 border border-dashed border-neutral-700 hover:border-white bg-neutral-950/60 hover:bg-neutral-950 text-left transition-colors cursor-pointer group space-y-1 rounded-xl"
               >
                 <div className="flex items-center justify-between">
                   <span className="font-mono text-xs text-white font-bold tracking-wider flex items-center gap-1.5 uppercase group-hover:text-white">
@@ -1057,26 +1107,32 @@ export default function ProfilePage() {
           <div className="flex items-center gap-2 pt-1 flex-wrap sm:flex-nowrap">
             <button
               onClick={() => setEditProfileOpen(true)}
-              className="flex-1 py-2 px-3 border border-neutral-800 bg-neutral-950 hover:border-white text-white font-mono text-xs tracking-wider uppercase transition-colors cursor-pointer text-center"
+              className="flex-1 py-2 px-3 border border-neutral-800 bg-neutral-950 hover:border-white text-white font-mono text-xs tracking-wider uppercase transition-colors cursor-pointer text-center rounded-xl"
             >
               [ EDIT PROFILE ]
             </button>
             <button
               onClick={() => setAvatarStudioOpen(true)}
-              className="flex-1 py-2 px-3 border border-cyan-500/60 bg-cyan-950/20 hover:border-cyan-400 text-cyan-300 hover:text-white font-mono text-xs tracking-wider uppercase transition-colors cursor-pointer text-center flex items-center justify-center gap-1.5"
+              className="flex-1 py-2 px-3 border border-cyan-500/60 bg-cyan-950/20 hover:border-cyan-400 text-cyan-300 hover:text-white font-mono text-xs tracking-wider uppercase transition-colors cursor-pointer text-center flex items-center justify-center gap-1.5 rounded-xl shadow-[0_0_15px_rgba(6,182,212,0.15)]"
             >
               <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
               <span>[ 👤 3D AVATAR ]</span>
             </button>
+            <Link
+              href="/shop"
+              className="flex-1 py-2 px-3 border border-amber-500/60 bg-amber-950/20 hover:border-amber-400 text-amber-300 hover:text-white font-mono text-xs tracking-wider uppercase transition-colors cursor-pointer text-center flex items-center justify-center gap-1.5 rounded-xl shadow-[0_0_15px_rgba(245,158,11,0.15)]"
+            >
+              <span>[ 🛍️ STORE ]</span>
+            </Link>
             <button
               onClick={() => setShareModalOpen(true)}
-              className="flex-1 py-2 px-3 border border-neutral-800 bg-neutral-950 hover:border-white text-white font-mono text-xs tracking-wider uppercase transition-colors cursor-pointer text-center"
+              className="flex-1 py-2 px-3 border border-neutral-800 bg-neutral-950 hover:border-white text-white font-mono text-xs tracking-wider uppercase transition-colors cursor-pointer text-center rounded-xl"
             >
               [ SHARE SIGNAL ]
             </button>
             <Link
               href="/terminal"
-              className="p-2 border border-neutral-800 bg-neutral-950 hover:border-white text-white transition-colors cursor-pointer shrink-0 flex items-center justify-center"
+              className="p-2 border border-neutral-800 bg-neutral-950 hover:border-white text-white transition-colors cursor-pointer shrink-0 flex items-center justify-center rounded-xl"
               title="System Terminal Console"
             >
               <Terminal className="w-4 h-4" />

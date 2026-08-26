@@ -566,6 +566,24 @@ export async function purchaseStoreItem(uid: string, itemId: string, cost: numbe
   }
 }
 
+export async function equipStoreItem(
+  uid: string,
+  category: "border" | "suit" | "title" | "dice" | "eyewear",
+  itemId: string | null
+): Promise<boolean> {
+  const db = getFirebaseDb();
+  const ref = doc(db, "users", uid);
+  try {
+    await updateDoc(ref, {
+      [`equipped.${category}`]: itemId,
+    });
+    return true;
+  } catch (err) {
+    console.error("Failed to equip item:", err);
+    return false;
+  }
+}
+
 
 export async function updateArcadeElo(winnerUid: string, loserUid: string) {
   if (!winnerUid || !loserUid || winnerUid.startsWith("bot") || loserUid.startsWith("bot")) return;
