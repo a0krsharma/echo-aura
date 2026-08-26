@@ -51,86 +51,91 @@ export function RightSidebar() {
       "
       aria-label="Right panel"
     >
-      {/* ── TOP RIGHT CONTROLS: SEARCH, NOTIFICATIONS, PROFILE ── */}
-      <div className="flex items-center justify-between gap-2 mb-8 pb-4 border-b border-neutral-900">
-        <p className="font-mono text-[10px] tracking-widest uppercase text-neutral-600">
-          // CONTROLS
+      {/* ── TOP CONTROLS: SEARCH, NOTIFICATIONS, PROFILE ── */}
+      <div className="flex items-center justify-between gap-2 mb-6 pb-4 border-b border-neutral-900">
+        <p className="font-mono text-[10px] tracking-widest uppercase text-neutral-500 font-bold">
+          LIVE FEED
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <Link
             href="/search"
-            className="p-2 border border-neutral-800 text-neutral-400 hover:text-white hover:border-white transition-colors cursor-pointer"
-            title="Search Voices & Topics"
+            className="p-2 rounded-xl border border-neutral-800 bg-neutral-950 text-neutral-400 hover:text-white hover:border-neutral-600 transition-all cursor-pointer"
+            title="Search"
             aria-label="Search"
           >
-            <Search className="w-4 h-4" />
+            <Search className="w-3.5 h-3.5" />
           </Link>
           <Link
             href="/notifications"
-            className="relative p-2 border border-neutral-800 text-neutral-400 hover:text-white hover:border-white transition-colors cursor-pointer"
+            className="relative p-2 rounded-xl border border-neutral-800 bg-neutral-950 text-neutral-400 hover:text-white hover:border-neutral-600 transition-all cursor-pointer"
             title="Notifications"
             aria-label="Notifications"
           >
-            <Bell className="w-4 h-4" />
+            <Bell className="w-3.5 h-3.5" />
             {unreadCount > 0 && (
               <span className="absolute -top-1 -right-1 flex items-center justify-center">
-                {unreadCount < 10 ? (
-                  <span className="w-4 h-4 bg-white text-black rounded-full font-mono text-[8px] flex items-center justify-center font-bold">
-                    {unreadCount}
-                  </span>
-                ) : (
-                  <span className="w-4 h-4 bg-white text-black rounded-full font-mono text-[8px] flex items-center justify-center font-bold">
-                    9+
-                  </span>
-                )}
+                <span className="w-4 h-4 bg-white text-black rounded-full font-mono text-[8px] flex items-center justify-center font-bold">
+                  {unreadCount < 10 ? unreadCount : "9+"}
+                </span>
               </span>
             )}
           </Link>
           <Link
             href="/profile"
-            className="p-2 border border-neutral-800 text-neutral-400 hover:text-white hover:border-white transition-colors cursor-pointer flex items-center justify-center"
+            className="p-2 rounded-xl border border-neutral-800 bg-neutral-950 text-neutral-400 hover:text-white hover:border-neutral-600 transition-all cursor-pointer flex items-center justify-center"
             title="Profile"
             aria-label="Profile"
           >
-            <User className="w-4 h-4" />
+            <User className="w-3.5 h-3.5" />
           </Link>
         </div>
       </div>
 
-      {/* ── LIVE ON THE STAGE ── */}
+      {/* ── LIVE ON STAGE ── */}
       <div>
-        <div className="flex items-center gap-2 mb-6">
-          <span className="w-2 h-2 rounded-full bg-white animate-ping" aria-hidden="true" />
-          <p className="font-mono text-xs tracking-widest uppercase text-white">
-            LIVE ON [ STAGE ]
-          </p>
+        <div className="flex items-center justify-between gap-2 mb-4">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" aria-hidden="true" />
+            <p className="font-mono text-xs tracking-wider uppercase text-white font-black">
+              LIVE STAGE DEBATES
+            </p>
+          </div>
+          <Link href="/clash" className="text-[10px] text-neutral-500 hover:text-white uppercase font-bold">
+            VIEW ALL →
+          </Link>
         </div>
 
         {liveClashes.length === 0 ? (
-          <div className="font-mono text-xs text-neutral-700 uppercase tracking-widest">
-            NO LIVE DEBATES.
+          <div className="p-4 rounded-2xl bg-neutral-950 border border-neutral-900 text-center space-y-1">
+            <p className="font-mono text-xs text-neutral-400 font-bold uppercase">NO ACTIVE CLASH</p>
+            <p className="text-[10px] text-neutral-600">Start an audio battle on Stage!</p>
           </div>
         ) : (
-          <div className="space-y-5">
+          <div className="space-y-3">
             {liveClashes.map((c) => {
               const totalVotes = (c.sideA?.votes || 0) + (c.sideB?.votes || 0);
               return (
                 <Link
                   key={c.id}
                   href="/clash"
-                  className="block border-l border-neutral-800 pl-4 hover:border-white transition-colors"
+                  className="block p-3 rounded-2xl bg-neutral-950/80 border border-neutral-900 hover:border-neutral-700 transition-all space-y-1.5 group"
                 >
-                  <p className="font-mono text-xs text-neutral-400 tracking-widest leading-relaxed">
-                    {c.sideA?.handle || "SIDE A"}
-                    <span className="text-neutral-700"> vs </span>
-                    {c.sideB?.handle || "SIDE B"}
+                  <div className="flex items-center justify-between text-[10px] font-mono font-bold text-neutral-400">
+                    <span className="text-white group-hover:text-amber-400 transition-colors truncate max-w-[100px]">
+                      {c.sideA?.handle || "SIDE A"}
+                    </span>
+                    <span className="text-neutral-600 font-normal">vs</span>
+                    <span className="text-white group-hover:text-amber-400 transition-colors truncate max-w-[100px]">
+                      {c.sideB?.handle || "SIDE B"}
+                    </span>
+                  </div>
+                  <p className="font-mono text-xs text-neutral-300 line-clamp-2 leading-relaxed">
+                    &ldquo;{c.topic}&rdquo;
                   </p>
-                  <p className="font-mono text-sm text-neutral-500 mt-1 leading-snug">
-                    "{c.topic}"
-                  </p>
-                  <p className="font-mono text-[10px] text-neutral-700 tracking-widest mt-1.5">
-                    {totalVotes} VOTES LIVE
-                  </p>
+                  <div className="flex items-center justify-between pt-1 border-t border-neutral-900 text-[9px] text-neutral-500 font-bold">
+                    <span>🔥 {totalVotes} VOTES</span>
+                    <span className="text-emerald-400">LISTEN LIVE 🎙️</span>
+                  </div>
                 </Link>
               );
             })}
