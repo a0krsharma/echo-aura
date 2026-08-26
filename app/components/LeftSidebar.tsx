@@ -42,12 +42,10 @@ export default function LeftSidebar() {
     { href: "/",               icon: Radio,        label: "FREQUENCY" },
     { href: "/waves",          icon: Waves,        label: "WAVES" },
     { href: "/studio",         icon: Mic2,         label: "STUDIO" },
-    { href: "/arcade",         icon: Gamepad2,     label: "ECHO CLUB" },
-    { href: "/rooms",          icon: Users,        label: "ROOMS" },
     { href: "/clash",          icon: Swords,       label: "STAGE" },
+    { href: "/rooms",          icon: Users,        label: "ROOMS" },
     { href: "/radar",          icon: Compass,      label: "RADAR" },
-    { href: "/shop",           icon: ShoppingCart, label: "STORE" },
-    { href: "/profile",        icon: User,         label: "PROFILE" },
+    { href: "/frequency-plus", icon: Headphones,   label: "FREQUENCY+" },
   ] as const;
 
   return (
@@ -75,9 +73,6 @@ export default function LeftSidebar() {
             >
               <Icon size={16} strokeWidth={isActive ? 2.2 : 1.8} className="shrink-0" />
               <span className="truncate">{item.label}</span>
-              {item.href === "/arcade" && (
-                <span className="ml-auto w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-              )}
             </Link>
           );
         })}
