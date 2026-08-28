@@ -186,31 +186,32 @@ function ArcadeContent() {
     }
   }, [searchParams, user]);
 
-  // 2. Ghost Participant Fallback Engine (Activates within 3.5s if solo in multiplayer)
-  useEffect(() => {
-    if (!activeMatch || activeMatch.mode === "VS_COMPUTER" || activeMatch.status !== "WAITING") {
-      setGhostTimerSec(null);
-      return;
-    }
-    const playerCount = Object.keys(activeMatch.players || {}).length;
-    if (playerCount === 1 && activeMatch.hostUid === user?.uid) {
-      setGhostTimerSec(4);
-      const interval = setInterval(() => {
-        setGhostTimerSec((prev) => {
-          if (prev === null) return null;
-          if (prev <= 1) {
-            clearInterval(interval);
-            addGhostParticipantToMatch(activeMatch.id).catch(console.warn);
-            return null;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      return () => clearInterval(interval);
-    } else {
-      setGhostTimerSec(null);
-    }
-  }, [activeMatch?.id, activeMatch?.status, activeMatch?.players, activeMatch?.hostUid, user?.uid]);
+    // 2. Ghost Participant Fallback Engine (Activates within 3.5s if solo in multiplayer)
+    useEffect(() => {
+      // @ts-ignore - isTournament exists on tournament documents
+      if (!activeMatch || activeMatch.mode === "VS_COMPUTER" || activeMatch.status !== "WAITING" || activeMatch.isChallenge || activeMatch.isTournament) {
+        setGhostTimerSec(null);
+        return;
+      }
+      const playerCount = Object.keys(activeMatch.players || {}).length;
+      if (playerCount === 1 && activeMatch.hostUid === user?.uid) {
+        setGhostTimerSec(4);
+        const interval = setInterval(() => {
+          setGhostTimerSec((prev) => {
+            if (prev === null) return null;
+            if (prev <= 1) {
+              clearInterval(interval);
+              addGhostParticipantToMatch(activeMatch.id).catch(console.warn);
+              return null;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+        return () => clearInterval(interval);
+      } else {
+        setGhostTimerSec(null);
+      }
+    }, [activeMatch?.id, activeMatch?.status, activeMatch?.players, activeMatch?.hostUid, activeMatch?.isChallenge, activeMatch?.mode, user?.uid]);
 
   // Subscribe to active match if playing
   useEffect(() => {

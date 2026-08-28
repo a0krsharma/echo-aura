@@ -858,6 +858,7 @@ export interface AntakshariState {
 export interface ArcadeMatch {
   id: string;
   isArcade?: boolean;
+  isChallenge?: boolean;
   roomId?: string; // If embedded inside a live audio room
   mode: ArcadeMatchMode;
   enableVoice: boolean;

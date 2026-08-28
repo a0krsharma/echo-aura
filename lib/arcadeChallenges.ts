@@ -159,6 +159,11 @@ export async function sendArcadeChallenge(params: {
   };
 
   await setDoc(docRef, challengeData);
+  
+  // Flag the match as a challenge so it doesn't auto-start with a Ghost AI
+  const matchRef = doc(db, "rooms", params.matchId);
+  await updateDoc(matchRef, { isChallenge: true }).catch(() => {});
+  
   return challengeId;
 }
 

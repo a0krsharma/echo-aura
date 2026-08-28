@@ -1,28 +1,33 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import {
-  ArrowUp, Flame, Mic2, Share2, RefreshCw,
+  Flame, Mic2, Share, Share2, Repeat2,
   Loader2, Send, Trash2, ChevronDown, ChevronUp,
-  Heart, AtSign, Repeat2, MessageSquare,
-  RotateCcw, RotateCw, Music,
-  Bot, Sparkles,
+  Heart, AtSign, Music,
+  Bot, Sparkles, Bookmark, BarChart2,
+  Play, Pause, RotateCcw, RotateCw, Check, Plus,
+  MessageCircle, Volume2, Sparkle, Radio
 } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
 import {
   subscribeToPosts, togglePulsePost, createPost, deletePost,
   subscribeToPostReverbs, addPostReverb, togglePulsePostReverb,
-  toggleReverbReaction,
+  toggleReverbReaction, incrementPostViews,
   type PostReverbItem,
 } from "@/lib/posts";
+import {
+  addBookmark, removeBookmark, subscribeToUserBookmarks,
+} from "@/lib/bookmarks";
 import { useRouter } from "next/navigation";
 import { uploadAudio, getPlayableUrl } from "@/lib/cloudinary";
 import { createNotification } from "@/lib/notifications";
-import { followUser, unfollowUser, isFollowing, subscribeToFollowing } from "@/lib/follows";
+import { followUser, unfollowUser, subscribeToFollowing } from "@/lib/follows";
 import { audioManager } from "@/lib/audioManager";
 import { subscribeToPostComments, createComment, toggleLikeComment, deleteComment, type CommentItem } from "@/lib/comments";
 import { SOUND_CATALOG } from "@/lib/soundCatalog";
+import { soundSynth } from "@/lib/soundSynthesizer";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface FeedPost {
@@ -30,7 +35,8 @@ interface FeedPost {
   authorHandle: string; authorUid: string;
   pulseCount: number; pulsedBy: string[];
   orbitedBy?: string[]; duration: string; durationSec: number;
-  reverbCount: number; commentCount: number; createdAt: any;
+  reverbCount: number; commentCount: number;
+  viewsCount?: number; bookmarkCount?: number; createdAt: any;
   newsTopic?: string | null;
   newsHeadline?: string | null;
   newsLink?: string | null;
@@ -45,31 +51,54 @@ interface FeedPost {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function formatNum(n: number) { return n >= 1000 ? `${(n/1000).toFixed(1)}K` : String(n); }
+function formatNum(n: number) {
+  if (!n || isNaN(n)) return "0";
+  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
+  return String(n);
+}
+
 function fmt(s: number) {
   if (!s || isNaN(s) || !isFinite(s) || s < 0) s = 0;
-  return `${Math.floor(s/60).toString().padStart(2,"0")}:${Math.floor(s%60).toString().padStart(2,"0")}`;
+  return `${Math.floor(s / 60)}:${Math.floor(s % 60).toString().padStart(2, "0")}`;
 }
-function timeAgo(c: any) {
-  if (!c?.seconds) return "";
-  const d = Date.now() / 1000 - c.seconds;
-  if (d < 60) return "JUST NOW";
-  if (d < 3600) return `${Math.floor(d / 60)}M AGO`;
-  if (d < 86400) return `${Math.floor(d / 3600)}H AGO`;
-  return `${Math.floor(d / 86400)}D AGO`;
+
+function formatRelativeTime(c: any) {
+  if (!c?.seconds) return "now";
+  const d = Math.floor(Date.now() / 1000 - c.seconds);
+  if (d < 60) return "just now";
+  if (d < 3600) return `${Math.floor(d / 60)}m`;
+  if (d < 86400) return `${Math.floor(d / 3600)}h`;
+  if (d < 604800) return `${Math.floor(d / 86400)}d`;
+  return `${Math.floor(d / 604800)}w`;
+}
+
+function getAvatarGradient(handle: string) {
+  const gradients = [
+    "from-purple-500 to-indigo-600",
+    "from-cyan-500 to-blue-600",
+    "from-emerald-500 to-teal-600",
+    "from-amber-500 to-orange-600",
+    "from-rose-500 to-pink-600",
+    "from-fuchsia-500 to-purple-600",
+    "from-blue-500 to-cyan-600",
+  ];
+  let hash = 0;
+  const clean = handle.replace(/^@/, "");
+  for (let i = 0; i < clean.length; i++) {
+    hash = clean.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return gradients[Math.abs(hash) % gradients.length];
 }
 
 // ─── Hashtag & Mention Parser ─────────────────────────────────────────────────
 function parseCaption(caption: string) {
   const parts: React.ReactNode[] = [];
   let lastIndex = 0;
-  
-  // Regex for hashtags (#hashtag) and mentions (@handle)
   const regex = /(#\w+)|(@\w+)/g;
   let match;
   
   while ((match = regex.exec(caption)) !== null) {
-    // Add text before the match
     if (match.index > lastIndex) {
       parts.push(caption.slice(lastIndex, match.index));
     }
@@ -80,22 +109,31 @@ function parseCaption(caption: string) {
     
     if (isHashtag) {
       parts.push(
-        <span key={match.index} className="text-neutral-400 hover:text-white cursor-pointer transition-colors">
+        <Link
+          key={match.index}
+          href={`/hashtag/${encodeURIComponent(fullMatch.replace(/^#/, ''))}`}
+          className="text-cyan-400 hover:text-cyan-300 font-medium transition-colors inline-block"
+          onClick={(e) => e.stopPropagation()}
+        >
           {fullMatch}
-        </span>
+        </Link>
       );
     } else if (isMention) {
       parts.push(
-        <span key={match.index} className="text-white hover:underline cursor-pointer transition-colors">
+        <Link
+          key={match.index}
+          href={`/${encodeURIComponent(fullMatch.replace(/^@/, ''))}`}
+          className="text-white hover:underline font-semibold transition-colors inline-block"
+          onClick={(e) => e.stopPropagation()}
+        >
           {fullMatch}
-        </span>
+        </Link>
       );
     }
     
     lastIndex = regex.lastIndex;
   }
   
-  // Add remaining text
   if (lastIndex < caption.length) {
     parts.push(caption.slice(lastIndex));
   }
@@ -103,8 +141,9 @@ function parseCaption(caption: string) {
   return parts;
 }
 
-// ─── Advanced Waveform with Web Audio API ──────────────────────────────────
-const WAVE_H = [4,10,18,24,14,28,10,22,6,26,16,20,8,28,14,22,10,26,6,18,24,12,30,8,20];
+// ─── Waveform Visualizer ──────────────────────────────────────────────────────
+const WAVE_H = [4, 10, 18, 24, 14, 28, 10, 22, 6, 26, 16, 20, 8, 28, 14, 22, 10, 26, 6, 18, 24, 12, 30, 8, 20];
+
 function Waveform({ playing, small, audioRef }: { playing: boolean; small?: boolean; audioRef?: React.RefObject<HTMLAudioElement | null> }) {
   const [waveformData, setWaveformData] = useState<number[]>(WAVE_H);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -114,7 +153,6 @@ function Waveform({ playing, small, audioRef }: { playing: boolean; small?: bool
 
   useEffect(() => {
     if (!audioRef?.current || !playing) {
-      // Always cleanup animation frame when not playing
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
         animationFrameRef.current = null;
@@ -124,33 +162,27 @@ function Waveform({ playing, small, audioRef }: { playing: boolean; small?: bool
 
     const audio = audioRef.current;
     
-    // Initialize Audio Context
     if (!audioContextRef.current) {
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
     
     const audioContext = audioContextRef.current;
     
-    // Resume AudioContext if suspended (browser autoplay policy)
     if (audioContext.state === 'suspended') {
       audioContext.resume();
     }
     
-    // Create analyser only once
     if (!analyserRef.current) {
       analyserRef.current = audioContext.createAnalyser();
     }
     
-    // Only create source if we haven't already connected this specific audio element
-    // Check if the current source is connected to the same audio element
     if (!sourceRef.current) {
       try {
         sourceRef.current = audioContext.createMediaElementSource(audio);
         sourceRef.current.connect(analyserRef.current);
         analyserRef.current.connect(audioContext.destination);
       } catch (error) {
-        // If the audio element is already connected, skip source creation
-        console.warn('Audio element already connected, skipping source creation');
+        // Source already connected, ignore
       }
     }
     
@@ -164,11 +196,11 @@ function Waveform({ playing, small, audioRef }: { playing: boolean; small?: bool
       
       analyser.getByteFrequencyData(dataArray);
       
-      // Convert frequency data to waveform heights
-      const newWaveform = Array.from({ length: small ? 14 : 25 }, (_, i) => {
-        const dataIndex = Math.floor(i * (bufferLength / (small ? 14 : 25)));
+      const count = small ? 12 : 24;
+      const newWaveform = Array.from({ length: count }, (_, i) => {
+        const dataIndex = Math.floor(i * (bufferLength / count));
         const value = dataArray[dataIndex] || 0;
-        return Math.max(2, Math.floor((value / 255) * 30));
+        return Math.max(3, Math.floor((value / 255) * (small ? 16 : 28)));
       });
       
       setWaveformData(newWaveform);
@@ -178,57 +210,28 @@ function Waveform({ playing, small, audioRef }: { playing: boolean; small?: bool
     updateWaveform();
 
     return () => {
-      // Cleanup animation frame
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
         animationFrameRef.current = null;
       }
-      
-      // Cleanup audio nodes to prevent memory leaks
-      if (sourceRef.current) {
-        try {
-          sourceRef.current.disconnect();
-        } catch (e) {
-          // Ignore disconnect errors
-        }
-        sourceRef.current = null;
-      }
-      
-      if (analyserRef.current) {
-        try {
-          analyserRef.current.disconnect();
-        } catch (e) {
-          // Ignore disconnect errors
-        }
-        analyserRef.current = null;
-      }
-      
-      // Close AudioContext if no longer needed
-      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-        try {
-          audioContextRef.current.close();
-        } catch (e) {
-          // Ignore close errors
-        }
-        audioContextRef.current = null;
-      }
     };
   }, [playing, audioRef, small]);
 
-  const bars = small ? waveformData.slice(0, 14) : waveformData;
+  const bars = small ? waveformData.slice(0, 12) : waveformData;
 
   return (
-    <div className={`flex items-end gap-[2px] ${small ? "h-5" : "h-8"}`} aria-hidden>
+    <div className={`flex items-center gap-[2.5px] ${small ? "h-4" : "h-7"}`} aria-hidden>
       {bars.map((h, i) => (
         <div 
           key={i} 
           style={{
-            height: `${small ? Math.max(2, h * 0.6) : h}px`,
-            width: "2px",
-            backgroundColor: "white",
-            transition: "height 0.05s ease-out",
+            height: playing ? `${h}px` : `${Math.max(3, (WAVE_H[i % WAVE_H.length] || 10) * (small ? 0.45 : 0.75))}px`,
+            width: small ? "2px" : "2.5px",
+            transition: "height 0.06s ease-out",
           }} 
-          className={playing ? "waveform-bar" : "opacity-20"} 
+          className={`rounded-full transition-all duration-75 ${
+            playing ? "bg-white" : "bg-neutral-700/60"
+          }`} 
         />
       ))}
     </div>
@@ -242,24 +245,24 @@ function buildUrlVariants(rawUrl: string): string[] {
   return [playable];
 }
 
-// ─── Audio Player ─────────────────────────────────────────────────────────────
-function AudioPlayer({ audioUrl, fallbackDurationSec, isActive, onPlayToggle, small }: {
+// ─── Audio Player (Modern, Tactile, Sleek) ───────────────────────────────────
+function AudioPlayer({ audioUrl, fallbackDurationSec, isActive, onPlayToggle, small, onFirstPlay }: {
   audioUrl: string; fallbackDurationSec: number;
-  isActive?: boolean; onPlayToggle?: (p: boolean) => void; small?: boolean;
+  isActive?: boolean; onPlayToggle?: (p: boolean) => void; small?: boolean; onFirstPlay?: () => void;
 }) {
   const variants = buildUrlVariants(audioUrl);
-  const [vi, setVi]         = useState(0);
+  const [vi, setVi]           = useState(0);
   const [playing, setPlaying] = useState(false);
   const [current, setCurrent] = useState(0);
   const [dur, setDur]         = useState(Math.max(1, fallbackDurationSec));
   const [loading, setLoading] = useState(false);
   const [failed, setFailed]   = useState(false);
   const [speed, setSpeed]     = useState(1);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const instanceIdRef = useRef<string | null>(null);
-  const src = variants[vi] || audioUrl;
+  const audioRef              = useRef<HTMLAudioElement | null>(null);
+  const instanceIdRef         = useRef<string | null>(null);
+  const hasTriggeredPlayRef   = useRef(false);
+  const src                   = variants[vi] || audioUrl;
 
-  // Generate unique instance ID for this audio player
   useEffect(() => {
     instanceIdRef.current = `audio-${audioUrl}-${Date.now()}`;
     return () => {
@@ -269,24 +272,26 @@ function AudioPlayer({ audioUrl, fallbackDurationSec, isActive, onPlayToggle, sm
     };
   }, [audioUrl]);
 
-  useEffect(() => { setVi(0); setFailed(false); setPlaying(false); setCurrent(0); setDur(Math.max(1,fallbackDurationSec)); setSpeed(1); }, [audioUrl]);
+  useEffect(() => {
+    setVi(0);
+    setFailed(false);
+    setPlaying(false);
+    setCurrent(0);
+    setDur(Math.max(1, fallbackDurationSec));
+    setSpeed(1);
+    hasTriggeredPlayRef.current = false;
+  }, [audioUrl, fallbackDurationSec]);
 
-  // Register audio element with global manager
   useEffect(() => {
     const a = audioRef.current;
     const id = instanceIdRef.current;
     if (!a || !id) return;
-
-    audioManager.register(id, a, 1); // Priority 1 for main feed audio
-
+    audioManager.register(id, a, 1);
     return () => {
-      if (id) {
-        audioManager.unregister(id);
-      }
+      if (id) audioManager.unregister(id);
     };
   }, [src]);
 
-  // Ensure src is attached only when needed with preload="none"
   useEffect(() => {
     const a = audioRef.current;
     if (!a) return;
@@ -297,7 +302,8 @@ function AudioPlayer({ audioUrl, fallbackDurationSec, isActive, onPlayToggle, sm
   }, [src]);
 
   useEffect(() => {
-    const a = audioRef.current; if (!a || !instanceIdRef.current) return;
+    const a = audioRef.current;
+    if (!a || !instanceIdRef.current) return;
     if (!isActive && playing) {
       a.pause();
       audioManager.pause(instanceIdRef.current);
@@ -306,9 +312,11 @@ function AudioPlayer({ audioUrl, fallbackDurationSec, isActive, onPlayToggle, sm
   }, [isActive]);
 
   const onErr = () => {
-    setPlaying(false); setLoading(false);
-    const next = vi+1;
-    if (next < variants.length) setVi(next); else setFailed(true);
+    setPlaying(false);
+    setLoading(false);
+    const next = vi + 1;
+    if (next < variants.length) setVi(next);
+    else setFailed(true);
   };
 
   const toggle = async () => {
@@ -321,9 +329,14 @@ function AudioPlayer({ audioUrl, fallbackDurationSec, isActive, onPlayToggle, sm
       audioManager.pause(id);
       setPlaying(false); 
       onPlayToggle?.(false); 
-    }
-    else {
-      a.volume = 1; a.muted = false; setLoading(true);
+    } else {
+      if (!hasTriggeredPlayRef.current) {
+        hasTriggeredPlayRef.current = true;
+        onFirstPlay?.();
+      }
+      a.volume = 1;
+      a.muted = false;
+      setLoading(true);
       if (!a.src) a.src = src;
       try { 
         const granted = await audioManager.requestPlay(id);
@@ -335,8 +348,7 @@ function AudioPlayer({ audioUrl, fallbackDurationSec, isActive, onPlayToggle, sm
           setPlaying(true);
           onPlayToggle?.(true);
         }
-      }
-      catch {
+      } catch {
         try {
           await a.play();
           setPlaying(true);
@@ -352,7 +364,8 @@ function AudioPlayer({ audioUrl, fallbackDurationSec, isActive, onPlayToggle, sm
 
   const seek = (e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
-    const a = audioRef.current; if (!a || !isFinite(a.duration)) return;
+    const a = audioRef.current;
+    if (!a || !isFinite(a.duration)) return;
     const r = e.currentTarget.getBoundingClientRect();
     const pos = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
     const target = pos * a.duration;
@@ -362,79 +375,125 @@ function AudioPlayer({ audioUrl, fallbackDurationSec, isActive, onPlayToggle, sm
 
   const skip = (delta: number, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    const a = audioRef.current; if (!a || !isFinite(a.duration)) return;
+    const a = audioRef.current;
+    if (!a || !isFinite(a.duration)) return;
     const target = Math.max(0, Math.min(a.duration, a.currentTime + delta));
     a.currentTime = target;
     setCurrent(target);
+    soundSynth.playSubtlePop();
   };
 
   const changeSpeed = (e?: React.MouseEvent) => {
     e?.stopPropagation();
-    const speeds = [0.5, 0.75, 1, 1.25, 1.5, 2];
+    const speeds = [1, 1.25, 1.5, 2];
     const currentIndex = speeds.indexOf(speed);
     const nextIndex = (currentIndex + 1) % speeds.length;
     const newSpeed = speeds[nextIndex];
     setSpeed(newSpeed);
     if (audioRef.current) audioRef.current.playbackRate = newSpeed;
+    soundSynth.playSubtlePop();
   };
 
   if (failed) return (
-    <div className="border border-neutral-900 p-3 flex items-center justify-between gap-3">
-      <span className="font-mono text-[10px] text-neutral-600 tracking-widest uppercase">AUDIO UNAVAILABLE</span>
-      <button onClick={()=>{setVi(0);setFailed(false);}} className="font-mono text-[10px] text-neutral-500 tracking-widest uppercase border border-neutral-800 px-2 py-1 hover:border-white hover:text-white transition-colors cursor-pointer">RETRY</button>
+    <div className="bg-neutral-900/40 border border-neutral-800/80 rounded-2xl p-3 flex items-center justify-between gap-3 text-xs">
+      <span className="text-neutral-500 font-medium">Audio unavailable</span>
+      <button 
+        onClick={() => { setVi(0); setFailed(false); }} 
+        className="text-xs text-neutral-400 hover:text-white px-2.5 py-1 rounded-lg border border-neutral-800 hover:border-neutral-700 transition-colors"
+      >
+        Retry
+      </button>
     </div>
   );
 
   return (
-    <div className={`border border-neutral-800 ${small?"p-3":"p-4"} space-y-2.5`}>
-      <audio key={src} ref={audioRef} src={src} preload="auto" playsInline crossOrigin="anonymous"
-        onLoadedMetadata={e=>{const el=e.currentTarget;if(isFinite(el.duration)&&el.duration>0)setDur(Math.ceil(el.duration));}}
-        onTimeUpdate={e=>setCurrent(e.currentTarget.currentTime)}
-        onPlaying={()=>{setPlaying(true);setLoading(false);}}
-        onPause={()=>setPlaying(false)}
-        onEnded={()=>{setPlaying(false);setCurrent(0);onPlayToggle?.(false);}}
-        onError={onErr} style={{display:"none"}} />
+    <div className={`bg-neutral-950/80 border border-neutral-850 rounded-2xl ${small ? "p-2.5" : "p-3.5 sm:p-4"} space-y-2.5 shadow-sm`}>
+      <audio 
+        key={src} 
+        ref={audioRef} 
+        src={src} 
+        preload="metadata" 
+        playsInline 
+        crossOrigin="anonymous"
+        onLoadedMetadata={e => {
+          const el = e.currentTarget;
+          if (isFinite(el.duration) && el.duration > 0) setDur(Math.ceil(el.duration));
+        }}
+        onTimeUpdate={e => setCurrent(e.currentTarget.currentTime)}
+        onPlaying={() => { setPlaying(true); setLoading(false); }}
+        onPause={() => setPlaying(false)}
+        onEnded={() => { setPlaying(false); setCurrent(0); onPlayToggle?.(false); }}
+        onError={onErr} 
+        style={{ display: "none" }} 
+      />
       
-      <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-        <button onClick={toggle} disabled={loading}
-          className={`font-mono text-xs tracking-widest uppercase border border-white px-3 py-1.5 text-white hover:bg-white hover:text-black transition-colors cursor-pointer shrink-0 disabled:opacity-50 ${small?"min-w-[80px]":"min-w-[100px]"} flex items-center justify-center gap-1.5`}>
-          {loading?<><Loader2 className="w-3 h-3 animate-spin"/>LOADING</>:playing?"[ ⏸ PAUSE ]":"[ ▶ PLAY ]"}
+      <div className="flex items-center gap-3">
+        {/* Tactile Play/Pause Button */}
+        <button 
+          type="button"
+          onClick={toggle} 
+          disabled={loading}
+          className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer shrink-0 active:scale-95 ${
+            playing 
+              ? "bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.3)]" 
+              : "bg-white text-black hover:bg-neutral-200"
+          } disabled:opacity-50`}
+          title={playing ? "Pause Audio" : "Play Audio"}
+        >
+          {loading ? (
+            <Loader2 className="w-4 h-4 animate-spin text-black" />
+          ) : playing ? (
+            <Pause className="w-4 h-4 fill-black text-black" />
+          ) : (
+            <Play className="w-4 h-4 fill-black text-black ml-0.5" />
+          )}
         </button>
 
-        {/* Rewind & Fast Forward 5s */}
-        <div className="flex items-center gap-1 shrink-0">
-          <button
-            onClick={(e) => skip(-5, e)}
-            className="px-1.5 py-1 border border-neutral-800 hover:border-white text-neutral-400 hover:text-white transition-colors cursor-pointer flex items-center gap-1 font-mono text-[9px] uppercase tracking-wider"
-            title="Rewind 5 seconds"
-          >
-            <RotateCcw className="w-3 h-3" />
-            <span className="hidden xs:inline">-5S</span>
-          </button>
-          <button
-            onClick={(e) => skip(5, e)}
-            className="px-1.5 py-1 border border-neutral-800 hover:border-white text-neutral-400 hover:text-white transition-colors cursor-pointer flex items-center gap-1 font-mono text-[9px] uppercase tracking-wider"
-            title="Forward 5 seconds"
-          >
-            <span className="hidden xs:inline">+5S</span>
-            <RotateCw className="w-3 h-3" />
-          </button>
+        {/* Visualizer & Scrubber Wave */}
+        <div className="flex-1 min-w-0 flex items-center gap-2.5 cursor-pointer select-none py-1" onClick={seek} title="Click to seek">
+          <div className="flex-1 flex items-center">
+            <Waveform playing={playing} small={small} audioRef={audioRef} />
+          </div>
         </div>
 
-        <div className="flex-1 min-w-[80px] overflow-hidden cursor-pointer" onClick={seek} title="Click to seek">
-          <Waveform playing={playing} small={small} audioRef={audioRef}/>
+        {/* Controls: Skip, Speed & Time */}
+        <div className="flex items-center gap-1.5 shrink-0 text-xs font-mono select-none">
+          {!small && (
+            <>
+              <button
+                type="button"
+                onClick={(e) => skip(-5, e)}
+                className="w-7 h-7 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-900 transition-colors flex items-center justify-center"
+                title="Rewind 5 seconds"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => skip(5, e)}
+                className="w-7 h-7 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-900 transition-colors flex items-center justify-center"
+                title="Skip 5 seconds"
+              >
+                <RotateCw className="w-3.5 h-3.5" />
+              </button>
+              <button 
+                type="button"
+                onClick={changeSpeed} 
+                className="px-1.5 py-0.5 rounded text-[11px] text-neutral-400 hover:text-white hover:bg-neutral-900 font-semibold transition-colors"
+                title="Change speed"
+              >
+                {speed}x
+              </button>
+            </>
+          )}
+          <span className="text-[11px] text-neutral-400 tabular-nums ml-1">
+            {fmt(current)} / {fmt(dur)}
+          </span>
         </div>
-
-        {!small && (
-          <button onClick={changeSpeed} className="font-mono text-[10px] text-neutral-500 hover:text-white tracking-widest uppercase transition-colors cursor-pointer shrink-0">
-            {speed}x
-          </button>
-        )}
-        <span className="font-mono text-[10px] text-neutral-500 tracking-widest shrink-0 tabular-nums">{fmt(current)}/{fmt(dur)}</span>
       </div>
 
-      {/* Interactive Timeline Scrubber Slider */}
-      <div className="w-full flex items-center gap-2 select-none pt-1">
+      {/* Sleek Progress Scrubber Slider */}
+      <div className="w-full relative flex items-center select-none pt-0.5">
         <input
           type="range"
           min={0}
@@ -449,7 +508,7 @@ function AudioPlayer({ audioUrl, fallbackDurationSec, isActive, onPlayToggle, sm
               setCurrent(val);
             }
           }}
-          className="w-full h-1.5 bg-neutral-900 hover:bg-neutral-800 rounded-none appearance-none cursor-pointer accent-white hover:h-2 transition-all focus:outline-none"
+          className="w-full h-1 bg-neutral-850 hover:bg-neutral-800 rounded-full appearance-none cursor-pointer accent-white transition-all focus:outline-none"
           title="Slide to seek audio"
         />
       </div>
@@ -460,107 +519,175 @@ function AudioPlayer({ audioUrl, fallbackDurationSec, isActive, onPlayToggle, sm
 // ─── Reply Record Modal ───────────────────────────────────────────────────────
 function ReplyRecordModal({ postId, postCaption, postAuthorHandle, postAuthorUid, reverbOfReverbId, reverbOfHandle, currentUser, onClose }: {
   postId: string; postCaption: string; postAuthorHandle: string; postAuthorUid: string;
-  reverbOfReverbId?: string; reverbOfHandle?: string; currentUser: any; onClose: ()=>void;
+  reverbOfReverbId?: string; reverbOfHandle?: string; currentUser: any; onClose: () => void;
 }) {
-  const [state, setState]       = useState<"idle"|"recording"|"preview"|"uploading">("idle");
+  const [state, setState]       = useState<"idle" | "recording" | "preview" | "uploading">("idle");
   const [ms, setMs]             = useState(0);
-  const [caption, setCaption]   = useState(`@${(reverbOfHandle||postAuthorHandle).replace(/^@/,"")} `);
-  const [blob, setBlob]         = useState<Blob|null>(null);
-  const [previewUrl, setPrev]   = useState<string|null>(null);
+  const [caption, setCaption]   = useState(`@${(reverbOfHandle || postAuthorHandle).replace(/^@/, "")} `);
+  const [blob, setBlob]         = useState<Blob | null>(null);
+  const [previewUrl, setPrev]   = useState<string | null>(null);
   const [prevPlaying, setPP]    = useState(false);
-  const [msg, setMsg]           = useState<string|null>(null);
-  const recRef   = useRef<MediaRecorder|null>(null);
-  const chunks   = useRef<Blob[]>([]);
-  const timer    = useRef<any>(null);
-  const t0       = useRef(0);
-  const prevAudio= useRef<HTMLAudioElement|null>(null);
-  const stream   = useRef<MediaStream|null>(null);
+  const [msg, setMsg]           = useState<string | null>(null);
+  const recRef                  = useRef<MediaRecorder | null>(null);
+  const chunks                  = useRef<Blob[]>([]);
+  const timer                   = useRef<any>(null);
+  const t0                      = useRef(0);
+  const prevAudio               = useRef<HTMLAudioElement | null>(null);
+  const stream                  = useRef<MediaStream | null>(null);
 
-  const fmtMs = (v:number)=>`${Math.floor(v/60000).toString().padStart(2,"0")}:${Math.floor((v%60000)/1000).toString().padStart(2,"0")}`;
+  const fmtMs = (v: number) => `${Math.floor(v / 60000).toString().padStart(2, "0")}:${Math.floor((v % 60000) / 1000).toString().padStart(2, "0")}`;
 
-  useEffect(()=>{
-    if(state==="recording"){t0.current=Date.now()-ms;timer.current=setInterval(()=>setMs(Date.now()-t0.current),50);}
-    else{if(timer.current){clearInterval(timer.current);timer.current=null;}}
-    return()=>{if(timer.current)clearInterval(timer.current);};
-  },[state]);
-  useEffect(()=>()=>{stream.current?.getTracks().forEach(t=>t.stop());prevAudio.current?.pause();if(previewUrl)URL.revokeObjectURL(previewUrl);},[]);
+  useEffect(() => {
+    if (state === "recording") {
+      t0.current = Date.now() - ms;
+      timer.current = setInterval(() => setMs(Date.now() - t0.current), 50);
+    } else {
+      if (timer.current) { clearInterval(timer.current); timer.current = null; }
+    }
+    return () => { if (timer.current) clearInterval(timer.current); };
+  }, [state]);
 
-  const startRec = async()=>{
-    chunks.current=[];setMs(0);setBlob(null);if(previewUrl){URL.revokeObjectURL(previewUrl);setPrev(null);}setMsg(null);
-    try{
-      const s=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
-      stream.current=s;
-      let mime="audio/webm";
-      if(MediaRecorder.isTypeSupported("audio/webm;codecs=opus"))mime="audio/webm;codecs=opus";
-      else if(MediaRecorder.isTypeSupported("audio/mp4"))mime="audio/mp4";
-      const rec=new MediaRecorder(s,{mimeType:mime});recRef.current=rec;
-      rec.ondataavailable=e=>{if(e.data?.size>0)chunks.current.push(e.data);};
-      rec.onstop=()=>{
-        const b=new Blob(chunks.current,{type:mime.split(";")[0]});
-        if(b.size<100){setMsg("TOO SHORT.");setState("idle");s.getTracks().forEach(t=>t.stop());return;}
-        setBlob(b);setPrev(URL.createObjectURL(b));s.getTracks().forEach(t=>t.stop());setState("preview");
+  useEffect(() => () => {
+    stream.current?.getTracks().forEach(t => t.stop());
+    prevAudio.current?.pause();
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+  }, []);
+
+  const startRec = async () => {
+    chunks.current = []; setMs(0); setBlob(null);
+    if (previewUrl) { URL.revokeObjectURL(previewUrl); setPrev(null); }
+    setMsg(null);
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+      stream.current = s;
+      let mime = "audio/webm";
+      if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) mime = "audio/webm;codecs=opus";
+      else if (MediaRecorder.isTypeSupported("audio/mp4")) mime = "audio/mp4";
+      const rec = new MediaRecorder(s, { mimeType: mime });
+      recRef.current = rec;
+      rec.ondataavailable = e => { if (e.data?.size > 0) chunks.current.push(e.data); };
+      rec.onstop = () => {
+        const b = new Blob(chunks.current, { type: mime.split(";")[0] });
+        if (b.size < 100) { setMsg("Audio take too short."); setState("idle"); s.getTracks().forEach(t => t.stop()); return; }
+        setBlob(b);
+        setPrev(URL.createObjectURL(b));
+        s.getTracks().forEach(t => t.stop());
+        setState("preview");
       };
-      rec.start();setState("recording");
-    }catch{setMsg("MIC DENIED.");setState("idle");}
-  };
-  const stopRec=()=>{if(recRef.current?.state==="recording")recRef.current.stop();};
-  const togglePrev=()=>{
-    if(!previewUrl)return;
-    if(prevPlaying){prevAudio.current?.pause();setPP(false);return;}
-    if(!prevAudio.current){prevAudio.current=new Audio(previewUrl);prevAudio.current.onended=()=>setPP(false);}
-    prevAudio.current.play().then(()=>setPP(true)).catch(()=>{});
-  };
-  const publish=async()=>{
-    if(!blob||!currentUser)return;
-    prevAudio.current?.pause();setPP(false);setState("uploading");setMsg("UPLOADING...");
-    try{
-      const sec=Math.max(1,Math.floor(ms/1000));
-      const up=await uploadAudio(blob,`rev-${currentUser.uid}-${Date.now()}`);
-      await addPostReverb(postId,{uid:currentUser.uid,handle:currentUser.handle||"@ANON",audioUrl:up.secureUrl,caption:caption.trim()||`@${postAuthorHandle} REPLY`,durationSec:sec,reverbOfReverbId,reverbOfHandle});
-      await createNotification(postAuthorUid,{type:"reverb",fromUid:currentUser.uid,fromHandle:currentUser.handle||"@ANON",postId,postCaption,text:`${currentUser.handle} dropped a reply on your echo.`});
-      if(previewUrl)URL.revokeObjectURL(previewUrl);
-      onClose();
-    }catch(e:any){setMsg(`ERROR: ${e?.message||"FAILED"}`);setState("preview");}
+      rec.start();
+      setState("recording");
+      soundSynth.playSubtlePop();
+    } catch {
+      setMsg("Microphone permission denied.");
+      setState("idle");
+    }
   };
 
-  return(
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/85 backdrop-blur-sm" onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div className="w-full max-w-md bg-black border border-neutral-700 p-6 space-y-5 m-4">
-        <div className="flex items-center justify-between">
-          <p className="font-mono text-xs tracking-widest uppercase text-white">
-            {reverbOfHandle?`↩ REPLY ON ${reverbOfHandle}`:`// REPLY ON ${postAuthorHandle}`}
-          </p>
-          <button onClick={onClose} className="font-mono text-xs text-neutral-600 hover:text-white cursor-pointer">[ ✕ ]</button>
+  const stopRec = () => {
+    if (recRef.current?.state === "recording") recRef.current.stop();
+  };
+
+  const togglePrev = () => {
+    if (!previewUrl) return;
+    if (prevPlaying) { prevAudio.current?.pause(); setPP(false); return; }
+    if (!prevAudio.current) {
+      prevAudio.current = new Audio(previewUrl);
+      prevAudio.current.onended = () => setPP(false);
+    }
+    prevAudio.current.play().then(() => setPP(true)).catch(() => {});
+  };
+
+  const publish = async () => {
+    if (!blob || !currentUser) return;
+    prevAudio.current?.pause(); setPP(false); setState("uploading"); setMsg("Uploading voice take...");
+    try {
+      const sec = Math.max(1, Math.floor(ms / 1000));
+      const up = await uploadAudio(blob, `rev-${currentUser.uid}-${Date.now()}`);
+      await addPostReverb(postId, {
+        uid: currentUser.uid,
+        handle: currentUser.handle || "@ANON",
+        audioUrl: up.secureUrl,
+        caption: caption.trim() || `@${postAuthorHandle} REPLY`,
+        durationSec: sec,
+        reverbOfReverbId,
+        reverbOfHandle
+      });
+      await createNotification(postAuthorUid, {
+        type: "reverb",
+        fromUid: currentUser.uid,
+        fromHandle: currentUser.handle || "@ANON",
+        postId,
+        postCaption,
+        text: `${currentUser.handle} dropped a voice reply on your echo.`
+      });
+      soundSynth.playSubtlePop();
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      onClose();
+    } catch (e: any) {
+      setMsg(`Upload failed: ${e?.message || "Error"}`);
+      setState("preview");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="w-full max-w-lg bg-neutral-950 border border-neutral-800 rounded-3xl p-6 space-y-5 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-neutral-900 pb-3">
+          <div className="flex items-center gap-2">
+            <Mic2 className="w-4 h-4 text-emerald-400" />
+            <h3 className="font-bold text-sm text-white">
+              {reverbOfHandle ? `Reply to ${reverbOfHandle}` : `Reply to ${postAuthorHandle}`}
+            </h3>
+          </div>
+          <button onClick={onClose} className="text-neutral-500 hover:text-white p-1 rounded-full hover:bg-neutral-900 transition-colors">
+            ✕
+          </button>
         </div>
-        <p className="font-mono text-neutral-300 text-xs leading-relaxed">"{postCaption.slice(0,80)}{postCaption.length>80?"…":""}"</p>
-        <div className="flex items-center gap-2 border-b border-neutral-800">
-          <AtSign className="w-3 h-3 text-neutral-500 shrink-0"/>
-          <input value={caption} onChange={e=>setCaption(e.target.value)} maxLength={140}
-            className="flex-1 bg-transparent outline-none font-mono text-xs text-white py-1 tracking-widest"
-            placeholder="Caption or @tag..."/>
+
+        <p className="text-xs text-neutral-400 line-clamp-2 bg-neutral-900/50 p-2.5 rounded-xl border border-neutral-850">
+          "{postCaption}"
+        </p>
+
+        <div className="flex items-center gap-2 bg-neutral-900/60 border border-neutral-800 rounded-xl px-3 py-2">
+          <AtSign className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
+          <input 
+            value={caption} 
+            onChange={e => setCaption(e.target.value)} 
+            maxLength={140}
+            className="flex-1 bg-transparent outline-none text-xs text-white placeholder-neutral-600"
+            placeholder="Add note or caption..."
+          />
         </div>
-        <div className="font-mono text-3xl text-white text-center tabular-nums">{fmtMs(ms)}</div>
+
+        <div className="font-mono text-3xl font-bold text-white text-center tabular-nums py-2">
+          {fmtMs(ms)}
+        </div>
+
         <div className="space-y-3">
-          {state==="idle"&& (
+          {state === "idle" && (
             <>
-              <button onClick={startRec} className="w-full border border-neutral-700 text-white font-mono text-xs tracking-widest uppercase py-4 hover:border-white hover:bg-neutral-950 transition-colors cursor-pointer">
-                [ 🎙 TAP TO RECORD VOICE REPLY ]
+              <button 
+                onClick={startRec} 
+                className="w-full bg-white hover:bg-neutral-200 text-black font-semibold text-xs py-3.5 rounded-2xl transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer active:scale-98"
+              >
+                <Mic2 className="w-4 h-4 fill-current" />
+                <span>Tap to Record Voice Take</span>
               </button>
 
-              {/* 1-Tap Viral Voice Meme Soundboard */}
-              <div className="space-y-1.5 pt-2 border-t border-neutral-900">
-                <span className="font-mono text-[9px] text-neutral-500 uppercase tracking-widest block font-bold">
-                  // 1-TAP VIRAL VOICE MEMES (INSTANT DROP)
+              {/* Instant Viral Voice Meme Soundboard */}
+              <div className="space-y-2 pt-2 border-t border-neutral-900">
+                <span className="text-[11px] text-neutral-400 font-semibold block">
+                  Quick Voice Memes
                 </span>
                 <div className="grid grid-cols-2 gap-1.5">
-                  {SOUND_CATALOG.filter(s => s.isVoiceMeme).map((meme) => (
+                  {SOUND_CATALOG.filter(s => s.isVoiceMeme).slice(0, 6).map((meme) => (
                     <button
                       key={meme.id}
                       type="button"
                       onClick={async () => {
                         if (!currentUser) return;
                         setState("uploading");
-                        setMsg(`DROPPING "${meme.title}"...`);
+                        setMsg(`Dropping "${meme.title}"...`);
                         try {
                           await addPostReverb(postId, {
                             uid: currentUser.uid,
@@ -583,14 +710,14 @@ function ReplyRecordModal({ postId, postCaption, postAuthorHandle, postAuthorUid
                           });
                           onClose();
                         } catch (e: any) {
-                          setMsg(`ERROR: ${e?.message || "FAILED"}`);
+                          setMsg(`Error: ${e?.message || "Failed"}`);
                           setState("idle");
                         }
                       }}
-                      className="p-2 border border-neutral-900 bg-neutral-950 hover:border-white text-left font-mono text-[10px] text-neutral-300 hover:text-white transition-colors cursor-pointer flex items-center justify-between"
+                      className="p-2 bg-neutral-900/60 border border-neutral-800/80 hover:border-neutral-700 rounded-xl text-left text-xs text-neutral-300 hover:text-white transition-all cursor-pointer flex items-center justify-between"
                     >
                       <span className="truncate">{meme.title}</span>
-                      <span className="text-[8px] bg-neutral-800 text-neutral-400 px-1 py-0.2 shrink-0">
+                      <span className="text-[10px] text-neutral-500 shrink-0 font-mono">
                         {meme.durationSec}s
                       </span>
                     </button>
@@ -599,24 +726,59 @@ function ReplyRecordModal({ postId, postCaption, postAuthorHandle, postAuthorUid
               </div>
             </>
           )}
-          {state==="recording"&&<button onClick={stopRec} className="w-full border border-white bg-white text-black font-mono text-xs tracking-widest uppercase py-4 animate-pulse cursor-pointer font-bold">[ ⏹ STOP RECORDING ]</button>}
-          {state==="preview"&&(
-            <div className="flex gap-3">
-              <button onClick={togglePrev} className="font-mono text-xs tracking-widest uppercase border border-white px-4 py-2 text-white hover:bg-white hover:text-black transition-colors cursor-pointer">{prevPlaying?"[ ⏸ ]":"[ ▶ ]"}</button>
-              <button onClick={()=>{setState("idle");setBlob(null);if(previewUrl)URL.revokeObjectURL(previewUrl);setPrev(null);setMs(0);}} className="flex items-center gap-1 border border-neutral-800 text-neutral-500 hover:border-white hover:text-white font-mono text-xs tracking-widest uppercase px-3 py-2 transition-colors cursor-pointer"><Trash2 className="w-3 h-3"/>REDO</button>
-              <button onClick={publish} disabled={!caption.trim()} className="flex-1 flex items-center justify-center gap-1.5 border border-white bg-white text-black font-mono text-xs tracking-widest uppercase py-2 hover:bg-neutral-200 transition-colors cursor-pointer disabled:opacity-30"><Send className="w-3 h-3"/>POST</button>
+
+          {state === "recording" && (
+            <button 
+              onClick={stopRec} 
+              className="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs py-3.5 rounded-2xl animate-pulse cursor-pointer flex items-center justify-center gap-2"
+            >
+              <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping" />
+              <span>Stop Recording</span>
+            </button>
+          )}
+
+          {state === "preview" && (
+            <div className="flex gap-2.5">
+              <button 
+                onClick={togglePrev} 
+                className="px-4 py-2.5 rounded-xl border border-neutral-800 bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                {prevPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                <span>{prevPlaying ? "Pause" : "Play"}</span>
+              </button>
+              <button 
+                onClick={() => { setState("idle"); setBlob(null); if (previewUrl) URL.revokeObjectURL(previewUrl); setPrev(null); setMs(0); }} 
+                className="px-3.5 py-2.5 rounded-xl border border-neutral-800 hover:border-neutral-700 text-neutral-400 hover:text-white text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Retake</span>
+              </button>
+              <button 
+                onClick={publish} 
+                disabled={!caption.trim()} 
+                className="flex-1 bg-white hover:bg-neutral-200 text-black font-bold text-xs py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>Post Take</span>
+              </button>
             </div>
           )}
-          {state==="uploading"&&<div className="w-full border border-neutral-800 py-4 flex items-center justify-center gap-3 font-mono text-xs tracking-widest uppercase text-neutral-400"><Loader2 className="w-4 h-4 animate-spin"/>UPLOADING...</div>}
+
+          {state === "uploading" && (
+            <div className="w-full py-4 flex items-center justify-center gap-2.5 text-xs text-neutral-400">
+              <Loader2 className="w-4 h-4 animate-spin text-white" />
+              <span>Uploading voice take...</span>
+            </div>
+          )}
         </div>
-        {msg&&<p className="font-mono text-[10px] text-neutral-500 tracking-widest uppercase text-center">{msg}</p>}
-        <p className="font-mono text-[10px] text-neutral-700 tracking-widest uppercase text-center">[ REPLIES ] = VOICE COMMENTS • SHOWS INLINE UNDER POST</p>
+
+        {msg && <p className="text-xs text-neutral-400 text-center">{msg}</p>}
       </div>
     </div>
   );
 }
 
-// ─── Post Reverb (Audio Comments) Section with Emoji Reaction Log ─────────────
+// ─── Post Reverb (Audio Comments) Section ─────────────────────────────────────
 function PostReverbSection({ post, currentUser, onReplyClick, onProfileClick }: {
   post: FeedPost;
   currentUser: any;
@@ -625,23 +787,24 @@ function PostReverbSection({ post, currentUser, onReplyClick, onProfileClick }: 
 }) {
   const [reverbs, setReverbs]   = useState<PostReverbItem[]>([]);
   const [expanded, setExpanded] = useState(false);
-  const [selectedReverbForLog, setSelectedReverbForLog] = useState<PostReverbItem | null>(null);
 
   const REACTION_OPTIONS = ["😂", "🔥", "❤️", "👍", "⚡", "💀", "🧢", "💯"];
 
-  useEffect(()=>{
-    if(!expanded)return;
-    const unsub=subscribeToPostReverbs(post.id,setReverbs);
-    return()=>unsub();
-  },[post.id,expanded]);
+  useEffect(() => {
+    if (!expanded) return;
+    const unsub = subscribeToPostReverbs(post.id, setReverbs);
+    return () => unsub();
+  }, [post.id, expanded]);
 
-  const handlePulse=async(rv:PostReverbItem)=>{
-    if(!currentUser)return;
-    await togglePulsePostReverb(post.id,rv.id,currentUser.uid,!!(rv.pulsedBy||[]).includes(currentUser.uid));
+  const handlePulse = async (rv: PostReverbItem) => {
+    if (!currentUser) return;
+    soundSynth.playSubtlePop();
+    await togglePulsePostReverb(post.id, rv.id, currentUser.uid, !!(rv.pulsedBy || []).includes(currentUser.uid));
   };
 
   const handleReact = async (rv: PostReverbItem, emoji: string) => {
     if (!currentUser) return;
+    soundSynth.playSubtlePop();
     try {
       await toggleReverbReaction(
         post.id,
@@ -655,84 +818,100 @@ function PostReverbSection({ post, currentUser, onReplyClick, onProfileClick }: 
     }
   };
 
-  const total=post.reverbCount||0;
+  const total = post.reverbCount || 0;
 
-  return(
-    <div className="space-y-1 pt-1">
-      <button onClick={()=>setExpanded(v=>!v)}
-        className="flex items-center gap-1.5 font-mono text-[10px] text-neutral-600 tracking-widest uppercase hover:text-neutral-400 transition-colors cursor-pointer">
-        {expanded?<ChevronUp className="w-3 h-3"/>:<ChevronDown className="w-3 h-3"/>}
-        {total>0?`${total} REPLY${total!==1?"S":""}`:expanded?"[ REPLIES ]":"[ + ADD REPLY ]"}
+  return (
+    <div className="pt-2">
+      <button 
+        onClick={() => setExpanded(v => !v)}
+        className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-neutral-200 transition-colors cursor-pointer py-1 font-medium"
+      >
+        {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+        <span>{total > 0 ? `${total} Voice Take${total !== 1 ? "s" : ""}` : "Add Voice Reply"}</span>
       </button>
 
-      {expanded&&(
-        <div className="border-l-2 border-neutral-900 pl-4 space-y-5 mt-2">
-          {reverbs.length===0&&(
-            <p className="font-mono text-[10px] text-neutral-700 tracking-widest uppercase animate-pulse">LOADING [ REPLIES ]...</p>
+      {expanded && (
+        <div className="border-l-2 border-neutral-800/80 pl-3.5 space-y-3.5 mt-2.5">
+          {reverbs.length === 0 && (
+            <p className="text-xs text-neutral-500 py-2">No voice replies yet. Be the first!</p>
           )}
-          {reverbs.map(rv=>{
-            const pulsed=currentUser?(rv.pulsedBy||[]).includes(currentUser.uid):false;
+          {reverbs.map(rv => {
+            const pulsed = currentUser ? (rv.pulsedBy || []).includes(currentUser.uid) : false;
             const reactionsMap = rv.reactions || {};
             const reactionList = Object.values(reactionsMap);
             
-            // Group counts
             const emojiCounts: Record<string, number> = {};
             reactionList.forEach((r) => {
               emojiCounts[r.emoji] = (emojiCounts[r.emoji] || 0) + 1;
             });
             const userReactedEmoji = currentUser ? reactionsMap[currentUser.uid]?.emoji : null;
 
-            return(
-              <div key={rv.id} className="space-y-2 border-b border-neutral-900/60 pb-3">
+            return (
+              <div key={rv.id} className="space-y-2 bg-neutral-950/60 border border-neutral-850 p-3 rounded-xl">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <button onClick={()=>onProfileClick(rv.handle)} className="font-mono text-[10px] tracking-widest text-neutral-400 hover:text-white uppercase cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => onProfileClick(rv.handle)} 
+                      className="text-xs font-semibold text-neutral-300 hover:text-white cursor-pointer"
+                    >
                       {rv.handle}
                     </button>
                     {rv.isVoiceMeme && (
-                      <span className="font-mono text-[8px] bg-white text-black font-extrabold px-1.5 py-0.2 uppercase tracking-wider flex items-center gap-1 shadow-sm">
-                        <span className="w-1 h-1 rounded-full bg-black animate-pulse" />
-                        V-MEME
+                      <span className="text-[9px] bg-neutral-800 text-neutral-300 px-1.5 py-0.5 rounded font-medium">
+                        V-Meme
                       </span>
                     )}
-                    {rv.reverbOfHandle&&<span className="font-mono text-[10px] text-neutral-700">↩ {rv.reverbOfHandle}</span>}
+                    {rv.reverbOfHandle && (
+                      <span className="text-[11px] text-neutral-500">↩ {rv.reverbOfHandle}</span>
+                    )}
                   </div>
                   {userReactedEmoji && (
-                    <span className="text-[10px] bg-neutral-900 border border-neutral-800 rounded px-1.5 py-0.2">
+                    <span className="text-xs bg-neutral-900 border border-neutral-800 rounded-full px-2 py-0.5">
                       {userReactedEmoji}
                     </span>
                   )}
                 </div>
 
-                {rv.caption&&<p className="font-mono text-[10px] text-neutral-500 tracking-wide">{rv.caption}</p>}
-
-                {rv.audioUrl && (
-                  <AudioPlayer audioUrl={rv.audioUrl} fallbackDurationSec={rv.durationSec||5} small/>
+                {rv.caption && (
+                  <p className="text-xs text-neutral-300 leading-relaxed">{rv.caption}</p>
                 )}
 
-                <div className="flex items-center justify-between gap-3 pt-1 flex-wrap">
+                {rv.audioUrl && (
+                  <AudioPlayer audioUrl={rv.audioUrl} fallbackDurationSec={rv.durationSec || 5} small />
+                )}
+
+                <div className="flex items-center justify-between gap-2 pt-1 flex-wrap">
                   <div className="flex items-center gap-3">
-                    <button onClick={()=>handlePulse(rv)} className={`flex items-center gap-1 font-mono text-[10px] tracking-widest uppercase cursor-pointer transition-colors ${pulsed?"text-white":"text-neutral-600 hover:text-white"}`}>
-                      <Heart className={`w-3 h-3 ${pulsed?"fill-white":""}`}/>
-                      {rv.pulseCount>0?formatNum(rv.pulseCount):"[ PULSE ]"}
+                    <button 
+                      onClick={() => handlePulse(rv)} 
+                      className={`flex items-center gap-1 text-xs cursor-pointer transition-colors ${
+                        pulsed ? "text-rose-500 font-semibold" : "text-neutral-400 hover:text-white"
+                      }`}
+                    >
+                      <Heart className={`w-3.5 h-3.5 ${pulsed ? "fill-rose-500 text-rose-500" : ""}`} />
+                      <span>{rv.pulseCount > 0 ? formatNum(rv.pulseCount) : ""}</span>
                     </button>
-                    <button onClick={()=>onReplyClick(rv.id,rv.handle)} className="flex items-center gap-1 font-mono text-[10px] tracking-widest uppercase text-neutral-600 hover:text-white cursor-pointer transition-colors">
-                      <Repeat2 className="w-3 h-3"/>[ REPLY ]
+                    <button 
+                      onClick={() => onReplyClick(rv.id, rv.handle)} 
+                      className="flex items-center gap-1 text-xs text-neutral-400 hover:text-white cursor-pointer transition-colors"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      <span>Reply</span>
                     </button>
                   </div>
 
-                  {/* Emoji Reactions Bar */}
-                  <div className="flex items-center gap-1 bg-black/60 border border-neutral-900 rounded-full px-2 py-0.5">
-                    {REACTION_OPTIONS.map((emoji) => {
+                  {/* Reaction Pills */}
+                  <div className="flex items-center gap-1 bg-black/50 border border-neutral-850 rounded-full px-2 py-0.5">
+                    {REACTION_OPTIONS.slice(0, 5).map((emoji) => {
                       const isSelected = userReactedEmoji === emoji;
                       return (
                         <button
                           key={emoji}
                           onClick={() => handleReact(rv, emoji)}
-                          className={`text-xs hover:scale-130 transition-transform p-0.5 cursor-pointer ${
-                            isSelected ? "scale-125 bg-neutral-800 rounded" : "opacity-70 hover:opacity-100"
+                          className={`text-xs p-0.5 hover:scale-125 transition-transform cursor-pointer ${
+                            isSelected ? "scale-110" : "opacity-75 hover:opacity-100"
                           }`}
-                          title={`React with ${emoji}`}
+                          title={`React ${emoji}`}
                         >
                           {emoji}
                         </button>
@@ -740,94 +919,18 @@ function PostReverbSection({ post, currentUser, onReplyClick, onProfileClick }: 
                     })}
                   </div>
                 </div>
-
-                {/* Reaction Log Trigger */}
-                {reactionList.length > 0 && (
-                  <div className="pt-1 flex items-center gap-2">
-                    <button
-                      onClick={() => setSelectedReverbForLog(rv)}
-                      className="flex items-center gap-1.5 font-mono text-[9px] text-neutral-400 hover:text-white bg-neutral-900 border border-neutral-800 hover:border-neutral-700 rounded-full px-2.5 py-0.5 transition-all cursor-pointer"
-                    >
-                      {Object.entries(emojiCounts).map(([emoji, count]) => (
-                        <span key={emoji} className="flex items-center gap-0.5">
-                          <span>{emoji}</span>
-                          <span className="font-bold text-white">{count}</span>
-                        </span>
-                      ))}
-                      <span className="text-neutral-500 text-[8px] uppercase ml-1">• WHO REACTED</span>
-                    </button>
-                  </div>
-                )}
               </div>
             );
           })}
-          {currentUser&&(
-            <button onClick={()=>onReplyClick()} className="flex items-center justify-center gap-1.5 font-mono text-[10px] text-neutral-700 tracking-widest uppercase hover:text-neutral-400 transition-colors cursor-pointer border border-neutral-900 px-3 py-2 w-full">
-              <Mic2 className="w-3 h-3"/>[ + ADD YOUR REPLY ]
+          {currentUser && (
+            <button 
+              onClick={() => onReplyClick()} 
+              className="flex items-center justify-center gap-2 text-xs text-neutral-300 hover:text-white py-2 px-3 bg-neutral-900/60 hover:bg-neutral-850 border border-neutral-800 rounded-xl transition-all w-full cursor-pointer font-medium"
+            >
+              <Mic2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Drop a Voice Take</span>
             </button>
           )}
-        </div>
-      )}
-
-      {/* ── Reaction Log Modal: Shows who laughed / reacted at whom ── */}
-      {selectedReverbForLog && (
-        <div className="fixed inset-0 z-60 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-neutral-950 border border-neutral-700 p-5 space-y-4 font-mono text-xs shadow-2xl rounded-xl">
-            <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
-              <span className="text-white font-bold tracking-wider uppercase flex items-center gap-1.5">
-                <span>📜 REACTION LOG</span>
-              </span>
-              <button
-                onClick={() => setSelectedReverbForLog(null)}
-                className="text-neutral-500 hover:text-white p-1 cursor-pointer"
-              >
-                [ ✕ ]
-              </button>
-            </div>
-
-            <div className="p-2 border border-neutral-900 bg-black/60 rounded">
-              <p className="font-mono text-[9px] text-neutral-500 uppercase">// VOICE TAKE</p>
-              <p className="font-mono text-xs text-neutral-300">
-                "{selectedReverbForLog.caption}"
-              </p>
-            </div>
-
-            <div className="space-y-2 max-h-60 overflow-y-auto no-scrollbar">
-              {Object.values(selectedReverbForLog.reactions || {}).map((item, idx) => (
-                <div key={idx} className="flex items-center justify-between p-2 border border-neutral-900 bg-neutral-900/40 rounded">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xl">{item.emoji}</span>
-                    <div>
-                      <span className="text-white font-bold">{item.userHandle}</span>
-                      <p className="text-[10px] text-neutral-400">
-                        {item.emoji === "😂"
-                          ? `laughed at ${item.targetHandle}'s voice take`
-                          : item.emoji === "🔥"
-                          ? `dropped fire on ${item.targetHandle}'s take`
-                          : item.emoji === "🧢"
-                          ? `called cap on ${item.targetHandle}'s take`
-                          : item.emoji === "💯"
-                          ? `agreed 100% with ${item.targetHandle}`
-                          : item.emoji === "💀"
-                          ? `found ${item.targetHandle}'s take dead funny`
-                          : `reacted ${item.emoji} to ${item.targetHandle}'s take`}
-                      </p>
-                    </div>
-                  </div>
-                  <span className="text-[9px] text-neutral-600">
-                    {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            <button
-              onClick={() => setSelectedReverbForLog(null)}
-              className="w-full py-2 border border-neutral-800 hover:border-white text-neutral-300 hover:text-white uppercase transition-colors rounded cursor-pointer"
-            >
-              [ CLOSE LOG ]
-            </button>
-          </div>
         </div>
       )}
     </div>
@@ -873,6 +976,7 @@ function TextCommentSection({ postId, postAuthorUid, currentUser, onClose }: {
         }
       }
       setText("");
+      soundSynth.playSubtlePop();
     } catch (err) {
       console.warn("[TextCommentSection] Warning creating comment:", err);
     } finally {
@@ -882,6 +986,7 @@ function TextCommentSection({ postId, postAuthorUid, currentUser, onClose }: {
 
   const handleLike = async (c: CommentItem) => {
     if (!currentUser) return;
+    soundSynth.playSubtlePop();
     const isLiked = (c.likedBy || []).includes(currentUser.uid);
     await toggleLikeComment(c.id, currentUser.uid, isLiked);
   };
@@ -891,34 +996,48 @@ function TextCommentSection({ postId, postAuthorUid, currentUser, onClose }: {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/85 backdrop-blur-sm" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="w-full max-w-xl bg-black border-t border-neutral-700 h-[70vh] flex flex-col m-0 md:mb-0 md:border md:rounded-t-lg">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-md p-0 sm:p-4 animate-fade-in" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="w-full max-w-lg bg-neutral-950 border-t sm:border border-neutral-800 sm:rounded-3xl h-[75vh] sm:h-[65vh] flex flex-col shadow-2xl">
         <div className="flex items-center justify-between p-4 border-b border-neutral-900">
-          <p className="font-mono text-xs tracking-widest uppercase text-white">[ TEXT COMMENTS ]</p>
-          <button onClick={onClose} className="font-mono text-xs text-neutral-600 hover:text-white cursor-pointer">[ ✕ ]</button>
+          <div className="flex items-center gap-2">
+            <MessageCircle className="w-4 h-4 text-cyan-400" />
+            <h3 className="font-bold text-sm text-white">Comments</h3>
+          </div>
+          <button onClick={onClose} className="text-neutral-500 hover:text-white p-1 rounded-full hover:bg-neutral-900 transition-colors">
+            ✕
+          </button>
         </div>
+
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {comments.length === 0 ? (
-            <p className="font-mono text-[10px] text-neutral-600 tracking-widest uppercase text-center py-8">NO COMMENTS YET</p>
+            <div className="flex flex-col items-center justify-center py-16 text-center space-y-2 text-neutral-500">
+              <MessageCircle className="w-8 h-8 opacity-40" />
+              <p className="text-xs">No comments yet. Start the conversation!</p>
+            </div>
           ) : (
             comments.map(c => {
               const liked = currentUser ? (c.likedBy || []).includes(currentUser.uid) : false;
               const isOwn = currentUser?.uid === c.authorUid;
               return (
-                <div key={c.id} className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-[10px] tracking-widest text-neutral-400 uppercase">{c.authorHandle}</span>
-                    <span className="font-mono text-[8px] text-neutral-700">{timeAgo(c.createdAt)}</span>
+                <div key={c.id} className="space-y-1 bg-neutral-900/40 p-3 rounded-2xl border border-neutral-850">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-white">{c.authorHandle}</span>
+                    <span className="text-[10px] text-neutral-500">{formatRelativeTime(c.createdAt)}</span>
                   </div>
-                  <p className="font-mono text-sm text-neutral-200">{c.text}</p>
+                  <p className="text-xs text-neutral-200 leading-relaxed">{c.text}</p>
                   <div className="flex items-center gap-4 pt-1">
-                    <button onClick={() => handleLike(c)} className={`flex items-center gap-1 font-mono text-[10px] tracking-widest uppercase cursor-pointer transition-colors ${liked ? "text-white" : "text-neutral-600 hover:text-white"}`}>
-                      <Heart className={`w-3 h-3 ${liked ? "fill-white" : ""}`} />
-                      {c.likeCount > 0 ? formatNum(c.likeCount) : ""} [ LIKE ]
+                    <button 
+                      onClick={() => handleLike(c)} 
+                      className={`flex items-center gap-1 text-[11px] cursor-pointer transition-colors ${
+                        liked ? "text-rose-500 font-semibold" : "text-neutral-400 hover:text-white"
+                      }`}
+                    >
+                      <Heart className={`w-3.5 h-3.5 ${liked ? "fill-rose-500 text-rose-500" : ""}`} />
+                      <span>{c.likeCount > 0 ? formatNum(c.likeCount) : ""}</span>
                     </button>
                     {isOwn && (
-                      <button onClick={() => handleDelete(c.id)} className="font-mono text-[10px] text-neutral-700 hover:text-red-500 uppercase tracking-widest cursor-pointer">
-                        <Trash2 className="w-3 h-3 inline mr-1"/>DELETE
+                      <button onClick={() => handleDelete(c.id)} className="text-[11px] text-neutral-500 hover:text-red-400 transition-colors cursor-pointer">
+                        Delete
                       </button>
                     )}
                   </div>
@@ -927,22 +1046,23 @@ function TextCommentSection({ postId, postAuthorUid, currentUser, onClose }: {
             })
           )}
         </div>
-        <div className="p-4 border-t border-neutral-900">
+
+        <div className="p-3.5 border-t border-neutral-900 bg-neutral-950">
           <form onSubmit={handleSubmit} className="flex gap-2">
             <input 
               type="text" 
               value={text} 
               onChange={e => setText(e.target.value)}
-              placeholder={currentUser ? "ADD A COMMENT..." : "LOGIN TO COMMENT"}
+              placeholder={currentUser ? "Write a comment..." : "Sign in to comment"}
               disabled={!currentUser || loading}
-              className="flex-1 bg-transparent border border-neutral-800 px-3 py-2 font-mono text-xs text-white placeholder-neutral-700 outline-none focus:border-neutral-500 transition-colors"
+              className="flex-1 bg-neutral-900 border border-neutral-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-neutral-500 outline-none focus:border-neutral-600 transition-colors"
             />
             <button 
               type="submit" 
               disabled={!text.trim() || !currentUser || loading}
-              className="px-4 border border-white bg-white text-black font-mono text-xs tracking-widest uppercase hover:bg-neutral-200 transition-colors disabled:opacity-50 cursor-pointer"
+              className="px-4 bg-white text-black font-semibold text-xs rounded-xl hover:bg-neutral-200 transition-colors disabled:opacity-40 cursor-pointer flex items-center justify-center"
             >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin"/> : "POST"}
+              {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Post"}
             </button>
           </form>
         </div>
@@ -951,135 +1071,150 @@ function TextCommentSection({ postId, postAuthorUid, currentUser, onClose }: {
   );
 }
 
-// ─── Skeleton Loading State ─────────────────────────────────────────────────
+// ─── Post Skeleton Loading ───────────────────────────────────────────────────
 function PostSkeleton() {
   return (
-    <article className="py-8 space-y-4 animate-pulse">
-      <div className="flex items-center justify-between">
-        <div className="h-4 w-24 bg-neutral-900 rounded" />
-        <div className="h-3 w-16 bg-neutral-900 rounded" />
-      </div>
-      <div className="h-8 w-3/4 bg-neutral-900 rounded" />
-      <div className="border border-neutral-800 p-4 space-y-2">
-        <div className="flex items-center gap-3">
-          <div className="h-6 w-20 bg-neutral-900 rounded" />
-          <div className="flex-1 h-5 bg-neutral-900 rounded" />
+    <article className="py-6 px-4 space-y-3.5 animate-pulse border-b border-neutral-900">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-full bg-neutral-900" />
+        <div className="space-y-1.5 flex-1">
+          <div className="h-3.5 w-28 bg-neutral-900 rounded-md" />
+          <div className="h-2.5 w-16 bg-neutral-900 rounded-md" />
         </div>
-        <div className="w-full h-[2px] bg-neutral-900" />
       </div>
-      <div className="flex items-center justify-between pt-1">
-        <div className="h-4 w-20 bg-neutral-900 rounded" />
-        <div className="flex gap-4">
-          <div className="h-4 w-16 bg-neutral-900 rounded" />
-          <div className="h-4 w-16 bg-neutral-900 rounded" />
-        </div>
+      <div className="h-4 w-5/6 bg-neutral-900 rounded-md" />
+      <div className="h-24 bg-neutral-900 rounded-2xl" />
+      <div className="flex items-center justify-between pt-2">
+        <div className="h-4 w-12 bg-neutral-900 rounded-md" />
+        <div className="h-4 w-12 bg-neutral-900 rounded-md" />
+        <div className="h-4 w-12 bg-neutral-900 rounded-md" />
+        <div className="h-4 w-12 bg-neutral-900 rounded-md" />
       </div>
     </article>
   );
 }
 
-// ─── Swipe Gesture Hook ───────────────────────────────────────────────────────
-function useSwipeGesture(onSwipeLeft?: () => void, onSwipeRight?: () => void) {
-  const touchStartX = useRef(0);
-  const touchEndX = useRef(0);
-
-  const onTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.changedTouches[0].screenX;
-  };
-
-  const onTouchEnd = (e: React.TouchEvent) => {
-    touchEndX.current = e.changedTouches[0].screenX;
-    handleSwipe();
-  };
-
-  const handleSwipe = () => {
-    const swipeThreshold = 50;
-    const diff = touchStartX.current - touchEndX.current;
-    
-    if (Math.abs(diff) > swipeThreshold) {
-      if (diff > 0) {
-        onSwipeLeft?.();
-      } else {
-        onSwipeRight?.();
-      }
-    }
-  };
-
-  return { onTouchStart, onTouchEnd };
-}
-
-// ─── Post Card Component (for proper hook usage) ───────────────────────────────
-function PostCard({ post, user, orbitedPosts, activePostId, deletingId, onPulse, onOrbit, onShare, onDelete, onReplyClick, onProfileClick, onActiveChange, setRef, onFollow, onUnfollow, following, onComment }: {
+// ─── World-Class Post Card (Twitter / Instagram Inspired) ─────────────────────
+function PostCard({ 
+  post, user, orbitedPosts, activePostId, deletingId, 
+  isBookmarked, onPulse, onOrbit, onShare, onBookmark, onDelete, 
+  onReplyClick, onProfileClick, onActiveChange, setRef, 
+  onFollow, onUnfollow, following, onComment, onFirstPlay
+}: {
   post: FeedPost; user: any; orbitedPosts: Set<string>; activePostId: string | null;
-  deletingId: string | null; onPulse: (p: FeedPost) => void; onOrbit: (p: FeedPost) => void;
-  onShare: (p: FeedPost) => void; onDelete: (id: string) => void; onReplyClick: (rid?: string, rh?: string) => void;
-  onProfileClick: (h: string) => void; onActiveChange: (id: string | null) => void; setRef: (id: string, el: HTMLElement | null) => void;
-  onFollow: (uid: string, handle: string) => void; onUnfollow: (uid: string) => void; following: Set<string>; onComment: (p: FeedPost) => void;
+  deletingId: string | null; isBookmarked: boolean;
+  onPulse: (p: FeedPost) => void; onOrbit: (p: FeedPost) => void;
+  onShare: (p: FeedPost) => void; onBookmark: (p: FeedPost) => void;
+  onDelete: (id: string) => void; onReplyClick: (rid?: string, rh?: string) => void;
+  onProfileClick: (h: string) => void; onActiveChange: (id: string | null) => void; 
+  setRef: (id: string, el: HTMLElement | null) => void;
+  onFollow: (uid: string, handle: string) => void; onUnfollow: (uid: string) => void; 
+  following: Set<string>; onComment: (p: FeedPost) => void; onFirstPlay: (p: FeedPost) => void;
 }) {
-  const swipeHandlers = useSwipeGesture(
-    () => onPulse(post), // Swipe left = pulse
-    () => onShare(post)  // Swipe right = share
-  );
-
   const isPulsed = user ? post.pulsedBy.includes(user.uid) : false;
   const isOrbited = orbitedPosts.has(post.id) || (user ? (post.orbitedBy || []).includes(user.uid) : false);
   const isOwn = user?.uid === post.authorUid;
   const isDel = deletingId === post.id;
+  const isFollowingAuthor = following.has(post.authorUid);
+
+  // Deterministic avatar gradient
+  const gradient = getAvatarGradient(post.authorHandle);
+  const initial = post.authorHandle.replace(/^@/, "").charAt(0).toUpperCase() || "E";
+
+  // Views display (calculated from metrics or viewsCount)
+  const displayViews = Math.max(
+    post.viewsCount || 0,
+    (post.pulseCount * 14) + (post.reverbCount * 8) + (post.commentCount * 6) + 12
+  );
 
   return (
     <article
       ref={el => setRef(post.id, el)}
       data-post-id={post.id}
-      className="py-8 space-y-4 animate-fade-in"
-      onTouchStart={swipeHandlers.onTouchStart}
-      onTouchEnd={swipeHandlers.onTouchEnd}
+      className="py-5 px-4 sm:px-6 hover:bg-neutral-950/40 transition-colors border-b border-neutral-900/80 space-y-3"
     >
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={() => onProfileClick(post.authorHandle)}
-            className="font-mono text-xs tracking-widest text-white hover:underline uppercase cursor-pointer">
-            {post.authorHandle}
+      {/* Author Header Row */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          {/* Avatar */}
+          <button 
+            onClick={() => onProfileClick(post.authorHandle)}
+            className={`w-10 h-10 rounded-full bg-gradient-to-tr ${gradient} flex items-center justify-center text-white font-bold text-sm shrink-0 hover:opacity-90 transition-opacity shadow-md`}
+          >
+            {initial}
           </button>
+
+          {/* Handle & Time */}
+          <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+            <button 
+              onClick={() => onProfileClick(post.authorHandle)}
+              className="font-bold text-sm text-white hover:underline truncate cursor-pointer"
+            >
+              {post.authorHandle}
+            </button>
+            <span className="text-neutral-500 text-xs">·</span>
+            <span className="text-neutral-500 text-xs shrink-0">
+              {formatRelativeTime(post.createdAt)}
+            </span>
+          </div>
+        </div>
+
+        {/* Orbit / Follow / Delete Action */}
+        <div className="flex items-center gap-2 shrink-0">
           {!isOwn && user && (
             <button
-              onClick={() => following.has(post.authorUid) ? onUnfollow(post.authorUid) : onFollow(post.authorUid, post.authorHandle)}
-              className={`font-mono text-[10px] tracking-widest uppercase px-2 py-0.5 border transition-colors cursor-pointer ${
-                following.has(post.authorUid)
-                  ? "border-neutral-700 text-neutral-500 hover:border-white hover:text-white"
-                  : "border-white text-white hover:bg-white hover:text-black"
+              onClick={() => isFollowingAuthor ? onUnfollow(post.authorUid) : onFollow(post.authorUid, post.authorHandle)}
+              className={`px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                isFollowingAuthor
+                  ? "border border-neutral-800 text-neutral-400 hover:border-neutral-700 hover:text-white bg-neutral-900/60"
+                  : "bg-white text-black hover:bg-neutral-200"
               }`}
             >
-              {following.has(post.authorUid) ? "[ ORBITING ]" : "[ ORBIT ]"}
+              {isFollowingAuthor ? (
+                <>
+                  <Check className="w-3 h-3" />
+                  <span>Orbiting</span>
+                </>
+              ) : (
+                <>
+                  <Plus className="w-3 h-3" />
+                  <span>Orbit</span>
+                </>
+              )}
             </button>
           )}
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="font-mono text-[10px] tracking-widest text-neutral-700 uppercase">{timeAgo(post.createdAt)}</span>
+
           {isOwn && (
-            <button onClick={() => onDelete(post.id)}
-              className={`flex items-center gap-1 font-mono text-[10px] tracking-widest uppercase transition-colors cursor-pointer ${isDel ? "text-white border border-white px-2 py-0.5 animate-pulse" : "text-neutral-700 hover:text-red-500"}`}>
-              <Trash2 className="w-3 h-3" />{isDel ? "CONFIRM?" : ""}
+            <button 
+              onClick={() => onDelete(post.id)}
+              className={`p-1.5 rounded-full transition-colors cursor-pointer ${
+                isDel 
+                  ? "text-rose-400 bg-rose-950/60 border border-rose-800" 
+                  : "text-neutral-500 hover:text-rose-400 hover:bg-neutral-900"
+              }`}
+              title={isDel ? "Confirm Delete" : "Delete Echo"}
+            >
+              <Trash2 className="w-4 h-4" />
             </button>
           )}
         </div>
       </div>
 
-      {/* Tagged News Dispatch Banner on Frequency Feed */}
+      {/* News Dispatch Header Badge (if linked to topic) */}
       {(post.newsTopic || post.newsHeadline) && (
-        <div className="p-3 border border-neutral-800 bg-neutral-950 flex items-center justify-between gap-3">
+        <div className="px-3 py-2 bg-neutral-900/60 border border-neutral-850 rounded-xl flex items-center justify-between gap-2 text-xs">
           <div className="flex items-center gap-2 overflow-hidden">
-            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse shrink-0" />
+            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shrink-0" />
             {post.newsTopic && (
               <Link
                 href={`/hashtag/${encodeURIComponent(post.newsTopic.replace(/^#+/, ""))}`}
-                className="font-mono text-xs font-bold text-white uppercase hover:underline shrink-0"
+                className="font-bold text-white uppercase hover:underline shrink-0"
               >
                 #{post.newsTopic.replace(/^#+/, "")}
               </Link>
             )}
             {post.newsHeadline && (
-              <span className="font-mono text-xs text-neutral-400 truncate">
+              <span className="text-neutral-400 truncate">
                 "{post.newsHeadline}"
               </span>
             )}
@@ -1089,119 +1224,195 @@ function PostCard({ post, user, orbitedPosts, activePostId, deletingId, onPulse,
               href={post.newsLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-mono text-[10px] text-neutral-500 hover:text-white uppercase tracking-widest shrink-0"
+              className="text-[11px] text-cyan-400 hover:underline shrink-0 font-medium"
             >
-              WIRE ↗
+              Dispatch ↗
             </a>
           )}
         </div>
       )}
 
-      {/* Caption */}
-      <h2 className="font-mono text-sm md:text-base font-bold text-white tracking-wide leading-relaxed">
-        "{parseCaption(post.caption)}"
-      </h2>
+      {/* Post Caption */}
+      <div className="text-neutral-100 text-[15px] sm:text-base leading-relaxed break-words font-normal select-text">
+        {parseCaption(post.caption)}
+      </div>
 
-      {/* Community Sound Attribution Ticker & Use This Audio */}
-      <div className="flex items-center justify-between text-[10px] text-neutral-400 font-mono py-1 border-t border-b border-neutral-900">
+      {/* Audio Stem / Track Attribution Chip */}
+      <div className="flex items-center justify-between gap-2 py-1 text-xs text-neutral-400">
         <Link
           href={`/audio/${post.audioTrackId || post.id}`}
-          className="flex items-center gap-1.5 hover:text-white transition-colors truncate max-w-[220px] sm:max-w-xs"
+          className="flex items-center gap-1.5 hover:text-white transition-colors truncate max-w-[240px] sm:max-w-xs"
         >
-          <Music className="w-3 h-3 text-white shrink-0" />
-          <span className="truncate uppercase font-bold text-neutral-300 hover:text-white">
-            {post.audioTrackTitle || "Original Audio"} • {post.audioTrackArtist || post.authorHandle}
+          <Music className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+          <span className="truncate text-neutral-400 hover:text-white">
+            {post.audioTrackTitle || "Original Voice Take"} • {post.audioTrackArtist || post.authorHandle}
           </span>
         </Link>
         <Link
-          href={`/studio?soundId=${encodeURIComponent(post.audioTrackId || post.id)}&soundUrl=${encodeURIComponent(post.audioUrl)}&soundTitle=${encodeURIComponent(post.audioTrackTitle || post.caption.slice(0, 30) || "Original Audio")}&soundArtist=${encodeURIComponent(post.audioTrackArtist || post.authorHandle)}${post.isVoiceMeme ? "&isMeme=true" : ""}`}
-          className="text-[9px] border border-neutral-800 hover:border-white px-2 py-0.5 uppercase tracking-wider text-neutral-300 hover:text-white transition-colors shrink-0 font-bold"
+          href={`/studio?soundId=${encodeURIComponent(post.audioTrackId || post.id)}&soundUrl=${encodeURIComponent(post.audioUrl)}&soundTitle=${encodeURIComponent(post.audioTrackTitle || post.caption.slice(0, 30) || "Original Voice Take")}&soundArtist=${encodeURIComponent(post.audioTrackArtist || post.authorHandle)}${post.isVoiceMeme ? "&isMeme=true" : ""}`}
+          className="px-2.5 py-1 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-700 rounded-full text-[11px] font-medium text-neutral-300 hover:text-white transition-all flex items-center gap-1 shrink-0"
         >
-          [ 🎵 USE AUDIO ]
+          <Plus className="w-3 h-3" />
+          <span>Use Audio</span>
         </Link>
       </div>
 
-      {/* Player */}
-      <AudioPlayer audioUrl={post.audioUrl} fallbackDurationSec={post.durationSec || 15}
+      {/* Modern Audio Player */}
+      <AudioPlayer 
+        audioUrl={post.audioUrl} 
+        fallbackDurationSec={post.durationSec || 15}
         isActive={activePostId === post.id}
-        onPlayToggle={p => { if (p) onActiveChange(post.id); else if (activePostId === post.id) onActiveChange(null); }} />
+        onPlayToggle={p => {
+          if (p) onActiveChange(post.id);
+          else if (activePostId === post.id) onActiveChange(null);
+        }}
+        onFirstPlay={() => onFirstPlay(post)}
+      />
 
-      {/* Actions */}
-      <div className="flex items-center justify-between pt-2 flex-wrap sm:flex-nowrap gap-2">
-        <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
-          <button onClick={() => onPulse(post)}
-            className={`flex items-center gap-1.5 font-mono text-[11px] sm:text-xs tracking-widest uppercase cursor-pointer transition-colors whitespace-nowrap shrink-0 ${isPulsed ? "text-white font-bold" : "text-neutral-400 hover:text-white"}`}>
-            <Heart className={`w-3.5 h-3.5 ${isPulsed ? "fill-white text-white" : ""}`} />
-            <span>{formatNum(post.pulseCount)} PULSE</span>
+      {/* World-Class Twitter / Instagram Icon Action Deck */}
+      <div className="flex items-center justify-between pt-1 text-neutral-400 select-none">
+        {/* 1. Comment / Reply */}
+        <button
+          type="button"
+          onClick={() => onComment(post)}
+          className="group flex items-center gap-1.5 text-neutral-400 hover:text-cyan-400 transition-colors p-1.5 -ml-1.5 rounded-full hover:bg-cyan-500/10 cursor-pointer"
+          title="Reply / Comment"
+        >
+          <MessageCircle className="w-4 h-4 group-hover:scale-110 transition-transform" />
+          <span className="text-xs">{post.commentCount > 0 ? formatNum(post.commentCount) : ""}</span>
+        </button>
+
+        {/* 2. Re-Echo (Repost) */}
+        {!isOwn ? (
+          <button
+            type="button"
+            onClick={() => onOrbit(post)}
+            disabled={isOrbited}
+            className={`group flex items-center gap-1.5 transition-colors p-1.5 rounded-full hover:bg-emerald-500/10 cursor-pointer ${
+              isOrbited ? "text-emerald-400" : "text-neutral-400 hover:text-emerald-400"
+            }`}
+            title={isOrbited ? "Re-Echoed" : "Re-Echo to Followers"}
+          >
+            <Repeat2 className={`w-4 h-4 group-hover:scale-110 transition-transform ${isOrbited ? "text-emerald-400" : ""}`} />
+            <span className={`text-xs ${isOrbited ? "text-emerald-400 font-semibold" : ""}`}>
+              {(post.orbitedBy?.length || 0) > 0 ? formatNum(post.orbitedBy?.length || 0) : ""}
+            </span>
           </button>
-          <button onClick={() => onComment(post)}
-            className="flex items-center gap-1.5 font-mono text-[11px] sm:text-xs tracking-widest uppercase cursor-pointer transition-colors text-neutral-400 hover:text-white whitespace-nowrap shrink-0">
-            <MessageSquare className="w-3.5 h-3.5" />
-            <span>{post.commentCount > 0 ? formatNum(post.commentCount) : ""} COMMENT</span>
-          </button>
+        ) : (
+          <div className="w-6" />
+        )}
+
+        {/* 3. Pulse (Like) */}
+        <button
+          type="button"
+          onClick={() => onPulse(post)}
+          className={`group flex items-center gap-1.5 transition-colors p-1.5 rounded-full hover:bg-rose-500/10 cursor-pointer ${
+            isPulsed ? "text-rose-500" : "text-neutral-400 hover:text-rose-500"
+          }`}
+          title="Pulse / Like"
+        >
+          <Heart className={`w-4 h-4 group-hover:scale-110 transition-transform ${isPulsed ? "fill-rose-500 text-rose-500" : ""}`} />
+          <span className={`text-xs ${isPulsed ? "text-rose-500 font-semibold" : ""}`}>
+            {post.pulseCount > 0 ? formatNum(post.pulseCount) : ""}
+          </span>
+        </button>
+
+        {/* 4. Bookmark (Save) */}
+        <button
+          type="button"
+          onClick={() => onBookmark(post)}
+          className={`group flex items-center gap-1.5 transition-colors p-1.5 rounded-full hover:bg-amber-500/10 cursor-pointer ${
+            isBookmarked ? "text-amber-400" : "text-neutral-400 hover:text-amber-400"
+          }`}
+          title={isBookmarked ? "Remove Bookmark" : "Bookmark Echo"}
+        >
+          <Bookmark className={`w-4 h-4 group-hover:scale-110 transition-transform ${isBookmarked ? "fill-amber-400 text-amber-400" : ""}`} />
+        </button>
+
+        {/* 5. Views Count */}
+        <div 
+          className="flex items-center gap-1.5 text-neutral-500 p-1.5"
+          title={`${displayViews} views`}
+        >
+          <BarChart2 className="w-4 h-4" />
+          <span className="text-xs">{formatNum(displayViews)}</span>
         </div>
-        <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
-          {!isOwn && (
-            <button onClick={() => onOrbit(post)} disabled={isOrbited}
-              className={`flex items-center gap-1.5 font-mono text-[11px] sm:text-xs tracking-widest uppercase transition-colors cursor-pointer whitespace-nowrap shrink-0 ${isOrbited ? "text-white font-bold" : "text-neutral-400 hover:text-white"}`}>
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>{isOrbited ? "RE-ECHOED" : "RE-ECHO"}</span>
-            </button>
-          )}
-          <button onClick={() => onShare(post)}
-            className="flex items-center gap-1.5 font-mono text-[11px] sm:text-xs tracking-widest text-neutral-400 uppercase hover:text-white transition-colors cursor-pointer whitespace-nowrap shrink-0">
-            <Share2 className="w-3.5 h-3.5" />
-            <span>SHARE</span>
-          </button>
-        </div>
+
+        {/* 6. Share */}
+        <button
+          type="button"
+          onClick={() => onShare(post)}
+          className="group flex items-center gap-1.5 text-neutral-400 hover:text-white transition-colors p-1.5 -mr-1.5 rounded-full hover:bg-neutral-800 cursor-pointer"
+          title="Share Echo"
+        >
+          <Share className="w-4 h-4 group-hover:scale-110 transition-transform" />
+        </button>
       </div>
 
-      {/* Inline reply thread */}
-      <PostReverbSection post={post} currentUser={user}
+      {/* Voice Replies Accordion */}
+      <PostReverbSection 
+        post={post} 
+        currentUser={user}
         onReplyClick={onReplyClick}
-        onProfileClick={onProfileClick} />
+        onProfileClick={onProfileClick} 
+      />
     </article>
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// ─── Home Feed Page ───────────────────────────────────────────────────────────
 export default function HomeFeedPage() {
-  const { user }     = useAuth();
-  const router       = useRouter();
-  const [posts, setPosts]           = useState<FeedPost[]>([]);
-  const [loading, setLoading]       = useState(true);
-  const [orbitedPosts, setOrbited]  = useState<Set<string>>(new Set());
-  const [activePostId, setActiveId] = useState<string|null>(null);
-  const [deletingId, setDeletingId] = useState<string|null>(null);
-  const [replyModal, setReplyModal] = useState<{post:FeedPost;rid?:string;rh?:string}|null>(null);
-  const [commentPost, setCommentPost] = useState<FeedPost|null>(null);
-  const [following, setFollowing]  = useState<Set<string>>(new Set());
-  const userInteracted = useRef(false);
-  const articleRefs    = useRef<Map<string,HTMLElement>>(new Map());
-  const observerRef    = useRef<IntersectionObserver|null>(null);
+  const { user }                      = useAuth();
+  const router                        = useRouter();
+  const [posts, setPosts]             = useState<FeedPost[]>([]);
+  const [loading, setLoading]         = useState(true);
+  const [activeTab, setActiveTab]     = useState<"for-you" | "following" | "bookmarks">("for-you");
+  const [orbitedPosts, setOrbited]    = useState<Set<string>>(new Set());
+  const [bookmarkedPostIds, setBookmarkedPostIds] = useState<Set<string>>(new Set());
+  const [activePostId, setActiveId]   = useState<string | null>(null);
+  const [deletingId, setDeletingId]   = useState<string | null>(null);
+  const [replyModal, setReplyModal]   = useState<{ post: FeedPost; rid?: string; rh?: string } | null>(null);
+  const [commentPost, setCommentPost] = useState<FeedPost | null>(null);
+  const [following, setFollowing]     = useState<Set<string>>(new Set());
+  const [toastMsg, setToastMsg]       = useState<string | null>(null);
 
-  useEffect(()=>{
-    const mark=()=>{userInteracted.current=true;};
-    window.addEventListener("click",mark,{once:true});
-    window.addEventListener("touchstart",mark,{once:true});
-    return()=>{window.removeEventListener("click",mark);window.removeEventListener("touchstart",mark);};
-  },[]);
+  const articleRefs     = useRef<Map<string, HTMLElement>>(new Map());
+  const viewedPostsRef  = useRef<Set<string>>(new Set());
 
-  useEffect(()=>{
-    const unsub=subscribeToPosts(live=>{
-      setPosts(live.map(p=>({
-        id:p.id, audioUrl:p.audioUrl, caption:p.caption,
-        authorHandle:p.authorHandle||"@ANON", authorUid:p.authorUid||"anon",
-        pulseCount:p.pulseCount||0, pulsedBy:p.pulsedBy||[],
-        orbitedBy:(p as any).orbitedBy||[], duration:p.duration||"00:15",
-        durationSec:p.durationSec||15, reverbCount:p.reverbCount||0, commentCount: (p as any).commentCount || 0, createdAt:p.createdAt,
+  // 1. Subscribe to Live Frequency Posts
+  useEffect(() => {
+    const unsub = subscribeToPosts(live => {
+      setPosts(live.map(p => ({
+        id: p.id,
+        audioUrl: p.audioUrl,
+        caption: p.caption,
+        authorHandle: p.authorHandle || "@ANON",
+        authorUid: p.authorUid || "anon",
+        pulseCount: p.pulseCount || 0,
+        pulsedBy: p.pulsedBy || [],
+        orbitedBy: (p as any).orbitedBy || [],
+        duration: p.duration || "00:15",
+        durationSec: p.durationSec || 15,
+        reverbCount: p.reverbCount || 0,
+        commentCount: (p as any).commentCount || 0,
+        viewsCount: (p as any).viewsCount || 0,
+        bookmarkCount: (p as any).bookmarkCount || 0,
+        createdAt: p.createdAt,
+        newsTopic: p.newsTopic,
+        newsHeadline: p.newsHeadline,
+        newsLink: p.newsLink,
+        audioTrackId: p.audioTrackId,
+        audioTrackTitle: p.audioTrackTitle,
+        audioTrackArtist: p.audioTrackArtist,
+        isVoiceMeme: p.isVoiceMeme,
       })));
       setLoading(false);
     });
-    return()=>unsub();
-  },[]);
+    return () => unsub();
+  }, []);
 
-  useEffect(()=>{
+  // 2. Subscribe to Following for authenticated user
+  useEffect(() => {
     if (!user?.uid) {
       setFollowing(new Set());
       return;
@@ -1212,124 +1423,315 @@ export default function HomeFeedPage() {
     return () => unsub();
   }, [user?.uid]);
 
-  const setRef=useCallback((id:string,el:HTMLElement|null)=>{
-    if(el)articleRefs.current.set(id,el);else articleRefs.current.delete(id);
-  },[]);
+  // 3. Subscribe to Bookmarks for authenticated user
+  useEffect(() => {
+    if (!user?.uid) {
+      setBookmarkedPostIds(new Set());
+      return;
+    }
+    const unsub = subscribeToUserBookmarks(user.uid, (bookmarks) => {
+      setBookmarkedPostIds(new Set(bookmarks.map(b => b.postId)));
+    });
+    return () => unsub();
+  }, [user?.uid]);
 
-  const handlePulse=async(post:FeedPost)=>{
-    if(!user){router.push("/login");return;}
-    const pulsed=post.pulsedBy.includes(user.uid);
-    await togglePulsePost(post.id,user.uid,pulsed);
-    if(!pulsed)await createNotification(post.authorUid,{type:"pulse",fromUid:user.uid,fromHandle:user.handle||"@ANON",postId:post.id,postCaption:post.caption,text:`${user.handle} pulsed your echo.`});
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 2500);
   };
 
-  const handleOrbit=async(post:FeedPost)=>{
-    if(!user){router.push("/login");return;}
-    if(orbitedPosts.has(post.id))return;
-    setOrbited(prev=>new Set([...prev,post.id]));
-    await createPost({audioUrl:post.audioUrl,caption:`[ RE-ECHO ] "${post.caption.slice(0,60)}${post.caption.length>60?"…":""}" — ${post.authorHandle}`,authorUid:user.uid,authorHandle:user.handle||"@ANON",duration:post.duration,durationSec:post.durationSec,orbitOf:post.id,orbitOfHandle:post.authorHandle} as any);
-    await createNotification(post.authorUid,{type:"reverb",fromUid:user.uid,fromHandle:user.handle||"@ANON",postId:post.id,postCaption:post.caption,text:`${user.handle} re-echoed your post.`});
-  };
+  const setRef = useCallback((id: string, el: HTMLElement | null) => {
+    if (el) articleRefs.current.set(id, el);
+    else articleRefs.current.delete(id);
+  }, []);
 
-  const handleShare=async(post:FeedPost)=>{
-    const url=`${window.location.origin}/${post.authorHandle.replace(/^@/,"")}`;
-    const d={title:`Echo by ${post.authorHandle}`,text:`"${post.caption}"`,url};
-    if(navigator.share&&navigator.canShare?.(d)){try{await navigator.share(d);}catch{}}
-    else{try{await navigator.clipboard.writeText(`${d.text} ${d.url}`);}catch{}}
-  };
+  // Mark view on impression / play
+  const handleFirstPlay = useCallback((post: FeedPost) => {
+    if (viewedPostsRef.current.has(post.id)) return;
+    viewedPostsRef.current.add(post.id);
+    incrementPostViews(post.id);
+  }, []);
 
-  const handleDelete=async(postId:string)=>{
-    if(deletingId===postId){
-      try{await deletePost(postId);setDeletingId(null);}
-      catch(e){console.error(e);setDeletingId(null);}
-    }else{
-      setDeletingId(postId);
-      setTimeout(()=>setDeletingId(p=>p===postId?null:p),3000);
+  const handlePulse = async (post: FeedPost) => {
+    if (!user) { router.push("/login"); return; }
+    soundSynth.playSubtlePop();
+    const pulsed = post.pulsedBy.includes(user.uid);
+    await togglePulsePost(post.id, user.uid, pulsed);
+    if (!pulsed) {
+      await createNotification(post.authorUid, {
+        type: "pulse",
+        fromUid: user.uid,
+        fromHandle: user.handle || "@ANON",
+        postId: post.id,
+        postCaption: post.caption,
+        text: `${user.handle} pulsed your echo.`
+      });
     }
   };
 
-  const handleFollow=async(uid:string, handle:string)=>{
-    if(!user)return;
-    try{
-      await followUser(user.uid, user.handle||"@ANON", uid, handle);
-      setFollowing(prev=>new Set([...prev, uid]));
-    }catch(e){console.error(e);}
+  const handleOrbit = async (post: FeedPost) => {
+    if (!user) { router.push("/login"); return; }
+    if (orbitedPosts.has(post.id)) return;
+    soundSynth.playSubtlePop();
+    setOrbited(prev => new Set([...prev, post.id]));
+    await createPost({
+      audioUrl: post.audioUrl,
+      caption: `[ RE-ECHO ] "${post.caption.slice(0, 60)}${post.caption.length > 60 ? "…" : ""}" — ${post.authorHandle}`,
+      authorUid: user.uid,
+      authorHandle: user.handle || "@ANON",
+      duration: post.duration,
+      durationSec: post.durationSec,
+      orbitOf: post.id,
+      orbitOfHandle: post.authorHandle
+    } as any);
+    await createNotification(post.authorUid, {
+      type: "reverb",
+      fromUid: user.uid,
+      fromHandle: user.handle || "@ANON",
+      postId: post.id,
+      postCaption: post.caption,
+      text: `${user.handle} re-echoed your post.`
+    });
+    showToast("Re-echoed to your profile!");
   };
 
-  const handleUnfollow=async(uid:string)=>{
-    if(!user)return;
-    try{
-      await unfollowUser(user.uid, uid);
-      setFollowing(prev=>{const next=new Set(prev);next.delete(uid);return next;});
-    }catch(e){console.error(e);}
+  const handleBookmark = async (post: FeedPost) => {
+    if (!user) { router.push("/login"); return; }
+    soundSynth.playSubtlePop();
+    const isBookmarked = bookmarkedPostIds.has(post.id);
+
+    // Optimistic UI state
+    setBookmarkedPostIds(prev => {
+      const next = new Set(prev);
+      if (isBookmarked) next.delete(post.id);
+      else next.add(post.id);
+      return next;
+    });
+
+    try {
+      if (isBookmarked) {
+        await removeBookmark(user.uid, post.id);
+        showToast("Bookmark removed");
+      } else {
+        await addBookmark(
+          user.uid,
+          post.id,
+          post.authorUid,
+          post.authorHandle,
+          post.caption,
+          post.audioUrl,
+          post.duration,
+          post.durationSec,
+          post.pulseCount
+        );
+        showToast("Saved to Bookmarks");
+      }
+    } catch (e) {
+      console.error("Bookmark toggle failed:", e);
+    }
   };
+
+  const handleShare = async (post: FeedPost) => {
+    soundSynth.playSubtlePop();
+    const url = `${window.location.origin}/${post.authorHandle.replace(/^@/, "")}`;
+    const d = { title: `Echo by ${post.authorHandle}`, text: `"${post.caption}"`, url };
+    if (navigator.share && navigator.canShare?.(d)) {
+      try { await navigator.share(d); } catch {}
+    } else {
+      try {
+        await navigator.clipboard.writeText(`${d.text} ${d.url}`);
+        showToast("Link copied to clipboard!");
+      } catch {}
+    }
+  };
+
+  const handleDelete = async (postId: string) => {
+    if (deletingId === postId) {
+      try {
+        await deletePost(postId);
+        setDeletingId(null);
+        showToast("Echo deleted");
+      } catch (e) {
+        console.error(e);
+        setDeletingId(null);
+      }
+    } else {
+      setDeletingId(postId);
+      setTimeout(() => setDeletingId(p => p === postId ? null : p), 3000);
+    }
+  };
+
+  const handleFollow = async (uid: string, handle: string) => {
+    if (!user) return;
+    soundSynth.playSubtlePop();
+    try {
+      await followUser(user.uid, user.handle || "@ANON", uid, handle);
+      setFollowing(prev => new Set([...prev, uid]));
+      showToast(`Orbiting ${handle}`);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleUnfollow = async (uid: string) => {
+    if (!user) return;
+    soundSynth.playSubtlePop();
+    try {
+      await unfollowUser(user.uid, uid);
+      setFollowing(prev => {
+        const next = new Set(prev);
+        next.delete(uid);
+        return next;
+      });
+      showToast("Stopped orbiting");
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Filter posts based on active tab
+  const displayedPosts = useMemo(() => {
+    if (activeTab === "following") {
+      return posts.filter(p => following.has(p.authorUid) || p.authorUid === user?.uid);
+    }
+    if (activeTab === "bookmarks") {
+      return posts.filter(p => bookmarkedPostIds.has(p.id));
+    }
+    return posts;
+  }, [posts, activeTab, following, bookmarkedPostIds, user?.uid]);
 
   return (
-    <div
-      className="min-h-screen bg-black text-white pb-28 md:pb-12 flex flex-col font-mono"
-      onClick={() => {
-        userInteracted.current = true;
-      }}
-    >
-      <header className="w-full bg-black border-b border-neutral-900 py-2.5 px-4 flex items-center justify-between">
-        <div className="flex items-center gap-4 font-mono text-[10px] tracking-widest text-neutral-500 uppercase whitespace-nowrap overflow-hidden">
-          <span className="flex items-center gap-1.5 text-white shrink-0"><Flame className="w-3 h-3"/>[ FREQUENCY ]</span>
-          <span className="shrink-0 hidden sm:inline">•</span><span className="shrink-0 hidden sm:inline">LIVE AUDIO FEED</span>
-          <span className="shrink-0 hidden sm:inline">•</span><span className="shrink-0 hidden sm:inline">UNFILTERED VOICES</span>
-        </div>
+    <div className="min-h-screen bg-black text-white pb-28 md:pb-16 flex flex-col font-sans selection:bg-neutral-800">
+      
+      {/* ── World-Class Sticky Header with Segment Control (Twitter / X Style) ── */}
+      <header className="sticky top-0 z-40 w-full bg-black/85 backdrop-blur-md border-b border-neutral-900">
+        <div className="max-w-2xl mx-auto px-4 flex items-center justify-between h-14">
+          
+          {/* Feed Tabs: For You, Following, Bookmarks */}
+          <div className="flex items-center gap-1 sm:gap-2 h-full">
+            <button
+              onClick={() => { setActiveTab("for-you"); soundSynth.playSubtlePop(); }}
+              className={`relative px-3 sm:px-4 h-full flex items-center text-sm font-bold transition-colors cursor-pointer ${
+                activeTab === "for-you" ? "text-white" : "text-neutral-500 hover:text-neutral-300"
+              }`}
+            >
+              <span>For You</span>
+              {activeTab === "for-you" && (
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-white rounded-full" />
+              )}
+            </button>
 
-        {/* Small Robo-Echo Logo on Home Frequency Header */}
-        <Link
-          href="/echo-bot"
-          className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-950/40 hover:bg-emerald-950/90 border border-emerald-500/50 hover:border-emerald-400 rounded-full transition-all cursor-pointer shadow-[0_0_12px_rgba(16,185,129,0.15)] group shrink-0 active:scale-95"
-          title="Open Robo-Echo AI Companion & Voice"
-        >
-          <div className="relative flex items-center justify-center">
-            <Bot className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
-            <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+            <button
+              onClick={() => { setActiveTab("following"); soundSynth.playSubtlePop(); }}
+              className={`relative px-3 sm:px-4 h-full flex items-center text-sm font-bold transition-colors cursor-pointer ${
+                activeTab === "following" ? "text-white" : "text-neutral-500 hover:text-neutral-300"
+              }`}
+            >
+              <span>Following</span>
+              {activeTab === "following" && (
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-white rounded-full" />
+              )}
+            </button>
+
+            <button
+              onClick={() => { setActiveTab("bookmarks"); soundSynth.playSubtlePop(); }}
+              className={`relative px-3 sm:px-4 h-full flex items-center gap-1.5 text-sm font-bold transition-colors cursor-pointer ${
+                activeTab === "bookmarks" ? "text-white" : "text-neutral-500 hover:text-neutral-300"
+              }`}
+            >
+              <Bookmark className={`w-3.5 h-3.5 ${activeTab === "bookmarks" ? "fill-white text-white" : ""}`} />
+              <span className="hidden xs:inline">Bookmarks</span>
+              {activeTab === "bookmarks" && (
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-white rounded-full" />
+              )}
+            </button>
           </div>
-          <span className="font-mono text-[10px] font-bold text-emerald-300 tracking-wider uppercase flex items-center gap-1">
-            ROBO-ECHO
-            <Sparkles className="w-2.5 h-2.5 text-emerald-400" />
-          </span>
-        </Link>
+
+          {/* Right Header: Robo-Echo Mascot Shortcut */}
+          <Link
+            href="/echo-bot"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-950/40 hover:bg-emerald-950/80 border border-emerald-500/50 hover:border-emerald-400 rounded-full transition-all cursor-pointer shadow-[0_0_15px_rgba(16,185,129,0.15)] group shrink-0 active:scale-95"
+            title="Open Robo-Echo AI Companion"
+          >
+            <div className="relative flex items-center justify-center">
+              <Bot className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
+              <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+            </div>
+            <span className="text-xs font-bold text-emerald-300 tracking-wide uppercase flex items-center gap-1">
+              Robo-Echo
+              <Sparkles className="w-2.5 h-2.5 text-emerald-400" />
+            </span>
+          </Link>
+        </div>
       </header>
 
-      <main className="max-w-xl mx-auto px-5 md:px-6 pt-8 w-full flex-1 flex flex-col">
-        {loading?(
+      {/* ── Main Feed Container ── */}
+      <main className="max-w-2xl mx-auto w-full flex-1 flex flex-col border-x border-neutral-900/60">
+        {loading ? (
           <div className="divide-y divide-neutral-900">
-            {[1,2,3].map(i=><PostSkeleton key={i}/>)}
+            {[1, 2, 3].map(i => <PostSkeleton key={i} />)}
           </div>
-        ):posts.length===0?(
-          <div className="flex-1 flex flex-col items-center justify-center py-24 text-center space-y-6 border border-neutral-900 p-8 my-8">
-            <div className="w-12 h-12 border border-neutral-800 flex items-center justify-center"><Mic2 className="w-5 h-5 text-neutral-500"/></div>
-            <div className="space-y-2">
-              <h2 className="font-mono font-bold text-2xl text-white tracking-wider uppercase">THE STREAM IS SILENT</h2>
-              <p className="font-mono text-[10px] tracking-widest text-neutral-600 uppercase">NO ECHOES IN THE FREQUENCY YET</p>
+        ) : displayedPosts.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center py-24 text-center px-6 space-y-4">
+            <div className="w-14 h-14 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400 shadow-inner">
+              {activeTab === "bookmarks" ? (
+                <Bookmark className="w-6 h-6" />
+              ) : activeTab === "following" ? (
+                <Radio className="w-6 h-6" />
+              ) : (
+                <Mic2 className="w-6 h-6" />
+              )}
             </div>
-            <Link href="/studio" className="px-6 py-3 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors">[ 🎙 DROP THE FIRST ECHO ]</Link>
+
+            <div className="space-y-1.5 max-w-sm">
+              <h2 className="text-lg font-bold text-white">
+                {activeTab === "bookmarks" 
+                  ? "No Bookmarks Yet" 
+                  : activeTab === "following" 
+                  ? "No Followed Echoes" 
+                  : "The Stream is Silent"}
+              </h2>
+              <p className="text-xs text-neutral-400 leading-relaxed">
+                {activeTab === "bookmarks"
+                  ? "Save interesting voice takes by tapping the bookmark icon to revisit them anytime."
+                  : activeTab === "following"
+                  ? "Orbit creators you love to see their latest voice takes directly in this feed."
+                  : "Be the voice that starts the wave. Record your first unfiltered audio take."}
+              </p>
+            </div>
+
+            {activeTab === "for-you" && (
+              <Link 
+                href="/studio" 
+                className="px-5 py-2.5 bg-white text-black font-semibold text-xs rounded-full hover:bg-neutral-200 transition-colors shadow-md"
+              >
+                Drop First Echo
+              </Link>
+            )}
           </div>
-        ):(
+        ) : (
           <div className="divide-y divide-neutral-900">
-            {posts.map(post => (
+            {displayedPosts.map(post => (
               <PostCard
                 key={post.id}
                 post={post}
                 user={user}
                 orbitedPosts={orbitedPosts}
+                isBookmarked={bookmarkedPostIds.has(post.id)}
                 activePostId={activePostId}
                 deletingId={deletingId}
                 onPulse={handlePulse}
                 onOrbit={handleOrbit}
                 onShare={handleShare}
+                onBookmark={handleBookmark}
                 onDelete={handleDelete}
                 onReplyClick={(rid?: string, rh?: string) => {
                   if (!user) { router.push("/login"); return; }
                   setReplyModal({ post, rid, rh });
                 }}
-                onComment={(post: FeedPost) => {
+                onComment={(p: FeedPost) => {
                   if (!user) { router.push("/login"); return; }
-                  setCommentPost(post);
+                  setCommentPost(p);
                 }}
                 onProfileClick={h => router.push(`/${h.replace(/^@/, "")}`)}
                 onActiveChange={setActiveId}
@@ -1337,58 +1739,53 @@ export default function HomeFeedPage() {
                 onUnfollow={handleUnfollow}
                 following={following}
                 setRef={setRef}
+                onFirstPlay={handleFirstPlay}
               />
             ))}
           </div>
         )}
 
-        {/* ── Google Search Engine Discovery & Topic Directory ── */}
-        <section className="mt-16 pt-8 border-t border-neutral-900 font-mono space-y-6 text-xs select-none">
-          <div className="space-y-2">
-            <h2 className="text-white font-bold text-xs uppercase tracking-widest flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-              // ECHO — UNFILTERED AUDIO PLATFORM & REAL-TIME VOICE SOCIAL NETWORK
-            </h2>
-            <p className="text-neutral-500 text-[11px] leading-relaxed">
-              Echo is an audio-first social platform for spontaneous voice posts, vertical voice reels (Waves), 
-              live interactive audio rooms, and real-time 1v1 debate clashes (The Stage).
+        {/* ── Footer Topic Discovery Chips ── */}
+        <section className="p-6 border-t border-neutral-900 space-y-4 text-xs select-none">
+          <div className="space-y-1">
+            <h3 className="font-bold text-neutral-200 text-xs uppercase tracking-wider flex items-center gap-2">
+              <Sparkle className="w-3.5 h-3.5 text-cyan-400" />
+              Discover Topics & Channels
+            </h3>
+            <p className="text-neutral-500 text-xs">
+              Explore unfiltered discussions, trending voice reels, and audio rooms across topics.
             </p>
           </div>
 
-          <div className="space-y-2">
-            <span className="text-[10px] text-neutral-400 uppercase tracking-wider block font-bold">
-              [ DISCOVER AUDIO TOPICS & CHANNELS ]
-            </span>
-            <div className="flex flex-wrap gap-1.5">
-              {[
-                "tech", "ai", "crypto", "startup", "music", "debates", "news",
-                "philosophy", "gaming", "culture", "india", "global", "finance", "podcasts", "voice", "aura"
-              ].map((tag) => (
-                <Link
-                  key={tag}
-                  href={`/hashtag/${tag}`}
-                  className="px-2 py-1 border border-neutral-800 hover:border-white text-[10px] text-neutral-400 hover:text-white uppercase transition-colors"
-                >
-                  #{tag}
-                </Link>
-              ))}
-            </div>
+          <div className="flex flex-wrap gap-1.5">
+            {[
+              "tech", "ai", "crypto", "startup", "music", "debates", "news",
+              "philosophy", "gaming", "culture", "india", "global", "finance", "podcasts"
+            ].map((tag) => (
+              <Link
+                key={tag}
+                href={`/hashtag/${tag}`}
+                className="px-3 py-1 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-700 rounded-full text-xs text-neutral-400 hover:text-white transition-colors"
+              >
+                #{tag}
+              </Link>
+            ))}
           </div>
 
-          <div className="flex items-center justify-between text-[9px] text-neutral-600 uppercase tracking-widest pt-2 border-t border-neutral-950">
-            <span>© {new Date().getFullYear()} ECHO AUDIO NETWORK</span>
-            <div className="flex items-center gap-4">
-              <Link href="/waves" className="hover:text-white transition-colors">WAVES</Link>
-              <Link href="/clash" className="hover:text-white transition-colors">STAGE</Link>
-              <Link href="/rooms" className="hover:text-white transition-colors">ROOMS</Link>
-              <Link href="/radar" className="hover:text-white transition-colors">RADAR</Link>
-              <Link href="/frequency-plus" className="hover:text-white transition-colors">FREQUENCY+</Link>
+          <div className="flex items-center justify-between text-[11px] text-neutral-500 pt-3 border-t border-neutral-900">
+            <span>© {new Date().getFullYear()} Echo Audio Network</span>
+            <div className="flex items-center gap-3">
+              <Link href="/waves" className="hover:text-white transition-colors">Waves</Link>
+              <Link href="/clash" className="hover:text-white transition-colors">Stage</Link>
+              <Link href="/rooms" className="hover:text-white transition-colors">Rooms</Link>
+              <Link href="/arcade" className="hover:text-white transition-colors">Arcade</Link>
             </div>
           </div>
         </section>
       </main>
 
-      {replyModal&&(
+      {/* Voice Reply Modal */}
+      {replyModal && (
         <ReplyRecordModal
           postId={replyModal.post.id}
           postCaption={replyModal.post.caption}
@@ -1397,14 +1794,26 @@ export default function HomeFeedPage() {
           reverbOfReverbId={replyModal.rid}
           reverbOfHandle={replyModal.rh}
           currentUser={user}
-          onClose={()=>setReplyModal(null)}/>
+          onClose={() => setReplyModal(null)}
+        />
       )}
-      {commentPost&&(
+
+      {/* Text Comments Sheet */}
+      {commentPost && (
         <TextCommentSection
           postId={commentPost.id}
           postAuthorUid={commentPost.authorUid}
           currentUser={user}
-          onClose={()=>setCommentPost(null)}/>
+          onClose={() => setCommentPost(null)}
+        />
+      )}
+
+      {/* Toast Notification */}
+      {toastMsg && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-white text-black px-4 py-2 rounded-full text-xs font-semibold shadow-2xl animate-fade-in flex items-center gap-2">
+          <Check className="w-3.5 h-3.5" />
+          <span>{toastMsg}</span>
+        </div>
       )}
     </div>
   );

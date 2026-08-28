@@ -52,6 +52,8 @@ export interface PostItem {
   orbitCount?:     number;
   reverbCount?:    number;
   commentCount?:   number;
+  viewsCount?:     number;
+  bookmarkCount?:  number;
   duration?:       string;
   durationSec?:    number;
   reverbOf?:       string;
@@ -168,6 +170,7 @@ export async function createPost(data: {
       audioTrackArtist: data.audioTrackArtist || null,
       isVoiceMeme:     Boolean(data.isVoiceMeme),
       audioUsageCount: 1,
+      viewsCount:      0,
       createdAt:       serverTimestamp(),
       // [ SPIKE ] - Initialize trending metrics
       spikeScore:      0,
@@ -826,4 +829,15 @@ export function subscribeToPostsByAudioTrackId(
   );
 }
 
-
+/**
+ * incrementPostViews — increments view count on a post
+ */
+export async function incrementPostViews(postId: string): Promise<void> {
+  try {
+    const db = getFirebaseDb();
+    const ref = doc(db, "posts", postId);
+    await updateDoc(ref, { viewsCount: increment(1) });
+  } catch (err) {
+    // Non-critical, ignore error
+  }
+}
