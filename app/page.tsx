@@ -1646,22 +1646,6 @@ export default function HomeFeedPage() {
               )}
             </button>
           </div>
-
-          {/* Right Header: Robo-Echo Mascot Shortcut */}
-          <Link
-            href="/echo-bot"
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-950/40 hover:bg-emerald-950/80 border border-emerald-500/50 hover:border-emerald-400 rounded-full transition-all cursor-pointer shadow-[0_0_15px_rgba(16,185,129,0.15)] group shrink-0 active:scale-95"
-            title="Open Robo-Echo AI Companion"
-          >
-            <div className="relative flex items-center justify-center">
-              <Bot className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
-              <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-            </div>
-            <span className="text-xs font-bold text-emerald-300 tracking-wide uppercase flex items-center gap-1">
-              Robo-Echo
-              <Sparkles className="w-2.5 h-2.5 text-emerald-400" />
-            </span>
-          </Link>
         </div>
       </header>
 

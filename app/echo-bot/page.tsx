@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import RoboEchoMascot from "@/app/components/robo-echo/RoboEchoMascot";
 import AIVoiceConsole from "@/app/components/robo-echo/AIVoiceConsole";
 import AutonomousCompanionScene from "@/app/components/robo-echo/AutonomousCompanionScene";
@@ -10,7 +11,14 @@ import Link from "next/link";
 import { ArrowLeft, Bot, Sparkles, Brain, Mic } from "lucide-react";
 
 export default function EchoBotPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<"mascot" | "voice" | "memory">("mascot");
+
+  useEffect(() => {
+    router.replace("/");
+  }, [router]);
+
+  return null;
 
   return (
     <div className="min-h-screen bg-black text-white font-mono flex flex-col md:flex-row select-none">

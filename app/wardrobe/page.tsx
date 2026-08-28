@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useCosmeticStore } from '../hooks/useCosmeticStore';
 import { CosmeticSlot, CosmeticItem } from '../types/cosmetics';
 
@@ -11,6 +12,12 @@ const RARITY_BADGE: Record<string, string> = {
 };
 
 export default function WardrobePage() {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace('/');
+  }, [router]);
+
+  return null;
   const {
     volts, unlockedIds, equipped, notification,
     catalog, buyItem, toggleEquip, addVolts,
@@ -64,7 +71,7 @@ export default function WardrobePage() {
                 backgroundColor: activeSkin?.skinProps?.bodyColor ?? '#f8fafc',
                 borderColor: activeSkin?.skinProps?.emissiveColor ?? '#334155',
                 boxShadow: activeSkin?.skinProps?.emissiveColor
-                  ? `0 0 24px ${activeSkin.skinProps.emissiveColor}66`
+                  ? `0 0 24px ${activeSkin?.skinProps?.emissiveColor}66`
                   : undefined,
                 outline: activeSkin?.skinProps?.wireframe ? '2px dashed #10b981' : undefined,
               }}
@@ -76,12 +83,12 @@ export default function WardrobePage() {
               </div>
               {/* Headwear indicator */}
               {activeHead && (
-                <div className="absolute -top-4 text-base">{activeHead.id === 'head_vr_halo' ? '👑' : activeHead.id === 'head_cyber_shades' ? '🕶️' : '🎉'}</div>
+                <div className="absolute -top-4 text-base">{activeHead?.id === 'head_vr_halo' ? '👑' : activeHead?.id === 'head_cyber_shades' ? '🕶️' : '🎉'}</div>
               )}
               {/* Ears indicator */}
               {activeEars && (
                 <div className="absolute text-base" style={{ top: '8px', right: '-20px' }}>
-                  {activeEars.id === 'ears_rgb_headphones' ? '🎧' : activeEars.id === 'ears_gold_horns' ? '⚡' : '🐱'}
+                  {activeEars?.id === 'ears_rgb_headphones' ? '🎧' : activeEars?.id === 'ears_gold_horns' ? '⚡' : '🐱'}
                 </div>
               )}
             </div>
