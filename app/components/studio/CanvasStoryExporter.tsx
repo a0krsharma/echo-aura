@@ -445,7 +445,7 @@ export default function CanvasStoryExporter({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-neutral-850 pb-3">
           <div className="flex items-center gap-2">
-            <Film className="w-4 h-4 text-emerald-400" />
+            <Film className="w-4 h-4 text-white" />
             <h3 className="font-bold text-sm text-white">
               9:16 Video Story Exporter
             </h3>
@@ -467,7 +467,7 @@ export default function CanvasStoryExporter({
 
           {!isExporting && !isDone && (
             <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center p-6 text-center space-y-3">
-              <div className="w-12 h-12 rounded-full bg-emerald-950/80 border border-emerald-500/60 flex items-center justify-center text-emerald-400">
+              <div className="w-12 h-12 rounded-full bg-neutral-900 border border-neutral-700 flex items-center justify-center text-white">
                 <Film className="w-5 h-5" />
               </div>
               <div className="space-y-1">
@@ -491,7 +491,7 @@ export default function CanvasStoryExporter({
 
           {isExporting && (
             <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center p-6 text-center space-y-3">
-              <Loader2 className="w-8 h-8 animate-spin text-emerald-400" />
+              <Loader2 className="w-8 h-8 animate-spin text-white" />
               <div className="space-y-1">
                 <p className="text-xs font-bold text-white">
                   Rendering Video Story ({exportProgress}%)
@@ -502,7 +502,7 @@ export default function CanvasStoryExporter({
               </div>
               <div className="w-48 h-1.5 bg-neutral-800 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-emerald-400 transition-all duration-150"
+                  className="h-full bg-white transition-all duration-150"
                   style={{ width: `${exportProgress}%` }}
                 />
               </div>
@@ -525,7 +525,7 @@ export default function CanvasStoryExporter({
               <button
                 type="button"
                 onClick={handleShare}
-                className="py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
+                className="py-3 bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 hover:border-white text-white font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
               >
                 <Share2 className="w-4 h-4" />
                 <span>{copied ? 'Link Copied!' : 'Share to Story'}</span>

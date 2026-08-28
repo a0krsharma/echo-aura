@@ -439,15 +439,11 @@ function StudioContent() {
           )}
         </div>
 
-        {/* ── Real-Time Voice Masks Carousel (0MB Client-Side DSP) ── */}
+        {/* ── Real-Time Voice Masks Carousel ── */}
         <div className="w-full space-y-2">
           <div className="flex items-center justify-between font-mono text-xs px-1">
             <span className="text-neutral-400 font-bold flex items-center gap-1.5 uppercase tracking-wider">
-              <span>// VOICE MASKS</span>
-            </span>
-            <span className="text-[10px] text-emerald-400 font-bold tracking-wider uppercase flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              0MB CLIENT-SIDE DSP
+              // VOICE MASKS
             </span>
           </div>
 
@@ -463,8 +459,8 @@ function StudioContent() {
                 }}
                 className={`px-3 py-2 rounded-xl border text-xs flex items-center gap-2 shrink-0 transition-all font-mono cursor-pointer ${
                   activeFilter === mask.id
-                    ? "border-emerald-400 bg-emerald-950/80 text-emerald-300 font-bold shadow-[0_0_12px_rgba(16,185,129,0.25)]"
-                    : "border-neutral-800 bg-neutral-950/90 text-neutral-400 hover:border-neutral-700 hover:text-white"
+                    ? "border-white bg-white text-black font-black shadow-[0_0_15px_rgba(255,255,255,0.2)]"
+                    : "border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-700 hover:text-white"
                 } disabled:opacity-50`}
                 title={mask.description}
               >
@@ -551,9 +547,9 @@ function StudioContent() {
                   soundSynth.playSubtlePop();
                   setShowStoryExporter(true);
                 }}
-                className="px-4 py-3.5 border border-emerald-500/70 bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shadow-[0_0_15px_rgba(16,185,129,0.2)]"
+                className="px-4 py-3.5 border border-neutral-700 hover:border-white bg-neutral-900 hover:bg-neutral-800 text-white font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
               >
-                <Film className="w-4 h-4 text-emerald-400" />
+                <Film className="w-4 h-4 text-white" />
                 <span>9:16 STORY EXPORT</span>
               </button>
 
