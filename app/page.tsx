@@ -75,13 +75,12 @@ function formatRelativeTime(c: any) {
 
 function getAvatarGradient(handle: string) {
   const gradients = [
-    "from-purple-500 to-indigo-600",
-    "from-cyan-500 to-blue-600",
-    "from-emerald-500 to-teal-600",
-    "from-amber-500 to-orange-600",
-    "from-rose-500 to-pink-600",
-    "from-fuchsia-500 to-purple-600",
-    "from-blue-500 to-cyan-600",
+    "from-neutral-800 to-neutral-950",
+    "from-zinc-800 to-zinc-950",
+    "from-neutral-700 to-neutral-900",
+    "from-stone-800 to-black",
+    "from-zinc-900 to-black",
+    "from-neutral-900 to-neutral-950",
   ];
   let hash = 0;
   const clean = handle.replace(/^@/, "");
@@ -112,7 +111,7 @@ function parseCaption(caption: string) {
         <Link
           key={match.index}
           href={`/hashtag/${encodeURIComponent(fullMatch.replace(/^#/, ''))}`}
-          className="text-cyan-400 hover:text-cyan-300 font-medium transition-colors inline-block"
+          className="text-white hover:underline font-medium transition-colors inline-block"
           onClick={(e) => e.stopPropagation()}
         >
           {fullMatch}
@@ -599,7 +598,10 @@ function ReplyRecordModal({ postId, postCaption, postAuthorHandle, postAuthorUid
 
   const publish = async () => {
     if (!blob || !currentUser) return;
-    prevAudio.current?.pause(); setPP(false); setState("uploading"); setMsg("Uploading voice take...");
+    prevAudio.current?.pause(); 
+    setPP(false); 
+    setState("uploading"); 
+    setMsg("Uploading voice take...");
     try {
       const sec = Math.max(1, Math.floor(ms / 1000));
       const up = await uploadAudio(blob, `rev-${currentUser.uid}-${Date.now()}`);
@@ -631,10 +633,10 @@ function ReplyRecordModal({ postId, postCaption, postAuthorHandle, postAuthorUid
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="w-full max-w-lg bg-neutral-950 border border-neutral-800 rounded-3xl p-6 space-y-5 shadow-2xl">
-        <div className="flex items-center justify-between border-b border-neutral-900 pb-3">
+      <div className="w-full max-w-lg bg-black border border-white rounded-3xl p-6 space-y-5 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-white/20 pb-3">
           <div className="flex items-center gap-2">
-            <Mic2 className="w-4 h-4 text-emerald-400" />
+            <Mic2 className="w-4 h-4 text-white" />
             <h3 className="font-bold text-sm text-white">
               {reverbOfHandle ? `Reply to ${reverbOfHandle}` : `Reply to ${postAuthorHandle}`}
             </h3>
@@ -644,7 +646,7 @@ function ReplyRecordModal({ postId, postCaption, postAuthorHandle, postAuthorUid
           </button>
         </div>
 
-        <p className="text-xs text-neutral-400 line-clamp-2 bg-neutral-900/50 p-2.5 rounded-xl border border-neutral-850">
+        <p className="text-xs text-neutral-400 line-clamp-2 bg-neutral-900/50 p-2.5 rounded-xl border border-neutral-800">
           "{postCaption}"
         </p>
 
@@ -665,72 +667,19 @@ function ReplyRecordModal({ postId, postCaption, postAuthorHandle, postAuthorUid
 
         <div className="space-y-3">
           {state === "idle" && (
-            <>
-              <button 
-                onClick={startRec} 
-                className="w-full bg-white hover:bg-neutral-200 text-black font-semibold text-xs py-3.5 rounded-2xl transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer active:scale-98"
-              >
-                <Mic2 className="w-4 h-4 fill-current" />
-                <span>Tap to Record Voice Take</span>
-              </button>
-
-              {/* Instant Viral Voice Meme Soundboard */}
-              <div className="space-y-2 pt-2 border-t border-neutral-900">
-                <span className="text-[11px] text-neutral-400 font-semibold block">
-                  Quick Voice Memes
-                </span>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {SOUND_CATALOG.filter(s => s.isVoiceMeme).slice(0, 6).map((meme) => (
-                    <button
-                      key={meme.id}
-                      type="button"
-                      onClick={async () => {
-                        if (!currentUser) return;
-                        setState("uploading");
-                        setMsg(`Dropping "${meme.title}"...`);
-                        try {
-                          await addPostReverb(postId, {
-                            uid: currentUser.uid,
-                            handle: currentUser.handle || "@ANON",
-                            audioUrl: meme.audioUrl,
-                            caption: caption.trim() || `[ V-MEME: "${meme.title}" ]`,
-                            durationSec: meme.durationSec,
-                            reverbOfReverbId,
-                            reverbOfHandle,
-                            isVoiceMeme: true,
-                            audioTrackTitle: meme.title,
-                          });
-                          await createNotification(postAuthorUid, {
-                            type: "reverb",
-                            fromUid: currentUser.uid,
-                            fromHandle: currentUser.handle || "@ANON",
-                            postId,
-                            postCaption,
-                            text: `${currentUser.handle} dropped a voice meme on your echo.`,
-                          });
-                          onClose();
-                        } catch (e: any) {
-                          setMsg(`Error: ${e?.message || "Failed"}`);
-                          setState("idle");
-                        }
-                      }}
-                      className="p-2 bg-neutral-900/60 border border-neutral-800/80 hover:border-neutral-700 rounded-xl text-left text-xs text-neutral-300 hover:text-white transition-all cursor-pointer flex items-center justify-between"
-                    >
-                      <span className="truncate">{meme.title}</span>
-                      <span className="text-[10px] text-neutral-500 shrink-0 font-mono">
-                        {meme.durationSec}s
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </>
+            <button 
+              onClick={startRec} 
+              className="w-full bg-white hover:bg-neutral-200 text-black font-semibold text-xs py-3.5 rounded-2xl transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer active:scale-98"
+            >
+              <Mic2 className="w-4 h-4 fill-current" />
+              <span>Tap to Record Voice Take</span>
+            </button>
           )}
 
           {state === "recording" && (
             <button 
               onClick={stopRec} 
-              className="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs py-3.5 rounded-2xl animate-pulse cursor-pointer flex items-center justify-center gap-2"
+              className="w-full bg-neutral-900 hover:bg-neutral-800 border border-white text-white font-bold text-xs py-3.5 rounded-2xl animate-pulse cursor-pointer flex items-center justify-center gap-2"
             >
               <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping" />
               <span>Stop Recording</span>
@@ -741,65 +690,72 @@ function ReplyRecordModal({ postId, postCaption, postAuthorHandle, postAuthorUid
             <div className="flex gap-2.5">
               <button 
                 onClick={togglePrev} 
-                className="px-4 py-2.5 rounded-xl border border-neutral-800 bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-2.5 rounded-xl border border-white bg-black hover:bg-neutral-900 text-white text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
               >
                 {prevPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
                 <span>{prevPlaying ? "Pause" : "Play"}</span>
               </button>
               <button 
                 onClick={() => { setState("idle"); setBlob(null); if (previewUrl) URL.revokeObjectURL(previewUrl); setPrev(null); setMs(0); }} 
-                className="px-3.5 py-2.5 rounded-xl border border-neutral-800 hover:border-neutral-700 text-neutral-400 hover:text-white text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
+                className="px-3 py-2 rounded-xl text-neutral-400 hover:text-white text-xs transition-colors flex items-center gap-1 cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                <span>Retake</span>
+                <span>Discard</span>
               </button>
               <button 
                 onClick={publish} 
-                disabled={!caption.trim()} 
-                className="flex-1 bg-white hover:bg-neutral-200 text-black font-bold text-xs py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40"
+                className="flex-1 bg-white hover:bg-neutral-200 text-black font-semibold text-xs py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer"
               >
-                <Send className="w-3.5 h-3.5" />
-                <span>Post Take</span>
+                <Send className="w-4 h-4 fill-current" />
+                <span>Publish Reply</span>
               </button>
             </div>
           )}
 
           {state === "uploading" && (
-            <div className="w-full py-4 flex items-center justify-center gap-2.5 text-xs text-neutral-400">
+            <div className="flex items-center justify-center gap-2 text-xs text-neutral-400 py-3">
               <Loader2 className="w-4 h-4 animate-spin text-white" />
-              <span>Uploading voice take...</span>
+              <span>{msg || "Uploading..."}</span>
             </div>
           )}
-        </div>
 
-        {msg && <p className="text-xs text-neutral-400 text-center">{msg}</p>}
+          {msg && state !== "uploading" && (
+            <p className="text-xs text-neutral-400 text-center font-mono">{msg}</p>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-// ─── Post Reverb (Audio Comments) Section ─────────────────────────────────────
-function PostReverbSection({ post, currentUser, onReplyClick, onProfileClick }: {
+// ─── Post Reverbs (Audio Replies) Section ─────────────────────────────────────
+function PostReverbSection({
+  post,
+  currentUser,
+  onProfileClick,
+  onReplyClick,
+}: {
   post: FeedPost;
   currentUser: any;
-  onReplyClick: (rid?: string, rh?: string) => void;
   onProfileClick: (h: string) => void;
+  onReplyClick: (reverbOfId?: string, reverbOfHandle?: string) => void;
 }) {
-  const [reverbs, setReverbs]   = useState<PostReverbItem[]>([]);
-  const [expanded, setExpanded] = useState(false);
-
-  const REACTION_OPTIONS = ["😂", "🔥", "❤️", "👍", "⚡", "💀", "🧢", "💯"];
+  const [reverbs, setReverbs] = useState<PostReverbItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!expanded) return;
-    const unsub = subscribeToPostReverbs(post.id, setReverbs);
+    const unsub = subscribeToPostReverbs(post.id, (list) => {
+      setReverbs(list);
+      setLoading(false);
+    });
     return () => unsub();
-  }, [post.id, expanded]);
+  }, [post.id]);
 
   const handlePulse = async (rv: PostReverbItem) => {
     if (!currentUser) return;
     soundSynth.playSubtlePop();
-    await togglePulsePostReverb(post.id, rv.id, currentUser.uid, !!(rv.pulsedBy || []).includes(currentUser.uid));
+    const isPulsed = (rv.pulsedBy || []).includes(currentUser.uid);
+    await togglePulsePostReverb(post.id, rv.id, currentUser.uid, isPulsed);
   };
 
   const handleReact = async (rv: PostReverbItem, emoji: string) => {
@@ -813,51 +769,56 @@ function PostReverbSection({ post, currentUser, onReplyClick, onProfileClick }: 
         emoji,
         rv.handle
       );
-    } catch (err) {
-      console.error("Failed to react to reverb:", err);
+    } catch (e) {
+      console.warn("Reaction failed:", e);
     }
   };
 
-  const total = post.reverbCount || 0;
-
   return (
-    <div className="pt-2">
-      <button 
-        onClick={() => setExpanded(v => !v)}
-        className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-neutral-200 transition-colors cursor-pointer py-1 font-medium"
-      >
-        {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-        <span>{total > 0 ? `${total} Voice Take${total !== 1 ? "s" : ""}` : "Add Voice Reply"}</span>
-      </button>
+    <div className="border-t border-white/10 bg-black p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <h4 className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-1.5">
+          <Volume2 className="w-3.5 h-3.5 text-white" />
+          <span>Voice Takes ({reverbs.length})</span>
+        </h4>
+        <span className="text-[10px] text-neutral-500 font-mono">LIVE THREAD</span>
+      </div>
 
-      {expanded && (
-        <div className="border-l-2 border-neutral-800/80 pl-3.5 space-y-3.5 mt-2.5">
-          {reverbs.length === 0 && (
-            <p className="text-xs text-neutral-500 py-2">No voice replies yet. Be the first!</p>
+      {loading ? (
+        <div className="flex items-center justify-center py-4 text-xs text-neutral-500">
+          <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" />
+          Loading takes...
+        </div>
+      ) : reverbs.length === 0 ? (
+        <div className="text-center py-4 space-y-2">
+          <p className="text-xs text-neutral-500">No voice takes yet.</p>
+          {currentUser && (
+            <button 
+              onClick={() => onReplyClick()} 
+              className="text-xs text-white hover:underline font-semibold cursor-pointer"
+            >
+              Be the first to reply →
+            </button>
           )}
-          {reverbs.map(rv => {
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {reverbs.map((rv) => {
             const pulsed = currentUser ? (rv.pulsedBy || []).includes(currentUser.uid) : false;
-            const reactionsMap = rv.reactions || {};
-            const reactionList = Object.values(reactionsMap);
-            
-            const emojiCounts: Record<string, number> = {};
-            reactionList.forEach((r) => {
-              emojiCounts[r.emoji] = (emojiCounts[r.emoji] || 0) + 1;
-            });
-            const userReactedEmoji = currentUser ? reactionsMap[currentUser.uid]?.emoji : null;
+            const userReactedEmoji = currentUser ? rv.reactions?.[currentUser.uid] : null;
 
             return (
-              <div key={rv.id} className="space-y-2 bg-neutral-950/60 border border-neutral-850 p-3 rounded-xl">
+              <div key={rv.id} className="space-y-2 bg-neutral-950/60 border border-white/10 p-3 rounded-xl">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <button 
                       onClick={() => onProfileClick(rv.handle)} 
-                      className="text-xs font-semibold text-neutral-300 hover:text-white cursor-pointer"
+                      className="text-xs font-semibold text-white hover:underline cursor-pointer"
                     >
                       {rv.handle}
                     </button>
                     {rv.isVoiceMeme && (
-                      <span className="text-[9px] bg-neutral-800 text-neutral-300 px-1.5 py-0.5 rounded font-medium">
+                      <span className="text-[9px] bg-white text-black px-1.5 py-0.5 rounded font-bold uppercase">
                         V-Meme
                       </span>
                     )}
@@ -865,15 +826,10 @@ function PostReverbSection({ post, currentUser, onReplyClick, onProfileClick }: 
                       <span className="text-[11px] text-neutral-500">↩ {rv.reverbOfHandle}</span>
                     )}
                   </div>
-                  {userReactedEmoji && (
-                    <span className="text-xs bg-neutral-900 border border-neutral-800 rounded-full px-2 py-0.5">
-                      {userReactedEmoji}
-                    </span>
-                  )}
                 </div>
 
                 {rv.caption && (
-                  <p className="text-xs text-neutral-300 leading-relaxed">{rv.caption}</p>
+                  <p className="text-xs text-white leading-relaxed">{rv.caption}</p>
                 )}
 
                 {rv.audioUrl && (
@@ -885,10 +841,10 @@ function PostReverbSection({ post, currentUser, onReplyClick, onProfileClick }: 
                     <button 
                       onClick={() => handlePulse(rv)} 
                       className={`flex items-center gap-1 text-xs cursor-pointer transition-colors ${
-                        pulsed ? "text-rose-500 font-semibold" : "text-neutral-400 hover:text-white"
+                        pulsed ? "text-white font-bold" : "text-neutral-400 hover:text-white"
                       }`}
                     >
-                      <Heart className={`w-3.5 h-3.5 ${pulsed ? "fill-rose-500 text-rose-500" : ""}`} />
+                      <Heart className={`w-3.5 h-3.5 ${pulsed ? "fill-white text-white" : ""}`} />
                       <span>{rv.pulseCount > 0 ? formatNum(rv.pulseCount) : ""}</span>
                     </button>
                     <button 
@@ -899,25 +855,6 @@ function PostReverbSection({ post, currentUser, onReplyClick, onProfileClick }: 
                       <span>Reply</span>
                     </button>
                   </div>
-
-                  {/* Reaction Pills */}
-                  <div className="flex items-center gap-1 bg-black/50 border border-neutral-850 rounded-full px-2 py-0.5">
-                    {REACTION_OPTIONS.slice(0, 5).map((emoji) => {
-                      const isSelected = userReactedEmoji === emoji;
-                      return (
-                        <button
-                          key={emoji}
-                          onClick={() => handleReact(rv, emoji)}
-                          className={`text-xs p-0.5 hover:scale-125 transition-transform cursor-pointer ${
-                            isSelected ? "scale-110" : "opacity-75 hover:opacity-100"
-                          }`}
-                          title={`React ${emoji}`}
-                        >
-                          {emoji}
-                        </button>
-                      );
-                    })}
-                  </div>
                 </div>
               </div>
             );
@@ -925,9 +862,9 @@ function PostReverbSection({ post, currentUser, onReplyClick, onProfileClick }: 
           {currentUser && (
             <button 
               onClick={() => onReplyClick()} 
-              className="flex items-center justify-center gap-2 text-xs text-neutral-300 hover:text-white py-2 px-3 bg-neutral-900/60 hover:bg-neutral-850 border border-neutral-800 rounded-xl transition-all w-full cursor-pointer font-medium"
+              className="flex items-center justify-center gap-2 text-xs text-white hover:bg-neutral-900 py-2 px-3 border border-white rounded-xl transition-all w-full cursor-pointer font-bold"
             >
-              <Mic2 className="w-3.5 h-3.5 text-emerald-400" />
+              <Mic2 className="w-3.5 h-3.5 text-white" />
               <span>Drop a Voice Take</span>
             </button>
           )}
@@ -997,10 +934,10 @@ function TextCommentSection({ postId, postAuthorUid, currentUser, onClose }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-md p-0 sm:p-4 animate-fade-in" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="w-full max-w-lg bg-neutral-950 border-t sm:border border-neutral-800 sm:rounded-3xl h-[75vh] sm:h-[65vh] flex flex-col shadow-2xl">
-        <div className="flex items-center justify-between p-4 border-b border-neutral-900">
+      <div className="w-full max-w-lg bg-black border border-white sm:rounded-3xl h-[75vh] sm:h-[65vh] flex flex-col shadow-2xl">
+        <div className="flex items-center justify-between p-4 border-b border-white">
           <div className="flex items-center gap-2">
-            <MessageCircle className="w-4 h-4 text-cyan-400" />
+            <MessageCircle className="w-4 h-4 text-white" />
             <h3 className="font-bold text-sm text-white">Comments</h3>
           </div>
           <button onClick={onClose} className="text-neutral-500 hover:text-white p-1 rounded-full hover:bg-neutral-900 transition-colors">
@@ -1019,7 +956,7 @@ function TextCommentSection({ postId, postAuthorUid, currentUser, onClose }: {
               const liked = currentUser ? (c.likedBy || []).includes(currentUser.uid) : false;
               const isOwn = currentUser?.uid === c.authorUid;
               return (
-                <div key={c.id} className="space-y-1 bg-neutral-900/40 p-3 rounded-2xl border border-neutral-850">
+                <div key={c.id} className="space-y-1 bg-black p-3 rounded-2xl border border-white/10">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-white">{c.authorHandle}</span>
                     <span className="text-[10px] text-neutral-500">{formatRelativeTime(c.createdAt)}</span>
@@ -1029,10 +966,10 @@ function TextCommentSection({ postId, postAuthorUid, currentUser, onClose }: {
                     <button 
                       onClick={() => handleLike(c)} 
                       className={`flex items-center gap-1 text-[11px] cursor-pointer transition-colors ${
-                        liked ? "text-rose-500 font-semibold" : "text-neutral-400 hover:text-white"
+                        liked ? "text-white font-bold" : "text-neutral-400 hover:text-white"
                       }`}
                     >
-                      <Heart className={`w-3.5 h-3.5 ${liked ? "fill-rose-500 text-rose-500" : ""}`} />
+                      <Heart className={`w-3.5 h-3.5 ${liked ? "fill-white text-white" : ""}`} />
                       <span>{c.likeCount > 0 ? formatNum(c.likeCount) : ""}</span>
                     </button>
                     {isOwn && (
@@ -1189,8 +1126,8 @@ function PostCard({
               onClick={() => onDelete(post.id)}
               className={`p-1.5 rounded-full transition-colors cursor-pointer ${
                 isDel 
-                  ? "text-rose-400 bg-rose-950/60 border border-rose-800" 
-                  : "text-neutral-500 hover:text-rose-400 hover:bg-neutral-900"
+                  ? "text-white bg-neutral-900 border border-white" 
+                  : "text-neutral-500 hover:text-white hover:bg-neutral-900"
               }`}
               title={isDel ? "Confirm Delete" : "Delete Echo"}
             >
@@ -1202,9 +1139,9 @@ function PostCard({
 
       {/* News Dispatch Header Badge (if linked to topic) */}
       {(post.newsTopic || post.newsHeadline) && (
-        <div className="px-3 py-2 bg-neutral-900/60 border border-neutral-850 rounded-xl flex items-center justify-between gap-2 text-xs">
+        <div className="px-3 py-2 bg-neutral-900/60 border border-neutral-800 rounded-xl flex items-center justify-between gap-2 text-xs">
           <div className="flex items-center gap-2 overflow-hidden">
-            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shrink-0" />
+            <span className="w-2 h-2 rounded-full bg-white animate-pulse shrink-0" />
             {post.newsTopic && (
               <Link
                 href={`/hashtag/${encodeURIComponent(post.newsTopic.replace(/^#+/, ""))}`}
@@ -1224,7 +1161,7 @@ function PostCard({
               href={post.newsLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[11px] text-cyan-400 hover:underline shrink-0 font-medium"
+              className="text-[11px] text-white hover:underline shrink-0 font-bold uppercase"
             >
               Dispatch ↗
             </a>
@@ -1269,17 +1206,17 @@ function PostCard({
         onFirstPlay={() => onFirstPlay(post)}
       />
 
-      {/* World-Class Twitter / Instagram Icon Action Deck */}
+      {/* World-Class Twitter / Instagram Icon Action Deck (Monochrome Uniformity) */}
       <div className="flex items-center justify-between pt-1 text-neutral-400 select-none">
         {/* 1. Comment / Reply */}
         <button
           type="button"
           onClick={() => onComment(post)}
-          className="group flex items-center gap-1.5 text-neutral-400 hover:text-cyan-400 transition-colors p-1.5 -ml-1.5 rounded-full hover:bg-cyan-500/10 cursor-pointer"
+          className="group flex items-center gap-1.5 text-neutral-400 hover:text-white transition-colors p-1.5 -ml-1.5 rounded-full hover:bg-white/10 cursor-pointer"
           title="Reply / Comment"
         >
           <MessageCircle className="w-4 h-4 group-hover:scale-110 transition-transform" />
-          <span className="text-xs">{post.commentCount > 0 ? formatNum(post.commentCount) : ""}</span>
+          <span className="text-xs font-mono">{post.commentCount > 0 ? formatNum(post.commentCount) : ""}</span>
         </button>
 
         {/* 2. Re-Echo (Repost) */}
@@ -1288,13 +1225,13 @@ function PostCard({
             type="button"
             onClick={() => onOrbit(post)}
             disabled={isOrbited}
-            className={`group flex items-center gap-1.5 transition-colors p-1.5 rounded-full hover:bg-emerald-500/10 cursor-pointer ${
-              isOrbited ? "text-emerald-400" : "text-neutral-400 hover:text-emerald-400"
+            className={`group flex items-center gap-1.5 transition-colors p-1.5 rounded-full hover:bg-white/10 cursor-pointer ${
+              isOrbited ? "text-white font-bold" : "text-neutral-400 hover:text-white"
             }`}
             title={isOrbited ? "Re-Echoed" : "Re-Echo to Followers"}
           >
-            <Repeat2 className={`w-4 h-4 group-hover:scale-110 transition-transform ${isOrbited ? "text-emerald-400" : ""}`} />
-            <span className={`text-xs ${isOrbited ? "text-emerald-400 font-semibold" : ""}`}>
+            <Repeat2 className={`w-4 h-4 group-hover:scale-110 transition-transform ${isOrbited ? "text-white" : ""}`} />
+            <span className={`text-xs font-mono ${isOrbited ? "text-white font-bold" : ""}`}>
               {(post.orbitedBy?.length || 0) > 0 ? formatNum(post.orbitedBy?.length || 0) : ""}
             </span>
           </button>
@@ -1306,13 +1243,13 @@ function PostCard({
         <button
           type="button"
           onClick={() => onPulse(post)}
-          className={`group flex items-center gap-1.5 transition-colors p-1.5 rounded-full hover:bg-rose-500/10 cursor-pointer ${
-            isPulsed ? "text-rose-500" : "text-neutral-400 hover:text-rose-500"
+          className={`group flex items-center gap-1.5 transition-colors p-1.5 rounded-full hover:bg-white/10 cursor-pointer ${
+            isPulsed ? "text-white font-bold" : "text-neutral-400 hover:text-white"
           }`}
           title="Pulse / Like"
         >
-          <Heart className={`w-4 h-4 group-hover:scale-110 transition-transform ${isPulsed ? "fill-rose-500 text-rose-500" : ""}`} />
-          <span className={`text-xs ${isPulsed ? "text-rose-500 font-semibold" : ""}`}>
+          <Heart className={`w-4 h-4 group-hover:scale-110 transition-transform ${isPulsed ? "fill-white text-white" : ""}`} />
+          <span className={`text-xs font-mono ${isPulsed ? "text-white font-bold" : ""}`}>
             {post.pulseCount > 0 ? formatNum(post.pulseCount) : ""}
           </span>
         </button>
@@ -1321,12 +1258,12 @@ function PostCard({
         <button
           type="button"
           onClick={() => onBookmark(post)}
-          className={`group flex items-center gap-1.5 transition-colors p-1.5 rounded-full hover:bg-amber-500/10 cursor-pointer ${
-            isBookmarked ? "text-amber-400" : "text-neutral-400 hover:text-amber-400"
+          className={`group flex items-center gap-1.5 transition-colors p-1.5 rounded-full hover:bg-white/10 cursor-pointer ${
+            isBookmarked ? "text-white font-bold" : "text-neutral-400 hover:text-white"
           }`}
           title={isBookmarked ? "Remove Bookmark" : "Bookmark Echo"}
         >
-          <Bookmark className={`w-4 h-4 group-hover:scale-110 transition-transform ${isBookmarked ? "fill-amber-400 text-amber-400" : ""}`} />
+          <Bookmark className={`w-4 h-4 group-hover:scale-110 transition-transform ${isBookmarked ? "fill-white text-white" : ""}`} />
         </button>
 
         {/* 5. Views Count */}
@@ -1335,14 +1272,14 @@ function PostCard({
           title={`${displayViews} views`}
         >
           <BarChart2 className="w-4 h-4" />
-          <span className="text-xs">{formatNum(displayViews)}</span>
+          <span className="text-xs font-mono">{formatNum(displayViews)}</span>
         </div>
 
         {/* 6. Share */}
         <button
           type="button"
           onClick={() => onShare(post)}
-          className="group flex items-center gap-1.5 text-neutral-400 hover:text-white transition-colors p-1.5 -mr-1.5 rounded-full hover:bg-neutral-800 cursor-pointer"
+          className="group flex items-center gap-1.5 text-neutral-400 hover:text-white transition-colors p-1.5 -mr-1.5 rounded-full hover:bg-white/10 cursor-pointer"
           title="Share Echo"
         >
           <Share className="w-4 h-4 group-hover:scale-110 transition-transform" />
@@ -1733,7 +1670,7 @@ export default function HomeFeedPage() {
         <section className="p-6 border-t border-neutral-900 space-y-4 text-xs select-none">
           <div className="space-y-1">
             <h3 className="font-bold text-neutral-200 text-xs uppercase tracking-wider flex items-center gap-2">
-              <Sparkle className="w-3.5 h-3.5 text-cyan-400" />
+              <Sparkle className="w-3.5 h-3.5 text-white" />
               Discover Topics & Channels
             </h3>
             <p className="text-neutral-500 text-xs">
