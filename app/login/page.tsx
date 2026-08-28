@@ -83,20 +83,6 @@ export default function LoginPage() {
           {busy ? "SIGNING IN…" : "[ CONTINUE WITH GOOGLE ]"}
         </button>
 
-        {/* Skip to Feed as Guest */}
-        <button
-          type="button"
-          onClick={() => {
-            try {
-              localStorage.setItem("echo_guest_mode", "true");
-            } catch {}
-            router.push("/");
-          }}
-          className="w-full flex items-center justify-center gap-2 border border-neutral-800 text-neutral-400 hover:text-white hover:border-neutral-600 font-mono text-[10px] tracking-[0.2em] uppercase py-3.5 px-6 transition-all duration-150 cursor-pointer"
-        >
-          <span>[ SKIP / EXPLORE AS GUEST → ]</span>
-        </button>
-
         <p className="font-mono text-[10px] text-neutral-600 text-center uppercase tracking-wider mt-2">
           By continuing, you accept our terms and privacy policy.
         </p>
