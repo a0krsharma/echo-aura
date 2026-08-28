@@ -15,13 +15,18 @@ import {
   X,
   Pause,
   Headphones,
-  CheckCircle2
+  CheckCircle2,
+  Film,
+  Sparkles
 } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
 import { uploadAudio } from "@/lib/cloudinary";
 import { createPost } from "@/lib/posts";
 import SoundPickerModal from "@/app/components/SoundPickerModal";
 import { SoundItem, getSoundById } from "@/lib/soundCatalog";
+import { useVoiceFilters, VOICE_MASKS } from "@/app/hooks/useVoiceFilters";
+import CanvasStoryExporter from "@/app/components/studio/CanvasStoryExporter";
+import { soundSynth } from "@/lib/soundSynthesizer";
 
 type StudioState = "idle" | "recording" | "preview" | "uploading";
 
@@ -81,6 +86,9 @@ function StudioContent() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
   const [recordedMimeType, setRecordedMimeType] = useState("audio/webm");
+  const [showStoryExporter, setShowStoryExporter] = useState(false);
+
+  const { activeFilter, applyFilterToStream, setActiveFilter, cleanup } = useVoiceFilters();
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -153,6 +161,9 @@ function StudioContent() {
       });
       streamRef.current = stream;
 
+      // Apply Real-Time 0MB Client-Side DSP Voice Mask
+      const processedStream = await applyFilterToStream(stream, activeFilter);
+
       let mimeType = "audio/webm";
       if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
         mimeType = "audio/webm;codecs=opus";
@@ -161,7 +172,7 @@ function StudioContent() {
       }
       setRecordedMimeType(mimeType);
 
-      const recorder = new MediaRecorder(stream, { mimeType });
+      const recorder = new MediaRecorder(processedStream, { mimeType });
       mediaRecorderRef.current = recorder;
 
       recorder.ondataavailable = (event) => {
@@ -428,6 +439,42 @@ function StudioContent() {
           )}
         </div>
 
+        {/* ── Real-Time Voice Masks Carousel (0MB Client-Side DSP) ── */}
+        <div className="w-full space-y-2">
+          <div className="flex items-center justify-between font-mono text-xs px-1">
+            <span className="text-neutral-400 font-bold flex items-center gap-1.5 uppercase tracking-wider">
+              <span>// VOICE MASKS</span>
+            </span>
+            <span className="text-[10px] text-emerald-400 font-bold tracking-wider uppercase flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              0MB CLIENT-SIDE DSP
+            </span>
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+            {VOICE_MASKS.map((mask) => (
+              <button
+                key={mask.id}
+                type="button"
+                disabled={studioState === "recording"}
+                onClick={() => {
+                  soundSynth.playSubtlePop();
+                  setActiveFilter(mask.id);
+                }}
+                className={`px-3 py-2 rounded-xl border text-xs flex items-center gap-2 shrink-0 transition-all font-mono cursor-pointer ${
+                  activeFilter === mask.id
+                    ? "border-emerald-400 bg-emerald-950/80 text-emerald-300 font-bold shadow-[0_0_12px_rgba(16,185,129,0.25)]"
+                    : "border-neutral-800 bg-neutral-950/90 text-neutral-400 hover:border-neutral-700 hover:text-white"
+                } disabled:opacity-50`}
+                title={mask.description}
+              >
+                <span className="text-sm">{mask.icon}</span>
+                <span className="truncate">{mask.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Center Clock & Waveform */}
         <div className="text-center space-y-3">
           <div className="font-mono text-5xl sm:text-7xl font-bold tracking-tight tabular-nums select-none text-white">
@@ -500,6 +547,18 @@ function StudioContent() {
 
               <button
                 type="button"
+                onClick={() => {
+                  soundSynth.playSubtlePop();
+                  setShowStoryExporter(true);
+                }}
+                className="px-4 py-3.5 border border-emerald-500/70 bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shadow-[0_0_15px_rgba(16,185,129,0.2)]"
+              >
+                <Film className="w-4 h-4 text-emerald-400" />
+                <span>9:16 STORY EXPORT</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={resetRecording}
                 className="px-4 py-3.5 border border-neutral-700 hover:border-white text-neutral-400 hover:text-white font-mono text-xs uppercase tracking-wider transition-colors flex items-center gap-1.5 cursor-pointer"
               >
@@ -564,6 +623,18 @@ function StudioContent() {
         onClose={() => setShowSoundPicker(false)}
         onSelectSound={(s) => setAttachedSound(s)}
         activeSoundId={attachedSound?.id}
+      />
+
+      {/* ── 9:16 Canvas Story Video Exporter (WhatsApp & Instagram Loops) ── */}
+      <CanvasStoryExporter
+        isOpen={showStoryExporter}
+        onClose={() => setShowStoryExporter(false)}
+        audioBlob={audioBlob}
+        audioUrl={previewUrl}
+        caption={caption}
+        userHandle={user?.handle || "@ANON"}
+        voiceMaskLabel={VOICE_MASKS.find((m) => m.id === activeFilter)?.label}
+        durationSec={Math.max(1, Math.floor(elapsedMs / 1000))}
       />
     </div>
   );
