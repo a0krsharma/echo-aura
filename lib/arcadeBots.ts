@@ -145,7 +145,7 @@ export async function executeCarromBotShot(match: ArcadeMatch): Promise<void> {
   } catch (err) {
     console.error("[ArcadeBot] Carrom error:", err);
   } finally {
-    setTimeout(() => activeBotRuns.delete(runKey), 2000);
+    activeBotRuns.delete(runKey);
   }
 }
 
@@ -325,7 +325,7 @@ export async function executeChessBotTurn(match: ArcadeMatch): Promise<void> {
   } catch (err) {
     console.error("[ArcadeBot] Chess error:", err);
   } finally {
-    setTimeout(() => activeBotRuns.delete(runKey), 1500);
+    activeBotRuns.delete(runKey);
   }
 }
 
@@ -454,7 +454,7 @@ export async function executeHandCricketBotTurn(match: ArcadeMatch): Promise<voi
   } catch (err) {
     console.error("[ArcadeBot] Hand cricket error:", err);
   } finally {
-    setTimeout(() => activeBotRuns.delete(runKey), 1500);
+    activeBotRuns.delete(runKey);
   }
 }
 
@@ -488,7 +488,7 @@ export async function executeRajaMantriBotTurn(match: ArcadeMatch): Promise<void
   } catch (err) {
     console.error("[ArcadeBot] Raja mantri error:", err);
   } finally {
-    setTimeout(() => activeBotRuns.delete(runKey), 2500);
+    activeBotRuns.delete(runKey);
   }
 }
 
@@ -516,7 +516,7 @@ export async function executePokerBotTurn(match: ArcadeMatch): Promise<void> {
   } catch (err) {
     console.error("[ArcadeBot] Poker error:", err);
   } finally {
-    setTimeout(() => activeBotRuns.delete(runKey), 1500);
+    activeBotRuns.delete(runKey);
   }
 }
 
@@ -541,7 +541,7 @@ export async function executeBlackjackBotTurn(match: ArcadeMatch): Promise<void>
   } catch (err) {
     console.error("[ArcadeBot] Blackjack error:", err);
   } finally {
-    setTimeout(() => activeBotRuns.delete(runKey), 1500);
+    activeBotRuns.delete(runKey);
   }
 }
 
@@ -571,7 +571,7 @@ export async function executeBingoBotTurn(match: ArcadeMatch): Promise<void> {
   } catch (err) {
     console.error("[ArcadeBot] Bingo error:", err);
   } finally {
-    setTimeout(() => activeBotRuns.delete(runKey), 2000);
+    activeBotRuns.delete(runKey);
   }
 }
 
@@ -594,7 +594,7 @@ export async function executeBookCricketBotTurn(match: ArcadeMatch): Promise<voi
   } catch (err) {
     console.error("[ArcadeBot] Book Cricket error:", err);
   } finally {
-    setTimeout(() => activeBotRuns.delete(runKey), 1800);
+    activeBotRuns.delete(runKey);
   }
 }
 
@@ -626,7 +626,7 @@ export async function executeLiarsDiceBotTurn(match: ArcadeMatch): Promise<void>
   } catch (err) {
     console.error("[ArcadeBot] Liar's Dice error:", err);
   } finally {
-    setTimeout(() => activeBotRuns.delete(runKey), 1500);
+    activeBotRuns.delete(runKey);
   }
 }
 
@@ -640,33 +640,71 @@ export async function executeGomokuBotTurn(match: ArcadeMatch): Promise<void> {
   const botPlayer = Object.values(match.players || {}).find((p) => p.isBot);
   if (!botPlayer) return;
 
-  const runKey = `${match.id}_gomoku_bot`;
+  const grid: (string | null)[][] = JSON.parse(match.gomokuState.gridStr || "[]");
+  const runKey = `${match.id}_gomoku_bot_${match.gomokuState.gridStr?.length}_${Date.now()}`;
   if (activeBotRuns.has(runKey)) return;
   activeBotRuns.add(runKey);
 
   try {
-    await new Promise((resolve) => setTimeout(resolve, 900));
-    const grid: (string | null)[][] = JSON.parse(match.gomokuState.gridStr || "[]");
-    const emptyCells: [number, number][] = [];
+    await new Promise((resolve) => setTimeout(resolve, 750));
+    const emptyCells: { r: number; c: number; score: number }[] = [];
+    const directions = [[0, 1], [1, 0], [1, 1], [1, -1]];
+
+    const countSequence = (r: number, c: number, color: string, dr: number, dc: number) => {
+      let count = 0;
+      let nr = r + dr;
+      let nc = c + dc;
+      while (nr >= 0 && nr < 15 && nc >= 0 && nc < 15 && grid[nr][nc] === color) {
+        count++;
+        nr += dr;
+        nc += dc;
+      }
+      nr = r - dr;
+      nc = c - dc;
+      while (nr >= 0 && nr < 15 && nc >= 0 && nc < 15 && grid[nr][nc] === color) {
+        count++;
+        nr -= dr;
+        nc -= dc;
+      }
+      return count;
+    };
 
     for (let r = 0; r < 15; r++) {
       for (let c = 0; c < 15; c++) {
-        if (!grid[r][c]) emptyCells.push([r, c]);
+        if (!grid[r][c]) {
+          let cellScore = 0;
+          for (const [dr, dc] of directions) {
+            const botSeq = countSequence(r, c, "WHITE", dr, dc);
+            const humanSeq = countSequence(r, c, "BLACK", dr, dc);
+
+            if (botSeq >= 4) cellScore += 1000; // Win instantly
+            else if (humanSeq >= 4) cellScore += 800; // Block human win
+            else if (botSeq === 3) cellScore += 200;
+            else if (humanSeq === 3) cellScore += 150; // Block human 3
+            else if (botSeq === 2) cellScore += 30;
+            else if (humanSeq === 2) cellScore += 20;
+          }
+          // Center preference
+          const distToCenter = Math.abs(7 - r) + Math.abs(7 - c);
+          cellScore += Math.max(0, 14 - distToCenter);
+          emptyCells.push({ r, c, score: cellScore });
+        }
       }
     }
 
     if (emptyCells.length === 0) return;
-    const [r, c] = emptyCells[Math.floor(Math.random() * emptyCells.length)];
-    await makeGomokuMove(match.id, botPlayer.uid, r, c);
+    emptyCells.sort((a, b) => b.score - a.score);
+    const chosen = emptyCells[0];
+    await makeGomokuMove(match.id, botPlayer.uid, chosen.r, chosen.c);
   } catch (err) {
     console.error("[ArcadeBot] Gomoku error:", err);
   } finally {
-    setTimeout(() => activeBotRuns.delete(runKey), 1500);
+    activeBotRuns.delete(runKey);
   }
 }
 
 /**
- * Reversi Bot
+ * Reversi Bot (Legal Flip Validator & Corner Master AI)
  */
 export async function executeReversiBotTurn(match: ArcadeMatch): Promise<void> {
   if (!match.reversiState || match.status !== "PLAYING") return;
@@ -675,33 +713,65 @@ export async function executeReversiBotTurn(match: ArcadeMatch): Promise<void> {
   const botPlayer = Object.values(match.players || {}).find((p) => p.isBot);
   if (!botPlayer) return;
 
-  const runKey = `${match.id}_reversi_bot_${match.reversiState.lightCount}`;
+  const board: (string | null)[][] = JSON.parse(match.reversiState.boardStr || "[]");
+  const runKey = `${match.id}_reversi_bot_${match.reversiState.lightCount}_${match.reversiState.darkCount}`;
   if (activeBotRuns.has(runKey)) return;
   activeBotRuns.add(runKey);
 
   try {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    const board: (string | null)[][] = JSON.parse(match.reversiState.boardStr || "[]");
-    const validMoves: [number, number][] = [];
+    await new Promise((resolve) => setTimeout(resolve, 750));
+    const currentTurn = "LIGHT";
+    const oppColor = "DARK";
+    const directions = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]];
+
+    const legalMoves: { r: number; c: number; flips: number; weight: number }[] = [];
 
     for (let r = 0; r < 8; r++) {
       for (let c = 0; c < 8; c++) {
-        if (!board[r][c]) validMoves.push([r, c]);
+        if (board[r][c] !== null) continue;
+
+        let totalFlipped = 0;
+        for (const [dr, dc] of directions) {
+          let nr = r + dr;
+          let nc = c + dc;
+          let count = 0;
+          while (nr >= 0 && nr < 8 && nc >= 0 && nc < 8 && board[nr][nc] === oppColor) {
+            count++;
+            nr += dr;
+            nc += dc;
+          }
+          if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8 && board[nr][nc] === currentTurn && count > 0) {
+            totalFlipped += count;
+          }
+        }
+
+        if (totalFlipped > 0) {
+          // Weight corners (high strategic value)
+          let weight = totalFlipped;
+          const isCorner = (r === 0 || r === 7) && (c === 0 || c === 7);
+          const isEdge = r === 0 || r === 7 || c === 0 || c === 7;
+          if (isCorner) weight += 50;
+          else if (isEdge) weight += 15;
+
+          legalMoves.push({ r, c, flips: totalFlipped, weight });
+        }
       }
     }
 
-    if (validMoves.length === 0) return;
-    const [r, c] = validMoves[Math.floor(Math.random() * validMoves.length)];
-    await makeReversiMove(match.id, botPlayer.uid, r, c);
+    if (legalMoves.length === 0) return;
+
+    legalMoves.sort((a, b) => b.weight - a.weight);
+    const chosen = legalMoves[0];
+    await makeReversiMove(match.id, botPlayer.uid, chosen.r, chosen.c);
   } catch (err) {
     console.error("[ArcadeBot] Reversi error:", err);
   } finally {
-    setTimeout(() => activeBotRuns.delete(runKey), 1500);
+    activeBotRuns.delete(runKey);
   }
 }
 
 /**
- * Dots and Boxes Bot
+ * Dots and Boxes Bot (Smart Box Hunter AI)
  */
 export async function executeDotsAndBoxesBotTurn(match: ArcadeMatch): Promise<void> {
   if (!match.dotsAndBoxesState || match.status !== "PLAYING") return;
@@ -712,35 +782,93 @@ export async function executeDotsAndBoxesBotTurn(match: ArcadeMatch): Promise<vo
   );
   if (!botPlayer) return;
 
-  const runKey = `${match.id}_dots_bot_${dbs.p1Score + dbs.p2Score}`;
+  const lines: Record<string, string> = JSON.parse(dbs.linesStr || "{}");
+  const boxes: Record<string, string> = JSON.parse(dbs.boxesStr || "{}");
+  const runKey = `${match.id}_dots_bot_${Object.keys(lines).length}_${dbs.currentTurnUid}`;
   if (activeBotRuns.has(runKey)) return;
   activeBotRuns.add(runKey);
 
   try {
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    const lines: Record<string, string> = JSON.parse(dbs.linesStr || "{}");
-    const unselectedKeys: string[] = [];
+    await new Promise((resolve) => setTimeout(resolve, 650));
+    
+    // 1. Check all 3x3 boxes to see if any box has 3 sides claimed (winning move)
+    let winningMove: string | null = null;
+    const safeMoves: string[] = [];
+    const allUnselected: string[] = [];
 
+    // Helper to get lines of a box
+    const getBoxLines = (r: number, c: number) => {
+      return {
+        top: `h_${r}_${c}`,
+        bottom: `h_${r + 1}_${c}`,
+        left: `v_${r}_${c}`,
+        right: `v_${r}_${c + 1}`,
+      };
+    };
+
+    // Gather all unselected lines
     for (let r = 0; r < 4; r++) {
       for (let c = 0; c < 4; c++) {
         if (c < 3) {
-          const hKey = `h-${r}-${c}`;
-          if (!lines[hKey]) unselectedKeys.push(hKey);
+          const hKey = `h_${r}_${c}`;
+          if (!lines[hKey]) allUnselected.push(hKey);
         }
         if (r < 3) {
-          const vKey = `v-${r}-${c}`;
-          if (!lines[vKey]) unselectedKeys.push(vKey);
+          const vKey = `v_${r}_${c}`;
+          if (!lines[vKey]) allUnselected.push(vKey);
         }
       }
     }
 
-    if (unselectedKeys.length === 0) return;
-    const chosenKey = unselectedKeys[Math.floor(Math.random() * unselectedKeys.length)];
+    if (allUnselected.length === 0) return;
+
+    // Scan boxes to find captures or safe lines
+    for (let r = 0; r < 3; r++) {
+      for (let c = 0; c < 3; c++) {
+        const boxKey = `b_${r}_${c}`;
+        if (!boxes[boxKey]) {
+          const { top, bottom, left, right } = getBoxLines(r, c);
+          const boxLines = [top, bottom, left, right];
+          const unclimedInBox = boxLines.filter((l) => !lines[l]);
+
+          if (unclimedInBox.length === 1) {
+            // Priority 1: Instant box completion!
+            winningMove = unclimedInBox[0];
+            break;
+          }
+        }
+      }
+      if (winningMove) break;
+    }
+
+    // If no instant win, find lines that don't give away a box (i.e. doesn't leave 1 uncompleted line)
+    if (!winningMove) {
+      for (const candidate of allUnselected) {
+        let givesAwayBox = false;
+        for (let r = 0; r < 3; r++) {
+          for (let c = 0; c < 3; c++) {
+            const { top, bottom, left, right } = getBoxLines(r, c);
+            const boxLines = [top, bottom, left, right];
+            if (boxLines.includes(candidate)) {
+              const unclimedInBox = boxLines.filter((l) => !lines[l] && l !== candidate);
+              if (unclimedInBox.length === 1) {
+                givesAwayBox = true;
+                break;
+              }
+            }
+          }
+          if (givesAwayBox) break;
+        }
+        if (!givesAwayBox) safeMoves.push(candidate);
+      }
+    }
+
+    const chosenKey = winningMove || (safeMoves.length > 0 ? safeMoves[Math.floor(Math.random() * safeMoves.length)] : allUnselected[Math.floor(Math.random() * allUnselected.length)]);
     await claimDotsLine(match.id, botPlayer.uid, chosenKey);
   } catch (err) {
     console.error("[ArcadeBot] Dots and boxes error:", err);
   } finally {
-    setTimeout(() => activeBotRuns.delete(runKey), 1500);
+    activeBotRuns.delete(runKey);
   }
 }
 
@@ -766,7 +894,7 @@ export async function executeSnakesLaddersBotTurn(match: ArcadeMatch): Promise<v
   } catch (err) {
     console.error("[ArcadeBot] Snakes and ladders error:", err);
   } finally {
-    setTimeout(() => activeBotRuns.delete(runKey), 1500);
+    activeBotRuns.delete(runKey);
   }
 }
 
@@ -794,7 +922,7 @@ export async function executeQuoridorBotTurn(match: ArcadeMatch): Promise<void> 
   } catch (err) {
     console.error("[ArcadeBot] Quoridor error:", err);
   } finally {
-    setTimeout(() => activeBotRuns.delete(runKey), 1500);
+    activeBotRuns.delete(runKey);
   }
 }
 
@@ -820,7 +948,7 @@ export async function executeYahtzeeBotTurn(match: ArcadeMatch): Promise<void> {
   } catch (err) {
     console.error("[ArcadeBot] Yahtzee error:", err);
   } finally {
-    setTimeout(() => activeBotRuns.delete(runKey), 1500);
+    activeBotRuns.delete(runKey);
   }
 }
 
@@ -855,7 +983,7 @@ export async function executeConnect4BotTurn(match: ArcadeMatch): Promise<void> 
   } catch (err) {
     console.error("[ArcadeBot] Connect4 error:", err);
   } finally {
-    setTimeout(() => activeBotRuns.delete(runKey), 1500);
+    activeBotRuns.delete(runKey);
   }
 }
 
@@ -896,7 +1024,7 @@ export async function executeBattleshipBotTurn(match: ArcadeMatch): Promise<void
   } catch (err) {
     console.error("[ArcadeBot] Battleship error:", err);
   } finally {
-    setTimeout(() => activeBotRuns.delete(runKey), 1500);
+    activeBotRuns.delete(runKey);
   }
 }
 
@@ -935,7 +1063,7 @@ export async function executeSudokuBotMove(match: ArcadeMatch): Promise<void> {
   } catch (err) {
     console.error("[ArcadeBot] Sudoku error:", err);
   } finally {
-    setTimeout(() => activeBotRuns.delete(runKey), 6000 + Math.random() * 4000);
+    activeBotRuns.delete(runKey);
   }
 }
 
@@ -969,7 +1097,7 @@ export async function executeRummyBotTurn(match: ArcadeMatch): Promise<void> {
   } catch (err) {
     console.error("[ArcadeBot] Rummy error:", err);
   } finally {
-    setTimeout(() => activeBotRuns.delete(runKey), 2000);
+    activeBotRuns.delete(runKey);
   }
 }
 
@@ -1003,7 +1131,7 @@ export async function executeCallBreakBotTurn(match: ArcadeMatch): Promise<void>
   } catch (err) {
     console.error("[ArcadeBot] Call Break error:", err);
   } finally {
-    setTimeout(() => activeBotRuns.delete(runKey), 1800);
+    activeBotRuns.delete(runKey);
   }
 }
 
@@ -1029,7 +1157,7 @@ export async function executeTeenPattiBotTurn(match: ArcadeMatch): Promise<void>
   } catch (err) {
     console.error("[ArcadeBot] Teen Patti error:", err);
   } finally {
-    setTimeout(() => activeBotRuns.delete(runKey), 2000);
+    activeBotRuns.delete(runKey);
   }
 }
 
@@ -1058,7 +1186,7 @@ export async function executeSattePeSattaBotTurn(match: ArcadeMatch): Promise<vo
   } catch (err) {
     console.error("[ArcadeBot] Satte Pe Satta error:", err);
   } finally {
-    setTimeout(() => activeBotRuns.delete(runKey), 1800);
+    activeBotRuns.delete(runKey);
   }
 }
 
@@ -1087,7 +1215,7 @@ export async function executeBhabhiBotTurn(match: ArcadeMatch): Promise<void> {
   } catch (err) {
     console.error("[ArcadeBot] Bhabhi error:", err);
   } finally {
-    setTimeout(() => activeBotRuns.delete(runKey), 1800);
+    activeBotRuns.delete(runKey);
   }
 }
 
@@ -1116,7 +1244,7 @@ export async function executeMendicotBotTurn(match: ArcadeMatch): Promise<void> 
   } catch (err) {
     console.error("[ArcadeBot] Mendicot error:", err);
   } finally {
-    setTimeout(() => activeBotRuns.delete(runKey), 1800);
+    activeBotRuns.delete(runKey);
   }
 }
 
@@ -1146,7 +1274,7 @@ export async function executeCheatBluffBotTurn(match: ArcadeMatch): Promise<void
   } catch (err) {
     console.error("[ArcadeBot] Cheat Bluff error:", err);
   } finally {
-    setTimeout(() => activeBotRuns.delete(runKey), 2000);
+    activeBotRuns.delete(runKey);
   }
 }
 

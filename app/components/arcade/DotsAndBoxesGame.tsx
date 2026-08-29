@@ -53,21 +53,25 @@ export default function DotsAndBoxesGame({ match, currentUid }: DotsAndBoxesGame
   return (
     <div className="w-full max-w-md mx-auto bg-black border-2 border-white p-4 font-mono text-white space-y-4 select-none shadow-[0_0_40px_rgba(255,255,255,0.1)]">
       {/* Header */}
-      <div className="flex items-center justify-between border-b-2 border-white pb-2 text-xs">
-        <span className="font-extrabold uppercase tracking-widest text-white flex items-center gap-1.5">
-          <Network className="w-4 h-4 text-emerald-400" />
-          // DOTS & BOXES [ GRID LOCK ]
+      <div className="flex items-center justify-between border-b-2 border-white pb-2.5 text-xs gap-2 flex-wrap sm:flex-nowrap">
+        <span className="font-extrabold uppercase tracking-wider text-white flex items-center gap-1.5 truncate">
+          <Network className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>DOTS & BOXES</span>
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={() => setInviteOpen(true)}
-            className="px-2 py-0.5 border border-white hover:bg-white hover:text-black font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
+            className="px-2.5 py-1 border border-white hover:bg-white hover:text-black font-extrabold text-[10px] uppercase transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap rounded"
           >
             <Share2 className="w-3 h-3" />
-            <span>[ INVITE 🎙️ ]</span>
+            <span>INVITE 🎙️</span>
           </button>
-          <span className="px-2 py-0.5 border border-white bg-white text-black font-extrabold text-[10px]">
+          <span className={`px-2.5 py-1 border font-extrabold text-[10px] whitespace-nowrap rounded ${
+            isMyTurn 
+              ? "border-emerald-400 bg-emerald-400 text-black animate-pulse" 
+              : "border-white bg-white text-black"
+          }`}>
             {isMyTurn ? "● YOUR TURN" : "OPPONENT'S TURN"}
           </span>
         </div>
