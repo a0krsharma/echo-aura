@@ -329,8 +329,8 @@ function ShellContent({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      {/* FLOATING WIRE CHAT LAUNCHER (Bottom Right Corner - hidden on wire, room, stage, waves) */}
-      {!pathname.startsWith("/wire") && !pathname.startsWith("/room") && !pathname.startsWith("/stage") && !pathname.startsWith("/waves") && (
+      {/* FLOATING WIRE CHAT LAUNCHER (Bottom Right Corner - hidden on wire, room, stage, waves, arcade) */}
+      {!pathname.startsWith("/wire") && !pathname.startsWith("/room") && !pathname.startsWith("/stage") && !pathname.startsWith("/waves") && !pathname.startsWith("/arcade") && (
         <Link
           href="/wire"
           className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-40 bg-white text-black hover:bg-neutral-200 border border-neutral-800 p-3.5 rounded-full shadow-2xl transition-all duration-200 hover:scale-110 flex items-center justify-center gap-2 group cursor-pointer"

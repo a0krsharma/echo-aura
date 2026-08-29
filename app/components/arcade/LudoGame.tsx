@@ -283,15 +283,15 @@ export default function LudoGame({ match, currentUid, onRematch }: LudoGameProps
   const maxSeats = match.maxPlayers || 4;
 
   return (
-    <div className="w-full max-w-3xl mx-auto bg-gradient-to-b from-neutral-950 via-neutral-900 to-black border-2 border-amber-500/60 p-3 sm:p-5 font-mono text-white space-y-4 select-none shadow-[0_0_80px_rgba(245,158,11,0.15)] rounded-2xl">
-      <div className="flex items-center justify-between border-b border-amber-500/30 pb-3 text-xs flex-wrap gap-2">
+    <div className="w-full max-w-2xl mx-auto bg-gradient-to-b from-neutral-950 via-neutral-900 to-black border-2 border-amber-500/60 p-2 sm:p-5 font-mono text-white space-y-3 sm:space-y-4 select-none shadow-[0_0_80px_rgba(245,158,11,0.15)] rounded-2xl">
+      <div className="flex items-center justify-between border-b border-amber-500/30 pb-2.5 text-xs flex-wrap gap-2">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 text-black flex items-center justify-center font-black shadow-[0_0_15px_rgba(245,158,11,0.5)]">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 text-black flex items-center justify-center font-black shadow-[0_0_15px_rgba(245,158,11,0.5)] text-sm sm:text-base">
             🎲
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="text-sm font-black uppercase text-amber-400 tracking-wider">
+              <span className="text-xs sm:text-sm font-black uppercase text-amber-400 tracking-wider">
                 GRANDMASTER LUDO
               </span>
               <span className="px-1.5 py-0.2 bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[9px] font-bold rounded">
@@ -311,10 +311,10 @@ export default function LudoGame({ match, currentUid, onRematch }: LudoGameProps
               soundSynth.playSubtlePop();
               setInviteOpen(true);
             }}
-            className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-yellow-400 text-black font-black text-[10px] uppercase rounded transition-all hover:brightness-110 flex items-center gap-1.5 cursor-pointer shadow-[0_0_15px_rgba(245,158,11,0.4)] active:scale-95"
+            className="px-2.5 py-1.5 bg-gradient-to-r from-amber-500 to-yellow-400 text-black font-black text-[10px] uppercase rounded transition-all hover:brightness-110 flex items-center gap-1 cursor-pointer shadow-[0_0_15px_rgba(245,158,11,0.4)] active:scale-95"
           >
             <Share2 className="w-3 h-3" />
-            <span>[ 🔗 INVITE & TALK 🎙️ ]</span>
+            <span>[ 🔗 INVITE 🎙️ ]</span>
           </button>
         </div>
       </div>
@@ -322,11 +322,11 @@ export default function LudoGame({ match, currentUid, onRematch }: LudoGameProps
       <ArcadeInviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} match={match} />
 
       {!currentPlayer && playersList.length < maxSeats && match.status !== "FINISHED" && (
-        <div className="w-full bg-gradient-to-r from-emerald-950 via-emerald-900 to-emerald-950 border-2 border-emerald-400 p-3 rounded-xl flex items-center justify-between gap-2 shadow-[0_0_25px_rgba(16,185,129,0.3)] animate-in fade-in">
-          <div className="flex items-center gap-2.5 text-xs truncate">
-            <Users className="w-4 h-4 text-emerald-400 shrink-0 animate-pulse" />
-            <span className="font-black uppercase text-emerald-200 truncate">
-              🪑 SEAT OPEN ({playersList.length}/{maxSeats} PLAYERS) • TAKE A SEAT TO PLAY & TALK ON LIVE MIC
+        <div className="w-full bg-gradient-to-r from-emerald-950 via-emerald-900 to-emerald-950 border-2 border-emerald-400 p-2.5 rounded-xl flex items-center justify-between gap-2 shadow-[0_0_25px_rgba(16,185,129,0.3)] animate-in fade-in">
+          <div className="flex items-center gap-2 text-xs truncate">
+            <Users className="w-3.5 h-3.5 text-emerald-400 shrink-0 animate-pulse" />
+            <span className="font-black uppercase text-emerald-200 text-[11px] truncate">
+              🪑 SEAT OPEN ({playersList.length}/{maxSeats})
             </span>
           </div>
           <button
@@ -347,14 +347,15 @@ export default function LudoGame({ match, currentUid, onRematch }: LudoGameProps
                 console.error("Failed to take seat:", e);
               }
             }}
-            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs uppercase cursor-pointer rounded-lg transition-all active:scale-95 shrink-0 shadow-lg"
+            className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-[10px] uppercase cursor-pointer rounded-lg transition-all active:scale-95 shrink-0 shadow-lg"
           >
-            [ 🪑 TAKE A SEAT ]
+            [ 🪑 SIT ]
           </button>
         </div>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+      {/* ── Compact 4-Player Seat HUD ── */}
+      <div className="grid grid-cols-4 gap-1 sm:gap-2">
         {(["RED", "GREEN", "YELLOW", "BLUE"] as const).map((team) => {
           const p = Object.values(match.players || {}).find((pl) => pl.team === team);
           const isTurn = ludoState.currentTurn === team;
@@ -366,51 +367,28 @@ export default function LudoGame({ match, currentUid, onRematch }: LudoGameProps
           return (
             <div
               key={team}
-              className={`p-2.5 rounded-xl border transition-all relative overflow-hidden ${
+              className={`p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl border transition-all relative overflow-hidden text-center ${
                 isTurn
-                  ? `border-amber-400 bg-neutral-900/90 shadow-[0_0_20px_rgba(245,158,11,0.3)] ring-2 ${meta.ringColor} scale-[1.02]`
+                  ? `border-amber-400 bg-neutral-900 shadow-[0_0_15px_rgba(245,158,11,0.3)] ring-1 sm:ring-2 ${meta.ringColor}`
                   : "border-neutral-800 bg-black/60"
               }`}
             >
               {isTurn && (
-                <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${meta.gradient}`} />
+                <div className={`absolute top-0 left-0 right-0 h-0.5 sm:h-1 bg-gradient-to-r ${meta.gradient}`} />
               )}
-              <div className="flex items-center justify-between text-[11px] font-black pb-1">
-                <span className="flex items-center gap-1.5 truncate">
-                  <span className={`w-2.5 h-2.5 rounded-full bg-gradient-to-br ${meta.gradient} shadow-sm shrink-0`} />
+              <div className="flex items-center justify-between text-[9px] sm:text-[11px] font-black pb-0.5">
+                <span className="flex items-center gap-1 truncate">
+                  <span className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-gradient-to-br ${meta.gradient} shadow-sm shrink-0`} />
                   <span className="text-white truncate">{meta.label}</span>
-                  {isMe && <span className="text-amber-400 text-[9px] font-bold">(YOU)</span>}
                 </span>
-                <span className={`px-1.5 py-0.2 rounded text-[10px] font-black ${meta.badgeBg} text-white shadow-sm`}>
-                  {homeCount}/4 🏆
+                <span className={`px-1 py-0.2 rounded text-[8px] sm:text-[10px] font-black ${meta.badgeBg} text-white shadow-sm`}>
+                  {homeCount}/4
                 </span>
               </div>
-              <div className="mt-1 flex items-center justify-between text-[10px] text-neutral-300 font-mono">
-                <span className="truncate max-w-[85px] font-bold text-white">
-                  {p ? p.handle : "[ EMPTY SEAT ]"}
+              <div className="mt-0.5 flex items-center justify-center text-[8px] sm:text-[10px] text-neutral-300 font-mono">
+                <span className="truncate font-bold text-white text-[8px] sm:text-[10px]">
+                  {p ? (isMe ? "YOU" : p.handle.slice(0, 8)) : "EMPTY"}
                 </span>
-                {!p && !currentPlayer && match.status !== "FINISHED" && (
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      if (!currentUid) return;
-                      try {
-                        const { joinArcadeMatch } = await import("@/lib/arcade");
-                        await joinArcadeMatch(match.id, {
-                          uid: currentUid,
-                          handle: `@PLAYER_${currentUid.slice(0, 4)}`,
-                        });
-                        if (match.roomId) {
-                          const { promoteToSpeaker } = await import("@/lib/rooms");
-                          await promoteToSpeaker(match.roomId, currentUid);
-                        }
-                      } catch (e) {}
-                    }}
-                    className="px-2 py-0.5 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-[9px] uppercase rounded cursor-pointer shadow active:scale-95"
-                  >
-                    SIT
-                  </button>
-                )}
               </div>
             </div>
           );
@@ -418,19 +396,20 @@ export default function LudoGame({ match, currentUid, onRematch }: LudoGameProps
       </div>
 
       {ludoState.lastActionLog && (
-        <div className="border border-amber-500/30 bg-neutral-950/80 px-3.5 py-2 rounded-lg text-xs text-amber-200 flex items-center gap-2 shadow-inner">
-          <Sparkles className="w-4 h-4 text-amber-400 shrink-0 animate-pulse" />
+        <div className="border border-amber-500/30 bg-neutral-950/80 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-[11px] sm:text-xs text-amber-200 flex items-center gap-2 shadow-inner">
+          <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0 animate-pulse" />
           <span className="truncate font-bold tracking-wide">{ludoState.lastActionLog}</span>
         </div>
       )}
 
-      <div className="relative aspect-square max-w-[460px] sm:max-w-[500px] mx-auto p-3 rounded-2xl bg-gradient-to-br from-[#3b2010] via-[#5c3317] to-[#28150a] border-4 border-[#8c5225] shadow-[0_20px_50px_rgba(0,0,0,0.8),_inset_0_2px_10px_rgba(255,255,255,0.2)]">
-        <span className="absolute top-2 left-2 w-2 h-2 rounded-full bg-gradient-to-br from-yellow-300 to-amber-700 shadow-md" />
-        <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-gradient-to-br from-yellow-300 to-amber-700 shadow-md" />
-        <span className="absolute bottom-2 left-2 w-2 h-2 rounded-full bg-gradient-to-br from-yellow-300 to-amber-700 shadow-md" />
-        <span className="absolute bottom-2 right-2 w-2 h-2 rounded-full bg-gradient-to-br from-yellow-300 to-amber-700 shadow-md" />
+      {/* ── Responsive 3D Ludo Board ── */}
+      <div className="relative aspect-square w-full max-w-[min(94vw,430px)] mx-auto p-1.5 sm:p-2.5 rounded-xl sm:rounded-2xl bg-gradient-to-br from-[#3b2010] via-[#5c3317] to-[#28150a] border-2 sm:border-4 border-[#8c5225] shadow-2xl">
+        <span className="absolute top-1.5 left-1.5 w-1.5 h-1.5 rounded-full bg-gradient-to-br from-yellow-300 to-amber-700 shadow-md" />
+        <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-gradient-to-br from-yellow-300 to-amber-700 shadow-md" />
+        <span className="absolute bottom-1.5 left-1.5 w-1.5 h-1.5 rounded-full bg-gradient-to-br from-yellow-300 to-amber-700 shadow-md" />
+        <span className="absolute bottom-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-gradient-to-br from-yellow-300 to-amber-700 shadow-md" />
         <div
-          className="w-full h-full grid gap-[1.5px] bg-[#1a0f07] border-2 border-[#3d200e] p-[2px] rounded-xl shadow-inner overflow-hidden"
+          className="w-full h-full grid gap-[1px] sm:gap-[1.5px] bg-[#1a0f07] border sm:border-2 border-[#3d200e] p-[1.5px] sm:p-[2px] rounded-lg sm:rounded-xl shadow-inner overflow-hidden"
           style={{
             gridTemplateColumns: "repeat(15, minmax(0, 1fr))",
             gridTemplateRows: "repeat(15, minmax(0, 1fr))",
@@ -440,12 +419,12 @@ export default function LudoGame({ match, currentUid, onRematch }: LudoGameProps
             Array.from({ length: 15 }).map((_, c) => {
               if (r < 6 && c < 6 && r === 0 && c === 0) {
                 return (
-                  <div key={`${r}-${c}`} style={{ gridColumn: "span 6", gridRow: "span 6" }} className="p-3 bg-gradient-to-br from-red-600 via-rose-700 to-red-950 border-2 border-red-500 rounded-tl-xl flex flex-col justify-between shadow-[inset_0_0_20px_rgba(0,0,0,0.6)]">
-                    <div className="flex justify-between items-center text-[10px] text-white font-black border-b border-red-400/40 pb-1"><span className="flex items-center gap-1">👑 RED BASE</span><span className="px-1.5 py-0.5 bg-black/40 rounded text-[9px]">{ludoState.tokens.RED?.filter((t) => t.isHome).length}/4 HOME</span></div>
-                    <div className="grid grid-cols-2 gap-3 place-items-center p-2 bg-black/30 rounded-xl border border-red-500/30">
+                  <div key={`${r}-${c}`} style={{ gridColumn: "span 6", gridRow: "span 6" }} className="p-1.5 sm:p-3 bg-gradient-to-br from-red-600 via-rose-700 to-red-950 border sm:border-2 border-red-500 rounded-tl-lg sm:rounded-tl-xl flex flex-col justify-between shadow-[inset_0_0_20px_rgba(0,0,0,0.6)]">
+                    <div className="flex justify-between items-center text-[8px] sm:text-[10px] text-white font-black border-b border-red-400/40 pb-0.5 sm:pb-1"><span className="flex items-center gap-1">👑 RED</span><span className="px-1 py-0.2 bg-black/40 rounded text-[8px] sm:text-[9px]">{ludoState.tokens.RED?.filter((t) => t.isHome).length}/4</span></div>
+                    <div className="grid grid-cols-2 gap-1.5 sm:gap-3 place-items-center p-1 sm:p-2 bg-black/30 rounded-lg sm:rounded-xl border border-red-500/30">
                       {(ludoState.tokens.RED || []).map((t) => {
                         const isMovable = validTokenIdsToMove.includes(t.id) && myTeam === "RED";
-                        return <button key={t.id} type="button" disabled={!isMovable} onClick={() => handleMove(t.id)} className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-xs transition-all relative ${t.isHome ? "bg-amber-400 text-black border-2 border-white shadow-[0_0_15px_#fbbf24]" : t.stepCount > 0 ? "bg-gradient-to-br from-red-400 to-red-800 text-white border-2 border-white shadow-lg" : "bg-gradient-to-br from-red-500 to-red-900 text-white border-2 border-red-300 shadow-md"} ${isMovable ? "ring-4 ring-white animate-bounce scale-110 shadow-[0_0_20px_#ffffff] z-30 cursor-pointer" : ""}`}>{t.isHome ? "🏆" : t.stepCount > 0 ? t.id + 1 : `●`}</button>;
+                        return <button key={t.id} type="button" disabled={!isMovable} onClick={() => handleMove(t.id)} className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-black text-[10px] sm:text-xs transition-all relative ${t.isHome ? "bg-amber-400 text-black border sm:border-2 border-white shadow-[0_0_15px_#fbbf24]" : t.stepCount > 0 ? "bg-gradient-to-br from-red-400 to-red-800 text-white border sm:border-2 border-white shadow-lg" : "bg-gradient-to-br from-red-500 to-red-900 text-white border sm:border-2 border-red-300 shadow-md"} ${isMovable ? "ring-2 sm:ring-4 ring-white animate-bounce scale-110 shadow-[0_0_20px_#ffffff] z-30 cursor-pointer" : ""}`}>{t.isHome ? "🏆" : t.stepCount > 0 ? t.id + 1 : `●`}</button>;
                       })}
                     </div>
                   </div>
@@ -453,12 +432,12 @@ export default function LudoGame({ match, currentUid, onRematch }: LudoGameProps
               }
               if (r < 6 && c >= 9 && r === 0 && c === 9) {
                 return (
-                  <div key={`${r}-${c}`} style={{ gridColumn: "span 6", gridRow: "span 6" }} className="p-3 bg-gradient-to-br from-emerald-600 via-green-700 to-emerald-950 border-2 border-emerald-500 rounded-tr-xl flex flex-col justify-between shadow-[inset_0_0_20px_rgba(0,0,0,0.6)]">
-                    <div className="flex justify-between items-center text-[10px] text-white font-black border-b border-emerald-400/40 pb-1"><span className="flex items-center gap-1">👑 GREEN BASE</span><span className="px-1.5 py-0.5 bg-black/40 rounded text-[9px]">{ludoState.tokens.GREEN?.filter((t) => t.isHome).length}/4 HOME</span></div>
-                    <div className="grid grid-cols-2 gap-3 place-items-center p-2 bg-black/30 rounded-xl border border-emerald-500/30">
+                  <div key={`${r}-${c}`} style={{ gridColumn: "span 6", gridRow: "span 6" }} className="p-1.5 sm:p-3 bg-gradient-to-br from-emerald-600 via-green-700 to-emerald-950 border sm:border-2 border-emerald-500 rounded-tr-lg sm:rounded-tr-xl flex flex-col justify-between shadow-[inset_0_0_20px_rgba(0,0,0,0.6)]">
+                    <div className="flex justify-between items-center text-[8px] sm:text-[10px] text-white font-black border-b border-emerald-400/40 pb-0.5 sm:pb-1"><span className="flex items-center gap-1">👑 GREEN</span><span className="px-1 py-0.2 bg-black/40 rounded text-[8px] sm:text-[9px]">{ludoState.tokens.GREEN?.filter((t) => t.isHome).length}/4</span></div>
+                    <div className="grid grid-cols-2 gap-1.5 sm:gap-3 place-items-center p-1 sm:p-2 bg-black/30 rounded-lg sm:rounded-xl border border-emerald-500/30">
                       {(ludoState.tokens.GREEN || []).map((t) => {
                         const isMovable = validTokenIdsToMove.includes(t.id) && myTeam === "GREEN";
-                        return <button key={t.id} type="button" disabled={!isMovable} onClick={() => handleMove(t.id)} className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-xs transition-all relative ${t.isHome ? "bg-amber-400 text-black border-2 border-white shadow-[0_0_15px_#fbbf24]" : t.stepCount > 0 ? "bg-gradient-to-br from-emerald-400 to-emerald-800 text-white border-2 border-white shadow-lg" : "bg-gradient-to-br from-emerald-500 to-emerald-900 text-white border-2 border-emerald-300 shadow-md"} ${isMovable ? "ring-4 ring-white animate-bounce scale-110 shadow-[0_0_20px_#ffffff] z-30 cursor-pointer" : ""}`}>{t.isHome ? "🏆" : t.stepCount > 0 ? t.id + 1 : `●`}</button>;
+                        return <button key={t.id} type="button" disabled={!isMovable} onClick={() => handleMove(t.id)} className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-black text-[10px] sm:text-xs transition-all relative ${t.isHome ? "bg-amber-400 text-black border sm:border-2 border-white shadow-[0_0_15px_#fbbf24]" : t.stepCount > 0 ? "bg-gradient-to-br from-emerald-400 to-emerald-800 text-white border sm:border-2 border-white shadow-lg" : "bg-gradient-to-br from-emerald-500 to-emerald-900 text-white border sm:border-2 border-emerald-300 shadow-md"} ${isMovable ? "ring-2 sm:ring-4 ring-white animate-bounce scale-110 shadow-[0_0_20px_#ffffff] z-30 cursor-pointer" : ""}`}>{t.isHome ? "🏆" : t.stepCount > 0 ? t.id + 1 : `●`}</button>;
                       })}
                     </div>
                   </div>
@@ -466,12 +445,12 @@ export default function LudoGame({ match, currentUid, onRematch }: LudoGameProps
               }
               if (r >= 9 && c < 6 && r === 9 && c === 0) {
                 return (
-                  <div key={`${r}-${c}`} style={{ gridColumn: "span 6", gridRow: "span 6" }} className="p-3 bg-gradient-to-br from-blue-600 via-indigo-700 to-blue-950 border-2 border-blue-500 rounded-bl-xl flex flex-col justify-between shadow-[inset_0_0_20px_rgba(0,0,0,0.6)]">
-                    <div className="flex justify-between items-center text-[10px] text-white font-black border-b border-blue-400/40 pb-1"><span className="flex items-center gap-1">👑 BLUE BASE</span><span className="px-1.5 py-0.5 bg-black/40 rounded text-[9px]">{ludoState.tokens.BLUE?.filter((t) => t.isHome).length}/4 HOME</span></div>
-                    <div className="grid grid-cols-2 gap-3 place-items-center p-2 bg-black/30 rounded-xl border border-blue-500/30">
+                  <div key={`${r}-${c}`} style={{ gridColumn: "span 6", gridRow: "span 6" }} className="p-1.5 sm:p-3 bg-gradient-to-br from-blue-600 via-indigo-700 to-blue-950 border sm:border-2 border-blue-500 rounded-bl-lg sm:rounded-bl-xl flex flex-col justify-between shadow-[inset_0_0_20px_rgba(0,0,0,0.6)]">
+                    <div className="flex justify-between items-center text-[8px] sm:text-[10px] text-white font-black border-b border-blue-400/40 pb-0.5 sm:pb-1"><span className="flex items-center gap-1">👑 BLUE</span><span className="px-1 py-0.2 bg-black/40 rounded text-[8px] sm:text-[9px]">{ludoState.tokens.BLUE?.filter((t) => t.isHome).length}/4</span></div>
+                    <div className="grid grid-cols-2 gap-1.5 sm:gap-3 place-items-center p-1 sm:p-2 bg-black/30 rounded-lg sm:rounded-xl border border-blue-500/30">
                       {(ludoState.tokens.BLUE || []).map((t) => {
                         const isMovable = validTokenIdsToMove.includes(t.id) && myTeam === "BLUE";
-                        return <button key={t.id} type="button" disabled={!isMovable} onClick={() => handleMove(t.id)} className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-xs transition-all relative ${t.isHome ? "bg-amber-400 text-black border-2 border-white shadow-[0_0_15px_#fbbf24]" : t.stepCount > 0 ? "bg-gradient-to-br from-cyan-400 to-blue-800 text-white border-2 border-white shadow-lg" : "bg-gradient-to-br from-blue-500 to-blue-900 text-white border-2 border-blue-300 shadow-md"} ${isMovable ? "ring-4 ring-white animate-bounce scale-110 shadow-[0_0_20px_#ffffff] z-30 cursor-pointer" : ""}`}>{t.isHome ? "🏆" : t.stepCount > 0 ? t.id + 1 : `●`}</button>;
+                        return <button key={t.id} type="button" disabled={!isMovable} onClick={() => handleMove(t.id)} className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-black text-[10px] sm:text-xs transition-all relative ${t.isHome ? "bg-amber-400 text-black border sm:border-2 border-white shadow-[0_0_15px_#fbbf24]" : t.stepCount > 0 ? "bg-gradient-to-br from-cyan-400 to-blue-800 text-white border sm:border-2 border-white shadow-lg" : "bg-gradient-to-br from-blue-500 to-blue-900 text-white border-2 border-blue-300 shadow-md"} ${isMovable ? "ring-2 sm:ring-4 ring-white animate-bounce scale-110 shadow-[0_0_20px_#ffffff] z-30 cursor-pointer" : ""}`}>{t.isHome ? "🏆" : t.stepCount > 0 ? t.id + 1 : `●`}</button>;
                       })}
                     </div>
                   </div>
@@ -479,12 +458,12 @@ export default function LudoGame({ match, currentUid, onRematch }: LudoGameProps
               }
               if (r >= 9 && c >= 9 && r === 9 && c === 9) {
                 return (
-                  <div key={`${r}-${c}`} style={{ gridColumn: "span 6", gridRow: "span 6" }} className="p-3 bg-gradient-to-br from-amber-500 via-yellow-600 to-amber-950 border-2 border-amber-400 rounded-br-xl flex flex-col justify-between shadow-[inset_0_0_20px_rgba(0,0,0,0.6)]">
-                    <div className="flex justify-between items-center text-[10px] text-white font-black border-b border-amber-400/40 pb-1"><span className="flex items-center gap-1">👑 YELLOW BASE</span><span className="px-1.5 py-0.5 bg-black/40 rounded text-[9px]">{ludoState.tokens.YELLOW?.filter((t) => t.isHome).length}/4 HOME</span></div>
-                    <div className="grid grid-cols-2 gap-3 place-items-center p-2 bg-black/30 rounded-xl border border-amber-500/30">
+                  <div key={`${r}-${c}`} style={{ gridColumn: "span 6", gridRow: "span 6" }} className="p-1.5 sm:p-3 bg-gradient-to-br from-amber-500 via-yellow-600 to-amber-950 border sm:border-2 border-amber-400 rounded-br-lg sm:rounded-br-xl flex flex-col justify-between shadow-[inset_0_0_20px_rgba(0,0,0,0.6)]">
+                    <div className="flex justify-between items-center text-[8px] sm:text-[10px] text-white font-black border-b border-amber-400/40 pb-0.5 sm:pb-1"><span className="flex items-center gap-1">👑 YELLOW</span><span className="px-1 py-0.2 bg-black/40 rounded text-[8px] sm:text-[9px]">{ludoState.tokens.YELLOW?.filter((t) => t.isHome).length}/4</span></div>
+                    <div className="grid grid-cols-2 gap-1.5 sm:gap-3 place-items-center p-1 sm:p-2 bg-black/30 rounded-lg sm:rounded-xl border border-amber-500/30">
                       {(ludoState.tokens.YELLOW || []).map((t) => {
                         const isMovable = validTokenIdsToMove.includes(t.id) && myTeam === "YELLOW";
-                        return <button key={t.id} type="button" disabled={!isMovable} onClick={() => handleMove(t.id)} className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-xs transition-all relative ${t.isHome ? "bg-amber-400 text-black border-2 border-white shadow-[0_0_15px_#fbbf24]" : t.stepCount > 0 ? "bg-gradient-to-br from-amber-200 to-yellow-700 text-black border-2 border-white shadow-lg" : "bg-gradient-to-br from-yellow-400 to-amber-700 text-black border-2 border-amber-200 shadow-md"} ${isMovable ? "ring-4 ring-white animate-bounce scale-110 shadow-[0_0_20px_#ffffff] z-30 cursor-pointer" : ""}`}>{t.isHome ? "🏆" : t.stepCount > 0 ? t.id + 1 : `●`}</button>;
+                        return <button key={t.id} type="button" disabled={!isMovable} onClick={() => handleMove(t.id)} className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-black text-[10px] sm:text-xs transition-all relative ${t.isHome ? "bg-amber-400 text-black border sm:border-2 border-white shadow-[0_0_15px_#fbbf24]" : t.stepCount > 0 ? "bg-gradient-to-br from-amber-200 to-yellow-700 text-black border sm:border-2 border-white shadow-lg" : "bg-gradient-to-br from-yellow-400 to-amber-700 text-black border sm:border-2 border-amber-200 shadow-md"} ${isMovable ? "ring-2 sm:ring-4 ring-white animate-bounce scale-110 shadow-[0_0_20px_#ffffff] z-30 cursor-pointer" : ""}`}>{t.isHome ? "🏆" : t.stepCount > 0 ? t.id + 1 : `●`}</button>;
                       })}
                     </div>
                   </div>
@@ -492,12 +471,12 @@ export default function LudoGame({ match, currentUid, onRematch }: LudoGameProps
               }
               if (r >= 6 && r <= 8 && c >= 6 && c <= 8 && r === 6 && c === 6) {
                 return (
-                  <div key={`${r}-${c}`} style={{ gridColumn: "span 3", gridRow: "span 3" }} className="relative bg-black flex items-center justify-center border-2 border-amber-400/80 shadow-[inset_0_0_25px_rgba(0,0,0,0.9)] overflow-hidden">
+                  <div key={`${r}-${c}`} style={{ gridColumn: "span 3", gridRow: "span 3" }} className="relative bg-black flex items-center justify-center border sm:border-2 border-amber-400/80 shadow-[inset_0_0_25px_rgba(0,0,0,0.9)] overflow-hidden">
                     <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-emerald-600/60 to-transparent [clip-path:polygon(0_0,100%_0,50%_100%)]" />
                     <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-blue-600/60 to-transparent [clip-path:polygon(50%_0,0_100%,100%_100%)]" />
                     <div className="absolute top-0 bottom-0 left-0 w-1/2 bg-gradient-to-r from-red-600/60 to-transparent [clip-path:polygon(0_0,100%_50%,0_100%)]" />
                     <div className="absolute top-0 bottom-0 right-0 w-1/2 bg-gradient-to-l from-amber-500/60 to-transparent [clip-path:polygon(100%_0,0_50%,100%_100%)]" />
-                    <div className="relative z-10 flex flex-col items-center justify-center p-1 text-center animate-pulse"><Crown className="w-7 h-7 text-amber-400 drop-shadow-[0_0_10px_rgba(245,158,11,0.8)]" /><span className="text-[8px] font-black uppercase tracking-widest text-amber-300">VICTORY</span></div>
+                    <div className="relative z-10 flex flex-col items-center justify-center p-0.5 text-center animate-pulse"><Crown className="w-5 h-5 sm:w-7 sm:h-7 text-amber-400 drop-shadow-[0_0_10px_rgba(245,158,11,0.8)]" /><span className="text-[7px] sm:text-[8px] font-black uppercase tracking-widest text-amber-300">VICTORY</span></div>
                   </div>
                 );
               }
@@ -517,14 +496,14 @@ export default function LudoGame({ match, currentUid, onRematch }: LudoGameProps
               else if (isStarCell) cellStyle = "bg-amber-50 border-amber-300 shadow-inner";
               return (
                 <div key={`${r}-${c}`} className={`relative flex items-center justify-center ${cellStyle} border transition-colors select-none`}>
-                  {isStarCell && <span className="text-amber-500 text-[11px] font-black drop-shadow-sm select-none">★</span>}
+                  {isStarCell && <span className="text-amber-500 text-[9px] sm:text-[11px] font-black drop-shadow-sm select-none">★</span>}
                   {tokensOnCell.map((tok, idx) => {
                     const isMovable = validTokenIdsToMove.includes(tok.id) && myTeam === tok.color;
                     const meta = THEME_CONFIG[tok.color];
                     const count = tokensOnCell.length;
-                    const stackOffset = count > 1 ? (idx - (count - 1) / 2) * 4 : 0;
+                    const stackOffset = count > 1 ? (idx - (count - 1) / 2) * 3 : 0;
                     return (
-                      <button key={`${tok.color}-${tok.id}`} type="button" disabled={!isMovable} onClick={() => handleMove(tok.id)} style={{ transform: `translate(${stackOffset}px, ${stackOffset}px)`, zIndex: 10 + idx }} className={`absolute w-6 h-6 sm:w-7 sm:h-7 rounded-full font-black text-[10px] flex items-center justify-center transition-all bg-gradient-to-br ${meta.tokenGradient} text-white border-2 border-white shadow-lg ${isMovable ? "ring-4 ring-white animate-bounce scale-125 shadow-[0_0_20px_#ffffff] z-30 cursor-pointer" : ""}`}>{tok.id + 1}</button>
+                      <button key={`${tok.color}-${tok.id}`} type="button" disabled={!isMovable} onClick={() => handleMove(tok.id)} style={{ transform: `translate(${stackOffset}px, ${stackOffset}px)`, zIndex: 10 + idx }} className={`absolute w-4.5 h-4.5 sm:w-6 sm:h-6 rounded-full font-black text-[8px] sm:text-[10px] flex items-center justify-center transition-all bg-gradient-to-br ${meta.tokenGradient} text-white border border-white shadow-md ${isMovable ? "ring-2 sm:ring-4 ring-white animate-bounce scale-125 shadow-[0_0_20px_#ffffff] z-30 cursor-pointer" : ""}`}>{tok.id + 1}</button>
                     );
                   })}
                 </div>
@@ -534,18 +513,19 @@ export default function LudoGame({ match, currentUid, onRematch }: LudoGameProps
         </div>
       </div>
 
-      <div className="border-2 border-amber-500/40 bg-gradient-to-r from-neutral-950 via-neutral-900 to-neutral-950 p-4 rounded-xl shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className={`w-16 h-16 border-2 border-neutral-800 rounded-2xl bg-gradient-to-b from-white via-amber-50 to-neutral-200 flex items-center justify-center shadow-[0_10px_25px_rgba(0,0,0,0.8),_inset_0_2px_4px_rgba(255,255,255,0.8)] transition-all ${rolling ? "animate-spin scale-110" : ""}`}>{renderDiceFace(roll)}</div>
-          <div className="space-y-1">
+      {/* ── Dice & Turn Action Card ── */}
+      <div className="border-2 border-amber-500/40 bg-gradient-to-r from-neutral-950 via-neutral-900 to-neutral-950 p-3 sm:p-4 rounded-xl shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+        <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
+          <div className={`w-12 h-12 sm:w-16 sm:h-16 border-2 border-neutral-800 rounded-xl sm:rounded-2xl bg-gradient-to-b from-white via-amber-50 to-neutral-200 flex items-center justify-center shadow-[0_10px_25px_rgba(0,0,0,0.8),_inset_0_2px_4px_rgba(255,255,255,0.8)] transition-all shrink-0 ${rolling ? "animate-spin scale-110" : ""}`}>{renderDiceFace(roll)}</div>
+          <div className="space-y-0.5 sm:space-y-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-black uppercase text-white">{isMyTurn ? !ludoState.hasRolled ? "YOUR TURN: ROLL THE DIE" : hasValidMoves ? "TAP YOUR GLOWING GOTI TO MOVE" : "NO VALID MOVES FOR THIS ROLL" : `WAITING FOR ${ludoState.currentTurn} TO ROLL`}</span>
+              <span className="text-xs sm:text-sm font-black uppercase text-white truncate">{isMyTurn ? !ludoState.hasRolled ? "YOUR TURN: ROLL THE DIE" : hasValidMoves ? "TAP YOUR GLOWING GOTI TO MOVE" : "NO VALID MOVES FOR THIS ROLL" : `WAITING FOR ${ludoState.currentTurn} TO ROLL`}</span>
             </div>
-            <p className="text-[11px] text-neutral-400">{roll === 6 ? "🎉 ROLLED A 6: Deploy goti onto track + BONUS TURN!" : isMyTurn && ludoState.hasRolled ? `Rolled a ${roll}. Choose which goti to advance.` : "Land on opponent gotis to send them home! Safe stars (★) protect you."}</p>
+            <p className="text-[10px] sm:text-[11px] text-neutral-400 leading-tight">{roll === 6 ? "🎉 ROLLED A 6: Deploy goti onto track + BONUS TURN!" : isMyTurn && ludoState.hasRolled ? `Rolled a ${roll}. Choose which goti to advance.` : "Land on opponent gotis to send them home! Safe stars (★) protect you."}</p>
           </div>
         </div>
-        <div className="w-full sm:w-auto">
-          {isMyTurn ? !ludoState.hasRolled ? <button type="button" disabled={rolling} onClick={handleRoll} className="w-full sm:w-auto px-8 py-3 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:brightness-110 text-black font-black text-xs uppercase rounded-xl transition-all active:scale-95 cursor-pointer shadow-[0_0_25px_rgba(245,158,11,0.5)] flex items-center justify-center gap-2"><Dices className="w-4 h-4 text-black" /><span>{rolling ? "ROLLING DIE..." : "[ ROLL 3D DIE 🎲 ]"}</span></button> : hasValidMoves ? <div className="px-4 py-2 bg-emerald-500/20 border border-emerald-400 text-emerald-300 font-black text-xs uppercase rounded-xl animate-pulse flex items-center gap-2"><Sparkles className="w-4 h-4 text-emerald-400" /><span>TAP GLOWING GOTI ON BOARD</span></div> : <button type="button" onClick={handlePassTurn} className="w-full sm:w-auto px-6 py-2.5 bg-neutral-900 border border-neutral-700 hover:border-white text-neutral-300 font-bold text-xs uppercase rounded-xl cursor-pointer">[ PASS TURN ]</button> : <div className="px-4 py-2 bg-neutral-900 border border-neutral-800 text-neutral-500 font-bold text-xs uppercase rounded-xl">OPPONENT TURN...</div>}
+        <div className="w-full sm:w-auto shrink-0">
+          {isMyTurn ? !ludoState.hasRolled ? <button type="button" disabled={rolling} onClick={handleRoll} className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:brightness-110 text-black font-black text-xs uppercase rounded-xl transition-all active:scale-95 cursor-pointer shadow-[0_0_25px_rgba(245,158,11,0.5)] flex items-center justify-center gap-2"><Dices className="w-4 h-4 text-black" /><span>{rolling ? "ROLLING DIE..." : "[ ROLL DIE 🎲 ]"}</span></button> : hasValidMoves ? <div className="px-4 py-2 bg-emerald-500/20 border border-emerald-400 text-emerald-300 font-black text-xs uppercase rounded-xl animate-pulse flex items-center justify-center gap-2"><Sparkles className="w-4 h-4 text-emerald-400" /><span>TAP GLOWING GOTI</span></div> : <button type="button" onClick={handlePassTurn} className="w-full sm:w-auto px-6 py-2.5 bg-neutral-900 border border-neutral-700 hover:border-white text-neutral-300 font-bold text-xs uppercase rounded-xl cursor-pointer">[ PASS TURN ]</button> : <div className="px-4 py-2 bg-neutral-900 border border-neutral-800 text-neutral-500 font-bold text-xs uppercase rounded-xl text-center">OPPONENT TURN...</div>}
         </div>
       </div>
 

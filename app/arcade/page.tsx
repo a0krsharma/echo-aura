@@ -474,44 +474,43 @@ function ArcadeContent() {
   }, [activeCategory, searchQuery]);
 
   return (
-    <div className="min-h-screen bg-black text-white font-mono pb-24 relative">
-      {/* ── Top Clean Navigation Bar ── */}
+    <div className="min-h-screen bg-black text-white font-mono relative">
       {/* ── Top Unified Clean Header ── */}
-      <header className="sticky top-0 z-30 bg-neutral-950/95 backdrop-blur-md border-b border-neutral-800 px-3 sm:px-6 py-2.5 flex items-center justify-between shadow-lg">
+      <header className="sticky top-0 z-30 bg-neutral-950/95 backdrop-blur-md border-b border-neutral-800 px-2.5 sm:px-6 py-2 sm:py-2.5 flex items-center justify-between shadow-lg">
         {activeMatch ? (
           /* ── In-Match Header Mode ── */
           <>
-            <div className="flex items-center gap-2.5 min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
               <button
                 type="button"
                 onClick={handleExitActiveMatch}
-                className="px-2.5 py-1.5 border border-neutral-700 bg-neutral-900 hover:border-white text-neutral-200 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5 text-xs rounded-lg font-bold"
+                className="p-1.5 sm:px-2.5 sm:py-1.5 border border-neutral-700 bg-neutral-900 hover:border-white text-neutral-200 hover:text-white transition-colors cursor-pointer flex items-center gap-1 text-xs rounded-lg font-bold shrink-0"
                 title="Exit to Echo Club Lobby"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                <span>EXIT</span>
+                <span className="hidden sm:inline">EXIT</span>
               </button>
 
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="text-base sm:text-lg">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-base sm:text-lg shrink-0">
                   {CLEAN_GAMES.find((g) => g.id === activeMatch.gameType)?.icon || "🎮"}
                 </span>
-                <span className="font-black text-xs sm:text-sm uppercase tracking-wide text-white truncate">
+                <span className="font-black text-xs sm:text-sm uppercase tracking-wide text-white truncate max-w-[120px] sm:max-w-[220px]">
                   {CLEAN_GAMES.find((g) => g.id === activeMatch.gameType)?.name || activeMatch.gameType.toUpperCase()}
                 </span>
-                <span className="hidden sm:inline-block text-[10px] px-2 py-0.5 rounded-full bg-neutral-900 border border-neutral-700 text-neutral-300 font-bold">
+                <span className="hidden sm:inline-block text-[10px] px-2 py-0.5 rounded-full bg-neutral-900 border border-neutral-700 text-neutral-300 font-bold shrink-0">
                   {activeMatch.mode === "VS_COMPUTER" ? "🤖 VS BOT" : "👥 MULTI"}
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 sm:gap-2 text-xs shrink-0">
+            <div className="flex items-center gap-1 sm:gap-2 text-xs shrink-0">
               {/* Rematch Button */}
               <button
                 type="button"
                 onClick={handleRematch}
                 disabled={isRematching}
-                className={`px-3 py-1.5 border font-black uppercase text-xs transition-all flex items-center gap-1.5 cursor-pointer rounded-lg shadow-sm active:scale-95 ${
+                className={`p-1.5 sm:px-3 sm:py-1.5 border font-black uppercase text-xs transition-all flex items-center gap-1 cursor-pointer rounded-lg shadow-sm active:scale-95 ${
                   activeMatch.status === "FINISHED"
                     ? "border-emerald-400 bg-emerald-400 text-black hover:bg-emerald-300 animate-pulse"
                     : "border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-white hover:text-white"
@@ -526,22 +525,22 @@ function ArcadeContent() {
               <button
                 type="button"
                 onClick={() => setSoundCheckOpen(true)}
-                className="px-2.5 sm:px-3 py-1.5 border border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-emerald-400 hover:text-emerald-300 font-bold uppercase text-xs transition-all flex items-center gap-1 cursor-pointer rounded-lg shadow-sm"
+                className="p-1.5 sm:px-2.5 sm:py-1.5 border border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-emerald-400 hover:text-emerald-300 font-bold uppercase text-xs transition-all flex items-center gap-1 cursor-pointer rounded-lg shadow-sm"
                 title="Microphone Sound Check"
               >
                 <Mic2 className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="hidden sm:inline">MIC CHECK</span>
+                <span className="hidden md:inline">MIC CHECK</span>
               </button>
 
               {/* Single Rules Button */}
               <button
                 type="button"
                 onClick={() => handleOpenRules(activeMatch.gameType)}
-                className="px-2.5 sm:px-3 py-1.5 border border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-white hover:text-white font-bold uppercase text-xs transition-all flex items-center gap-1 cursor-pointer rounded-lg shadow-sm"
+                className="p-1.5 sm:px-2.5 sm:py-1.5 border border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-white hover:text-white font-bold uppercase text-xs transition-all flex items-center gap-1 cursor-pointer rounded-lg shadow-sm"
                 title="View Rules & Guide"
               >
                 <HelpCircle className="w-3.5 h-3.5 text-emerald-400" />
-                <span>RULES</span>
+                <span className="hidden sm:inline">RULES</span>
               </button>
 
               {/* Invite Button for Multiplayer */}
@@ -549,7 +548,8 @@ function ArcadeContent() {
                 <button
                   type="button"
                   onClick={() => setInviteModalMatch(activeMatch)}
-                  className="px-3 py-1.5 border-2 border-white bg-white text-black hover:bg-neutral-200 font-black uppercase text-xs transition-all flex items-center gap-1.5 cursor-pointer rounded-lg shadow-sm active:scale-95"
+                  className="p-1.5 sm:px-3 sm:py-1.5 border-2 border-white bg-white text-black hover:bg-neutral-200 font-black uppercase text-xs transition-all flex items-center gap-1 cursor-pointer rounded-lg shadow-sm active:scale-95"
+                  title="Invite Players"
                 >
                   <Share2 className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">INVITE</span>
@@ -571,42 +571,41 @@ function ArcadeContent() {
         ) : (
           /* ── Lobby Header Mode ── */
           <>
-            <div className="flex items-center gap-3 min-w-0">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <Link
                 href="/"
-                className="px-2.5 py-1.5 border border-neutral-700 bg-neutral-900 hover:border-white text-neutral-300 hover:text-white transition-colors flex items-center gap-1 text-xs rounded-lg font-bold"
+                className="p-1.5 sm:px-2.5 sm:py-1.5 border border-neutral-700 bg-neutral-900 hover:border-white text-neutral-300 hover:text-white transition-colors flex items-center gap-1 text-xs rounded-lg font-bold shrink-0"
+                title="Back to Feed"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                <span>ECHO</span>
+                <span className="hidden sm:inline">ECHO</span>
               </Link>
 
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="w-7 h-7 bg-white text-black rounded-lg flex items-center justify-center font-black shadow-md">
-                  <Gamepad2 className="w-4 h-4" />
+              <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                <div className="w-6 h-6 sm:w-7 sm:h-7 bg-white text-black rounded-lg flex items-center justify-center font-black shadow-md shrink-0">
+                  <Gamepad2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </div>
-                <div>
-                  <h1 className="font-black text-xs sm:text-sm tracking-wider uppercase text-white truncate">
-                    ECHO CLUB
-                  </h1>
-                </div>
+                <h1 className="font-black text-xs sm:text-sm tracking-wider uppercase text-white truncate">
+                  ECHO CLUB
+                </h1>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 text-xs shrink-0">
-
+            <div className="flex items-center gap-1 sm:gap-2 text-xs shrink-0">
               <button
                 type="button"
                 onClick={() => setSoundCheckOpen(true)}
-                className="px-2.5 sm:px-3 py-1.5 border border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-emerald-400 hover:text-emerald-300 font-bold text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer rounded-lg shadow-sm"
+                className="p-1.5 sm:px-2.5 sm:py-1.5 border border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-emerald-400 hover:text-emerald-300 font-bold text-xs uppercase transition-all flex items-center gap-1 cursor-pointer rounded-lg shadow-sm"
                 title="Microphone Sound Check"
               >
                 <Mic2 className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="hidden sm:inline">MIC CHECK</span>
+                <span className="hidden md:inline">MIC CHECK</span>
               </button>
 
               <Link
                 href="/leaderboard"
-                className="px-2.5 sm:px-3 py-1.5 border border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-yellow-400 hover:text-yellow-300 font-bold text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer rounded-lg shadow-sm"
+                className="p-1.5 sm:px-2.5 sm:py-1.5 border border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-yellow-400 hover:text-yellow-300 font-bold text-xs uppercase transition-all flex items-center gap-1 cursor-pointer rounded-lg shadow-sm"
+                title="Leaderboard"
               >
                 <Trophy className="w-3.5 h-3.5 text-yellow-400" />
                 <span className="hidden md:inline">LEADERBOARD</span>
@@ -615,7 +614,7 @@ function ArcadeContent() {
               <button
                 type="button"
                 onClick={() => setTournamentModalOpen(true)}
-                className="px-2.5 sm:px-3 py-1.5 border border-amber-500/50 bg-amber-950/30 text-amber-300 hover:border-amber-400 hover:bg-amber-900/50 font-bold text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer rounded-lg shadow-sm"
+                className="p-1.5 sm:px-2.5 sm:py-1.5 border border-amber-500/50 bg-amber-950/30 text-amber-300 hover:border-amber-400 hover:bg-amber-900/50 font-bold text-xs uppercase transition-all flex items-center gap-1 cursor-pointer rounded-lg shadow-sm"
                 title="Tournament Bracket & Arena Matches"
               >
                 <Trophy className="w-3.5 h-3.5 text-amber-400" />
@@ -625,16 +624,18 @@ function ArcadeContent() {
               <button
                 type="button"
                 onClick={() => handleOpenRules("antakshari")}
-                className="px-2.5 sm:px-3 py-1.5 border border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-white hover:text-white font-bold text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer rounded-lg shadow-sm"
+                className="px-2 py-1.5 sm:px-2.5 border border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-white hover:text-white font-bold text-xs uppercase transition-all flex items-center gap-1 cursor-pointer rounded-lg shadow-sm"
+                title="Rules & Guide"
               >
                 <HelpCircle className="w-3.5 h-3.5 text-emerald-400" />
-                <span>RULES</span>
+                <span className="hidden sm:inline">RULES</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => handleOpenCreate("antakshari")}
-                className="px-3 sm:px-3.5 py-1.5 border-2 border-white bg-white text-black hover:bg-neutral-200 font-black text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer rounded-lg shadow-md active:scale-95"
+                className="px-2.5 sm:px-3.5 py-1.5 border-2 border-white bg-white text-black hover:bg-neutral-200 font-black text-xs uppercase transition-all flex items-center gap-1 cursor-pointer rounded-lg shadow-md active:scale-95"
+                title="Create Match"
               >
                 <Zap className="w-3.5 h-3.5 fill-black" />
                 <span>CREATE</span>
@@ -644,7 +645,7 @@ function ArcadeContent() {
         )}
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+      <main className="max-w-5xl mx-auto px-2.5 sm:px-4 py-3 sm:py-6 space-y-4 sm:space-y-6 pb-40 sm:pb-24">
         {activeMatch ? (
           /* ── Active Game Arena View ── */
           <div className="space-y-4">
