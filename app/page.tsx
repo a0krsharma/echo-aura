@@ -734,11 +734,13 @@ function PostReverbSection({
   currentUser,
   onProfileClick,
   onReplyClick,
+  onClose,
 }: {
   post: FeedPost;
   currentUser: any;
   onProfileClick: (h: string) => void;
   onReplyClick: (reverbOfId?: string, reverbOfHandle?: string) => void;
+  onClose?: () => void;
 }) {
   const [reverbs, setReverbs] = useState<PostReverbItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -775,29 +777,49 @@ function PostReverbSection({
   };
 
   return (
-    <div className="border-t border-white/10 bg-black p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <h4 className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-1.5">
-          <Volume2 className="w-3.5 h-3.5 text-white" />
-          <span>Voice Takes ({reverbs.length})</span>
-        </h4>
-        <span className="text-[10px] text-neutral-500 font-mono">LIVE THREAD</span>
+    <div className="border-t border-white/10 bg-neutral-950 p-3.5 sm:p-4 space-y-3 rounded-b-2xl animate-in fade-in slide-in-from-top-2 duration-200">
+      <div className="flex items-center justify-between border-b border-neutral-900 pb-2.5">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-full bg-white text-black flex items-center justify-center font-black shadow-sm">
+            <Mic2 className="w-3.5 h-3.5" />
+          </div>
+          <div>
+            <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+              <span>Voice Takes ({reverbs.length})</span>
+            </h4>
+            <p className="text-[10px] text-neutral-400 font-mono">
+              Live audio replies & community reactions recorded for this echo.
+            </p>
+          </div>
+        </div>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-neutral-500 hover:text-white px-2 py-1 text-xs font-mono transition-colors cursor-pointer border border-neutral-800 hover:border-neutral-600 rounded"
+            title="Close Voice Takes"
+          >
+            [ ✕ ]
+          </button>
+        )}
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-4 text-xs text-neutral-500">
-          <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" />
-          Loading takes...
+        <div className="flex items-center justify-center py-4 text-xs text-neutral-500 font-mono">
+          <Loader2 className="w-3.5 h-3.5 animate-spin mr-2 text-white" />
+          Loading voice takes...
         </div>
       ) : reverbs.length === 0 ? (
-        <div className="text-center py-4 space-y-2">
-          <p className="text-xs text-neutral-500">No voice takes yet.</p>
+        <div className="text-center py-3.5 px-4 bg-black/60 border border-neutral-900 rounded-xl space-y-2.5">
+          <p className="text-xs text-neutral-400 font-mono">No voice takes recorded for this echo yet.</p>
           {currentUser && (
             <button 
+              type="button"
               onClick={() => onReplyClick()} 
-              className="text-xs text-white hover:underline font-semibold cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white text-black hover:bg-neutral-200 text-xs font-bold uppercase rounded-lg transition-all cursor-pointer active:scale-95 shadow-sm"
             >
-              Be the first to reply →
+              <Mic2 className="w-3.5 h-3.5" />
+              <span>[ + DROP FIRST VOICE TAKE ]</span>
             </button>
           )}
         </div>
@@ -805,13 +827,13 @@ function PostReverbSection({
         <div className="space-y-3">
           {reverbs.map((rv) => {
             const pulsed = currentUser ? (rv.pulsedBy || []).includes(currentUser.uid) : false;
-            const userReactedEmoji = currentUser ? rv.reactions?.[currentUser.uid] : null;
 
             return (
-              <div key={rv.id} className="space-y-2 bg-neutral-950/60 border border-white/10 p-3 rounded-xl">
+              <div key={rv.id} className="space-y-2 bg-neutral-900/60 border border-white/10 p-3 rounded-xl">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <button 
+                      type="button"
                       onClick={() => onProfileClick(rv.handle)} 
                       className="text-xs font-semibold text-white hover:underline cursor-pointer"
                     >
@@ -839,6 +861,7 @@ function PostReverbSection({
                 <div className="flex items-center justify-between gap-2 pt-1 flex-wrap">
                   <div className="flex items-center gap-3">
                     <button 
+                      type="button"
                       onClick={() => handlePulse(rv)} 
                       className={`flex items-center gap-1 text-xs cursor-pointer transition-colors ${
                         pulsed ? "text-white font-bold" : "text-neutral-400 hover:text-white"
@@ -848,6 +871,7 @@ function PostReverbSection({
                       <span>{rv.pulseCount > 0 ? formatNum(rv.pulseCount) : ""}</span>
                     </button>
                     <button 
+                      type="button"
                       onClick={() => onReplyClick(rv.id, rv.handle)} 
                       className="flex items-center gap-1 text-xs text-neutral-400 hover:text-white cursor-pointer transition-colors"
                     >
@@ -861,11 +885,12 @@ function PostReverbSection({
           })}
           {currentUser && (
             <button 
+              type="button"
               onClick={() => onReplyClick()} 
-              className="flex items-center justify-center gap-2 text-xs text-white hover:bg-neutral-900 py-2 px-3 border border-white rounded-xl transition-all w-full cursor-pointer font-bold"
+              className="flex items-center justify-center gap-2 text-xs text-black bg-white hover:bg-neutral-200 py-2 px-3 rounded-xl transition-all w-full cursor-pointer font-bold uppercase shadow-sm active:scale-95"
             >
-              <Mic2 className="w-3.5 h-3.5 text-white" />
-              <span>Drop a Voice Take</span>
+              <Mic2 className="w-3.5 h-3.5" />
+              <span>[ + DROP A VOICE TAKE ]</span>
             </button>
           )}
         </div>
@@ -1048,6 +1073,7 @@ function PostCard({
   onFollow: (uid: string, handle: string) => void; onUnfollow: (uid: string) => void; 
   following: Set<string>; onComment: (p: FeedPost) => void; onFirstPlay: (p: FeedPost) => void;
 }) {
+  const [showVoiceTakes, setShowVoiceTakes] = useState(false);
   const isPulsed = user ? post.pulsedBy.includes(user.uid) : false;
   const isOrbited = orbitedPosts.has(post.id) || (user ? (post.orbitedBy || []).includes(user.uid) : false);
   const isOwn = user?.uid === post.authorUid;
@@ -1208,18 +1234,36 @@ function PostCard({
 
       {/* World-Class Twitter / Instagram Icon Action Deck (Monochrome Uniformity) */}
       <div className="flex items-center justify-between pt-1 text-neutral-400 select-none">
-        {/* 1. Comment / Reply */}
+        {/* 1. Comment / Reply (Text) */}
         <button
           type="button"
           onClick={() => onComment(post)}
           className="group flex items-center gap-1.5 text-neutral-400 hover:text-white transition-colors p-1.5 -ml-1.5 rounded-full hover:bg-white/10 cursor-pointer"
-          title="Reply / Comment"
+          title="Comments / Replies"
         >
           <MessageCircle className="w-4 h-4 group-hover:scale-110 transition-transform" />
           <span className="text-xs font-mono">{post.commentCount > 0 ? formatNum(post.commentCount) : ""}</span>
         </button>
 
-        {/* 2. Re-Echo (Repost) */}
+        {/* 2. Voice Takes (Audio Replies Toggle) */}
+        <button
+          type="button"
+          onClick={() => {
+            soundSynth.playSubtlePop();
+            setShowVoiceTakes((prev) => !prev);
+          }}
+          className={`group flex items-center gap-1.5 transition-colors p-1.5 rounded-full hover:bg-white/10 cursor-pointer ${
+            showVoiceTakes ? "text-white font-bold bg-white/15 ring-1 ring-white/30" : "text-neutral-400 hover:text-white"
+          }`}
+          title="Voice Takes (Live Audio Replies)"
+        >
+          <Mic2 className={`w-4 h-4 group-hover:scale-110 transition-transform ${showVoiceTakes ? "text-white fill-white/20" : ""}`} />
+          <span className={`text-xs font-mono ${showVoiceTakes ? "text-white font-bold" : ""}`}>
+            {(post.reverbCount || 0) > 0 ? formatNum(post.reverbCount) : ""}
+          </span>
+        </button>
+
+        {/* 3. Re-Echo (Repost) */}
         {!isOwn ? (
           <button
             type="button"
@@ -1239,7 +1283,7 @@ function PostCard({
           <div className="w-6" />
         )}
 
-        {/* 3. Pulse (Like) */}
+        {/* 4. Pulse (Like) */}
         <button
           type="button"
           onClick={() => onPulse(post)}
@@ -1254,7 +1298,7 @@ function PostCard({
           </span>
         </button>
 
-        {/* 4. Bookmark (Save) */}
+        {/* 5. Bookmark (Save) */}
         <button
           type="button"
           onClick={() => onBookmark(post)}
@@ -1266,7 +1310,7 @@ function PostCard({
           <Bookmark className={`w-4 h-4 group-hover:scale-110 transition-transform ${isBookmarked ? "fill-white text-white" : ""}`} />
         </button>
 
-        {/* 5. Views Count */}
+        {/* 6. Views Count */}
         <div 
           className="flex items-center gap-1.5 text-neutral-500 p-1.5"
           title={`${displayViews} views`}
@@ -1275,7 +1319,7 @@ function PostCard({
           <span className="text-xs font-mono">{formatNum(displayViews)}</span>
         </div>
 
-        {/* 6. Share */}
+        {/* 7. Share */}
         <button
           type="button"
           onClick={() => onShare(post)}
@@ -1286,13 +1330,16 @@ function PostCard({
         </button>
       </div>
 
-      {/* Voice Replies Accordion */}
-      <PostReverbSection 
-        post={post} 
-        currentUser={user}
-        onReplyClick={onReplyClick}
-        onProfileClick={onProfileClick} 
-      />
+      {/* Voice Replies Accordion (Toggled on Demand) */}
+      {showVoiceTakes && (
+        <PostReverbSection 
+          post={post} 
+          currentUser={user}
+          onReplyClick={onReplyClick}
+          onProfileClick={onProfileClick}
+          onClose={() => setShowVoiceTakes(false)} 
+        />
+      )}
     </article>
   );
 }
