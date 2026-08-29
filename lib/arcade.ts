@@ -3484,6 +3484,28 @@ export async function betPoker(
 }
 
 // ── Blackjack Actions ─────────────────────────────────────────────────────────
+function calculateBlackjackValue(hand: string[]): number {
+  let value = 0;
+  let aces = 0;
+  for (const card of hand) {
+    if (card === "🂠") continue;
+    const rank = card.replace(/[♠♥♦♣]/g, "").trim();
+    if (rank === "A") {
+      aces++;
+      value += 11;
+    } else if (["K", "Q", "J", "10"].includes(rank)) {
+      value += 10;
+    } else {
+      value += parseInt(rank, 10) || 10;
+    }
+  }
+  while (value > 21 && aces > 0) {
+    value -= 10;
+    aces--;
+  }
+  return value;
+}
+
 export async function playBlackjackAction(
   matchId: string,
   playerUid: string,
@@ -3497,27 +3519,74 @@ export async function playBlackjackAction(
   if (!match.blackjackState) return;
 
   const bs = match.blackjackState;
-  const playerHand = bs.playerHands[playerUid] || ["10♠", "8♦"];
-  const deck = ["A♣", "2♦", "5♥", "7♠", "9♦", "K♣", "Q♥", "J♠"];
-  const drawn = deck[Math.floor(Math.random() * deck.length)];
+  const playerHand = [...(bs.playerHands[playerUid] || ["10♠", "8♦"])];
+  const fullDeck = [
+    "A♠", "2♠", "3♠", "4♠", "5♠", "6♠", "7♠", "8♠", "9♠", "10♠", "J♠", "Q♠", "K♠",
+    "A♥", "2♥", "3♥", "4♥", "5♥", "6♥", "7♥", "8♥", "9♥", "10♥", "J♥", "Q♥", "K♥",
+    "A♦", "2♦", "3♦", "4♦", "5♦", "6♦", "7♦", "8♦", "9♦", "10♦", "J♦", "Q♦", "K♦",
+    "A♣", "2♣", "3♣", "4♣", "5♣", "6♣", "7♣", "8♣", "9♣", "10♣", "J♣", "Q♣", "K♣",
+  ];
+  const drawCard = () => fullDeck[Math.floor(Math.random() * fullDeck.length)];
+
+  const botPlayer = Object.values(match.players || {}).find((p) => p.isBot);
+  const botUid = botPlayer?.uid || "bot_dealer";
 
   if (action === "HIT" || action === "DOUBLE") {
-    playerHand.push(drawn);
+    playerHand.push(drawCard());
   }
+
+  const playerValue = calculateBlackjackValue(playerHand);
+  const isBust = playerValue > 21;
 
   const updates: any = {
     [`blackjackState.playerHands.${playerUid}`]: playerHand,
-    "blackjackState.lastActionLog": `${match.players[playerUid]?.handle || "Player"} chose to ${action}!`,
     updatedAt: serverTimestamp(),
   };
 
-  if (action === "STAND" || action === "DOUBLE") {
+  if (isBust) {
+    // Player busts (> 21) -> Dealer wins immediately
+    const dealerHand = [bs.dealerHand[0] || "A♥", drawCard()];
+    updates["blackjackState.dealerHand"] = dealerHand;
     updates["blackjackState.dealerRevealed"] = true;
-    updates["blackjackState.dealerHand"] = ["A♥", "9♣"];
+    updates["blackjackState.lastActionLog"] = `💥 BUST! ${match.players[playerUid]?.handle || "Player"} scored ${playerValue} and busted! Dealer wins!`;
     updates.status = "FINISHED";
-    updates.winnerUid = playerUid;
-    updates.winnerHandle = match.players[playerUid]?.handle || "@ANON";
-    await awardAura(playerUid, (bs.playerBets[playerUid] || 50) * 2);
+    updates.winnerUid = botUid;
+    updates.winnerHandle = botPlayer?.handle || "CASINO DEALER";
+  } else if (action === "STAND" || action === "DOUBLE") {
+    // Reveal Dealer hidden card and draw until Dealer score >= 17
+    const dealerHand = [bs.dealerHand[0] || "A♥", drawCard()];
+    while (calculateBlackjackValue(dealerHand) < 17) {
+      dealerHand.push(drawCard());
+    }
+
+    const dealerValue = calculateBlackjackValue(dealerHand);
+    const dealerBust = dealerValue > 21;
+
+    updates["blackjackState.dealerHand"] = dealerHand;
+    updates["blackjackState.dealerRevealed"] = true;
+    updates.status = "FINISHED";
+
+    if (dealerBust || playerValue > dealerValue) {
+      // Player wins!
+      updates.winnerUid = playerUid;
+      updates.winnerHandle = match.players[playerUid]?.handle || "@ANON";
+      updates["blackjackState.lastActionLog"] = `🏆 VICTORY! Player ${playerValue} beat Dealer ${dealerBust ? "BUST (" + dealerValue + ")" : dealerValue}!`;
+      await awardAura(playerUid, (bs.playerBets[playerUid] || 50) * 2);
+    } else if (dealerValue > playerValue) {
+      // Dealer wins
+      updates.winnerUid = botUid;
+      updates.winnerHandle = botPlayer?.handle || "CASINO DEALER";
+      updates["blackjackState.lastActionLog"] = `Dealer (${dealerValue}) beat Player (${playerValue}). Dealer wins!`;
+    } else {
+      // Push (Tie)
+      updates.winnerUid = playerUid;
+      updates.winnerHandle = "PUSH (TIE)";
+      updates["blackjackState.lastActionLog"] = `🤝 PUSH! Both player and dealer scored ${playerValue}! Stakes refunded.`;
+      await awardAura(playerUid, bs.playerBets[playerUid] || 50);
+    }
+  } else {
+    // Hit without bust
+    updates["blackjackState.lastActionLog"] = `${match.players[playerUid]?.handle || "Player"} hit and now holds ${playerValue} points!`;
   }
 
   await updateDoc(matchRef, updates);
