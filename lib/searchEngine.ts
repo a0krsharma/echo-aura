@@ -114,21 +114,44 @@ export async function executeMultiVectorSearch(
 
   // 3. Search Active Rooms (Live Nodes / Stages)
   try {
-    const roomsSnap = await getDocs(query(collection(db, 'rooms'), limit(50)));
+    const roomsSnap = await getDocs(
+      query(
+        collection(db, 'rooms'),
+        where('isActive', '==', true),
+        limit(50)
+      )
+    );
+
+    const nowMs = Date.now();
+    const hostRoomMap = new Map<string, LiveRoomResult>();
+
     roomsSnap.forEach((docSnap) => {
       const data = docSnap.data();
-      const isLive = data.isLive || data.isActive || (data.listenerCount && data.listenerCount > 0);
+      // Skip arcade match objects masquerading as rooms, ended rooms, or non-live
+      if (data.isArcade || data.gameType || data.isActive === false || data.status === 'FINISHED') {
+        return;
+      }
+
+      // Check TTL / freshness
+      const createdAtMs = data.createdAt?.seconds ? data.createdAt.seconds * 1000 : nowMs;
+      const updatedAtMs = data.updatedAt?.seconds ? data.updatedAt.seconds * 1000 : createdAtMs;
+      if (nowMs - updatedAtMs > 8 * 60 * 60 * 1000) {
+        return; // Stale room older than 8 hours
+      }
+
       const name = data.name || '';
       const desc = data.description || '';
       const cat = data.category?.toLowerCase() || '';
       const tags = Array.isArray(data.tags) ? data.tags : [];
+      const hostUid = data.hostUid || docSnap.id;
 
       const matchesQuery =
         !cleanQ ||
         name.toLowerCase().includes(cleanQ) ||
         desc.toLowerCase().includes(cleanQ) ||
         cat.includes(cleanQ) ||
-        tags.some((t: string) => t.toLowerCase().includes(cleanQ));
+        tags.some((t: string) => t.toLowerCase().includes(cleanQ)) ||
+        (data.hostHandle && data.hostHandle.toLowerCase().includes(cleanQ));
 
       const matchesCategory =
         categoryFilter === 'ALL' ||
@@ -136,20 +159,27 @@ export async function executeMultiVectorSearch(
         cat === categoryFilter.toLowerCase() ||
         tags.some((t: string) => t.toUpperCase() === categoryFilter);
 
-      if (matchesQuery && (categoryFilter === 'ALL' || matchesCategory)) {
-        results.liveRooms.push({
+      if (matchesQuery && matchesCategory) {
+        const roomObj: LiveRoomResult = {
           id: docSnap.id,
           name,
           description: desc,
           hostHandle: data.hostHandle || '@ANON',
-          hostUid: data.hostUid || '',
-          listenerCount: Number(data.listenerCount || data.listeners || 1),
+          hostUid,
+          listenerCount: Number(data.participantCount || data.listenerCount || data.listeners || 1),
           tags,
           category: data.category,
-          isLive,
-        });
+          isLive: true,
+        };
+
+        // Deduplicate: Keep only the single latest room per host
+        if (!hostRoomMap.has(hostUid)) {
+          hostRoomMap.set(hostUid, roomObj);
+        }
       }
     });
+
+    results.liveRooms = Array.from(hostRoomMap.values());
   } catch (e) {
     console.warn('[SearchEngine] Rooms search error:', e);
   }

@@ -696,30 +696,30 @@ export default function SearchPage() {
                     <div
                       key={room.id}
                       onClick={() => router.push(`/room/${room.id}`)}
-                      className="p-4 border border-white bg-black hover:bg-neutral-950 transition-colors cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                      className="p-4 border border-neutral-800 bg-neutral-950 hover:border-white transition-colors cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl"
                     >
                       <div className="space-y-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] bg-white text-black font-bold px-2 py-0.5">
+                          <span className="text-[10px] bg-white text-black font-bold px-2 py-0.5 rounded">
                             LIVE STAGE
                           </span>
-                          <span className="text-[10px] text-neutral-500">HOST: {room.hostHandle}</span>
+                          <span className="text-[10px] text-neutral-400 font-mono">HOST: {room.hostHandle}</span>
                         </div>
                         <h4 className="text-sm font-bold text-white tracking-wide truncate">
                           {room.name}
                         </h4>
                         {room.description && (
-                          <p className="text-xs text-neutral-400 truncate">
+                          <p className="text-xs text-neutral-400 truncate font-sans">
                             {room.description}
                           </p>
                         )}
                       </div>
 
                       <div className="flex items-center gap-3 self-end sm:self-auto shrink-0">
-                        <span className="text-xs text-neutral-400">
-                          {room.listenerCount} LISTENERS
+                        <span className="text-xs text-neutral-400 font-mono">
+                          {room.listenerCount} {room.listenerCount === 1 ? 'LISTENER' : 'LISTENERS'}
                         </span>
-                        <button className="text-xs bg-white text-black font-bold px-3 py-1.5 hover:bg-neutral-200 transition-colors">
+                        <button className="text-xs bg-white text-black font-bold px-3 py-1.5 hover:bg-neutral-200 transition-colors rounded">
                           &gt;&gt; ENTER STAGE
                         </button>
                       </div>

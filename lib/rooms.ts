@@ -186,6 +186,20 @@ export async function createRoom(roomData: {
       broadcastEngine: roomData.broadcastEngine || "STAGE",
     };
 
+    // Deactivate old active rooms of the same host to prevent duplicate stage entries
+    try {
+      const oldRoomsSnap = await getDocs(
+        query(
+          collection(db, ROOMS_COLLECTION),
+          where("hostUid", "==", roomData.hostUid),
+          where("isActive", "==", true)
+        )
+      );
+      for (const oldDoc of oldRoomsSnap.docs) {
+        updateDoc(oldDoc.ref, { isActive: false, isEnded: true, updatedAt: serverTimestamp() }).catch(() => {});
+      }
+    } catch {}
+
     console.log("[createRoom] Attempting to save room to Firestore:", newRoom);
     await setDoc(roomRef, newRoom);
     console.log("[createRoom] Room saved successfully to Firestore with ID:", roomId);
