@@ -29,7 +29,7 @@ export default function LiveNewsDispatches({
   const router = useRouter();
   const { user } = useAuth();
   const [creatingRoomId, setCreatingRoomId] = useState<string | null>(null);
-  const [visibleCount, setVisibleCount] = useState<number>(6);
+  const [visibleCount, setVisibleCount] = useState<number>(15);
 
   const handleStartLiveStage = async (e: React.MouseEvent, item: NewsDispatch) => {
     e.stopPropagation();
@@ -109,12 +109,12 @@ export default function LiveNewsDispatches({
             return (
               <div
                 key={item.id}
-                className="border border-neutral-900 bg-black p-4 space-y-3 hover:border-neutral-700 transition-colors group"
+                className="border border-neutral-900 bg-black p-4 space-y-3 hover:border-neutral-700 transition-colors group rounded-xl"
               >
                 {/* Wire Meta & Timestamp */}
                 <div className="flex items-center justify-between text-[10px] text-neutral-500">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-white bg-neutral-950 border border-neutral-800 px-1.5 py-0.5">
+                    <span className="font-bold text-white bg-neutral-950 border border-neutral-800 px-1.5 py-0.5 rounded">
                       {item.source}
                     </span>
                     <span>•</span>
@@ -137,7 +137,7 @@ export default function LiveNewsDispatches({
                     {item.title}
                   </h4>
                   {item.description && (
-                    <p className="text-xs text-neutral-400 leading-relaxed line-clamp-2">
+                    <p className="text-xs text-neutral-400 leading-relaxed line-clamp-2 font-sans">
                       {item.description}
                     </p>
                   )}
@@ -150,7 +150,7 @@ export default function LiveNewsDispatches({
                     <button
                       onClick={(e) => handleStartLiveStage(e, item)}
                       disabled={isCreating}
-                      className="flex items-center gap-1.5 text-[11px] bg-white text-black font-bold px-3 py-1.5 hover:bg-neutral-200 transition-colors cursor-pointer disabled:opacity-50"
+                      className="flex items-center gap-1.5 text-[11px] bg-white text-black font-bold px-3 py-1.5 hover:bg-neutral-200 transition-colors cursor-pointer disabled:opacity-50 rounded"
                     >
                       {isCreating ? (
                         <Loader2 className="w-3 h-3 animate-spin" />
@@ -163,7 +163,7 @@ export default function LiveNewsDispatches({
                     {/* Record Voice Reply Take */}
                     <button
                       onClick={(e) => handleRecordAudioTake(e, item)}
-                      className="flex items-center gap-1.5 text-[11px] border border-neutral-800 text-neutral-300 hover:border-white hover:text-white px-2.5 py-1.5 transition-colors cursor-pointer"
+                      className="flex items-center gap-1.5 text-[11px] border border-neutral-800 text-neutral-300 hover:border-white hover:text-white px-2.5 py-1.5 transition-colors cursor-pointer rounded"
                     >
                       <Mic2 className="w-3 h-3 text-neutral-400" />
                       <span>RECORD TAKE</span>
@@ -189,12 +189,20 @@ export default function LiveNewsDispatches({
 
           {/* Load More Dispatches Button */}
           {hasMore && (
-            <button
-              onClick={() => setVisibleCount((prev) => prev + 6)}
-              className="w-full py-3 border border-neutral-800 hover:border-white text-neutral-300 hover:text-white bg-neutral-950 text-xs font-mono font-bold uppercase tracking-widest transition-colors cursor-pointer"
-            >
-              [ + LOAD MORE SECTOR DISPATCHES ({dispatches.length - visibleCount} REMAINING) ]
-            </button>
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={() => setVisibleCount((prev) => prev + 15)}
+                className="flex-1 py-3 border border-neutral-800 hover:border-white text-neutral-300 hover:text-white bg-neutral-950 text-xs font-mono font-bold uppercase tracking-widest transition-colors cursor-pointer rounded-xl"
+              >
+                [ + SHOW NEXT 15 DISPATCHES ({dispatches.length - visibleCount} MORE) ]
+              </button>
+              <button
+                onClick={() => setVisibleCount(dispatches.length)}
+                className="px-4 py-3 border border-neutral-800 hover:border-white text-neutral-300 hover:text-white bg-neutral-950 text-xs font-mono font-bold uppercase tracking-widest transition-colors cursor-pointer rounded-xl"
+              >
+                [ ALL ({dispatches.length}) ]
+              </button>
+            </div>
           )}
         </div>
       )}

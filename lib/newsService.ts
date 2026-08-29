@@ -5518,8 +5518,35 @@ export async function fetchLiveNewsDispatches(
     }
   }
 
-  deduplicated.sort((a, b) => b.timestamp - a.timestamp);
-  const finalDispatches = deduplicated.slice(0, 50);
+  // Priority scoring: Boost trending & controversial high-voltage headlines to top
+  const HIGH_VOLTAGE_KEYWORDS = [
+    'scandal', 'controversy', 'war', 'crackdown', 'boycott', 'feud', 'standoff', 'crisis',
+    'lawsuit', 'protest', 'collapse', 'outrage', 'ban', 'leak', 'fraud', 'shock', 'surge',
+    'record', 'all-time high', 'investigation', 'verdict', 'breakdown', 'ai', 'bitcoin',
+    'hindenburg', 'gambhir', 'autotune', 'scalping', 'deepseek', 'musk', 'openai', '70-hour',
+    'antitrust', 'dispute', 'probe', 'bubble', 'bribe', 'strikes', 'crash', 'banned', 'accused'
+  ];
+
+  const getDispatchPriorityScore = (item: NewsDispatch): number => {
+    let score = item.timestamp;
+    const text = `${item.title} ${item.description} ${item.topicTag}`.toLowerCase();
+    
+    let matches = 0;
+    for (const kw of HIGH_VOLTAGE_KEYWORDS) {
+      if (text.includes(kw)) {
+        matches++;
+      }
+    }
+
+    if (item.category === 'trending') {
+      score += 4 * 60 * 60 * 1000;
+    }
+    score += matches * 3 * 60 * 60 * 1000;
+    return score;
+  };
+
+  deduplicated.sort((a, b) => getDispatchPriorityScore(b) - getDispatchPriorityScore(a));
+  const finalDispatches = deduplicated.slice(0, 100);
 
   _newsCache[cacheKey] = {
     timestamp: now,

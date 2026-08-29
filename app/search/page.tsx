@@ -732,7 +732,7 @@ export default function SearchPage() {
             {/* 2. MATCHING WORLD NEWS WIRE DISPATCHES */}
             {newsDispatches.length > 0 && (
               <LiveNewsDispatches
-                dispatches={newsDispatches.slice(0, 5)}
+                dispatches={newsDispatches}
                 loading={newsLoading}
                 categoryTitle={`GLOBAL WIRE: ${activeTab === 'ALL' ? 'BREAKING' : activeTab}`}
               />
