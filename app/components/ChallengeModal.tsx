@@ -35,7 +35,6 @@ const ARCADE_GAMES: { type: ArcadeGameType; name: string; icon: string; desc: st
   { type: "dots_and_boxes", name: "DOTS & BOXES", icon: "🕸️", desc: "Grid lock box capture strategy" },
   { type: "snakes_and_ladders", name: "SNAKES & LADDERS", icon: "🪜", desc: "10x10 circuit jumpers race" },
   { type: "connect4", name: "CONNECT FOUR MATRIX", icon: "🔴", desc: "7x6 data-stream token drop battle" },
-  { type: "battleship", name: "BATTLESHIP RADAR", icon: "🚢", desc: "10x10 radar naval command artillery" },
   { type: "sudoku", name: "1V1 SUDOKU RACE", icon: "🧩", desc: "Speed data-grid hacking race" },
   { type: "snake", name: "SNAKE SCORE DUEL", icon: "🐍", desc: "Phosphor terminal high-score showdown" },
   { type: "hand_cricket", name: "HAND CRICKET (ODD-EVEN)", icon: "🏏", desc: "1-6 finger throw mind game duel" },

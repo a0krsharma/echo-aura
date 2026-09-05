@@ -44,7 +44,6 @@ const ALL_TOURNAMENT_GAMES = [
   { id: "connect4", name: "Connect 4 Arena", icon: "🔴", category: "BOARD", desc: "3D upright arcade grid with gravity drop" },
   { id: "snakes_and_ladders", name: "Snakes & Ladders", icon: "🪜", category: "BOARD", desc: "3D golden ladders & ivory dice" },
   { id: "dots_and_boxes", name: "Dots & Boxes", icon: "🕸️", category: "BOARD", desc: "Tactical line-drawing box capture" },
-  { id: "battleship", name: "Naval Battleship", icon: "🎯", category: "BOARD", desc: "3D holographic radar fleet combat" },
 
   // Physics & Sports
   { id: "carrom", name: "Championship Carrom", icon: "⚪", category: "PHYSICS", desc: "19-piece tournament rack with real physics" },

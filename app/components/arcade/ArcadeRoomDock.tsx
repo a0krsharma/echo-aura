@@ -14,7 +14,6 @@ import {
 import LudoGame from "./LudoGame";
 import ChessGame from "./ChessGame";
 import Connect4Game from "./Connect4Game";
-import BattleshipGame from "./BattleshipGame";
 import SudokuGame from "./SudokuGame";
 import Game2048 from "./Game2048";
 import WordleGame from "./WordleGame";
@@ -99,7 +98,6 @@ const CATEGORIZED_GAMES = [
   { id: "hand_cricket", name: "🏏 HAND CRICKET", cat: "PAPER" },
   { id: "raja_mantri", name: "👑 RAJA MANTRI", cat: "PAPER" },
   { id: "connect4", name: "🔴 CONNECT 4", cat: "TACTICAL" },
-  { id: "battleship", name: "🚢 BATTLESHIP", cat: "TACTICAL" },
   { id: "skribbl", name: "🎨 SKRIBBL", cat: "PARTY" },
   { id: "codenames", name: "🕵️ CODENAMES", cat: "PARTY" },
   { id: "liars_dice", name: "🎲 LIAR'S DICE", cat: "CARD" },
@@ -633,9 +631,6 @@ export default function ArcadeRoomDock({ roomId, isHost }: ArcadeRoomDockProps) 
           )}
           {match.gameType === "connect4" && (
             <Connect4Game match={match} currentUid={user?.uid || ""} isHost={isHost} />
-          )}
-          {match.gameType === "battleship" && (
-            <BattleshipGame match={match} currentUid={user?.uid || ""} isHost={isHost} />
           )}
           {match.gameType === "sudoku" && (
             <SudokuGame match={match} currentUid={user?.uid || ""} isHost={isHost} />

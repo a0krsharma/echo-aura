@@ -40,7 +40,6 @@ const GAME_META: Record<string, { name: string; icon: string; desc: string; maxA
   snakes_and_ladders: { name: "SNAKES & LADDERS", icon: "🪜", desc: "10x10 circuit jumpers race", maxAllowed: 4 },
   pool: { name: "8-BALL POOL MATRIX", icon: "🎱", desc: "2D physics cue table solids & stripes clearance", maxAllowed: 2 },
   carrom: { name: "CYBER CARROM ARENA", icon: "⚪", desc: "Striker aiming with baseline position & queen cover", maxAllowed: 4 },
-  battleship: { name: "NAVAL BATTLESHIP", icon: "🚢", desc: "10x10 radar fleet positioning & missile radar strikes", maxAllowed: 2 },
   "2048": { name: "2048 BINARY MERGE", icon: "🔢", desc: "Slide & merge matching numbers", maxAllowed: 1 },
   wordle: { name: "CIPHER WORDLE", icon: "🔤", desc: "Decrypt 5-letter secret system cipher", maxAllowed: 1 },
   puzzle15: { name: "15-PUZZLE SLIDER", icon: "🧩", desc: "Slide 15 tiles into numerical order", maxAllowed: 1 },

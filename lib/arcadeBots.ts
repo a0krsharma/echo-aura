@@ -17,7 +17,6 @@
  * - Hand Cricket (Odd-Even)
  * - Raja Mantri Chor Sipahi
  * - Connect Four
- * - Battleship Radar Command
  * - Sudoku
  * - Gomoku (5 in a Row)
  * - Reversi / Othello
@@ -35,7 +34,6 @@ import {
   submitSudokuCell,
   makeChessMove,
   dropConnect4Token,
-  fireBattleshipShot,
   fireCarromShot,
   firePoolShot,
   playUnoCard,
@@ -982,47 +980,6 @@ export async function executeConnect4BotTurn(match: ArcadeMatch): Promise<void> 
     await dropConnect4Token(match.id, botPlayer.uid, targetCol);
   } catch (err) {
     console.error("[ArcadeBot] Connect4 error:", err);
-  } finally {
-    activeBotRuns.delete(runKey);
-  }
-}
-
-/**
- * Battleship Bot
- */
-export async function executeBattleshipBotTurn(match: ArcadeMatch): Promise<void> {
-  if (!match.battleshipState || match.status !== "PLAYING") return;
-
-  const bs = match.battleshipState;
-  const botPlayer = Object.values(match.players || {}).find(
-    (p) => p.uid === bs.currentTurnUid && p.isBot
-  );
-  if (!botPlayer) return;
-
-  const runKey = `${match.id}_battleship_bot`;
-  if (activeBotRuns.has(runKey)) return;
-  activeBotRuns.add(runKey);
-
-  try {
-    await new Promise((resolve) => setTimeout(resolve, 1200));
-    const shots: [number, number, boolean][] = JSON.parse(bs.p2ShotsStr || "[]");
-
-    const taken = new Set(shots.map(([r, c]) => `${r}-${c}`));
-    const untaken: [number, number][] = [];
-    for (let r = 0; r < 10; r++) {
-      for (let c = 0; c < 10; c++) {
-        if (!taken.has(`${r}-${c}`)) {
-          untaken.push([r, c]);
-        }
-      }
-    }
-
-    if (untaken.length === 0) return;
-
-    const [r, c] = untaken[Math.floor(Math.random() * untaken.length)];
-    await fireBattleshipShot(match.id, botPlayer.uid, r, c);
-  } catch (err) {
-    console.error("[ArcadeBot] Battleship error:", err);
   } finally {
     activeBotRuns.delete(runKey);
   }

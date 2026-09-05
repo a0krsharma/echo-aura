@@ -8,12 +8,11 @@
  * 1. Cyber Ludo (15x15 Physical Board)
  * 2. Chess (Grid Protocol 8x8)
  * 3. Connect Four (Data-Stream Grid)
- * 4. Battleship (Sub-Grid Radar Command)
- * 5. Sudoku (Matrix Data-Grid)
- * 6. Minesweeper (Hex-Node Logic Bomb Clearing)
- * 7. 2048 (Binary Merge Matrix)
- * 8. Retro Snake (Terminal Phosphor Canvas)
- * 9. Wordle / Cipher (Code-Breaker Protocol)
+ * 4. Sudoku (Matrix Data-Grid)
+ * 5. Minesweeper (Hex-Node Logic Bomb Clearing)
+ * 6. 2048 (Binary Merge Matrix)
+ * 7. Retro Snake (Terminal Phosphor Canvas)
+ * 8. Wordle / Cipher (Code-Breaker Protocol)
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -102,7 +101,6 @@ export type ArcadeGameType =
   | "pool"
   | "carrom"
   | "liars_dice"
-  | "battleship"
   | "yahtzee"
   | "pen_fight"
   | "monopoly";
@@ -188,21 +186,6 @@ export interface Connect4State {
   currentTurn: "RED" | "YELLOW";
   winner?: string;
   isDraw?: boolean;
-  lastActionLog?: string;
-}
-
-export interface BattleshipState {
-  p1Uid: string;
-  p2Uid: string;
-  p1ShipsStr: string; // [row, col][] coordinates
-  p2ShipsStr: string;
-  p1ShotsStr: string; // [row, col, hit][] coordinates
-  p2ShotsStr: string;
-  currentTurnUid: string;
-  p1Hits: number;
-  p2Hits: number;
-  totalShipCells: number;
-  phase: "DEPLOYING" | "BATTLE";
   lastActionLog?: string;
 }
 
@@ -889,7 +872,6 @@ export interface ArcadeMatch {
   ludoState?: LudoState;
   chessState?: ChessState;
   connect4State?: Connect4State;
-  battleshipState?: BattleshipState;
   minesweeperState?: MinesweeperState;
   game2048State?: Game2048State;
   snakeState?: SnakeState;
@@ -1153,22 +1135,6 @@ export async function createArcadeMatch(params: {
       gridStr: JSON.stringify(grid),
       currentTurn: "RED",
       lastActionLog: "Connect Four data-stream online. RED to drop token.",
-    };
-  } else if (params.gameType === "battleship") {
-    const botShips = [[0, 0], [0, 1], [0, 2], [2, 3], [3, 3], [5, 5], [6, 5], [7, 5]];
-    matchData.battleshipState = {
-      p1Uid: params.hostUid,
-      p2Uid: mode === "VS_COMPUTER" ? `bot_${matchId}_naval` : "",
-      p1ShipsStr: JSON.stringify([[1, 1], [1, 2], [1, 3], [3, 4], [4, 4], [6, 6], [7, 6], [8, 6]]),
-      p2ShipsStr: JSON.stringify(botShips),
-      p1ShotsStr: JSON.stringify([]),
-      p2ShotsStr: JSON.stringify([]),
-      currentTurnUid: params.hostUid,
-      p1Hits: 0,
-      p2Hits: 0,
-      totalShipCells: 8,
-      phase: "BATTLE",
-      lastActionLog: "Radar Command active. Fire your first grid shot!",
     };
   } else if (params.gameType === "sudoku") {
     matchData.sudokuState = {
@@ -2260,10 +2226,6 @@ export async function joinArcadeMatch(
     updatedAt: serverTimestamp(),
   };
 
-  if (match.gameType === "battleship" && !match.battleshipState?.p2Uid) {
-    updates["battleshipState.p2Uid"] = user.uid;
-  }
-
   if (match.gameType === "uno" && match.unoState) {
     const hands: Record<string, UnoCard[]> = JSON.parse(match.unoState.handsStr || "{}");
     let drawDeck: UnoCard[] = JSON.parse(match.unoState.drawDeckStr || "[]");
@@ -2329,10 +2291,6 @@ export async function addGhostParticipantToMatch(
     status: currentPlayers.length + 1 >= 2 ? "PLAYING" : match.status,
     updatedAt: serverTimestamp(),
   };
-
-  if (match.gameType === "battleship" && !match.battleshipState?.p2Uid) {
-    updates["battleshipState.p2Uid"] = ghostUid;
-  }
 
   await updateDoc(matchRef, updates);
   return ghostUid;
@@ -2599,56 +2557,6 @@ export async function dropConnect4Token(
 
   await updateDoc(matchRef, updates);
   return { won, isDraw: isFull && !won };
-}
-
-// ── Battleship Shot ──────────────────────────────────────────────────────────
-export async function fireBattleshipShot(
-  matchId: string,
-  playerUid: string,
-  row: number,
-  col: number
-): Promise<{ hit: boolean; won: boolean }> {
-  const db = getFirebaseDb();
-  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
-  const snap = await getDoc(matchRef);
-  if (!snap.exists()) throw new Error("Match not found");
-  const match = snap.data() as ArcadeMatch;
-  if (!match.battleshipState) throw new Error("Not a battleship match");
-
-  const bs = match.battleshipState;
-  const isP1 = playerUid === bs.p1Uid;
-  const targetShips: [number, number][] = JSON.parse(isP1 ? bs.p2ShipsStr : bs.p1ShipsStr);
-  const shots: [number, number, boolean][] = JSON.parse(isP1 ? bs.p1ShotsStr : bs.p2ShotsStr);
-
-  const isHit = targetShips.some(([r, c]) => r === row && c === col);
-  shots.push([row, col, isHit]);
-
-  const newHits = (isP1 ? bs.p1Hits : bs.p2Hits) + (isHit ? 1 : 0);
-  const won = newHits >= bs.totalShipCells;
-
-  const otherUid = isP1 ? bs.p2Uid : bs.p1Uid;
-  const nextTurnUid = isHit ? playerUid : otherUid;
-
-  const coordNotation = `${String.fromCharCode(65 + col)}${row + 1}`;
-  const updates: any = {
-    [isP1 ? "battleshipState.p1ShotsStr" : "battleshipState.p2ShotsStr"]: JSON.stringify(shots),
-    [isP1 ? "battleshipState.p1Hits" : "battleshipState.p2Hits"]: newHits,
-    "battleshipState.currentTurnUid": nextTurnUid,
-    "battleshipState.lastActionLog": `${match.players[playerUid]?.handle || "Player"} fired at ${coordNotation}: ${isHit ? "💥 DIRECT HIT!" : "🌊 MISS"}`,
-    updatedAt: serverTimestamp(),
-  };
-
-  if (won) {
-    updates.status = "FINISHED";
-    updates.winnerUid = playerUid;
-    updates.winnerHandle = match.players[playerUid]?.handle || "@ANON";
-    if (!match.players[playerUid]?.isBot) {
-      await awardAura(playerUid, match.stakes * 2 || 100);
-    }
-  }
-
-  await updateDoc(matchRef, updates);
-  return { hit: isHit, won };
 }
 
 // ── Minesweeper Cell Action ──────────────────────────────────────────────────

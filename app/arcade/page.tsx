@@ -52,7 +52,6 @@ import BingoGame from "@/app/components/arcade/BingoGame";
 import NPATGame from "@/app/components/arcade/NPATGame";
 import HangmanGame from "@/app/components/arcade/HangmanGame";
 import MathBlitzGame from "@/app/components/arcade/MathBlitzGame";
-import BattleshipGame from "@/app/components/arcade/BattleshipGame";
 import MonopolyGame from "@/app/components/arcade/MonopolyGame";
 import ArcadeInviteModal from "@/app/components/arcade/ArcadeInviteModal";
 import ArcadeCreateModal from "@/app/components/arcade/ArcadeCreateModal";
@@ -113,7 +112,6 @@ const CLEAN_GAMES: MasterRankedGame[] = [
   { id: "connect4", name: "Connect 4 Arena", category: "BOARD", icon: "🔴", description: "3D upright arcade grid with gravity drop" },
   { id: "snakes_and_ladders", name: "Snakes & Ladders", category: "BOARD", icon: "🪜", description: "3D golden ladders, snakes & ivory dice" },
   { id: "dots_and_boxes", name: "Dots & Boxes", category: "BOARD", icon: "🕸️", description: "Tactical line-drawing box capture" },
-  { id: "battleship", name: "Naval Battleship", category: "BOARD", icon: "🎯", description: "3D holographic radar fleet combat" },
   { id: "monopoly", name: "Monopoly Real Estate", category: "BOARD", icon: "🎩", description: "Official 40-tile tournament real estate with 32-house lock & Markov ROI" },
 
   // ── ♠️ Casino, Card & Bluffing ──
@@ -798,9 +796,6 @@ function ArcadeContent() {
             )}
             {activeMatch.gameType === "dots_and_boxes" && (
               <DotsAndBoxesGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
-            )}
-            {activeMatch.gameType === "battleship" && (
-              <BattleshipGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
             )}
             {activeMatch.gameType === "monopoly" && (
               <MonopolyGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} onRematch={handleRematch} />
