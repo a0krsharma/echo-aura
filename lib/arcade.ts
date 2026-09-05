@@ -2932,7 +2932,8 @@ export async function updateGlowHockeyScore(
   matchId: string,
   scorerUid: string,
   p1Score: number,
-  p2Score: number
+  p2Score: number,
+  targetScore: number = 7
 ): Promise<void> {
   const db = getFirebaseDb();
   const matchRef = doc(db, ARCADE_COLLECTION, matchId);
@@ -2940,7 +2941,7 @@ export async function updateGlowHockeyScore(
   if (!snap.exists()) return;
   const match = snap.data() as ArcadeMatch;
 
-  const isWon = p1Score >= 7 || p2Score >= 7;
+  const isWon = p1Score >= targetScore || p2Score >= targetScore;
   const updates: any = {
     "glowHockeyState.p1Score": p1Score,
     "glowHockeyState.p2Score": p2Score,
