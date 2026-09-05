@@ -3,7 +3,21 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { updateSnakeScore, type ArcadeMatch } from "@/lib/arcade";
 import ArcadeSocialDeck from "./ArcadeSocialDeck";
-import { Volume2, VolumeX, RotateCcw, Play, Pause, Award, Shield, Sparkles } from "lucide-react";
+import {
+  Volume2,
+  VolumeX,
+  Play,
+  Pause,
+  RotateCcw,
+  ArrowUp,
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  Shield,
+  Zap,
+  Grid,
+  Trophy,
+} from "lucide-react";
 
 interface SnakeGameProps {
   match: ArcadeMatch;
@@ -47,11 +61,11 @@ const MAZE_OBSTACLES: Record<MazeType, [number, number][]> = {
 const SPEED_CONFIG: Record<number, { ms: number; label: string }> = {
   1: { ms: 220, label: "1 (SLOW)" },
   2: { ms: 190, label: "2" },
-  3: { ms: 160, label: "3 (CASUAL)" },
+  3: { ms: 160, label: "3" },
   4: { ms: 135, label: "4" },
   5: { ms: 110, label: "5 (CLASSIC)" },
   6: { ms: 90, label: "6" },
-  7: { ms: 75, label: "7 (FAST)" },
+  7: { ms: 75, label: "7" },
   8: { ms: 60, label: "8" },
   9: { ms: 48, label: "9 (TURBO)" },
 };
@@ -63,7 +77,9 @@ class NokiaAudioEngine {
 
   private initCtx() {
     if (!this.ctx && typeof window !== "undefined") {
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (AudioCtx) {
         this.ctx = new AudioCtx();
       }
@@ -73,7 +89,12 @@ class NokiaAudioEngine {
     }
   }
 
-  public playTone(freq: number, durationMs: number, type: OscillatorType = "square", gainVal = 0.12) {
+  public playTone(
+    freq: number,
+    durationMs: number,
+    type: OscillatorType = "square",
+    gainVal = 0.12
+  ) {
     if (this.isMuted) return;
     try {
       this.initCtx();
@@ -85,7 +106,10 @@ class NokiaAudioEngine {
       osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
 
       gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + durationMs / 1000);
+      gain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        this.ctx.currentTime + durationMs / 1000
+      );
 
       osc.connect(gain);
       gain.connect(this.ctx.destination);
@@ -97,12 +121,12 @@ class NokiaAudioEngine {
     }
   }
 
-  // Key click
-  public playKeyClick() {
+  // Tactile click
+  public playClick() {
     this.playTone(850, 14, "square", 0.08);
   }
 
-  // Turn blip
+  // Snake turn blip
   public playTurn() {
     this.playTone(600, 12, "square", 0.05);
   }
@@ -124,7 +148,7 @@ class NokiaAudioEngine {
     setTimeout(() => this.playTone(784, 50, "square", 0.12), 90);
   }
 
-  // Eat Bonus Insect (high victory arpeggio)
+  // Eat Bonus Insect (victory fanfare arpeggio)
   public playEatBonus() {
     if (this.isMuted) return;
     const notes = [1046, 1318, 1568, 2093];
@@ -133,7 +157,7 @@ class NokiaAudioEngine {
     });
   }
 
-  // Crash / Wall Hit
+  // Collision Crunch
   public playCrash() {
     if (this.isMuted) return;
     try {
@@ -157,13 +181,13 @@ class NokiaAudioEngine {
     }
   }
 
-  // Authentic Nokia 3310 Snake Game Over jingle (descending)
+  // Authentic descending Nokia 3310 Game Over melody
   public playGameOverJingle() {
     if (this.isMuted) return;
     const melody = [
-      { freq: 698, dur: 90 },  // F5
-      { freq: 587, dur: 90 },  // D5
-      { freq: 466, dur: 90 },  // Bb4
+      { freq: 698, dur: 90 }, // F5
+      { freq: 587, dur: 90 }, // D5
+      { freq: 466, dur: 90 }, // Bb4
       { freq: 392, dur: 110 }, // G4
       { freq: 311, dur: 120 }, // Eb4
       { freq: 261, dur: 220 }, // C4
@@ -201,9 +225,6 @@ export default function SnakeGame({ match, currentUid }: SnakeGameProps) {
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [isPaused, setIsPaused] = useState<boolean>(false);
 
-  // LCD display blinking ticks for retro animation
-  const [lcdTick, setLcdTick] = useState<number>(0);
-
   // References to keep event handlers fresh
   const directionRef = useRef<Direction>(direction);
   directionRef.current = direction;
@@ -229,7 +250,7 @@ export default function SnakeGame({ match, currentUid }: SnakeGameProps) {
   const bonusRef = useRef<BonusInsect | null>(bonus);
   bonusRef.current = bonus;
 
-  // Touch swipe gesture refs
+  // Touch & Swipe gesture refs
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   // Audio mute sync
@@ -270,70 +291,77 @@ export default function SnakeGame({ match, currentUid }: SnakeGameProps) {
   }, []);
 
   // Spawns standard apple dot
-  const spawnFood = useCallback((
-    currentSnake: [number, number][],
-    currentMaze: MazeType,
-    currentBonus: BonusInsect | null
-  ): [number, number] => {
-    const obstacles = getObstacles(currentMaze);
-    let attempts = 0;
-    while (attempts < 500) {
-      const r = Math.floor(Math.random() * ROWS);
-      const c = Math.floor(Math.random() * COLS);
+  const spawnFood = useCallback(
+    (
+      currentSnake: [number, number][],
+      currentMaze: MazeType,
+      currentBonus: BonusInsect | null
+    ): [number, number] => {
+      const obstacles = getObstacles(currentMaze);
+      let attempts = 0;
+      while (attempts < 500) {
+        const r = Math.floor(Math.random() * ROWS);
+        const c = Math.floor(Math.random() * COLS);
 
-      // Check box border walls
-      if (currentMaze === "BOX" && (r === 0 || r === ROWS - 1 || c === 0 || c === COLS - 1)) {
+        // Check box border walls
+        if (
+          currentMaze === "BOX" &&
+          (r === 0 || r === ROWS - 1 || c === 0 || c === COLS - 1)
+        ) {
+          attempts++;
+          continue;
+        }
+
+        const onSnake = currentSnake.some(([sr, sc]) => sr === r && sc === c);
+        const onObstacle = obstacles.some(([or, oc]) => or === r && oc === c);
+        const onBonus =
+          currentBonus && currentBonus.pos[0] === r && currentBonus.pos[1] === c;
+
+        if (!onSnake && !onObstacle && !onBonus) {
+          return [r, c];
+        }
         attempts++;
-        continue;
       }
-
-      // Check snake collision
-      const onSnake = currentSnake.some(([sr, sc]) => sr === r && sc === c);
-      // Check obstacle collision
-      const onObstacle = obstacles.some(([or, oc]) => or === r && oc === c);
-      // Check bonus collision
-      const onBonus = currentBonus && currentBonus.pos[0] === r && currentBonus.pos[1] === c;
-
-      if (!onSnake && !onObstacle && !onBonus) {
-        return [r, c];
-      }
-      attempts++;
-    }
-    return [5, 5];
-  }, [getObstacles]);
+      return [5, 5];
+    },
+    [getObstacles]
+  );
 
   // Spawns bonus creature (Snake II feature)
-  const spawnBonus = useCallback((
-    currentSnake: [number, number][],
-    currentMaze: MazeType,
-    currentFood: [number, number]
-  ): BonusInsect => {
-    const obstacles = getObstacles(currentMaze);
-    let r = Math.floor(Math.random() * (ROWS - 2)) + 1;
-    let c = Math.floor(Math.random() * (COLS - 2)) + 1;
-    let attempts = 0;
-    while (attempts < 300) {
-      r = Math.floor(Math.random() * (ROWS - 2)) + 1;
-      c = Math.floor(Math.random() * (COLS - 2)) + 1;
-      const onSnake = currentSnake.some(([sr, sc]) => sr === r && sc === c);
-      const onObstacle = obstacles.some(([or, oc]) => or === r && oc === c);
-      const onFood = currentFood[0] === r && currentFood[1] === c;
-      if (!onSnake && !onObstacle && !onFood) break;
-      attempts++;
-    }
+  const spawnBonus = useCallback(
+    (
+      currentSnake: [number, number][],
+      currentMaze: MazeType,
+      currentFood: [number, number]
+    ): BonusInsect => {
+      const obstacles = getObstacles(currentMaze);
+      let r = Math.floor(Math.random() * (ROWS - 2)) + 1;
+      let c = Math.floor(Math.random() * (COLS - 2)) + 1;
+      let attempts = 0;
+      while (attempts < 300) {
+        r = Math.floor(Math.random() * (ROWS - 2)) + 1;
+        c = Math.floor(Math.random() * (COLS - 2)) + 1;
+        const onSnake = currentSnake.some(([sr, sc]) => sr === r && sc === c);
+        const onObstacle = obstacles.some(([or, oc]) => or === r && oc === c);
+        const onFood = currentFood[0] === r && currentFood[1] === c;
+        if (!onSnake && !onObstacle && !onFood) break;
+        attempts++;
+      }
 
-    nokiaAudio.playBonusSpawn();
-    return {
-      pos: [r, c],
-      timeLeft: 60, // 60 ticks
-      maxTime: 60,
-      points: 100,
-    };
-  }, [getObstacles]);
+      nokiaAudio.playBonusSpawn();
+      return {
+        pos: [r, c],
+        timeLeft: 60,
+        maxTime: 60,
+        points: 100,
+      };
+    },
+    [getObstacles]
+  );
 
   // Start new game
   const handleStartGame = () => {
-    nokiaAudio.playKeyClick();
+    nokiaAudio.playClick();
     const initialSnake: [number, number][] = [
       [8, 12],
       [8, 11],
@@ -358,11 +386,11 @@ export default function SnakeGame({ match, currentUid }: SnakeGameProps) {
   // Pause / Resume
   const handleTogglePause = () => {
     if (!isPlaying || isGameOver) return;
-    nokiaAudio.playKeyClick();
+    nokiaAudio.playClick();
     setIsPaused((p) => !p);
   };
 
-  // Safe direction changer (prevents 180° instant self-reversals)
+  // Safe direction changer (prevents 180° self reversals)
   const changeDirection = useCallback((newDir: Direction) => {
     const curr = directionRef.current;
     if (
@@ -374,7 +402,13 @@ export default function SnakeGame({ match, currentUid }: SnakeGameProps) {
       if (nextDirectionRef.current !== newDir) {
         nextDirectionRef.current = newDir;
         nokiaAudio.playTurn();
-        if (navigator.vibrate) navigator.vibrate(10);
+        if (typeof window !== "undefined" && navigator.vibrate) {
+          try {
+            navigator.vibrate(10);
+          } catch {
+            // Ignore
+          }
+        }
       }
     }
   }, []);
@@ -383,9 +417,6 @@ export default function SnakeGame({ match, currentUid }: SnakeGameProps) {
   const step = useCallback(() => {
     if (!isPlayingRef.current || isPausedRef.current || isGameOverRef.current) return;
 
-    setLcdTick((t) => (t + 1) % 1000);
-
-    // Apply buffered direction
     const dir = nextDirectionRef.current;
     directionRef.current = dir;
 
@@ -422,10 +453,12 @@ export default function SnakeGame({ match, currentUid }: SnakeGameProps) {
         return prevSnake;
       }
 
-      // Check self-collision (excluding the tail if it moves)
+      // Check self-collision
       const willGrow =
         (newR === food[0] && newC === food[1]) ||
-        (bonusRef.current && newR === bonusRef.current.pos[0] && newC === bonusRef.current.pos[1]);
+        (bonusRef.current &&
+          newR === bonusRef.current.pos[0] &&
+          newC === bonusRef.current.pos[1]);
 
       const bodyToCheck = willGrow ? prevSnake : prevSnake.slice(0, -1);
       if (bodyToCheck.some(([sr, sc]) => sr === newR && sc === newC)) {
@@ -455,10 +488,18 @@ export default function SnakeGame({ match, currentUid }: SnakeGameProps) {
         }
 
         setFood(spawnFood(newSnake, currentMaze, nextBonus));
-      } else if (bonusRef.current && newR === bonusRef.current.pos[0] && newC === bonusRef.current.pos[1]) {
+      } else if (
+        bonusRef.current &&
+        newR === bonusRef.current.pos[0] &&
+        newC === bonusRef.current.pos[1]
+      ) {
         // Handle Bonus Insect consumption
         nokiaAudio.playEatBonus();
-        const bonusPts = Math.round(bonusRef.current.points * (bonusRef.current.timeLeft / bonusRef.current.maxTime)) + 50;
+        const bonusPts =
+          Math.round(
+            bonusRef.current.points *
+              (bonusRef.current.timeLeft / bonusRef.current.maxTime)
+          ) + 50;
         const newScore = score + bonusPts;
         setScore(newScore);
         updateLocalHighScore(newScore);
@@ -473,10 +514,14 @@ export default function SnakeGame({ match, currentUid }: SnakeGameProps) {
           if (!prevB) return null;
           if (prevB.timeLeft <= 1) return null;
 
-          // Bonus insect crawls 1 cell occasionally
           let nextPos = prevB.pos;
           if (prevB.timeLeft % 8 === 0) {
-            const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+            const dirs = [
+              [-1, 0],
+              [1, 0],
+              [0, -1],
+              [0, 1],
+            ];
             const [dr, dc] = dirs[Math.floor(Math.random() * dirs.length)];
             const testR = Math.max(1, Math.min(ROWS - 2, prevB.pos[0] + dr));
             const testC = Math.max(1, Math.min(COLS - 2, prevB.pos[1] + dc));
@@ -518,18 +563,41 @@ export default function SnakeGame({ match, currentUid }: SnakeGameProps) {
   // Physical Keyboard controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Prevent scrolling on arrow keys or space
-      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(e.code)) {
+      if (
+        ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(
+          e.code
+        )
+      ) {
         e.preventDefault();
       }
 
-      if (e.code === "ArrowUp" || e.code === "KeyW" || e.code === "Numpad8" || e.key === "2") {
+      if (
+        e.code === "ArrowUp" ||
+        e.code === "KeyW" ||
+        e.code === "Numpad8" ||
+        e.key === "2"
+      ) {
         changeDirection("UP");
-      } else if (e.code === "ArrowDown" || e.code === "KeyS" || e.code === "Numpad2" || e.key === "8") {
+      } else if (
+        e.code === "ArrowDown" ||
+        e.code === "KeyS" ||
+        e.code === "Numpad2" ||
+        e.key === "8"
+      ) {
         changeDirection("DOWN");
-      } else if (e.code === "ArrowLeft" || e.code === "KeyA" || e.code === "Numpad4" || e.key === "4") {
+      } else if (
+        e.code === "ArrowLeft" ||
+        e.code === "KeyA" ||
+        e.code === "Numpad4" ||
+        e.key === "4"
+      ) {
         changeDirection("LEFT");
-      } else if (e.code === "ArrowRight" || e.code === "KeyD" || e.code === "Numpad6" || e.key === "6") {
+      } else if (
+        e.code === "ArrowRight" ||
+        e.code === "KeyD" ||
+        e.code === "Numpad6" ||
+        e.key === "6"
+      ) {
         changeDirection("RIGHT");
       } else if (e.code === "Space" || e.code === "Enter") {
         if (!isPlaying || isGameOver) {
@@ -539,7 +607,7 @@ export default function SnakeGame({ match, currentUid }: SnakeGameProps) {
         }
       } else if (e.key >= "1" && e.key <= "9" && !isPlaying) {
         setSpeedLevel(parseInt(e.key, 10));
-        nokiaAudio.playKeyClick();
+        nokiaAudio.playClick();
       }
     };
 
@@ -547,7 +615,7 @@ export default function SnakeGame({ match, currentUid }: SnakeGameProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isPlaying, isGameOver, changeDirection]);
 
-  // Direct Touch / Swipe on LCD display
+  // ── Screen Swipe Navigation (Up, Down, Left, Right) ──
   const handleTouchStart = (e: React.TouchEvent) => {
     const touch = e.touches[0];
     touchStartRef.current = { x: touch.clientX, y: touch.clientY };
@@ -563,7 +631,8 @@ export default function SnakeGame({ match, currentUid }: SnakeGameProps) {
     const absX = Math.abs(dx);
     const absY = Math.abs(dy);
 
-    if (Math.max(absX, absY) > 25) {
+    // Trigger swipe if moved at least 20px
+    if (Math.max(absX, absY) > 20) {
       if (absX > absY) {
         if (dx > 0) changeDirection("RIGHT");
         else changeDirection("LEFT");
@@ -574,65 +643,101 @@ export default function SnakeGame({ match, currentUid }: SnakeGameProps) {
     }
   };
 
-  // Cycle Mazes
-  const handleCycleMaze = () => {
-    nokiaAudio.playKeyClick();
-    const sequence: MazeType[] = ["NONE", "BOX", "TUNNEL", "CROSS"];
-    const nextIdx = (sequence.indexOf(maze) + 1) % sequence.length;
-    setMaze(sequence[nextIdx]);
+  // Mouse drag swipe support for desktop
+  const handleMouseDown = (e: React.MouseEvent) => {
+    touchStartRef.current = { x: e.clientX, y: e.clientY };
   };
 
-  // Cycle Speed
-  const handleCycleSpeed = () => {
-    nokiaAudio.playKeyClick();
-    setSpeedLevel((lvl) => (lvl % 9) + 1);
+  const handleMouseUp = (e: React.MouseEvent) => {
+    if (!touchStartRef.current) return;
+    const dx = e.clientX - touchStartRef.current.x;
+    const dy = e.clientY - touchStartRef.current.y;
+    touchStartRef.current = null;
+
+    const absX = Math.abs(dx);
+    const absY = Math.abs(dy);
+
+    if (Math.max(absX, absY) > 20) {
+      if (absX > absY) {
+        if (dx > 0) changeDirection("RIGHT");
+        else changeDirection("LEFT");
+      } else {
+        if (dy > 0) changeDirection("DOWN");
+        else changeDirection("UP");
+      }
+    }
   };
 
-  // Render LCD cell contents
   const obstacles = MAZE_OBSTACLES[maze] || [];
 
   return (
-    <div className="w-full max-w-sm sm:max-w-md mx-auto py-2 px-1 select-none font-mono">
-      {/* ── Outer Nokia 3310 Phone Chassis ── */}
-      <div className="relative rounded-[46px] p-4 sm:p-5 bg-gradient-to-b from-[#1b2b3a] via-[#15212d] to-[#0c151e] shadow-[0_22px_60px_rgba(0,0,0,0.85),inset_0_2px_4px_rgba(255,255,255,0.25),inset_0_-4px_8px_rgba(0,0,0,0.7)] border-4 border-[#2b3e52]">
+    <div className="w-full max-w-lg mx-auto py-2 px-1 select-none font-mono">
+      {/* ── Outer Retro Console Frame ── */}
+      <div className="relative rounded-3xl p-3 sm:p-4 bg-gradient-to-b from-[#18232c] via-[#121a22] to-[#0a0f15] border-2 border-[#2b3b4a] shadow-[0_16px_40px_rgba(0,0,0,0.85),inset_0_1px_2px_rgba(255,255,255,0.2)]">
         
-        {/* Top Speaker Ear-piece */}
-        <div className="flex flex-col items-center justify-center mb-3">
-          <div className="w-16 h-2 rounded-full bg-[#0b1219] border border-[#3b4c5e] shadow-[inset_0_1px_3px_rgba(0,0,0,0.9)] flex items-center justify-center gap-1">
-            <span className="w-1 h-1 rounded-full bg-[#1b2633]" />
-            <span className="w-1 h-1 rounded-full bg-[#1b2633]" />
-            <span className="w-1 h-1 rounded-full bg-[#1b2633]" />
-            <span className="w-1 h-1 rounded-full bg-[#1b2633]" />
+        {/* Top Console Header Bar */}
+        <div className="flex items-center justify-between px-2 pb-2.5 mb-2 border-b border-[#233140] text-xs">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#95a881] shadow-[0_0_8px_#95a881] animate-pulse" />
+            <span className="font-extrabold tracking-widest text-neutral-200 text-[11px] sm:text-xs">
+              RETRO NOKIA SNAKE II
+            </span>
           </div>
-          {/* Nokia Logo */}
-          <div className="mt-1.5 tracking-[0.28em] text-[13px] font-black text-[#c2d0df] drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] font-sans">
-            NOKIA
+
+          <div className="flex items-center gap-2">
+            {/* Audio Mute Button */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsMuted((m) => !m);
+                nokiaAudio.playClick();
+              }}
+              className="p-1.5 rounded-lg bg-[#1a2530] border border-[#344658] text-neutral-300 hover:text-white hover:border-[#95a881] transition-all cursor-pointer"
+              title={isMuted ? "Unmute Audio" : "Mute Audio"}
+            >
+              {isMuted ? <VolumeX className="w-3.5 h-3.5 text-neutral-400" /> : <Volume2 className="w-3.5 h-3.5 text-[#95a881]" />}
+            </button>
+
+            {/* Play / Restart Button */}
+            <button
+              type="button"
+              onClick={isPlaying && !isGameOver ? handleTogglePause : handleStartGame}
+              className="px-2.5 py-1 rounded-lg bg-[#95a881] text-[#1c2714] font-black text-[10px] sm:text-xs tracking-wider uppercase hover:bg-[#a6bb91] transition-all cursor-pointer flex items-center gap-1 shadow-[0_0_12px_rgba(149,168,129,0.3)]"
+            >
+              {isPlaying && !isGameOver ? (
+                isPaused ? <Play className="w-3 h-3 fill-current" /> : <Pause className="w-3 h-3 fill-current" />
+              ) : (
+                <RotateCcw className="w-3 h-3" />
+              )}
+              <span>{isPlaying && !isGameOver ? (isPaused ? "RESUME" : "PAUSE") : (isGameOver ? "RETRY" : "START")}</span>
+            </button>
           </div>
         </div>
 
-        {/* ── Inner Curved Bezel Frame ── */}
-        <div className="relative rounded-[28px] p-3 sm:p-3.5 bg-gradient-to-b from-[#243343] to-[#1a2734] border-2 border-[#384a5c] shadow-[inset_0_3px_8px_rgba(0,0,0,0.6)]">
-          
-          {/* Glass Glare Reflection Overlay */}
-          <div className="absolute inset-0 rounded-[26px] bg-gradient-to-tr from-transparent via-white/[0.04] to-white/[0.12] pointer-events-none z-20" />
+        {/* ── 2. Monochrome Dot-Matrix Green LCD Screen ── */}
+        <div className="relative rounded-2xl p-2.5 sm:p-3 bg-gradient-to-b from-[#212d38] to-[#16202a] border-2 border-[#334455] shadow-[inset_0_3px_8px_rgba(0,0,0,0.65)]">
+          {/* Glass Glare Reflection */}
+          <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-transparent via-white/[0.03] to-white/[0.1] pointer-events-none z-20" />
 
-          {/* ── Retro Monochrome Dot-Matrix LCD Display ── */}
+          {/* Screen Canvas Container */}
           <div
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
-            className="relative rounded-[16px] p-2.5 overflow-hidden border-2 border-[#41533b] shadow-[inset_0_4px_10px_rgba(0,0,0,0.45)] bg-[#95a881] text-[#1c2714]"
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
+            className="relative rounded-xl p-2.5 overflow-hidden border-2 border-[#3b4b35] shadow-[inset_0_4px_12px_rgba(0,0,0,0.55)] bg-[#95a881] text-[#1c2714] cursor-grab active:cursor-grabbing"
             style={{
               backgroundImage: `
-                radial-gradient(#899c75 18%, transparent 19%),
-                radial-gradient(#899c75 18%, transparent 19%)
+                radial-gradient(#899c75 20%, transparent 20%),
+                radial-gradient(#899c75 20%, transparent 20%)
               `,
               backgroundPosition: "0 0, 2px 2px",
               backgroundSize: "4px 4px",
             }}
           >
-            {/* LCD Top Status Bar */}
-            <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-bold border-b border-[#73855f] pb-1 mb-1 tracking-wider uppercase">
-              {/* Antenna / Signal */}
+            {/* Status Bar */}
+            <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-bold border-b border-[#73855f] pb-1.5 mb-1.5 tracking-wider uppercase">
+              {/* Signal strength antenna bars */}
               <div className="flex items-end gap-0.5" title="Signal Strength">
                 <span className="w-1 h-1.5 bg-[#1c2714]" />
                 <span className="w-1 h-2.5 bg-[#1c2714]" />
@@ -641,15 +746,15 @@ export default function SnakeGame({ match, currentUid }: SnakeGameProps) {
                 <span className="text-[8px] font-mono ml-0.5">ECHO</span>
               </div>
 
-              {/* Title & Game Mode */}
+              {/* Title / State */}
               <div className="font-extrabold tracking-widest text-center">
-                {isGameOver ? "CRASH!" : isPaused ? "PAUSED" : "SNAKE II"}
+                {isGameOver ? "💀 CRASH!" : isPaused ? "⏸ PAUSED" : "SNAKE II"}
               </div>
 
-              {/* Battery Meter */}
-              <div className="flex items-center gap-1">
-                <span className="text-[8px]">LVL {speedLevel}</span>
-                <div className="w-5 h-2.5 border border-[#1c2714] p-0.5 flex gap-0.5 rounded-[1px]">
+              {/* Battery level meter & Active Level */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-[9px] font-black">LVL {speedLevel}</span>
+                <div className="w-5 h-2.5 border border-[#1c2714] p-0.5 flex gap-0.5 rounded-[1px]" title="Nokia Battery">
                   <span className="w-1 h-full bg-[#1c2714]" />
                   <span className="w-1 h-full bg-[#1c2714]" />
                   <span className="w-1 h-full bg-[#1c2714]" />
@@ -657,30 +762,32 @@ export default function SnakeGame({ match, currentUid }: SnakeGameProps) {
               </div>
             </div>
 
-            {/* Sub-Header: Score & Bonus Bar */}
-            <div className="flex items-center justify-between text-[10px] font-extrabold px-0.5 mb-1.5">
+            {/* Score Readout & Bonus Countdown */}
+            <div className="flex items-center justify-between text-[10px] sm:text-xs font-black px-0.5 mb-2">
               <span>SCORE: {String(score).padStart(5, "0")}</span>
+
+              {/* Bonus Bug Countdown Bar */}
               {bonus && (
-                <div className="flex items-center gap-1 text-[9px] animate-pulse">
+                <div className="flex items-center gap-1 text-[9px] font-black animate-pulse">
                   <span>BUG:</span>
-                  <div className="w-12 h-1.5 bg-[#7e926a] border border-[#1c2714] overflow-hidden">
+                  <div className="w-14 h-2 bg-[#7e926a] border border-[#1c2714] overflow-hidden">
                     <div
-                      className="h-full bg-[#1c2714]"
+                      className="h-full bg-[#1c2714] transition-all duration-100"
                       style={{ width: `${(bonus.timeLeft / bonus.maxTime) * 100}%` }}
                     />
                   </div>
                 </div>
               )}
+
               <span>HI: {String(highScore).padStart(5, "0")}</span>
             </div>
 
-            {/* ── Main LCD 24x16 Grid Matrix ── */}
+            {/* ── 1-Bit Pixel Graphics (24 x 16 Grid) ── */}
             <div
               className={`relative aspect-[24/16] w-full bg-[#8ea177] border-2 border-[#1c2714] ${
                 maze === "BOX" ? "ring-2 ring-[#1c2714]" : ""
               }`}
             >
-              {/* Dot-matrix grid layer */}
               <div
                 className="w-full h-full grid"
                 style={{
@@ -704,9 +811,8 @@ export default function SnakeGame({ match, currentUid }: SnakeGameProps) {
                         className="w-full h-full flex items-center justify-center p-[0.5px]"
                       >
                         {isHead ? (
-                          // Snake Head with Eyes
+                          // Pixel snake with directional 2-pixel eyes in the head
                           <div className="w-full h-full bg-[#1c2714] relative rounded-[1px] flex items-center justify-center">
-                            {/* Head Eyes Orientation */}
                             {direction === "RIGHT" && (
                               <div className="absolute right-[1px] flex flex-col gap-[2px]">
                                 <span className="w-[1.5px] h-[1.5px] bg-[#95a881]" />
@@ -733,28 +839,28 @@ export default function SnakeGame({ match, currentUid }: SnakeGameProps) {
                             )}
                           </div>
                         ) : isBody ? (
-                          // Snake Body Segment
+                          // Solid Pixel Body
                           <div className="w-full h-full bg-[#1c2714] rounded-[0.5px]" />
                         ) : isApple ? (
-                          // Classic Nokia 3x3 Apple Dot
+                          // Classic 3x3 pixel apple with stem
                           <div className="w-full h-full flex items-center justify-center">
-                            <div className="w-2 h-2 bg-[#1c2714] rounded-[1px] relative">
-                              <span className="absolute -top-[1.5px] left-[1px] w-[1px] h-[1.5px] bg-[#1c2714]" />
+                            <div className="w-2.5 h-2.5 bg-[#1c2714] rounded-[1px] relative">
+                              <span className="absolute -top-[2px] left-[1px] w-[1px] h-[2px] bg-[#1c2714]" />
                             </div>
                           </div>
                         ) : isInsect ? (
-                          // Nokia Snake II Bonus Insect (Spider/Beetle)
+                          // Nokia Snake II crawling 5-legged bonus bug/spider
                           <div className="w-full h-full flex items-center justify-center animate-bounce">
-                            <div className="w-2.5 h-2 bg-[#1c2714] relative rounded-[1px]">
-                              {/* Legs */}
-                              <span className="absolute -top-[1px] -left-[1px] w-[1px] h-[1px] bg-[#1c2714]" />
-                              <span className="absolute -top-[1px] -right-[1px] w-[1px] h-[1px] bg-[#1c2714]" />
-                              <span className="absolute -bottom-[1px] -left-[1px] w-[1px] h-[1px] bg-[#1c2714]" />
-                              <span className="absolute -bottom-[1px] -right-[1px] w-[1px] h-[1px] bg-[#1c2714]" />
+                            <div className="w-3 h-2.5 bg-[#1c2714] relative rounded-[1px]">
+                              <span className="absolute -top-[1.5px] -left-[1px] w-[1px] h-[1.5px] bg-[#1c2714]" />
+                              <span className="absolute -top-[1.5px] -right-[1px] w-[1px] h-[1.5px] bg-[#1c2714]" />
+                              <span className="absolute -bottom-[1.5px] -left-[1px] w-[1px] h-[1.5px] bg-[#1c2714]" />
+                              <span className="absolute -bottom-[1.5px] -right-[1px] w-[1px] h-[1.5px] bg-[#1c2714]" />
+                              <span className="absolute -bottom-[2px] left-[3px] w-[1px] h-[1px] bg-[#1c2714]" />
                             </div>
                           </div>
                         ) : isObstacle ? (
-                          // Maze Brick Obstacle
+                          // Wall obstacles rendered as crisp LCD bricks
                           <div className="w-full h-full bg-[#1c2714] border-[0.5px] border-[#8ea177]" />
                         ) : null}
                       </div>
@@ -763,54 +869,54 @@ export default function SnakeGame({ match, currentUid }: SnakeGameProps) {
                 )}
               </div>
 
-              {/* ── Overlay: Start / Game Over Modal on LCD ── */}
+              {/* LCD Overlay: Start / GameOver / Pause */}
               {(!isPlaying || isGameOver || isPaused) && (
-                <div className="absolute inset-0 bg-[#95a881]/90 flex flex-col items-center justify-center p-2 text-center text-[#1c2714] z-10">
+                <div className="absolute inset-0 bg-[#95a881]/90 flex flex-col items-center justify-center p-3 text-center text-[#1c2714] z-10 backdrop-blur-[0.5px]">
                   {isGameOver ? (
-                    <div className="space-y-1">
-                      <div className="text-xs font-black tracking-widest uppercase">
+                    <div className="space-y-1.5 animate-in fade-in zoom-in-95">
+                      <div className="text-sm font-black tracking-widest uppercase">
                         💀 GAME OVER
                       </div>
-                      <div className="text-[10px] font-extrabold">
-                        SCORE: {score}
+                      <div className="text-xs font-black">
+                        FINAL SCORE: {score}
                       </div>
-                      <div className="text-[9px] text-[#2b3a20]">
+                      <div className="text-[10px] text-[#2b3a20] font-bold">
                         {score >= highScore && score > 0 ? "★ NEW RECORD! ★" : `BEST: ${highScore}`}
                       </div>
                       <button
                         type="button"
                         onClick={handleStartGame}
-                        className="mt-1 px-3 py-1 bg-[#1c2714] text-[#95a881] font-black text-[10px] uppercase rounded-[2px] shadow cursor-pointer active:scale-95"
+                        className="mt-2 px-4 py-1.5 bg-[#1c2714] text-[#95a881] font-black text-xs uppercase rounded shadow-md cursor-pointer hover:bg-black transition-transform active:scale-95"
                       >
                         [ PLAY AGAIN ]
                       </button>
                     </div>
                   ) : isPaused ? (
-                    <div className="space-y-1">
-                      <div className="text-xs font-black tracking-widest">GAME PAUSED</div>
+                    <div className="space-y-2">
+                      <div className="text-sm font-black tracking-widest">GAME PAUSED</div>
                       <button
                         type="button"
                         onClick={handleTogglePause}
-                        className="mt-1 px-3 py-1 bg-[#1c2714] text-[#95a881] font-black text-[10px] uppercase rounded-[2px] shadow cursor-pointer"
+                        className="px-4 py-1.5 bg-[#1c2714] text-[#95a881] font-black text-xs uppercase rounded shadow cursor-pointer active:scale-95"
                       >
                         RESUME
                       </button>
                     </div>
                   ) : (
-                    <div className="space-y-1">
-                      <div className="text-xs font-black tracking-widest uppercase">
+                    <div className="space-y-1.5">
+                      <div className="text-sm font-black tracking-widest uppercase">
                         SNAKE II • NOKIA
                       </div>
-                      <div className="text-[9px] font-bold">
-                        SPEED: {speedLevel} // MAZE: {maze}
+                      <div className="text-[10px] font-bold">
+                        SPEED {speedLevel} // MAZE: {maze}
                       </div>
-                      <div className="text-[8px] text-[#2b3a20] max-w-[180px]">
-                        Press 2/4/6/8 or swipe screen to steer snake
+                      <div className="text-[9px] text-[#2b3a20] max-w-[200px] leading-tight">
+                        Swipe screen right, left, up, down or use Arrow Keys / D-Pad
                       </div>
                       <button
                         type="button"
                         onClick={handleStartGame}
-                        className="mt-1 px-4 py-1.5 bg-[#1c2714] text-[#95a881] font-black text-[10px] uppercase rounded-[2px] shadow cursor-pointer active:scale-95"
+                        className="mt-2 px-5 py-2 bg-[#1c2714] text-[#95a881] font-black text-xs uppercase rounded shadow-lg cursor-pointer hover:bg-black active:scale-95"
                       >
                         START GAME
                       </button>
@@ -820,189 +926,117 @@ export default function SnakeGame({ match, currentUid }: SnakeGameProps) {
               )}
             </div>
 
-            {/* LCD Bottom Hints */}
-            <div className="flex items-center justify-between text-[8px] font-extrabold text-[#37472c] pt-1 mt-0.5 border-t border-[#73855f]">
-              <span>SWIPE / 2,4,6,8</span>
+            {/* LCD Bottom Control Hints */}
+            <div className="flex items-center justify-between text-[9px] font-black text-[#37472c] pt-1.5 mt-1 border-t border-[#73855f]">
+              <span>👆 SWIPE: ◄ ▲ ▼ ►</span>
               <span>MAZE: {maze}</span>
               <span>SPD: {speedLevel}</span>
             </div>
           </div>
         </div>
 
-        {/* ── Nokia 3310 Softkeys & Central Navi-Bar ── */}
-        <div className="mt-3 mb-2 px-1">
-          <div className="flex items-center justify-between">
-            {/* Left Softkey: Menu / Start */}
-            <button
-              type="button"
-              onClick={handleStartGame}
-              className="w-16 h-7 rounded-t-xl rounded-b-md bg-gradient-to-b from-[#3a4d60] to-[#253443] border border-[#506478] shadow-[0_2px_4px_rgba(0,0,0,0.6),inset_0_1px_2px_rgba(255,255,255,0.3)] active:translate-y-0.5 active:shadow-inner text-[9px] font-black text-[#d0e0f0] flex items-center justify-center cursor-pointer transition-transform"
-            >
-              {isPlaying && !isGameOver ? "RESTART" : "START"}
-            </button>
+        {/* ── 4. Game Modes & Controls ── */}
+        <div className="mt-3 space-y-3 px-1">
+          {/* Labyrinths Mode Selector */}
+          <div className="flex items-center justify-between gap-1.5 text-[10px] font-bold">
+            <span className="text-neutral-400 uppercase flex items-center gap-1">
+              <Grid className="w-3 h-3 text-[#95a881]" />
+              MAZE:
+            </span>
+            <div className="flex items-center gap-1">
+              {(["NONE", "BOX", "TUNNEL", "CROSS"] as MazeType[]).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => {
+                    setMaze(m);
+                    nokiaAudio.playClick();
+                  }}
+                  className={`px-2 py-1 rounded text-[9px] font-black uppercase transition-all cursor-pointer border ${
+                    maze === m
+                      ? "bg-[#95a881] text-[#1c2714] border-[#95a881] shadow-[0_0_8px_rgba(149,168,129,0.4)]"
+                      : "bg-[#16212b] text-neutral-400 border-[#283949] hover:text-white"
+                  }`}
+                >
+                  {m === "NONE" ? "WRAP" : m}
+                </button>
+              ))}
+            </div>
+          </div>
 
-            {/* Central Navi-Key (Classic Blue Curved Pill) */}
-            <button
-              type="button"
-              onClick={isPlaying ? handleTogglePause : handleStartGame}
-              className="w-20 h-9 rounded-2xl bg-gradient-to-b from-[#2b5887] via-[#1e3f63] to-[#12273e] border-2 border-[#4176ad] shadow-[0_4px_8px_rgba(0,0,0,0.7),inset_0_2px_3px_rgba(255,255,255,0.4)] active:scale-95 text-[10px] font-black text-white flex items-center justify-center gap-1 cursor-pointer transition-transform"
-            >
-              {isPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
-              <span>{isPaused ? "RESUME" : "PAUSE"}</span>
-            </button>
+          {/* Speed Selector (1 to 9) */}
+          <div className="flex items-center justify-between gap-1 text-[10px] font-bold">
+            <span className="text-neutral-400 uppercase flex items-center gap-1">
+              <Zap className="w-3 h-3 text-amber-400" />
+              SPEED:
+            </span>
+            <div className="grid grid-cols-9 gap-1 flex-1 max-w-[280px]">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((lvl) => (
+                <button
+                  key={lvl}
+                  type="button"
+                  onClick={() => {
+                    setSpeedLevel(lvl);
+                    nokiaAudio.playClick();
+                  }}
+                  className={`py-1 rounded text-[9px] font-black text-center transition-all cursor-pointer border ${
+                    speedLevel === lvl
+                      ? "bg-amber-400 text-black border-amber-300 shadow-[0_0_8px_rgba(251,191,36,0.4)]"
+                      : "bg-[#16212b] text-neutral-400 border-[#283949] hover:text-white"
+                  }`}
+                >
+                  {lvl}
+                </button>
+              ))}
+            </div>
+          </div>
 
-            {/* Right Softkey: Maze / Back */}
+          {/* Ergonomic Directional Controls (Screen right swipe, left, up, down + D-Pad) */}
+          <div className="flex flex-col items-center justify-center pt-1 pb-1">
             <button
               type="button"
-              onClick={handleCycleMaze}
-              className="w-16 h-7 rounded-t-xl rounded-b-md bg-gradient-to-b from-[#3a4d60] to-[#253443] border border-[#506478] shadow-[0_2px_4px_rgba(0,0,0,0.6),inset_0_1px_2px_rgba(255,255,255,0.3)] active:translate-y-0.5 active:shadow-inner text-[9px] font-black text-[#d0e0f0] flex items-center justify-center cursor-pointer transition-transform"
+              onClick={() => changeDirection("UP")}
+              className="w-14 h-11 rounded-t-xl rounded-b-md bg-gradient-to-b from-[#2b3a4a] to-[#1c2632] border-2 border-[#415366] text-amber-300 shadow-[0_3px_6px_rgba(0,0,0,0.6)] active:scale-95 active:border-amber-400 flex items-center justify-center cursor-pointer transition-transform"
+              aria-label="Up"
             >
-              MAZE 🔲
+              <ArrowUp className="w-5 h-5 stroke-[2.5]" />
+            </button>
+            <div className="flex items-center gap-3 my-1">
+              <button
+                type="button"
+                onClick={() => changeDirection("LEFT")}
+                className="w-14 h-11 rounded-l-xl rounded-r-md bg-gradient-to-b from-[#2b3a4a] to-[#1c2632] border-2 border-[#415366] text-amber-300 shadow-[0_3px_6px_rgba(0,0,0,0.6)] active:scale-95 active:border-amber-400 flex items-center justify-center cursor-pointer transition-transform"
+                aria-label="Left"
+              >
+                <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
+              </button>
+
+              <button
+                type="button"
+                onClick={isPlaying && !isGameOver ? handleTogglePause : handleStartGame}
+                className="w-14 h-11 rounded-xl bg-gradient-to-b from-[#95a881] to-[#7f946c] text-[#1c2714] font-black text-[10px] shadow-[0_3px_8px_rgba(149,168,129,0.4)] active:scale-95 flex items-center justify-center cursor-pointer transition-transform uppercase"
+              >
+                {isPlaying && !isGameOver ? (isPaused ? "GO" : "PAUSE") : "PLAY"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => changeDirection("RIGHT")}
+                className="w-14 h-11 rounded-r-xl rounded-l-md bg-gradient-to-b from-[#2b3a4a] to-[#1c2632] border-2 border-[#415366] text-amber-300 shadow-[0_3px_6px_rgba(0,0,0,0.6)] active:scale-95 active:border-amber-400 flex items-center justify-center cursor-pointer transition-transform"
+                aria-label="Right"
+              >
+                <ArrowRight className="w-5 h-5 stroke-[2.5]" />
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => changeDirection("DOWN")}
+              className="w-14 h-11 rounded-b-xl rounded-t-md bg-gradient-to-b from-[#2b3a4a] to-[#1c2632] border-2 border-[#415366] text-amber-300 shadow-[0_3px_6px_rgba(0,0,0,0.6)] active:scale-95 active:border-amber-400 flex items-center justify-center cursor-pointer transition-transform"
+              aria-label="Down"
+            >
+              <ArrowDown className="w-5 h-5 stroke-[2.5]" />
             </button>
           </div>
-        </div>
-
-        {/* ── Nokia 3310 Numeric Keypad (4 Rows x 3 Columns) ── */}
-        <div className="grid grid-cols-3 gap-2 sm:gap-2.5 px-2 pt-1 pb-2">
-          {/* Key 1: Speed Toggle */}
-          <button
-            type="button"
-            onClick={handleCycleSpeed}
-            className="h-10 rounded-xl bg-gradient-to-b from-[#2b3a4a] to-[#1a2530] border border-[#445668] shadow-[0_3px_5px_rgba(0,0,0,0.7),inset_0_1px_1px_rgba(255,255,255,0.2)] active:scale-95 text-center flex flex-col items-center justify-center cursor-pointer transition-transform group"
-          >
-            <span className="text-xs font-black text-white group-hover:text-amber-400">1</span>
-            <span className="text-[7px] text-neutral-400">SPD {speedLevel}</span>
-          </button>
-
-          {/* Key 2: UP ARROW */}
-          <button
-            type="button"
-            onClick={() => changeDirection("UP")}
-            className="h-10 rounded-xl bg-gradient-to-b from-[#36495c] to-[#202e3b] border-2 border-[#5c7288] shadow-[0_3px_6px_rgba(0,0,0,0.8),inset_0_1px_2px_rgba(255,255,255,0.3)] active:scale-90 text-center flex flex-col items-center justify-center cursor-pointer transition-all hover:border-amber-400 group"
-          >
-            <span className="text-xs font-black text-amber-300">2 ▲</span>
-            <span className="text-[7px] text-amber-200 font-bold">UP</span>
-          </button>
-
-          {/* Key 3: Sound Toggle */}
-          <button
-            type="button"
-            onClick={() => {
-              setIsMuted((m) => !m);
-              nokiaAudio.playKeyClick();
-            }}
-            className="h-10 rounded-xl bg-gradient-to-b from-[#2b3a4a] to-[#1a2530] border border-[#445668] shadow-[0_3px_5px_rgba(0,0,0,0.7),inset_0_1px_1px_rgba(255,255,255,0.2)] active:scale-95 text-center flex flex-col items-center justify-center cursor-pointer transition-transform group"
-          >
-            <span className="text-xs font-black text-white group-hover:text-amber-400">3</span>
-            <span className="text-[7px] text-neutral-400 flex items-center gap-0.5">
-              {isMuted ? <VolumeX className="w-2.5 h-2.5" /> : <Volume2 className="w-2.5 h-2.5" />}
-              {isMuted ? "MUTE" : "SOUND"}
-            </span>
-          </button>
-
-          {/* Key 4: LEFT ARROW */}
-          <button
-            type="button"
-            onClick={() => changeDirection("LEFT")}
-            className="h-10 rounded-xl bg-gradient-to-b from-[#36495c] to-[#202e3b] border-2 border-[#5c7288] shadow-[0_3px_6px_rgba(0,0,0,0.8),inset_0_1px_2px_rgba(255,255,255,0.3)] active:scale-90 text-center flex flex-col items-center justify-center cursor-pointer transition-all hover:border-amber-400 group"
-          >
-            <span className="text-xs font-black text-amber-300">4 ◄</span>
-            <span className="text-[7px] text-amber-200 font-bold">LEFT</span>
-          </button>
-
-          {/* Key 5: Action / Enter */}
-          <button
-            type="button"
-            onClick={isPlaying ? handleTogglePause : handleStartGame}
-            className="h-10 rounded-xl bg-gradient-to-b from-[#2b3a4a] to-[#1a2530] border border-[#445668] shadow-[0_3px_5px_rgba(0,0,0,0.7),inset_0_1px_1px_rgba(255,255,255,0.2)] active:scale-95 text-center flex flex-col items-center justify-center cursor-pointer transition-transform group"
-          >
-            <span className="text-xs font-black text-white group-hover:text-amber-400">5</span>
-            <span className="text-[7px] text-neutral-400">OK</span>
-          </button>
-
-          {/* Key 6: RIGHT ARROW */}
-          <button
-            type="button"
-            onClick={() => changeDirection("RIGHT")}
-            className="h-10 rounded-xl bg-gradient-to-b from-[#36495c] to-[#202e3b] border-2 border-[#5c7288] shadow-[0_3px_6px_rgba(0,0,0,0.8),inset_0_1px_2px_rgba(255,255,255,0.3)] active:scale-90 text-center flex flex-col items-center justify-center cursor-pointer transition-all hover:border-amber-400 group"
-          >
-            <span className="text-xs font-black text-amber-300">6 ►</span>
-            <span className="text-[7px] text-amber-200 font-bold">RIGHT</span>
-          </button>
-
-          {/* Key 7 */}
-          <button
-            type="button"
-            onClick={() => {
-              setSpeedLevel(3);
-              nokiaAudio.playKeyClick();
-            }}
-            className="h-10 rounded-xl bg-gradient-to-b from-[#2b3a4a] to-[#1a2530] border border-[#445668] shadow-[0_3px_5px_rgba(0,0,0,0.7),inset_0_1px_1px_rgba(255,255,255,0.2)] active:scale-95 text-center flex flex-col items-center justify-center cursor-pointer transition-transform group"
-          >
-            <span className="text-xs font-black text-white group-hover:text-amber-400">7</span>
-            <span className="text-[7px] text-neutral-400">SLOW</span>
-          </button>
-
-          {/* Key 8: DOWN ARROW */}
-          <button
-            type="button"
-            onClick={() => changeDirection("DOWN")}
-            className="h-10 rounded-xl bg-gradient-to-b from-[#36495c] to-[#202e3b] border-2 border-[#5c7288] shadow-[0_3px_6px_rgba(0,0,0,0.8),inset_0_1px_2px_rgba(255,255,255,0.3)] active:scale-90 text-center flex flex-col items-center justify-center cursor-pointer transition-all hover:border-amber-400 group"
-          >
-            <span className="text-xs font-black text-amber-300">8 ▼</span>
-            <span className="text-[7px] text-amber-200 font-bold">DOWN</span>
-          </button>
-
-          {/* Key 9 */}
-          <button
-            type="button"
-            onClick={() => {
-              setSpeedLevel(9);
-              nokiaAudio.playKeyClick();
-            }}
-            className="h-10 rounded-xl bg-gradient-to-b from-[#2b3a4a] to-[#1a2530] border border-[#445668] shadow-[0_3px_5px_rgba(0,0,0,0.7),inset_0_1px_1px_rgba(255,255,255,0.2)] active:scale-95 text-center flex flex-col items-center justify-center cursor-pointer transition-transform group"
-          >
-            <span className="text-xs font-black text-white group-hover:text-amber-400">9</span>
-            <span className="text-[7px] text-neutral-400">TURBO</span>
-          </button>
-
-          {/* Key * (Sound toggle) */}
-          <button
-            type="button"
-            onClick={() => {
-              setIsMuted((m) => !m);
-              nokiaAudio.playKeyClick();
-            }}
-            className="h-9 rounded-xl bg-gradient-to-b from-[#24313f] to-[#151e27] border border-[#3c4c5c] shadow-[0_2px_4px_rgba(0,0,0,0.7)] active:scale-95 text-center flex flex-col items-center justify-center cursor-pointer transition-transform"
-          >
-            <span className="text-xs font-black text-neutral-300">*</span>
-            <span className="text-[6px] text-neutral-500">MUTE</span>
-          </button>
-
-          {/* Key 0 */}
-          <button
-            type="button"
-            onClick={handleCycleMaze}
-            className="h-9 rounded-xl bg-gradient-to-b from-[#24313f] to-[#151e27] border border-[#3c4c5c] shadow-[0_2px_4px_rgba(0,0,0,0.7)] active:scale-95 text-center flex flex-col items-center justify-center cursor-pointer transition-transform"
-          >
-            <span className="text-xs font-black text-neutral-300">0</span>
-            <span className="text-[6px] text-neutral-500">MAZE</span>
-          </button>
-
-          {/* Key # (Reset / Rematch) */}
-          <button
-            type="button"
-            onClick={handleStartGame}
-            className="h-9 rounded-xl bg-gradient-to-b from-[#24313f] to-[#151e27] border border-[#3c4c5c] shadow-[0_2px_4px_rgba(0,0,0,0.7)] active:scale-95 text-center flex flex-col items-center justify-center cursor-pointer transition-transform"
-          >
-            <span className="text-xs font-black text-neutral-300">#</span>
-            <span className="text-[6px] text-neutral-500">RESET</span>
-          </button>
-        </div>
-
-        {/* Bottom Phone Microphone Hole */}
-        <div className="flex justify-center pt-1 pb-0.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#080d13] border border-[#2a3848]" />
         </div>
       </div>
 
