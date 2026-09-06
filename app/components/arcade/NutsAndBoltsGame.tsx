@@ -6,15 +6,11 @@ import ArcadeSocialDeck from "./ArcadeSocialDeck";
 import {
   RotateCcw,
   Undo2,
-  Trophy,
   Volume2,
   VolumeX,
-  Play,
-  Pause,
   ArrowRight,
-  Sparkles,
-  Layers,
   CheckCircle2,
+  Sparkles,
 } from "lucide-react";
 
 interface NutsAndBoltsGameProps {
@@ -30,20 +26,19 @@ export interface NutColorConfig {
   name: string;
   color: string;
   darkColor: string;
-  textColor: string;
+  lightColor: string;
 }
 
 export const NUT_COLORS: NutColorConfig[] = [
-  { id: "ruby", name: "Ruby", color: "#ef4444", darkColor: "#991b1b", textColor: "#ffffff" },
-  { id: "sapphire", name: "Sapphire", color: "#3b82f6", darkColor: "#1e40af", textColor: "#ffffff" },
-  { id: "emerald", name: "Emerald", color: "#10b981", darkColor: "#065f46", textColor: "#ffffff" },
-  { id: "amber", name: "Amber", color: "#f59e0b", darkColor: "#92400e", textColor: "#000000" },
-  { id: "amethyst", name: "Amethyst", color: "#a855f7", darkColor: "#6b21a8", textColor: "#ffffff" },
-  { id: "cyan", name: "Cyan", color: "#06b6d4", darkColor: "#0e7490", textColor: "#000000" },
-  { id: "coral", name: "Coral", color: "#f97316", darkColor: "#9a3412", textColor: "#ffffff" },
+  { id: "ruby", name: "Ruby", color: "#ef4444", darkColor: "#991b1b", lightColor: "#fca5a5" },
+  { id: "sapphire", name: "Sapphire", color: "#3b82f6", darkColor: "#1e40af", lightColor: "#93c5fd" },
+  { id: "emerald", name: "Emerald", color: "#10b981", darkColor: "#065f46", lightColor: "#86efac" },
+  { id: "amber", name: "Amber", color: "#f59e0b", darkColor: "#92400e", lightColor: "#fde047" },
+  { id: "amethyst", name: "Amethyst", color: "#a855f7", darkColor: "#6b21a8", lightColor: "#d8b4fe" },
+  { id: "cyan", name: "Cyan", color: "#06b6d4", darkColor: "#0e7490", lightColor: "#67e8f9" },
+  { id: "coral", name: "Coral", color: "#f97316", darkColor: "#9a3412", lightColor: "#fdba74" },
 ];
 
-// ── Web Audio Synthesizer ─────────────────────────────────────────────────────
 class BoltsAudioEngine {
   private ctx: AudioContext | null = null;
   public isMuted: boolean = false;
@@ -75,31 +70,25 @@ class BoltsAudioEngine {
       gain.connect(this.ctx.destination);
       osc.start();
       osc.stop(this.ctx.currentTime + durationMs / 1000);
-    } catch {
-      // Ignore
-    }
+    } catch {}
   }
 
-  // Lift / Unscrew nut
   public playUnscrew() {
     if (this.isMuted) return;
     this.playTone(340, 40, "triangle", 0.12);
     setTimeout(() => this.playTone(520, 50, "triangle", 0.15), 35);
   }
 
-  // Thread down / Ratchet
   public playScrewDown() {
     if (this.isMuted) return;
     this.playTone(520, 40, "triangle", 0.15);
     setTimeout(() => this.playTone(340, 50, "triangle", 0.12), 35);
   }
 
-  // Invalid Move
   public playError() {
     this.playTone(180, 80, "sawtooth", 0.15);
   }
 
-  // Level Won Chime
   public playVictory() {
     if (this.isMuted) return;
     const notes = [523, 659, 784, 1046];
@@ -122,12 +111,10 @@ export default function NutsAndBoltsGame({ match, currentUid }: NutsAndBoltsGame
   const [highScore, setHighScore] = useState<number>(0);
   const [isMuted, setIsMuted] = useState<boolean>(false);
 
-  // Sync audio mute
   useEffect(() => {
     boltsAudio.isMuted = isMuted;
   }, [isMuted]);
 
-  // Load High Score
   useEffect(() => {
     try {
       const saved = localStorage.getItem("echo_nuts_bolts_hi");
@@ -147,14 +134,11 @@ export default function NutsAndBoltsGame({ match, currentUid }: NutsAndBoltsGame
     });
   }, []);
 
-  // ── Procedural Solvable Board Generator ─────────────────────────────────────
+  // 100% Guaranteed Solvable Board Generator
   const generateSolvableLevel = useCallback((lvl: number): string[][] => {
-    // Determine color count: 3 colors for lvl 1-4, 4 for lvl 5-12, 5 for 13-25, 6 for 26+
     const colorCount = Math.min(NUT_COLORS.length, lvl <= 3 ? 3 : lvl <= 10 ? 4 : lvl <= 20 ? 5 : 6);
     const emptyBoltCount = 2;
-    const totalBolts = colorCount + emptyBoltCount;
 
-    // Start with solved state: Each bolt has 4 of the same color
     const solvedBolts: string[][] = [];
     for (let c = 0; c < colorCount; c++) {
       const colorId = NUT_COLORS[c].id;
@@ -164,12 +148,10 @@ export default function NutsAndBoltsGame({ match, currentUid }: NutsAndBoltsGame
       solvedBolts.push([]);
     }
 
-    // Apply N valid reverse transfers to shuffle
     const shuffleMoves = 18 + lvl * 5;
     const current = solvedBolts.map((b) => [...b]);
 
     for (let m = 0; m < shuffleMoves; m++) {
-      // Find non-empty source
       const nonEmpties = current
         .map((b, idx) => ({ b, idx }))
         .filter((item) => item.b.length > 0);
@@ -177,7 +159,6 @@ export default function NutsAndBoltsGame({ match, currentUid }: NutsAndBoltsGame
       if (nonEmpties.length === 0) break;
       const src = nonEmpties[Math.floor(Math.random() * nonEmpties.length)];
 
-      // Find targets that have capacity
       const validTargets = current
         .map((b, idx) => ({ b, idx }))
         .filter((item) => item.idx !== src.idx && item.b.length < MAX_NUT_CAPACITY);
@@ -185,7 +166,6 @@ export default function NutsAndBoltsGame({ match, currentUid }: NutsAndBoltsGame
       if (validTargets.length === 0) continue;
       const tgt = validTargets[Math.floor(Math.random() * validTargets.length)];
 
-      // Transfer top nut
       const nut = current[src.idx].pop()!;
       current[tgt.idx].push(nut);
     }
@@ -193,7 +173,6 @@ export default function NutsAndBoltsGame({ match, currentUid }: NutsAndBoltsGame
     return current;
   }, []);
 
-  // Start / Load Level
   const loadLevel = useCallback((lvl: number) => {
     const newBoard = generateSolvableLevel(lvl);
     setBolts(newBoard);
@@ -207,7 +186,6 @@ export default function NutsAndBoltsGame({ match, currentUid }: NutsAndBoltsGame
     loadLevel(level);
   }, [level, loadLevel]);
 
-  // Check Victory Condition: Every non-empty bolt has 4 identical colors
   const checkVictory = useCallback((board: string[][]): boolean => {
     let completedBolts = 0;
     let expectedCompleted = 0;
@@ -224,12 +202,10 @@ export default function NutsAndBoltsGame({ match, currentUid }: NutsAndBoltsGame
     return completedBolts === expectedCompleted && completedBolts > 0;
   }, []);
 
-  // Handle Bolt Click (Pick up or Thread down)
   const handleBoltClick = (boltIdx: number) => {
     if (isLevelWon) return;
 
     if (selectedBoltIdx === null) {
-      // Trying to select source bolt
       if (bolts[boltIdx].length === 0) {
         boltsAudio.playError();
         return;
@@ -237,19 +213,13 @@ export default function NutsAndBoltsGame({ match, currentUid }: NutsAndBoltsGame
       setSelectedBoltIdx(boltIdx);
       boltsAudio.playUnscrew();
     } else if (selectedBoltIdx === boltIdx) {
-      // Unselect same bolt
       setSelectedBoltIdx(null);
       boltsAudio.playScrewDown();
     } else {
-      // Trying to transfer from selectedBoltIdx -> boltIdx
       const srcBolt = bolts[selectedBoltIdx];
       const tgtBolt = bolts[boltIdx];
-
       const nutToMove = srcBolt[srcBolt.length - 1];
 
-      // Validation Rules:
-      // 1. Target must have capacity < 4
-      // 2. Target must be empty OR top color must match incoming nut
       const canPlace =
         tgtBolt.length < MAX_NUT_CAPACITY &&
         (tgtBolt.length === 0 || tgtBolt[tgtBolt.length - 1] === nutToMove);
@@ -260,19 +230,16 @@ export default function NutsAndBoltsGame({ match, currentUid }: NutsAndBoltsGame
         return;
       }
 
-      // Execute Move
       const nextBolts = bolts.map((b) => [...b]);
       const transferred = nextBolts[selectedBoltIdx].pop()!;
       nextBolts[boltIdx].push(transferred);
 
-      // Save history for undo
       setHistory((prev) => [...prev, bolts.map((b) => [...b])]);
       setBolts(nextBolts);
       setSelectedBoltIdx(null);
       setMoveCount((m) => m + 1);
       boltsAudio.playScrewDown();
 
-      // Check win
       if (checkVictory(nextBolts)) {
         setIsLevelWon(true);
         boltsAudio.playVictory();
@@ -285,7 +252,6 @@ export default function NutsAndBoltsGame({ match, currentUid }: NutsAndBoltsGame
     }
   };
 
-  // Undo Move
   const handleUndo = () => {
     if (history.length === 0 || isLevelWon) return;
     const lastBoard = history[history.length - 1];
@@ -296,17 +262,17 @@ export default function NutsAndBoltsGame({ match, currentUid }: NutsAndBoltsGame
     boltsAudio.playUnscrew();
   };
 
-  // Next Level
   const handleNextLevel = () => {
     setLevel((l) => l + 1);
   };
 
+  const activeLiftedNut = selectedBoltIdx !== null ? bolts[selectedBoltIdx]?.[bolts[selectedBoltIdx].length - 1] : null;
+
   return (
     <div className="w-full max-w-lg mx-auto py-2 px-1 select-none font-mono">
-      {/* Outer Console Shell */}
       <div className="relative rounded-3xl p-3 sm:p-4 bg-gradient-to-b from-[#18232e] via-[#101720] to-[#080d12] border-2 border-[#2b3d50] shadow-[0_16px_40px_rgba(0,0,0,0.85)]">
         
-        {/* Top Header Bar */}
+        {/* Header */}
         <div className="flex items-center justify-between px-1 pb-2.5 mb-3 border-b border-[#223344] text-xs">
           <div className="flex items-center gap-3">
             <div>
@@ -323,7 +289,6 @@ export default function NutsAndBoltsGame({ match, currentUid }: NutsAndBoltsGame
             </div>
           </div>
 
-          {/* Quick Actions */}
           <div className="flex items-center gap-1.5">
             <button
               type="button"
@@ -359,10 +324,9 @@ export default function NutsAndBoltsGame({ match, currentUid }: NutsAndBoltsGame
           </div>
         </div>
 
-        {/* ── Workshop Table: Vertical Threaded Bolts & Hex Nuts ── */}
+        {/* ── Workshop Table: Vertical Bolts with Destination Glow Rings ── */}
         <div className="relative w-full rounded-2xl p-4 sm:p-6 bg-gradient-to-b from-[#131b24] via-[#0c1219] to-[#070b10] border-2 border-[#253547] shadow-[inset_0_4px_24px_rgba(0,0,0,0.85)] min-h-[360px] flex items-center justify-center">
           
-          {/* Bolts Grid */}
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-4 sm:gap-6 w-full max-w-md place-items-center">
             {bolts.map((bolt, boltIdx) => {
               const isSelected = selectedBoltIdx === boltIdx;
@@ -370,38 +334,49 @@ export default function NutsAndBoltsGame({ match, currentUid }: NutsAndBoltsGame
                 bolt.length === MAX_NUT_CAPACITY &&
                 bolt.every((n) => n === bolt[0]);
 
+              // Check if valid destination for lifted nut
+              const isValidDestination =
+                selectedBoltIdx !== null &&
+                selectedBoltIdx !== boltIdx &&
+                bolt.length < MAX_NUT_CAPACITY &&
+                (bolt.length === 0 || bolt[bolt.length - 1] === activeLiftedNut);
+
               return (
                 <div
                   key={boltIdx}
                   onClick={() => handleBoltClick(boltIdx)}
                   className={`relative flex flex-col items-center justify-end h-52 w-16 rounded-2xl p-1 cursor-pointer transition-all duration-200 group ${
                     isSelected
-                      ? "ring-2 ring-amber-400 shadow-[0_0_16px_rgba(251,191,36,0.3)] bg-amber-500/5"
-                      : "hover:bg-white/[0.03]"
+                      ? "ring-2 ring-amber-400 shadow-[0_0_16px_rgba(251,191,36,0.4)] bg-amber-500/10"
+                      : isValidDestination
+                      ? "ring-2 ring-emerald-400 shadow-[0_0_16px_rgba(16,185,129,0.35)] bg-emerald-500/5 animate-pulse"
+                      : "hover:bg-white/[0.04]"
                   }`}
                 >
-                  {/* Solved Bolt Ribbon Badge */}
                   {isFullColor && (
                     <div className="absolute -top-3 z-20">
                       <CheckCircle2 className="w-4 h-4 text-emerald-400 drop-shadow" />
                     </div>
                   )}
 
-                  {/* ── Threaded Vertical Metal Bolt Shaft ── */}
+                  {/* Destination Valid Indicator Ring */}
+                  {isValidDestination && (
+                    <div className="absolute -top-2 z-20">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981] inline-block" />
+                    </div>
+                  )}
+
+                  {/* Threaded Bolt Shaft */}
                   <div className="absolute bottom-6 w-4 h-40 rounded-t-md bg-gradient-to-r from-[#94a3b8] via-[#cbd5e1] to-[#64748b] border-x border-[#475569] shadow-[inset_0_0_4px_rgba(0,0,0,0.5)] z-0 flex flex-col justify-between py-1">
-                    {/* Thread Ridges */}
                     {Array.from({ length: 14 }).map((_, rIdx) => (
-                      <div
-                        key={rIdx}
-                        className="w-full h-[2px] bg-[#334155]/60 -skew-y-6"
-                      />
+                      <div key={rIdx} className="w-full h-[2px] bg-[#334155]/60 -skew-y-6" />
                     ))}
                   </div>
 
-                  {/* Bolt Heavy Base Nut / Stand */}
+                  {/* Bolt Base Stand */}
                   <div className="absolute bottom-0 w-14 h-6 rounded-b-xl bg-gradient-to-b from-[#475569] via-[#334155] to-[#1e293b] border-t-2 border-[#94a3b8] shadow-md z-0" />
 
-                  {/* ── Stack of Hex Nuts ── */}
+                  {/* Stack of Hex Nuts */}
                   <div className="relative z-10 w-full flex flex-col-reverse items-center gap-1 mb-6">
                     {bolt.map((nutColorId, nutIdx) => {
                       const cfg = NUT_COLORS.find((c) => c.id === nutColorId) || NUT_COLORS[0];
@@ -412,7 +387,7 @@ export default function NutsAndBoltsGame({ match, currentUid }: NutsAndBoltsGame
                         <div
                           key={nutIdx}
                           className={`relative w-12 h-7 rounded-md transition-all duration-200 flex items-center justify-center shadow-lg border-2 ${
-                            isHovering ? "-translate-y-6 ring-2 ring-amber-300 scale-105" : ""
+                            isHovering ? "-translate-y-7 ring-2 ring-amber-300 scale-110 shadow-amber-400/40" : ""
                           }`}
                           style={{
                             backgroundColor: cfg.color,
@@ -420,12 +395,9 @@ export default function NutsAndBoltsGame({ match, currentUid }: NutsAndBoltsGame
                             boxShadow: `inset 0 2px 4px rgba(255,255,255,0.4), inset 0 -2px 4px rgba(0,0,0,0.5), 0 3px 6px rgba(0,0,0,0.6)`,
                           }}
                         >
-                          {/* Inner Hex Hole */}
                           <div className="w-4 h-4 rounded-full bg-[#1e293b] border border-black/50 shadow-inner flex items-center justify-center">
                             <span className="w-1.5 h-1.5 rounded-full bg-[#cbd5e1]/40" />
                           </div>
-
-                          {/* Outer Chamfer Facets */}
                           <div className="absolute inset-0 rounded-md border-x-4 border-black/20 pointer-events-none" />
                         </div>
                       );
@@ -436,7 +408,6 @@ export default function NutsAndBoltsGame({ match, currentUid }: NutsAndBoltsGame
             })}
           </div>
 
-          {/* Level Complete Modal */}
           {isLevelWon && (
             <div className="absolute inset-0 bg-black/85 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center p-4 text-center z-30 animate-in fade-in zoom-in-95">
               <div className="w-12 h-12 rounded-2xl bg-amber-400/20 border border-amber-400/50 flex items-center justify-center text-2xl mb-2 animate-bounce">
@@ -464,14 +435,13 @@ export default function NutsAndBoltsGame({ match, currentUid }: NutsAndBoltsGame
           )}
         </div>
 
-        {/* Footer Hints */}
+        {/* Footer Guidance */}
         <div className="flex items-center justify-between text-[9px] text-neutral-400 font-bold pt-2 mt-1 border-t border-[#223344]">
-          <span>TAP BOLT TO LIFT NUT // TAP TARGET TO SCREW DOWN</span>
-          <span>SAME COLOR ONLY ON TOP</span>
+          <span>TAP BOLT TO LIFT // GREEN RINGS SHOW VALID TARGETS</span>
+          <span>SAME COLOR MATCH ONLY</span>
         </div>
       </div>
 
-      {/* Social Deck */}
       <div className="mt-4">
         <ArcadeSocialDeck match={match} currentUid={currentUid} />
       </div>
