@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { updateArcadeGameScore, type ArcadeMatch } from "@/lib/arcade";
 import { arcadeSfx } from "@/lib/arcadeSfx";
 import EchoArcadeModalCard, { type BotDifficulty } from "./EchoArcadeModalCard";
-import { ArrowLeft, RotateCcw, Flame, Trophy } from "lucide-react";
+import { ArrowLeft, RotateCcw, Flame, Trophy, Zap, Sparkles } from "lucide-react";
 
 interface RPSGameProps {
   match: ArcadeMatch;
@@ -15,10 +15,10 @@ interface RPSGameProps {
 
 type Choice = "rock" | "paper" | "scissors";
 
-const CHOICES: { id: Choice; name: string; emoji: string; color: string; beats: Choice }[] = [
-  { id: "rock", name: "ROCK", emoji: "🪨", color: "#64748b", beats: "scissors" },
-  { id: "paper", name: "PAPER", emoji: "📄", color: "#38bdf8", beats: "rock" },
-  { id: "scissors", name: "SCISSORS", emoji: "✂️", color: "#f43f5e", beats: "paper" },
+const CHOICES: { id: Choice; name: string; emoji: string; color: string; beats: Choice; effect: string }[] = [
+  { id: "rock", name: "ROCK", emoji: "🪨", color: "#64748b", beats: "scissors", effect: "SHATTERS" },
+  { id: "paper", name: "PAPER", emoji: "📄", color: "#38bdf8", beats: "rock", effect: "ENVELOPS" },
+  { id: "scissors", name: "SCISSORS", emoji: "✂️", color: "#f43f5e", beats: "paper", effect: "SLICES" },
 ];
 
 export default function RockPaperScissorsGame({
@@ -37,18 +37,17 @@ export default function RockPaperScissorsGame({
   const [isOvertime, setIsOvertime] = useState(false);
 
   // Round phase
-  const [countdown, setCountdown] = useState<number | null>(null); // 3, 2, 1, shoot
+  const [countdown, setCountdown] = useState<number | null>(null);
   const [p1Choice, setP1Choice] = useState<Choice | null>(null);
   const [p2Choice, setP2Choice] = useState<Choice | null>(null);
   const [roundResult, setRoundResult] = useState<"p1" | "p2" | "tie" | null>(null);
+  const [clashAnimation, setClashAnimation] = useState(false);
   const [bouncingHand, setBouncingHand] = useState<number>(0);
   const [gameOver, setGameOver] = useState(false);
   const [winner, setWinner] = useState<"p1" | "p2" | null>(null);
 
-  // Markov Chain player history tracking for Bot
   const historyRef = useRef<Choice[]>([]);
   const countdownTimer = useRef<NodeJS.Timeout | null>(null);
-  const overtimeTimer = useRef<NodeJS.Timeout | null>(null);
 
   // Start new match
   const startGame = useCallback((mode: "bot" | "friend", diff: BotDifficulty = "medium") => {
@@ -65,26 +64,19 @@ export default function RockPaperScissorsGame({
     startRound(false);
   }, []);
 
-  // Bot AI prediction using Markov Chain
+  // Bot AI
   const predictPlayerMove = useCallback((): Choice => {
     const history = historyRef.current;
     if (history.length < 2 || botDiff === "easy") {
-      // Random choice
       return CHOICES[Math.floor(Math.random() * CHOICES.length)].id;
     }
 
-    // Check last move
     const lastMove = history[history.length - 1];
-
     if (botDiff === "hard") {
-      // Players often switch to the choice that would have beaten what defeated them,
-      // or repeat winning moves. We predict and counter accordingly.
       const counterToLast = CHOICES.find((c) => c.beats === lastMove)?.id || "rock";
-      // Pick what beats their likely counter:
       return CHOICES.find((c) => c.beats === counterToLast)?.id || "paper";
     }
 
-    // Medium: 60% probability of predicting counter
     if (Math.random() < 0.6) {
       return CHOICES.find((c) => c.beats === lastMove)?.id || "scissors";
     }
@@ -92,104 +84,94 @@ export default function RockPaperScissorsGame({
   }, [botDiff]);
 
   // Start a round
-  const startRound = useCallback(
-    (overtime: boolean) => {
-      setP1Choice(null);
-      setP2Choice(null);
-      setRoundResult(null);
-      setIsOvertime(overtime);
+  const startRound = useCallback((overtime: boolean) => {
+    setP1Choice(null);
+    setP2Choice(null);
+    setRoundResult(null);
+    setClashAnimation(false);
+    setIsOvertime(overtime);
 
-      let step = 3;
-      setCountdown(step);
-      arcadeSfx.playButtonTap();
+    let step = 3;
+    setCountdown(step);
+    arcadeSfx.playButtonTap();
 
-      countdownTimer.current = setInterval(() => {
-        step -= 1;
-        setBouncingHand((b) => (b + 1) % 2);
+    countdownTimer.current = setInterval(() => {
+      step -= 1;
+      setBouncingHand((b) => (b + 1) % 2);
 
-        if (step > 0) {
-          setCountdown(step);
-          arcadeSfx.playButtonTap();
-        } else {
-          if (countdownTimer.current) clearInterval(countdownTimer.current);
-          setCountdown(0); // Shoot!
+      if (step > 0) {
+        setCountdown(step);
+        arcadeSfx.playButtonTap();
+      } else {
+        if (countdownTimer.current) clearInterval(countdownTimer.current);
+        setCountdown(0);
+      }
+    }, 650);
+  }, []);
 
-          // Overtime timeout limit (1.5s)
-          if (overtime) {
-            overtimeTimer.current = setTimeout(() => {
-              // If still no pick, default
-              setP1Choice((prev) => prev || "rock");
-            }, 1500);
-          }
-        }
-      }, 700);
-    },
-    []
-  );
-
-  // Resolve round when choices are in
+  // Evaluate round
   const evaluateRound = useCallback(
     (p1: Choice, p2: Choice) => {
       historyRef.current.push(p1);
 
-      if (p1 === p2) {
-        // Tie! Trigger Sudden Death Overtime!
-        setRoundResult("tie");
-        arcadeSfx.playWhoosh();
-        setTimeout(() => {
-          startRound(true);
-        }, 1200);
-        return;
-      }
+      // Trigger center clash impact
+      setClashAnimation(true);
 
-      const p1Rule = CHOICES.find((c) => c.id === p1);
-      if (p1Rule && p1Rule.beats === p2) {
-        // P1 Wins!
-        setRoundResult("p1");
-        arcadeSfx.playMatchSuccess();
-        const nextScore = p1Score + 1;
-        const nextStreak = p1Streak + 1;
-        setP1Score(nextScore);
-        setP1Streak(nextStreak);
+      setTimeout(() => {
+        if (p1 === p2) {
+          setRoundResult("tie");
+          arcadeSfx.playWhoosh();
+          setTimeout(() => startRound(true), 1200);
+          return;
+        }
 
-        if (nextScore >= 3) {
-          setGameOver(true);
-          setWinner("p1");
-          arcadeSfx.playVictory();
-          if (currentUid && match?.id) {
-            updateArcadeGameScore(match.id, currentUid, "rock_paper_scissors" as any, 30, true);
+        const p1Rule = CHOICES.find((c) => c.id === p1);
+        if (p1Rule && p1Rule.beats === p2) {
+          // P1 Wins
+          setRoundResult("p1");
+          arcadeSfx.playMatchSuccess();
+          const nextScore = p1Score + 1;
+          const nextStreak = p1Streak + 1;
+          setP1Score(nextScore);
+          setP1Streak(nextStreak);
+
+          if (nextScore >= 3) {
+            setGameOver(true);
+            setWinner("p1");
+            arcadeSfx.playVictory();
+            if (currentUid && match?.id) {
+              updateArcadeGameScore(match.id, currentUid, "rock_paper_scissors" as any, 30, true);
+            }
+          } else {
+            setTimeout(() => startRound(false), 1500);
           }
         } else {
-          setTimeout(() => startRound(false), 1400);
-        }
-      } else {
-        // P2 / Bot Wins
-        setRoundResult("p2");
-        arcadeSfx.playPenaltyBuzz();
-        const nextScore = p2Score + 1;
-        setP2Score(nextScore);
-        setP1Streak(0);
+          // P2 Wins
+          setRoundResult("p2");
+          arcadeSfx.playPenaltyBuzz();
+          const nextScore = p2Score + 1;
+          setP2Score(nextScore);
+          setP1Streak(0);
 
-        if (nextScore >= 3) {
-          setGameOver(true);
-          setWinner("p2");
-          arcadeSfx.playVictory();
-        } else {
-          setTimeout(() => startRound(false), 1400);
+          if (nextScore >= 3) {
+            setGameOver(true);
+            setWinner("p2");
+            arcadeSfx.playVictory();
+          } else {
+            setTimeout(() => startRound(false), 1500);
+          }
         }
-      }
+      }, 350);
     },
     [p1Score, p2Score, p1Streak, currentUid, match, startRound]
   );
 
-  // Player picks an option
   const handleSelectChoice = (choice: Choice) => {
     if (p1Choice !== null || gameOver) return;
 
     arcadeSfx.playButtonTap();
     setP1Choice(choice);
 
-    // Bot picks using Markov model
     const botChoice = predictPlayerMove();
     setP2Choice(botChoice);
 
@@ -201,18 +183,11 @@ export default function RockPaperScissorsGame({
     <div className="w-full h-full flex items-center justify-center relative">
       <div className="absolute inset-0 bg-blue-50 rounded-2xl flex items-center justify-center">
         <svg viewBox="0 0 160 160" className="w-36 h-36">
-          {/* Rock */}
           <circle cx="50" cy="55" r="26" fill="#64748b" />
           <path d="M35 50 Q50 30 65 50 Q70 70 50 75 Q30 70 35 50 Z" fill="#94a3b8" />
           <text x="50" y="62" textAnchor="middle" fontSize="22">🪨</text>
-
-          {/* Paper */}
           <rect x="85" y="30" width="44" height="52" rx="6" fill="#38bdf8" />
-          <line x1="95" y1="42" x2="119" y2="42" stroke="#e0f2fe" strokeWidth="3" strokeLinecap="round" />
-          <line x1="95" y1="54" x2="119" y2="54" stroke="#e0f2fe" strokeWidth="3" strokeLinecap="round" />
           <text x="107" y="70" textAnchor="middle" fontSize="22">📄</text>
-
-          {/* Scissors */}
           <circle cx="80" cy="115" r="26" fill="#f43f5e" />
           <text x="80" y="122" textAnchor="middle" fontSize="22">✂️</text>
         </svg>
@@ -222,19 +197,19 @@ export default function RockPaperScissorsGame({
 
   const howToPlaySteps = [
     {
-      title: "Timing & 1-2-3 Bounce",
-      desc: "Lock in your choice before the countdown finishes: Rock crushes Scissors, Scissors cut Paper, Paper covers Rock.",
+      title: "Tactile 1-2-3 Countdown",
+      desc: "Lock in Rock, Paper, or Scissors before countdown ends: Rock crushes Scissors, Scissors cut Paper, Paper wraps Rock.",
       icon: "🪨",
     },
     {
-      title: "Sudden Death Overtime",
-      desc: "Ties trigger instant overtime with a 1.5s rapid-fire decision limit!",
-      icon: "⚡",
+      title: "Center Clash Particles",
+      desc: "Hands rush to clash in the center with custom elemental destruction animations!",
+      icon: "💥",
     },
     {
-      title: "Streak Momentum Flames",
-      desc: "Consecutive victories ignite your arena border. First to 3 wins takes the match.",
-      icon: "🔥",
+      title: "Sudden Death Overtime",
+      desc: "Ties trigger instant overtime with a 1.5s rapid-fire limit. First to 3 wins takes the match!",
+      icon: "⚡",
     },
   ];
 
@@ -298,7 +273,7 @@ export default function RockPaperScissorsGame({
           ) : (
             <>
               <Trophy className="w-3.5 h-3.5" />
-              <span>FIRST TO 3</span>
+              <span>TO 3</span>
             </>
           )}
         </div>
@@ -307,26 +282,27 @@ export default function RockPaperScissorsGame({
       {/* Overtime Banner */}
       {isOvertime && (
         <div className="w-full max-w-sm text-center my-1 animate-pulse">
-          <span className="text-xs font-black tracking-widest uppercase px-3 py-1 rounded-full bg-red-600 text-white shadow-lg">
-            ⚡ SUDDEN DEATH OVERTIME (1.5s) ⚡
+          <span className="text-xs font-black tracking-widest uppercase px-3 py-1 rounded-full bg-red-600 text-white shadow-lg flex items-center justify-center gap-1">
+            <Zap className="w-3.5 h-3.5" />
+            <span>SUDDEN DEATH OVERTIME (1.5s)</span>
           </span>
         </div>
       )}
 
       {/* Duel Arena */}
       <div className="relative w-full max-w-sm h-[380px] bg-gradient-to-b from-blue-950/40 via-neutral-900 to-cyan-950/40 rounded-3xl border border-white/10 overflow-hidden shadow-2xl flex flex-col justify-between items-center p-6">
-        {/* Opponent Selection (Top) */}
+        {/* Opponent Hand (Top) */}
         <div className="w-full flex flex-col items-center">
           <div className="text-[11px] font-black uppercase tracking-wider text-neutral-400 mb-2">
             {playMode === "bot" ? `BOT (${botDiff.toUpperCase()})` : "PLAYER 2"}
           </div>
 
           <div
-            className={`w-28 h-28 rounded-2xl border-4 flex items-center justify-center text-5xl transition-all duration-200 shadow-xl ${
+            className={`w-28 h-28 rounded-3xl border-4 flex items-center justify-center text-5xl transition-all duration-200 shadow-2xl ${
               p2Choice
                 ? "bg-cyan-600/30 border-cyan-400 scale-105"
                 : "bg-neutral-800/60 border-neutral-700"
-            }`}
+            } ${clashAnimation ? "translate-y-12 scale-110" : ""}`}
           >
             {p2Choice ? (
               <span>{CHOICES.find((c) => c.id === p2Choice)?.emoji}</span>
@@ -340,15 +316,21 @@ export default function RockPaperScissorsGame({
           </div>
         </div>
 
-        {/* Center Countdown / Result Banner */}
-        <div className="flex flex-col items-center my-2">
+        {/* Center Countdown / Clash Particles */}
+        <div className="flex flex-col items-center my-2 relative">
+          {clashAnimation && (
+            <div className="absolute -top-4 text-4xl animate-ping pointer-events-none">
+              💥
+            </div>
+          )}
+
           {countdown !== null && countdown > 0 ? (
             <div className="text-4xl font-black text-amber-400 animate-bounce">
               {countdown}
             </div>
           ) : roundResult ? (
             <div
-              className={`text-2xl font-black uppercase tracking-wider px-4 py-1.5 rounded-xl shadow-lg animate-fadeIn ${
+              className={`text-xl font-black uppercase tracking-wider px-4 py-1.5 rounded-xl shadow-lg animate-fadeIn ${
                 roundResult === "p1"
                   ? "bg-emerald-500 text-white"
                   : roundResult === "p2"
@@ -364,19 +346,19 @@ export default function RockPaperScissorsGame({
             </div>
           ) : (
             <div className="text-xs font-bold text-neutral-400 uppercase tracking-widest">
-              SELECT YOUR WEAPON
+              SELECT YOUR MOVE
             </div>
           )}
         </div>
 
-        {/* Player Selection (Bottom) */}
+        {/* Player Hand (Bottom) */}
         <div className="w-full flex flex-col items-center">
           <div
-            className={`w-28 h-28 rounded-2xl border-4 flex items-center justify-center text-5xl transition-all duration-200 shadow-xl ${
+            className={`w-28 h-28 rounded-3xl border-4 flex items-center justify-center text-5xl transition-all duration-200 shadow-2xl ${
               p1Choice
                 ? "bg-blue-600/30 border-blue-400 scale-105"
                 : "bg-neutral-800/60 border-neutral-700"
-            }`}
+            } ${clashAnimation ? "-translate-y-12 scale-110" : ""}`}
           >
             {p1Choice ? (
               <span>{CHOICES.find((c) => c.id === p1Choice)?.emoji}</span>
@@ -403,9 +385,7 @@ export default function RockPaperScissorsGame({
             <h2 className="text-3xl font-black text-white uppercase tracking-tight">
               {winner === "p1" ? "MATCH WON!" : "DEFEAT!"}
             </h2>
-            <p className="text-sm font-bold text-neutral-400 mt-1">
-              Final Score: {p1Score} - {p2Score}
-            </p>
+            <p className="text-sm font-bold text-neutral-400 mt-1">Final Score: {p1Score} - {p2Score}</p>
 
             <button
               type="button"
@@ -419,7 +399,7 @@ export default function RockPaperScissorsGame({
         )}
       </div>
 
-      {/* 3D Icon Selection Buttons: 🪨 ROCK, 📄 PAPER, ✂️ SCISSORS */}
+      {/* 3D Icon Selection Buttons */}
       <div className="w-full max-w-sm grid grid-cols-3 gap-3 mt-4">
         {CHOICES.map((choice) => (
           <button

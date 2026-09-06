@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { updateArcadeGameScore, type ArcadeMatch } from "@/lib/arcade";
 import { arcadeSfx } from "@/lib/arcadeSfx";
 import EchoArcadeModalCard, { type BotDifficulty } from "./EchoArcadeModalCard";
-import { ArrowLeft, RotateCcw, Trophy, Zap } from "lucide-react";
+import { ArrowLeft, RotateCcw, Trophy, Zap, Flame } from "lucide-react";
 
 interface PingPongProps {
   match: ArcadeMatch;
@@ -16,17 +16,30 @@ interface PingPongProps {
 interface Ball {
   x: number;
   y: number;
+  z: number; // 3D height altitude above table
   vx: number;
   vy: number;
+  vz: number; // vertical bounce velocity
   radius: number;
-  spin: number; // curve spin
+  spin: number; // curve side-spin (-1 to 1)
+  topSpin: number; // forward/backward spin
   isSmash: boolean;
 }
 
 interface TrailPoint {
   x: number;
   y: number;
+  z: number;
   alpha: number;
+}
+
+interface Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  color: string;
 }
 
 export default function PingPongGame({
@@ -41,25 +54,61 @@ export default function PingPongGame({
   // Scores: First to 7
   const [p1Score, setP1Score] = useState(0);
   const [p2Score, setP2Score] = useState(0);
+  const [rallyCount, setRallyCount] = useState(0);
+  const [maxRally, setMaxRally] = useState(0);
   const [matchWinner, setMatchWinner] = useState<"p1" | "p2" | null>(null);
+  const [smashPrompt, setSmashPrompt] = useState(false);
+  const [screenShake, setScreenShake] = useState(0);
+  const [announcement, setAnnouncement] = useState<string | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // Paddles & Ball
-  const p1PaddleRef = useRef({ x: 180, y: 350, vx: 0, width: 70, height: 12 });
-  const p2PaddleRef = useRef({ x: 180, y: 50, vx: 0, width: 70, height: 12 });
+  const p1PaddleRef = useRef({ x: 180, y: 355, vx: 0, width: 75, height: 14 });
+  const p2PaddleRef = useRef({ x: 180, y: 45, vx: 0, width: 75, height: 14 });
   const ballRef = useRef<Ball>({
     x: 180,
     y: 200,
-    vx: (Math.random() - 0.5) * 4,
-    vy: 4,
+    z: 15,
+    vx: (Math.random() - 0.5) * 3,
+    vy: 4.5,
+    vz: 0,
     radius: 7,
     spin: 0,
+    topSpin: 0,
     isSmash: false,
   });
 
   const trailRef = useRef<TrailPoint[]>([]);
+  const particlesRef = useRef<Particle[]>([]);
   const lastTouchX = useRef(180);
+  const lastTouchY = useRef(355);
+
+  // Shake decay
+  useEffect(() => {
+    if (screenShake <= 0) return;
+    const t = setTimeout(() => setScreenShake((s) => Math.max(0, s - 2)), 40);
+    return () => clearTimeout(t);
+  }, [screenShake]);
+
+  // Reset ball after point
+  const resetBall = useCallback((direction: 1 | -1) => {
+    ballRef.current = {
+      x: 180,
+      y: 200,
+      z: 20,
+      vx: (Math.random() - 0.5) * 3.5,
+      vy: direction * (4.2 + Math.random()),
+      vz: 0,
+      radius: 7,
+      spin: 0,
+      topSpin: 0,
+      isSmash: false,
+    };
+    trailRef.current = [];
+    setRallyCount(0);
+    setSmashPrompt(false);
+  }, []);
 
   // Start game
   const startGame = useCallback((mode: "bot" | "friend", diff: BotDifficulty = "medium") => {
@@ -67,33 +116,31 @@ export default function PingPongGame({
     setBotDiff(diff);
     setP1Score(0);
     setP2Score(0);
+    setRallyCount(0);
+    setMaxRally(0);
     setMatchWinner(null);
+    setAnnouncement(null);
     resetBall(1);
     setInMenu(false);
-  }, []);
-
-  const resetBall = (direction: 1 | -1) => {
-    ballRef.current = {
-      x: 180,
-      y: 200,
-      vx: (Math.random() - 0.5) * 3,
-      vy: direction * (4 + Math.random()),
-      radius: 7,
-      spin: 0,
-      isSmash: false,
-    };
-    trailRef.current = [];
-  };
+  }, [resetBall]);
 
   // Touch / Pointer controls
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 360;
+    const y = ((e.clientY - rect.top) / rect.height) * 400;
+
     const paddle = p1PaddleRef.current;
     const dx = x - lastTouchX.current;
+    const dy = y - lastTouchY.current;
+
     paddle.vx = dx;
-    paddle.x = Math.max(paddle.width / 2, Math.min(360 - paddle.width / 2, x));
+    paddle.x = Math.max(paddle.width / 2 + 10, Math.min(350 - paddle.width / 2, x));
+    // Subtle vertical movement within player zone
+    paddle.y = Math.max(330, Math.min(375, y));
+
     lastTouchX.current = x;
+    lastTouchY.current = y;
   };
 
   // Main Canvas & Physics Loop
@@ -112,22 +159,58 @@ export default function PingPongGame({
       const p1 = p1PaddleRef.current;
       const p2 = p2PaddleRef.current;
 
-      // 1. Ball Curve & Physics
-      ball.vx += ball.spin * 0.08;
+      // 1. Aerodynamics & 3D Ball Physics
+      ball.vx += ball.spin * 0.12; // curve side-spin
       ball.x += ball.vx;
       ball.y += ball.vy;
 
-      // Trail for smash
-      if (ball.isSmash) {
-        trailRef.current.push({ x: ball.x, y: ball.y, alpha: 1 });
+      // 3D vertical bounce simulation
+      ball.z += ball.vz;
+      ball.vz -= 0.35; // gravity pull
+      if (ball.z <= 0) {
+        ball.z = 0;
+        // Bounce on table surface
+        if (ball.y > 35 && ball.y < 365) {
+          ball.vz = Math.abs(ball.vy) * 0.55 + 2;
+          arcadeSfx.playPingPongBounce(false);
+        }
       }
-      trailRef.current.forEach((t) => (t.alpha -= 0.08));
+
+      // Check Smash Window Prompt (ball near player apex)
+      if (ball.vy > 0 && ball.y > 270 && ball.y < 330 && ball.z > 6) {
+        setSmashPrompt(true);
+      } else {
+        setSmashPrompt(false);
+      }
+
+      // Trail & particles for supersonic smash
+      if (ball.isSmash) {
+        trailRef.current.push({ x: ball.x, y: ball.y, z: ball.z, alpha: 1 });
+        if (Math.random() < 0.6) {
+          particlesRef.current.push({
+            x: ball.x + (Math.random() - 0.5) * 8,
+            y: ball.y,
+            vx: (Math.random() - 0.5) * 3,
+            vy: (Math.random() - 0.5) * 3,
+            life: 1,
+            color: Math.random() > 0.5 ? "#f59e0b" : "#ef4444",
+          });
+        }
+      }
+      trailRef.current.forEach((t) => (t.alpha -= 0.09));
       trailRef.current = trailRef.current.filter((t) => t.alpha > 0);
 
-      // Wall Bounces
-      if (ball.x <= ball.radius || ball.x >= 360 - ball.radius) {
-        ball.vx = -ball.vx * 0.95;
-        ball.x = Math.max(ball.radius, Math.min(360 - ball.radius, ball.x));
+      particlesRef.current.forEach((p) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= 0.05;
+      });
+      particlesRef.current = particlesRef.current.filter((p) => p.life > 0);
+
+      // Side Wall Bounces
+      if (ball.x <= ball.radius + 15 || ball.x >= 345 - ball.radius) {
+        ball.vx = -ball.vx * 0.92;
+        ball.x = Math.max(ball.radius + 15, Math.min(345 - ball.radius, ball.x));
         arcadeSfx.playPingPongBounce(false);
       }
 
@@ -139,25 +222,37 @@ export default function PingPongGame({
         ball.x <= p1.x + p1.width / 2 &&
         ball.vy > 0
       ) {
-        // Impact offset
         const offset = (ball.x - p1.x) / (p1.width / 2);
-        const swipeSpeed = Math.abs(p1.vx);
-        const isSmash = swipeSpeed > 6;
+        const swipeSpeed = Math.hypot(p1.vx, (lastTouchY.current - p1.y));
+        const canSmash = (swipeSpeed > 5 || p1.y < 340) && ball.z > 5;
 
-        ball.isSmash = isSmash;
-        ball.vy = isSmash ? -8.5 : -5.5;
-        ball.vx = offset * 5 + p1.vx * 0.3;
-        ball.spin = (p1.vx * 0.05);
+        ball.isSmash = canSmash;
+        ball.vy = canSmash ? -9.5 : -5.8;
+        ball.vz = canSmash ? 5 : 3.5;
+        ball.vx = offset * 5.2 + p1.vx * 0.28;
+        ball.spin = p1.vx * 0.06;
 
-        arcadeSfx.playPingPongBounce(isSmash);
+        if (canSmash) {
+          setScreenShake(8);
+          setAnnouncement("🔥 APEX SMASH!");
+          setTimeout(() => setAnnouncement(null), 1000);
+        }
+
+        arcadeSfx.playPingPongBounce(canSmash);
+        setRallyCount((r) => {
+          const next = r + 1;
+          setMaxRally((m) => Math.max(m, next));
+          return next;
+        });
       }
 
-      // 3. Paddle 2 (Bot) Trajectory extrapolation & movement
-      const botSpeed = botDiff === "hard" ? 5.2 : botDiff === "medium" ? 3.8 : 2.5;
-      const targetX = ball.vy < 0 ? ball.x : 180; // track ball if heading toward bot
+      // 3. Paddle 2 (Bot / Opponent) AI
+      const botSpeed = botDiff === "hard" ? 5.8 : botDiff === "medium" ? 4.2 : 2.8;
+      // Trajectory extrapolation
+      const targetX = ball.vy < 0 ? ball.x + ball.vx * 3 : 180;
       const botDiffX = targetX - p2.x;
       p2.x += Math.sign(botDiffX) * Math.min(Math.abs(botDiffX), botSpeed);
-      p2.x = Math.max(p2.width / 2, Math.min(360 - p2.width / 2, p2.x));
+      p2.x = Math.max(p2.width / 2 + 15, Math.min(345 - p2.width / 2, p2.x));
 
       // Paddle 2 Collision
       if (
@@ -168,16 +263,27 @@ export default function PingPongGame({
         ball.vy < 0
       ) {
         const offset = (ball.x - p2.x) / (p2.width / 2);
-        ball.isSmash = false;
-        ball.vy = 5.5;
-        ball.vx = offset * 5;
-        ball.spin = -offset * 0.1;
+        // If it was a hard smash, bot on easy/medium might miss
+        if (ball.isSmash && botDiff !== "hard" && Math.random() < 0.45) {
+          // Bot misses smash!
+        } else {
+          ball.isSmash = false;
+          ball.vy = 5.8;
+          ball.vz = 3.5;
+          ball.vx = offset * 5.2;
+          ball.spin = -offset * 0.08;
 
-        arcadeSfx.playPingPongBounce(false);
+          arcadeSfx.playPingPongBounce(false);
+          setRallyCount((r) => {
+            const next = r + 1;
+            setMaxRally((m) => Math.max(m, next));
+            return next;
+          });
+        }
       }
 
       // 4. Scoring (Ball out of bounds)
-      if (ball.y < 0) {
+      if (ball.y < -15) {
         // Player 1 Scores!
         arcadeSfx.playMatchSuccess();
         setP1Score((s) => {
@@ -186,15 +292,15 @@ export default function PingPongGame({
             setMatchWinner("p1");
             arcadeSfx.playVictory();
             if (currentUid && match?.id) {
-              updateArcadeGameScore(match.id, currentUid, "ping_pong" as any, 50, true);
+              updateArcadeGameScore(match.id, currentUid, "ping_pong" as any, 100, true);
             }
           } else {
             resetBall(-1);
           }
           return next;
         });
-      } else if (ball.y > 400) {
-        // Opponent Scores
+      } else if (ball.y > 415) {
+        // Opponent Scores!
         arcadeSfx.playPenaltyBuzz();
         setP2Score((s) => {
           const next = s + 1;
@@ -208,53 +314,139 @@ export default function PingPongGame({
         });
       }
 
-      // ── RENDER TABLE TENNIS COURT ──
+      // ── RENDER TOURNAMENT TABLE TENNIS COURT ──
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Green Ping Pong Table Surface
-      ctx.fillStyle = "#15803d";
-      ctx.fillRect(15, 20, 330, 360);
+      ctx.save();
+      if (screenShake > 0) {
+        ctx.translate((Math.random() - 0.5) * screenShake, (Math.random() - 0.5) * screenShake);
+      }
 
-      // White Border Lines
-      ctx.strokeStyle = "#f8fafc";
-      ctx.lineWidth = 3;
-      ctx.strokeRect(15, 20, 330, 360);
+      // Stadium Arena Floor
+      const floorGrad = ctx.createLinearGradient(0, 0, 0, 400);
+      floorGrad.addColorStop(0, "#0f172a");
+      floorGrad.addColorStop(1, "#020617");
+      ctx.fillStyle = floorGrad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Center Line
+      // Table Outer Wood Apron
+      ctx.fillStyle = "#1e293b";
       ctx.beginPath();
-      ctx.moveTo(180, 20);
-      ctx.lineTo(180, 380);
-      ctx.lineWidth = 1.5;
+      ctx.roundRect(10, 15, 340, 370, 8);
+      ctx.fill();
+
+      // Deep Tournament Blue Table Surface
+      const tableGrad = ctx.createLinearGradient(0, 20, 0, 380);
+      tableGrad.addColorStop(0, "#1d4ed8");
+      tableGrad.addColorStop(1, "#1e40af");
+      ctx.fillStyle = tableGrad;
+      ctx.beginPath();
+      ctx.roundRect(15, 20, 330, 360, 6);
+      ctx.fill();
+
+      // Crisp White Border Lines
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 3;
+      ctx.strokeRect(18, 23, 324, 354);
+
+      // Center Divider Line
+      ctx.beginPath();
+      ctx.moveTo(180, 23);
+      ctx.lineTo(180, 377);
+      ctx.lineWidth = 2;
       ctx.stroke();
 
-      // Net in Middle
-      ctx.strokeStyle = "#cbd5e1";
+      // 3D Mesh Net in Middle
+      // Net Shadow
+      ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
+      ctx.fillRect(10, 201, 340, 6);
+
+      // Net Mesh Line
+      ctx.strokeStyle = "#e2e8f0";
       ctx.lineWidth = 4;
-      ctx.setLineDash([4, 4]);
+      ctx.setLineDash([5, 4]);
       ctx.beginPath();
       ctx.moveTo(10, 200);
       ctx.lineTo(350, 200);
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Draw Smash Trail
+      // Top White Tape of Net
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(10, 198);
+      ctx.lineTo(350, 198);
+      ctx.stroke();
+
+      // Net Post Brackets on Sides
+      ctx.fillStyle = "#334155";
+      ctx.fillRect(6, 194, 8, 12);
+      ctx.fillRect(346, 194, 8, 12);
+
+      // Draw Smash Fire Trail
       trailRef.current.forEach((t) => {
-        ctx.fillStyle = `rgba(251, 191, 36, ${t.alpha * 0.5})`;
+        ctx.fillStyle = `rgba(245, 158, 11, ${t.alpha * 0.6})`;
         ctx.beginPath();
-        ctx.arc(t.x, t.y, ball.radius * 1.5, 0, Math.PI * 2);
+        ctx.arc(t.x, t.y, (ball.radius + t.z * 0.15) * 1.3, 0, Math.PI * 2);
         ctx.fill();
       });
 
-      // Draw Ball
-      ctx.fillStyle = ball.isSmash ? "#f59e0b" : "#ffffff";
+      // Draw Smash Fire Particles
+      particlesRef.current.forEach((p) => {
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+
+      // Draw Ball 3D Drop Shadow (scales with altitude z)
+      const shadowRadius = ball.radius * (1 + ball.z * 0.04);
+      const shadowAlpha = Math.max(0.1, 0.45 - ball.z * 0.015);
+      const shadowYOffset = ball.z * 0.8;
+      ctx.fillStyle = `rgba(0, 0, 0, ${shadowAlpha})`;
       ctx.beginPath();
-      ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+      ctx.ellipse(ball.x, ball.y + shadowYOffset, shadowRadius, shadowRadius * 0.6, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = "#94a3b8";
+
+      // Draw Ball (scales with altitude z for 3D perception)
+      const renderedRadius = ball.radius * (1 + ball.z * 0.035);
+      const ballGrad = ctx.createRadialGradient(
+        ball.x - renderedRadius * 0.3,
+        ball.y - renderedRadius * 0.3,
+        1,
+        ball.x,
+        ball.y,
+        renderedRadius
+      );
+      if (ball.isSmash) {
+        ballGrad.addColorStop(0, "#fef08a");
+        ballGrad.addColorStop(0.6, "#f59e0b");
+        ballGrad.addColorStop(1, "#ea580c");
+      } else {
+        ballGrad.addColorStop(0, "#ffffff");
+        ballGrad.addColorStop(0.7, "#f8fafc");
+        ballGrad.addColorStop(1, "#cbd5e1");
+      }
+      ctx.fillStyle = ballGrad;
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, renderedRadius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = ball.isSmash ? "#f97316" : "#94a3b8";
       ctx.lineWidth = 1;
       ctx.stroke();
 
-      // Draw Paddle 2 (Bot/Top - Red)
+      // Draw Paddle 2 (Bot - Red Rubber Blade + Wooden Handle)
+      // Shadow
+      ctx.fillStyle = "rgba(0,0,0,0.3)";
+      ctx.beginPath();
+      ctx.roundRect(p2.x - p2.width / 2 + 2, p2.y - p2.height / 2 + 3, p2.width, p2.height, 6);
+      ctx.fill();
+
+      // Rubber Face
       ctx.fillStyle = "#ef4444";
       ctx.beginPath();
       ctx.roundRect(p2.x - p2.width / 2, p2.y - p2.height / 2, p2.width, p2.height, 6);
@@ -262,8 +454,18 @@ export default function PingPongGame({
       ctx.strokeStyle = "#991b1b";
       ctx.lineWidth = 2;
       ctx.stroke();
+      // Handle
+      ctx.fillStyle = "#d97706";
+      ctx.fillRect(p2.x - 6, p2.y - p2.height / 2 - 10, 12, 10);
 
-      // Draw Paddle 1 (Player/Bottom - Blue)
+      // Draw Paddle 1 (Player - Blue Rubber Blade + Wooden Handle)
+      // Shadow
+      ctx.fillStyle = "rgba(0,0,0,0.3)";
+      ctx.beginPath();
+      ctx.roundRect(p1.x - p1.width / 2 + 2, p1.y - p1.height / 2 + 3, p1.width, p1.height, 6);
+      ctx.fill();
+
+      // Rubber Face
       ctx.fillStyle = "#3b82f6";
       ctx.beginPath();
       ctx.roundRect(p1.x - p1.width / 2, p1.y - p1.height / 2, p1.width, p1.height, 6);
@@ -271,23 +473,28 @@ export default function PingPongGame({
       ctx.strokeStyle = "#1d4ed8";
       ctx.lineWidth = 2;
       ctx.stroke();
+      // Handle
+      ctx.fillStyle = "#d97706";
+      ctx.fillRect(p1.x - 6, p1.y + p1.height / 2, 12, 10);
+
+      ctx.restore(); // end shake transform
 
       animId = requestAnimationFrame(loop);
     };
 
     animId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animId);
-  }, [inMenu, botDiff, currentUid, match]);
+  }, [inMenu, botDiff, currentUid, match, screenShake, resetBall]);
 
   // Hero Graphic
   const pingPongHero = (
     <div className="w-full h-full flex items-center justify-center relative">
-      <div className="absolute inset-0 bg-emerald-50 rounded-2xl flex items-center justify-center">
+      <div className="absolute inset-0 bg-blue-950/40 rounded-2xl flex items-center justify-center border border-blue-500/20">
         <svg viewBox="0 0 160 160" className="w-36 h-36">
-          {/* Table */}
-          <rect x="25" y="40" width="110" height="80" rx="4" fill="#15803d" stroke="#166534" strokeWidth="3" />
-          <line x1="80" y1="40" x2="80" y2="120" stroke="#f8fafc" strokeWidth="2" />
-          <line x1="20" y1="80" x2="140" y2="80" stroke="#cbd5e1" strokeWidth="3" strokeDasharray="3 3" />
+          <rect x="25" y="35" width="110" height="90" rx="6" fill="#1d4ed8" stroke="#1e40af" strokeWidth="3" />
+          <rect x="28" y="38" width="104" height="84" fill="none" stroke="#ffffff" strokeWidth="1.5" />
+          <line x1="80" y1="38" x2="80" y2="122" stroke="#ffffff" strokeWidth="1.5" />
+          <line x1="20" y1="80" x2="140" y2="80" stroke="#e2e8f0" strokeWidth="3" strokeDasharray="4 3" />
 
           {/* Paddle Red */}
           <g transform="translate(55, 60) rotate(30)">
@@ -301,8 +508,8 @@ export default function PingPongGame({
             <rect x="-3" y="12" width="6" height="10" fill="#d97706" rx="2" />
           </g>
 
-          {/* Ball */}
-          <circle cx="75" cy="85" r="6" fill="#ffffff" stroke="#cbd5e1" strokeWidth="1" />
+          {/* Ball with Fire Trail */}
+          <circle cx="75" cy="85" r="7" fill="#f59e0b" stroke="#ea580c" strokeWidth="1.5" />
         </svg>
       </div>
     </div>
@@ -310,31 +517,31 @@ export default function PingPongGame({
 
   const howToPlaySteps = [
     {
-      title: "Swipe Paddle to Return",
-      desc: "Drag your finger across the lower half to slide the paddle and return the ball.",
+      title: "Slide Paddle to Return",
+      desc: "Drag your finger across the bottom zone to slide your paddle into the ball's trajectory.",
       icon: "🏓",
     },
     {
-      title: "Spin & Power Smashes",
-      desc: "Fast horizontal swipes apply curve spin. Hit the ball hard for blazing power smashes!",
+      title: "Apex Power Smash",
+      desc: "When the ball floats up to its peak height, swipe hard to unleash a blazing supersonic smash!",
       icon: "⚡",
     },
     {
       title: "First to 7 Points",
-      desc: "Outmaneuver your opponent and drive the ball past their baseline. First to 7 wins!",
+      desc: "Drive the ball past the opponent's baseline. Long rallies build massive arcade bonus points!",
       icon: "🏆",
     },
   ];
 
   if (inMenu) {
     return (
-      <div className="min-h-[85vh] flex items-center justify-center p-4 bg-gradient-to-b from-emerald-950 via-neutral-950 to-neutral-900">
+      <div className="min-h-[85vh] flex items-center justify-center p-4 bg-gradient-to-b from-blue-950 via-neutral-950 to-neutral-900">
         <EchoArcadeModalCard
           title="PING PONG"
-          subtitle="Swipe Table Tennis"
+          subtitle="Tournament Table Tennis"
           categoryTag="TACTICAL SPORTS"
-          accentColor="#10B981"
-          objective="Drag paddle to volley the ball! Apply spin on sharp swipes & smash at apex. First to 7 wins!"
+          accentColor="#3B82F6"
+          objective="Slide paddle to volley! Hit at apex to unleash blazing Power Smashes. First to 7 wins!"
           heroGraphic={pingPongHero}
           howToPlaySteps={howToPlaySteps}
           onPlayFriend={() => startGame("friend")}
@@ -372,14 +579,33 @@ export default function PingPongGame({
           </div>
         </div>
 
+        {/* Rally Tracker */}
         <div className="flex items-center gap-1 text-xs font-bold text-amber-400 bg-amber-950/60 px-2.5 py-1 rounded-full border border-amber-500/30">
-          <Trophy className="w-3.5 h-3.5" />
-          <span>TO 7</span>
+          <Zap className="w-3.5 h-3.5" />
+          <span>RALLY: {rallyCount}</span>
         </div>
       </div>
 
+      {/* Smash Prompt / Announcement Header */}
+      <div className="w-full max-w-sm h-6 flex items-center justify-center my-1">
+        {announcement ? (
+          <span className="text-xs font-black tracking-wider uppercase text-amber-400 animate-bounce">
+            {announcement}
+          </span>
+        ) : smashPrompt ? (
+          <span className="text-xs font-black tracking-wider uppercase px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse flex items-center gap-1">
+            <Flame className="w-3.5 h-3.5 text-amber-400" />
+            <span>⚡ APEX SMASH READY!</span>
+          </span>
+        ) : (
+          <span className="text-xs font-black uppercase tracking-wider text-neutral-500">
+            FIRST TO 7 • MAX RALLY: {maxRally}
+          </span>
+        )}
+      </div>
+
       {/* Canvas Court */}
-      <div className="relative w-full max-w-sm h-[400px] rounded-3xl overflow-hidden shadow-2xl border border-white/15 my-2 flex items-center justify-center">
+      <div className="relative w-full max-w-sm h-[400px] rounded-3xl overflow-hidden shadow-2xl border border-white/15 my-1 flex items-center justify-center">
         <canvas
           ref={canvasRef}
           width={360}
@@ -398,13 +624,13 @@ export default function PingPongGame({
               {matchWinner === "p1" ? "VICTORY!" : "DEFEATED!"}
             </h2>
             <p className="text-sm font-bold text-neutral-400 mt-1">
-              Final Score: {p1Score} - {p2Score}
+              Final Score: {p1Score} - {p2Score} (Max Rally: {maxRally})
             </p>
 
             <button
               type="button"
               onPointerDown={() => startGame(playMode, botDiff)}
-              className="w-full max-w-[220px] mt-6 py-3.5 bg-emerald-500 hover:bg-emerald-600 border-b-4 border-emerald-700 active:border-b-0 active:translate-y-1 text-white font-black text-base uppercase tracking-wider rounded-2xl shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2"
+              className="w-full max-w-[220px] mt-6 py-3.5 bg-blue-500 hover:bg-blue-600 border-b-4 border-blue-700 active:border-b-0 active:translate-y-1 text-white font-black text-base uppercase tracking-wider rounded-2xl shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2"
             >
               <RotateCcw className="w-5 h-5" />
               <span>PLAY AGAIN</span>
@@ -416,9 +642,10 @@ export default function PingPongGame({
       {/* Control Prompt */}
       <div className="w-full max-w-sm text-center py-2">
         <span className="text-xs font-black uppercase tracking-wider text-neutral-400">
-          DRAG FINGER HORIZONTALLY TO SLIDE PADDLE
+          DRAG TO SLIDE PADDLE • SWIPE UP AT APEX TO SMASH
         </span>
       </div>
     </div>
   );
 }
+

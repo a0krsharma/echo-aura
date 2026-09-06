@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { updateArcadeGameScore, type ArcadeMatch } from "@/lib/arcade";
 import { arcadeSfx } from "@/lib/arcadeSfx";
 import EchoArcadeModalCard, { type BotDifficulty } from "./EchoArcadeModalCard";
-import { RotateCcw, ArrowLeft, Trophy, Flame } from "lucide-react";
+import { RotateCcw, ArrowLeft, Trophy, Flame, Zap, Sparkles } from "lucide-react";
 
 interface LumberjackGameProps {
   match: ArcadeMatch;
@@ -31,7 +31,7 @@ interface FlyingChunk {
   branch: BranchSide;
 }
 
-interface ChipParticle {
+interface SplinterParticle {
   id: number;
   x: number;
   y: number;
@@ -40,6 +40,14 @@ interface ChipParticle {
   size: number;
   color: string;
   life: number;
+}
+
+interface FloatText {
+  id: number;
+  text: string;
+  x: number;
+  y: number;
+  color: string;
 }
 
 export default function LumberjackGame({
@@ -56,25 +64,25 @@ export default function LumberjackGame({
   const [score, setScore] = useState(0);
   const [playerSide, setPlayerSide] = useState<"left" | "right">("left");
   const [gameOver, setGameOver] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(100); // 0 to 100%
+  const [timeLeft, setTimeLeft] = useState(100);
   const [combo, setCombo] = useState(0);
+  const [isFever, setIsFever] = useState(false);
+  const [isChoppingAnim, setIsChoppingAnim] = useState(false);
+  const [screenShake, setScreenShake] = useState(false);
 
-  // 2-Player state (if in friend mode)
-  const [p2Score, setP2Score] = useState(0);
-  const [p2Side, setP2Side] = useState<"left" | "right">("left");
-  const [p2GameOver, setP2GameOver] = useState(false);
-
-  // Visual trunk
+  // Visual trunk & effects
   const [trunk, setTrunk] = useState<TrunkSegment[]>([]);
-  const [p2Trunk, setP2Trunk] = useState<TrunkSegment[]>([]);
   const [flyingChunks, setFlyingChunks] = useState<FlyingChunk[]>([]);
-  const [chips, setChips] = useState<ChipParticle[]>([]);
+  const [splinters, setSplinters] = useState<SplinterParticle[]>([]);
+  const [floatingTexts, setFloatingTexts] = useState<FloatText[]>([]);
 
   const trunkIdCounter = useRef(100);
   const chunkIdCounter = useRef(1);
-  const chipIdCounter = useRef(1);
+  const splinterIdCounter = useRef(1);
+  const floatIdCounter = useRef(1);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const botTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const feverTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load high score
   useEffect(() => {
@@ -84,16 +92,15 @@ export default function LumberjackGame({
     } catch {}
   }, []);
 
-  // Safe branch generation generator
+  // Safe branch generator (minimum 1 blank space between opposing branches)
   const createInitialTrunk = useCallback((): TrunkSegment[] => {
     const list: TrunkSegment[] = [];
     let lastBranch: BranchSide = "none";
     for (let i = 0; i < 8; i++) {
       let branch: BranchSide = "none";
       if (i >= 2) {
-        // Guarantee at least 1 blank between opposite branches
         if (lastBranch === "none") {
-          branch = Math.random() < 0.45 ? (Math.random() < 0.5 ? "left" : "right") : "none";
+          branch = Math.random() < 0.48 ? (Math.random() < 0.5 ? "left" : "right") : "none";
         } else {
           branch = "none";
         }
@@ -110,31 +117,28 @@ export default function LumberjackGame({
       setPlayMode(mode);
       setBotDiff(diff);
       setScore(0);
-      setP2Score(0);
       setCombo(0);
+      setIsFever(false);
       setPlayerSide("left");
-      setP2Side("left");
       setGameOver(false);
-      setP2GameOver(false);
       setTimeLeft(100);
       setFlyingChunks([]);
-      setChips([]);
+      setSplinters([]);
+      setFloatingTexts([]);
       setTrunk(createInitialTrunk());
-      setP2Trunk(createInitialTrunk());
       setInMenu(false);
     },
     [createInitialTrunk]
   );
 
-  // Timer countdown loop
+  // Countdown loop
   useEffect(() => {
     if (inMenu || gameOver) {
       if (timerRef.current) clearInterval(timerRef.current);
       return;
     }
 
-    // Shrinks faster as score increases
-    const decayRate = 0.8 + Math.min(score * 0.025, 2.5);
+    const decayRate = isFever ? 0.6 : 0.9 + Math.min(score * 0.025, 2.5);
     timerRef.current = setInterval(() => {
       setTimeLeft((prev) => {
         const next = prev - decayRate;
@@ -149,9 +153,9 @@ export default function LumberjackGame({
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [inMenu, gameOver, score]);
+  }, [inMenu, gameOver, score, isFever]);
 
-  // Particle & Chunk Physics Loop
+  // Particle & Physics Animation Loop
   useEffect(() => {
     if (inMenu) return;
     const anim = requestAnimationFrame(() => {
@@ -161,28 +165,37 @@ export default function LumberjackGame({
             ...c,
             x: c.x + c.vx,
             y: c.y + c.vy,
-            vy: c.vy + 1.2, // gravity
+            vy: c.vy + 1.2,
             rot: c.rot + c.vrot,
           }))
-          .filter((c) => c.y < 600)
+          .filter((c) => c.y < 650)
       );
 
-      setChips((prev) =>
+      setSplinters((prev) =>
         prev
           .map((p) => ({
             ...p,
             x: p.x + p.vx,
             y: p.y + p.vy,
-            vy: p.vy + 0.8,
-            life: p.life - 0.05,
+            vy: p.vy + 0.9,
+            life: p.life - 0.04,
           }))
           .filter((p) => p.life > 0)
       );
+
+      setFloatingTexts((prev) =>
+        prev
+          .map((ft) => ({
+            ...ft,
+            y: ft.y - 2,
+          }))
+          .filter((ft) => ft.y > 100)
+      );
     });
     return () => cancelAnimationFrame(anim);
-  }, [flyingChunks, chips, inMenu]);
+  }, [flyingChunks, splinters, floatingTexts, inMenu]);
 
-  // Handle Game Over
+  // Game over
   const handleGameOver = useCallback(() => {
     setGameOver(true);
     arcadeSfx.playPenaltyBuzz();
@@ -197,30 +210,56 @@ export default function LumberjackGame({
     }
   }, [score, hiScore, currentUid, match]);
 
-  // Chop action for player 1
+  // Chop action
   const chop = useCallback(
     (side: "left" | "right") => {
       if (gameOver || inMenu) return;
 
       arcadeSfx.playAxeChop();
       setPlayerSide(side);
+      setIsChoppingAnim(true);
+      setTimeout(() => setIsChoppingAnim(false), 90);
 
-      // Check collision with the branch at bottom segment (trunk[0])
+      // Screen shake
+      setScreenShake(true);
+      setTimeout(() => setScreenShake(false), 80);
+
+      // Check collision with branch on bottom segment
       const bottomSegment = trunk[0];
       if (bottomSegment && bottomSegment.branch === side) {
-        // Immediate squash by branch!
         handleGameOver();
         return;
       }
 
-      // Successful chop!
-      const newScore = score + 1;
+      // Successful Chop
+      const pointsToAdd = isFever ? 2 : 1;
+      const newScore = score + pointsToAdd;
+      const newCombo = combo + 1;
       setScore(newScore);
-      setCombo((c) => c + 1);
-      setTimeLeft((t) => Math.min(100, t + 4));
+      setCombo(newCombo);
+      setTimeLeft((t) => Math.min(100, t + 4.5));
 
-      // Spawn flying chunk
-      const chunkVx = side === "left" ? 9 + Math.random() * 4 : -(9 + Math.random() * 4);
+      // Trigger Fever Mode if combo > 15
+      if (newCombo >= 15 && !isFever) {
+        setIsFever(true);
+        arcadeSfx.playVictory();
+        setFloatingTexts((prev) => [
+          ...prev,
+          { id: floatIdCounter.current++, text: "🔥 FEVER MODE 2X! 🔥", x: 140, y: 260, color: "#f59e0b" },
+        ]);
+        if (feverTimerRef.current) clearTimeout(feverTimerRef.current);
+        feverTimerRef.current = setTimeout(() => {
+          setIsFever(false);
+        }, 5000);
+      } else if (newCombo % 10 === 0) {
+        setFloatingTexts((prev) => [
+          ...prev,
+          { id: floatIdCounter.current++, text: `${newCombo} COMBO!`, x: 150, y: 280, color: "#10b981" },
+        ]);
+      }
+
+      // Flying wood chunk
+      const chunkVx = side === "left" ? 10 + Math.random() * 5 : -(10 + Math.random() * 5);
       setFlyingChunks((prev) => [
         ...prev,
         {
@@ -228,30 +267,30 @@ export default function LumberjackGame({
           x: 160,
           y: 280,
           vx: chunkVx,
-          vy: -6 - Math.random() * 4,
+          vy: -7 - Math.random() * 4,
           rot: 0,
-          vrot: (Math.random() - 0.5) * 20,
+          vrot: (Math.random() - 0.5) * 25,
           branch: bottomSegment ? bottomSegment.branch : "none",
         },
       ]);
 
-      // Spawn wood chips
-      const newChips: ChipParticle[] = [];
-      for (let i = 0; i < 6; i++) {
-        newChips.push({
-          id: chipIdCounter.current++,
+      // Splinters explosion
+      const newSplinters: SplinterParticle[] = [];
+      for (let i = 0; i < (isFever ? 12 : 7); i++) {
+        newSplinters.push({
+          id: splinterIdCounter.current++,
           x: side === "left" ? 120 : 200,
-          y: 300,
-          vx: (side === "left" ? 1 : -1) * (Math.random() * 8 + 2),
-          vy: -Math.random() * 8 - 2,
-          size: Math.random() * 5 + 3,
-          color: Math.random() > 0.5 ? "#b45309" : "#d97706",
+          y: 310,
+          vx: (side === "left" ? 1 : -1) * (Math.random() * 9 + 3),
+          vy: -Math.random() * 8 - 3,
+          size: Math.random() * 6 + 3,
+          color: isFever ? "#fef08a" : Math.random() > 0.5 ? "#b45309" : "#d97706",
           life: 1,
         });
       }
-      setChips((prev) => [...prev.slice(-20), ...newChips]);
+      setSplinters((prev) => [...prev.slice(-30), ...newSplinters]);
 
-      // Check if next branch immediately squashes player
+      // Check next descending segment
       const nextSegment = trunk[1];
       if (nextSegment && nextSegment.branch === side) {
         handleGameOver();
@@ -264,12 +303,12 @@ export default function LumberjackGame({
         const last = remaining[remaining.length - 1];
         let branch: BranchSide = "none";
         if (last && last.branch === "none") {
-          branch = Math.random() < 0.45 ? (Math.random() < 0.5 ? "left" : "right") : "none";
+          branch = Math.random() < 0.48 ? (Math.random() < 0.5 ? "left" : "right") : "none";
         }
         return [...remaining, { id: trunkIdCounter.current++, branch }];
       });
     },
-    [gameOver, inMenu, trunk, score, handleGameOver]
+    [gameOver, inMenu, trunk, score, combo, isFever, handleGameOver]
   );
 
   // Bot AI loop
@@ -279,9 +318,8 @@ export default function LumberjackGame({
       return;
     }
 
-    const cadence = botDiff === "hard" ? 180 : botDiff === "medium" ? 260 : 360;
+    const cadence = botDiff === "hard" ? 175 : botDiff === "medium" ? 250 : 340;
     botTimerRef.current = setInterval(() => {
-      // Bot determines safe side
       const nextSegment = trunk[1];
       let targetSide: "left" | "right" = playerSide;
 
@@ -289,7 +327,7 @@ export default function LumberjackGame({
         targetSide = nextSegment.branch === "left" ? "right" : "left";
       }
 
-      // 3% intentional human misread error on high speeds
+      // 3% intentional human error
       if (Math.random() < 0.03) {
         targetSide = targetSide === "left" ? "right" : "left";
       }
@@ -302,37 +340,26 @@ export default function LumberjackGame({
     };
   }, [inMenu, playMode, botDiff, gameOver, trunk, playerSide, chop]);
 
-  // Hero Vector Graphic for Lumberjack
+  // Hero Vector Graphic
   const lumberjackHero = (
     <div className="w-full h-full flex flex-col items-center justify-center relative">
       <div className="absolute inset-0 bg-emerald-50 rounded-2xl flex items-center justify-center">
         <svg viewBox="0 0 160 160" className="w-36 h-36">
-          {/* Forest Pine Background */}
           <polygon points="80,15 95,45 65,45" fill="#15803d" />
           <polygon points="80,35 105,75 55,75" fill="#166534" />
           <polygon points="80,65 115,115 45,115" fill="#14532d" />
           <rect x="73" y="115" width="14" height="25" fill="#78350f" rx="3" />
-
-          {/* Wooden Tree Trunk */}
           <rect x="110" y="40" width="30" height="95" fill="#b45309" rx="4" />
           <rect x="115" y="40" width="8" height="95" fill="#d97706" />
-          {/* Branch */}
           <path d="M140 70 L158 65 L158 75 Z" fill="#92400e" />
-
-          {/* Lumberjack Character */}
-          {/* Legs */}
           <rect x="35" y="105" width="8" height="25" fill="#1e3a8a" rx="3" />
           <rect x="47" y="105" width="8" height="25" fill="#1e3a8a" rx="3" />
-          {/* Flannel Shirt */}
           <rect x="30" y="65" width="30" height="42" fill="#dc2626" rx="6" />
           <line x1="45" y1="65" x2="45" y2="107" stroke="#7f1d1d" strokeWidth="2" />
-          {/* Head & Beanie */}
           <circle cx="45" cy="50" r="14" fill="#fed7aa" />
           <path d="M31 46 Q45 28 59 46 Z" fill="#ea580c" />
           <circle cx="45" cy="30" r="4" fill="#c2410c" />
-          {/* Beard */}
           <path d="M36 52 Q45 64 54 52 Z" fill="#78350f" />
-          {/* Axe */}
           <line x1="45" y1="75" x2="90" y2="55" stroke="#78350f" strokeWidth="4" strokeLinecap="round" />
           <path d="M85 45 L105 50 L95 65 L80 60 Z" fill="#94a3b8" />
         </svg>
@@ -343,18 +370,18 @@ export default function LumberjackGame({
   const howToPlaySteps = [
     {
       title: "Tap Left or Right",
-      desc: "Tap the left side of the screen to chop from the left, or tap the right side to chop from the right.",
+      desc: "Tap the left side of the screen to chop from the left; tap right to chop from the right.",
       icon: "🪓",
     },
     {
       title: "Dodge Falling Branches",
-      desc: "Every cut shifts the tree down by one segment. Never stand under a descending branch!",
+      desc: "Every cut shifts the tree down. Avoid standing under descending timber branches!",
       icon: "🌲",
     },
     {
-      title: "Beat the Timer",
-      desc: "The countdown bar accelerates as your score climbs. Maintain a rapid cutting cadence.",
-      icon: "⏱️",
+      title: "Activate Fever Mode",
+      desc: "Maintain a rapid cutting cadence of 15+ combo to unlock the Golden Fiery Axe with 2x points!",
+      icon: "🔥",
     },
   ];
 
@@ -363,10 +390,10 @@ export default function LumberjackGame({
       <div className="min-h-[85vh] flex items-center justify-center p-4 bg-gradient-to-b from-emerald-950 via-neutral-950 to-neutral-900">
         <EchoArcadeModalCard
           title="LUMBERJACK"
-          subtitle="Speed Reflex Duel"
+          subtitle="Speed Reflex Timber Duel"
           categoryTag="SPEED REFLEX"
           accentColor="#4CAF50"
-          objective="Tap on the left or right side to cut down the tree. But be careful not to get hit by the branches!"
+          objective="Tap left or right to chop timber and avoid branches! Unleash 2x Fever Mode on high combo streaks!"
           heroGraphic={lumberjackHero}
           howToPlaySteps={howToPlaySteps}
           onPlayFriend={() => startGame("friend")}
@@ -379,7 +406,7 @@ export default function LumberjackGame({
   }
 
   return (
-    <div className="min-h-[90vh] flex flex-col items-center justify-between p-4 select-none touch-none bg-neutral-950 text-white font-sans">
+    <div className={`min-h-[90vh] flex flex-col items-center justify-between p-4 select-none touch-none bg-neutral-950 text-white font-sans ${screenShake ? "translate-y-1" : ""}`}>
       {/* Top HUD */}
       <div className="w-full max-w-sm flex items-center justify-between px-2 pt-2">
         <button
@@ -390,15 +417,15 @@ export default function LumberjackGame({
           <ArrowLeft className="w-5 h-5" />
         </button>
 
-        {/* Score & Combo */}
+        {/* Score & Fever Multiplier */}
         <div className="flex flex-col items-center">
-          <div className="text-4xl font-black tracking-tight text-emerald-400 drop-shadow-md">
+          <div className={`text-4xl font-black tracking-tight drop-shadow-md ${isFever ? "text-amber-300 animate-pulse" : "text-emerald-400"}`}>
             {score}
           </div>
           {combo > 5 && (
-            <div className="flex items-center gap-1 text-xs font-black text-amber-400 uppercase tracking-widest animate-pulse">
-              <Flame className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
-              <span>{combo} COMBO</span>
+            <div className={`flex items-center gap-1 text-xs font-black uppercase tracking-widest ${isFever ? "text-amber-400" : "text-emerald-400"}`}>
+              <Flame className="w-3.5 h-3.5 fill-current" />
+              <span>{combo} COMBO {isFever ? "(2X FEVER!)" : ""}</span>
             </div>
           )}
         </div>
@@ -413,23 +440,30 @@ export default function LumberjackGame({
       <div className="w-full max-w-xs h-3 bg-neutral-900 rounded-full overflow-hidden border border-white/15 my-2">
         <div
           className={`h-full transition-all duration-100 ${
-            timeLeft > 50 ? "bg-emerald-500" : timeLeft > 25 ? "bg-amber-500" : "bg-red-500 animate-pulse"
+            isFever ? "bg-amber-400 animate-pulse" : timeLeft > 50 ? "bg-emerald-500" : timeLeft > 25 ? "bg-amber-500" : "bg-red-500 animate-pulse"
           }`}
           style={{ width: `${Math.max(0, Math.min(100, timeLeft))}%` }}
         />
       </div>
 
-      {/* Main Gameplay Canvas / Arena */}
+      {/* Main Canvas Arena */}
       <div className="relative w-full max-w-sm h-[460px] bg-gradient-to-b from-sky-900/40 via-emerald-950/30 to-neutral-950 border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex flex-col justify-end">
-        {/* Sky Clouds / Pine silhouette */}
-        <div className="absolute top-4 left-4 w-12 h-4 bg-white/10 rounded-full" />
-        <div className="absolute top-10 right-6 w-16 h-5 bg-white/10 rounded-full" />
+        {/* Floating Combo Banners */}
+        {floatingTexts.map((ft) => (
+          <div
+            key={ft.id}
+            className="absolute font-black text-sm uppercase tracking-wider pointer-events-none drop-shadow-lg z-30"
+            style={{ left: `${ft.x}px`, top: `${ft.y}px`, color: ft.color }}
+          >
+            {ft.text}
+          </div>
+        ))}
 
-        {/* Dynamic Flying Chunks */}
+        {/* Flying Chunks */}
         {flyingChunks.map((chunk) => (
           <div
             key={chunk.id}
-            className="absolute w-16 h-12 bg-amber-700 border border-amber-900 rounded-md shadow-lg pointer-events-none"
+            className="absolute w-20 h-14 bg-gradient-to-r from-amber-800 to-amber-700 border border-amber-950 rounded-md shadow-2xl pointer-events-none"
             style={{
               left: `${chunk.x}px`,
               top: `${chunk.y}px`,
@@ -438,83 +472,93 @@ export default function LumberjackGame({
           >
             {chunk.branch !== "none" && (
               <div
-                className={`absolute top-2 w-10 h-6 bg-emerald-700 rounded-sm ${
-                  chunk.branch === "left" ? "-left-8" : "-right-8"
+                className={`absolute top-2 w-12 h-6 bg-emerald-800 rounded-sm ${
+                  chunk.branch === "left" ? "-left-10" : "-right-10"
                 }`}
               />
             )}
           </div>
         ))}
 
-        {/* Splashing Wood Chips */}
-        {chips.map((chip) => (
+        {/* Splinters */}
+        {splinters.map((sp) => (
           <div
-            key={chip.id}
+            key={sp.id}
             className="absolute rounded-full pointer-events-none"
             style={{
-              left: `${chip.x}px`,
-              top: `${chip.y}px`,
-              width: `${chip.size}px`,
-              height: `${chip.size}px`,
-              backgroundColor: chip.color,
-              opacity: chip.life,
+              left: `${sp.x}px`,
+              top: `${sp.y}px`,
+              width: `${sp.size}px`,
+              height: `${sp.size}px`,
+              backgroundColor: sp.color,
+              opacity: sp.life,
             }}
           />
         ))}
 
-        {/* Central Tree Trunk Segments */}
-        <div className="absolute left-1/2 -translate-x-1/2 bottom-12 w-20 flex flex-col-reverse items-center z-10">
+        {/* Central Tree Trunk Segments with 3D Bark Rings */}
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-12 w-22 flex flex-col-reverse items-center z-10">
           {trunk.slice(0, 6).map((seg, idx) => (
             <div
               key={seg.id}
-              className="relative w-20 h-14 bg-gradient-to-r from-amber-800 via-amber-700 to-amber-900 border-y border-amber-950/60 shadow-sm shrink-0 flex items-center justify-center"
+              className="relative w-22 h-14 bg-gradient-to-r from-amber-900 via-amber-700 to-amber-900 border-y border-amber-950/70 shadow-md shrink-0 flex items-center justify-center rounded-xs"
             >
-              {/* Bark wood grain */}
-              <div className="w-1.5 h-full bg-amber-900/40 absolute left-4" />
-              <div className="w-1 h-full bg-amber-600/30 absolute right-5" />
+              {/* Bark Grain Ribs */}
+              <div className="w-1.5 h-full bg-amber-950/50 absolute left-3" />
+              <div className="w-1 h-full bg-amber-600/40 absolute right-4" />
+              <div className="w-1 h-full bg-amber-800/60 absolute left-8" />
 
               {/* Branch Left */}
               {seg.branch === "left" && (
-                <div className="absolute -left-20 top-2 w-20 h-8 bg-gradient-to-l from-amber-800 to-emerald-800 rounded-l-xl border border-amber-950 flex items-center px-1 shadow-md">
+                <div className="absolute -left-20 top-2 w-20 h-8 bg-gradient-to-l from-amber-800 to-emerald-800 rounded-l-2xl border border-amber-950 flex items-center px-1 shadow-md">
                   <span className="text-xs">🍃</span>
                 </div>
               )}
 
               {/* Branch Right */}
               {seg.branch === "right" && (
-                <div className="absolute -right-20 top-2 w-20 h-8 bg-gradient-to-r from-amber-800 to-emerald-800 rounded-r-xl border border-amber-950 flex items-center justify-end px-1 shadow-md">
+                <div className="absolute -right-20 top-2 w-20 h-8 bg-gradient-to-r from-amber-800 to-emerald-800 rounded-r-2xl border border-amber-950 flex items-center justify-end px-1 shadow-md">
                   <span className="text-xs">🍃</span>
                 </div>
               )}
             </div>
           ))}
 
-          {/* Trunk Root Stump */}
-          <div className="w-28 h-8 bg-amber-950 rounded-t-lg -mb-2 border-t-2 border-amber-700/60" />
+          {/* Root Stump */}
+          <div className="w-32 h-9 bg-amber-950 rounded-t-xl -mb-2 border-t-2 border-amber-700/60" />
         </div>
 
-        {/* Lumberjack Character */}
+        {/* Animated Lumberjack Character Rig */}
         <div
           className={`absolute bottom-12 z-20 transition-all duration-75 ${
             playerSide === "left" ? "left-6" : "right-6 scale-x-[-1]"
           }`}
         >
-          <div className="relative w-16 h-24 flex flex-col items-center">
-            {/* Beanie */}
-            <div className="w-8 h-4 bg-orange-600 rounded-t-full" />
-            {/* Face */}
-            <div className="w-7 h-6 bg-amber-200 rounded-b-md flex items-center justify-center">
-              <span className="text-[10px]">🧔</span>
+          <div className="relative w-20 h-28 flex flex-col items-center">
+            {/* Beanie Hat */}
+            <div className="w-9 h-5 bg-orange-600 rounded-t-full border-t border-orange-400" />
+            {/* Head & Beard */}
+            <div className="w-8 h-7 bg-amber-200 rounded-b-md flex items-center justify-center relative">
+              <span className="text-xs">🧔</span>
             </div>
-            {/* Flannel Shirt */}
-            <div className="w-10 h-10 bg-red-600 border border-red-800 rounded-md" />
-            {/* Legs */}
-            <div className="flex gap-1 -mt-1">
-              <div className="w-3 h-6 bg-blue-900 rounded-b-sm" />
-              <div className="w-3 h-6 bg-blue-900 rounded-b-sm" />
+            {/* Flannel Shirt with Suspenders */}
+            <div className="w-12 h-11 bg-red-600 border border-red-900 rounded-md relative flex justify-between px-1.5">
+              <div className="w-1.5 h-full bg-neutral-900" />
+              <div className="w-1.5 h-full bg-neutral-900" />
             </div>
-            {/* Axe Swing Effect */}
-            <div className="absolute -top-1 -right-3 text-xl animate-bounce">🪓</div>
+            {/* Legs with Boots */}
+            <div className="flex gap-1.5 -mt-1">
+              <div className="w-4 h-7 bg-blue-900 rounded-b-md border-b-2 border-neutral-900" />
+              <div className="w-4 h-7 bg-blue-900 rounded-b-md border-b-2 border-neutral-900" />
+            </div>
+            {/* Axe with swing motion */}
+            <div
+              className={`absolute -top-1 -right-4 text-2xl transition-transform duration-75 ${
+                isChoppingAnim ? "rotate-45 translate-x-2" : "-rotate-12"
+              } ${isFever ? "drop-shadow-[0_0_8px_rgba(245,158,11,1)]" : ""}`}
+            >
+              {isFever ? "✨🪓" : "🪓"}
+            </div>
           </div>
         </div>
 
@@ -524,12 +568,8 @@ export default function LumberjackGame({
             <div className="w-16 h-16 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center text-3xl mb-2">
               💥
             </div>
-            <h2 className="text-3xl font-black text-white uppercase tracking-tight">
-              SQUASHED!
-            </h2>
-            <p className="text-sm font-bold text-neutral-400 mt-1">
-              Watch out for falling timber branches!
-            </p>
+            <h2 className="text-3xl font-black text-white uppercase tracking-tight">SQUASHED!</h2>
+            <p className="text-sm font-bold text-neutral-400 mt-1">Watch out for falling branches!</p>
 
             <div className="bg-white/10 rounded-2xl p-4 my-4 w-full max-w-[220px]">
               <div className="text-xs uppercase text-neutral-400 font-bold">Your Score</div>
@@ -553,7 +593,7 @@ export default function LumberjackGame({
         )}
       </div>
 
-      {/* Dual Touch Chop Controls (Left & Right halves) */}
+      {/* Dual Touch Chop Controls */}
       <div className="w-full max-w-sm grid grid-cols-2 gap-3 mt-4">
         <button
           type="button"

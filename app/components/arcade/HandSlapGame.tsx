@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { updateArcadeGameScore, type ArcadeMatch } from "@/lib/arcade";
 import { arcadeSfx } from "@/lib/arcadeSfx";
 import EchoArcadeModalCard, { type BotDifficulty } from "./EchoArcadeModalCard";
-import { ArrowLeft, RotateCcw, Shield, Zap, Trophy } from "lucide-react";
+import { ArrowLeft, RotateCcw, Shield, Zap, Trophy, Flame } from "lucide-react";
 
 interface HandSlapGameProps {
   match: ArcadeMatch;
@@ -29,16 +29,14 @@ export default function HandSlapGame({
   const [p2Score, setP2Score] = useState(0);
   const [p1Role, setP1Role] = useState<Role>("attacker");
 
-  // Tension, Feints & Animations
+  // Tension & Animations
   const [tensionZoom, setTensionZoom] = useState(1);
   const [p1DodgesWithoutAttack, setP1DodgesWithoutAttack] = useState(0);
   const [p2DodgesWithoutAttack, setP2DodgesWithoutAttack] = useState(0);
-
-  // Slap state
   const [isSlapping, setIsSlapping] = useState(false);
   const [isDodging, setIsDodging] = useState(false);
   const [feintTwitch, setFeintTwitch] = useState(false);
-  const [redHandprint, setRedHandprint] = useState<{ x: number; y: number; opacity: number } | null>(null);
+  const [slapRedness, setSlapRedness] = useState(0); // 0 to 5 level of redness
   const [screenShake, setScreenShake] = useState(false);
   const [statusBanner, setStatusBanner] = useState<string>("READY! TENSION RISING...");
   const [gameOver, setGameOver] = useState(false);
@@ -49,7 +47,7 @@ export default function HandSlapGame({
   const tensionInterval = useRef<NodeJS.Timeout | null>(null);
   const botTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // Tension zoom effect
+  // Tension zoom
   useEffect(() => {
     if (inMenu || gameOver) {
       if (tensionInterval.current) clearInterval(tensionInterval.current);
@@ -61,7 +59,7 @@ export default function HandSlapGame({
 
     tensionInterval.current = setInterval(() => {
       const elapsed = Date.now() - roundStartTime.current;
-      const zoom = 1 + Math.min(elapsed / 8000, 0.25); // slowly zooms up to 1.25x
+      const zoom = 1 + Math.min(elapsed / 7000, 0.22);
       setTensionZoom(zoom);
     }, 100);
 
@@ -70,7 +68,7 @@ export default function HandSlapGame({
     };
   }, [inMenu, gameOver, p1Score, p2Score, p1Role]);
 
-  // Start new match
+  // Start match
   const startGame = useCallback((mode: "bot" | "friend", diff: BotDifficulty = "medium") => {
     setPlayMode(mode);
     setBotDiff(diff);
@@ -82,7 +80,7 @@ export default function HandSlapGame({
     setIsSlapping(false);
     setIsDodging(false);
     setFeintTwitch(false);
-    setRedHandprint(null);
+    setSlapRedness(0);
     setScreenShake(false);
     setStatusBanner("ATTACKER: TAP TO SLAP! DEFENDER: DODGE!");
     setGameOver(false);
@@ -91,7 +89,6 @@ export default function HandSlapGame({
     setInMenu(false);
   }, []);
 
-  // End match
   const concludeGame = useCallback(
     (wonBy: "p1" | "p2") => {
       setGameOver(true);
@@ -104,7 +101,7 @@ export default function HandSlapGame({
     [currentUid, match]
   );
 
-  // Trigger Slap by Attacker
+  // Trigger Slap Strike
   const triggerSlap = useCallback(
     (attacker: "p1" | "p2") => {
       if (actionLock.current || gameOver) return;
@@ -114,7 +111,6 @@ export default function HandSlapGame({
       const defender = attacker === "p1" ? "p2" : "p1";
       const isDefending = isDodging;
 
-      // Reset dodges without attack
       if (defender === "p1") setP1DodgesWithoutAttack(0);
       else setP2DodgesWithoutAttack(0);
 
@@ -123,8 +119,8 @@ export default function HandSlapGame({
           // HIT!
           arcadeSfx.playSlap();
           setScreenShake(true);
-          setRedHandprint({ x: 160, y: 220, opacity: 1 });
-          setStatusBanner(attacker === "p1" ? "💥 DIRECT HIT! +1 POINT!" : "💥 BOT CONNECTED! +1 POINT!");
+          setSlapRedness((r) => Math.min(5, r + 1));
+          setStatusBanner(attacker === "p1" ? "💥 DIRECT SLAP! +1 POINT!" : "💥 BOT CONNECTED! +1 POINT!");
 
           if (attacker === "p1") {
             const nextScore = p1Score + 1;
@@ -142,7 +138,7 @@ export default function HandSlapGame({
             }
           }
         } else {
-          // DODGED! Attacker missed -> Swap Roles!
+          // DODGED! Swap Roles!
           arcadeSfx.playWhoosh();
           setStatusBanner("💨 CLEAN DODGE! ROLES SWAP!");
           setP1Role((r) => (r === "attacker" ? "defender" : "attacker"));
@@ -152,13 +148,13 @@ export default function HandSlapGame({
           setIsSlapping(false);
           setScreenShake(false);
           actionLock.current = false;
-        }, 500);
+        }, 450);
       }, 160);
     },
     [actionLock, gameOver, isDodging, p1Score, p2Score, concludeGame]
   );
 
-  // Trigger Dodge by Defender
+  // Trigger Dodge
   const triggerDodge = useCallback(
     (defender: "p1" | "p2") => {
       if (actionLock.current || gameOver) return;
@@ -166,7 +162,6 @@ export default function HandSlapGame({
       arcadeSfx.playWhoosh();
       setIsDodging(true);
 
-      // If dodging while attacker is NOT slapping -> check 3 false retreats
       if (!isSlapping) {
         if (defender === "p1") {
           const count = p1DodgesWithoutAttack + 1;
@@ -200,17 +195,18 @@ export default function HandSlapGame({
     [actionLock, gameOver, isSlapping, p1DodgesWithoutAttack, p2DodgesWithoutAttack, p1Score, p2Score, concludeGame]
   );
 
-  // Trigger Feint Twitch
+  // Feint twitch
   const triggerFeint = useCallback(() => {
     if (actionLock.current || gameOver) return;
     setFeintTwitch(true);
     arcadeSfx.playButtonTap();
+    setStatusBanner("👀 FEINT TWITCH BAIT!");
     setTimeout(() => {
       setFeintTwitch(false);
     }, 150);
   }, [gameOver]);
 
-  // Bot State Machine
+  // Bot AI
   useEffect(() => {
     if (inMenu || playMode !== "bot" || gameOver) {
       if (botTimer.current) clearTimeout(botTimer.current);
@@ -220,20 +216,17 @@ export default function HandSlapGame({
     const isBotAttacker = p1Role === "defender";
 
     if (isBotAttacker) {
-      // Bot is attacking: delay 1.2s to 3.5s then slap or feint
-      const waitMs = 1200 + Math.random() * 2000;
+      const waitMs = 1100 + Math.random() * 1800;
       botTimer.current = setTimeout(() => {
-        if (Math.random() < 0.25) {
-          // Trigger bluff twitch
+        if (Math.random() < 0.3) {
           triggerFeint();
         } else {
           triggerSlap("p2");
         }
       }, waitMs);
     } else {
-      // Bot is defending: when player slaps, react within human limits (160ms - 320ms)
       if (isSlapping) {
-        const reactionMs = botDiff === "hard" ? 170 : botDiff === "medium" ? 230 : 310;
+        const reactionMs = botDiff === "hard" ? 170 : botDiff === "medium" ? 235 : 320;
         const willDodge = Math.random() < (botDiff === "hard" ? 0.85 : botDiff === "medium" ? 0.65 : 0.45);
 
         botTimer.current = setTimeout(() => {
@@ -249,31 +242,24 @@ export default function HandSlapGame({
     };
   }, [inMenu, playMode, gameOver, p1Role, isSlapping, botDiff, triggerSlap, triggerDodge, triggerFeint]);
 
-  // Hero Vector Graphic
+  // Hero Graphic
   const handSlapHero = (
     <div className="w-full h-full flex items-center justify-center relative">
       <div className="absolute inset-0 bg-red-50 rounded-2xl flex items-center justify-center">
         <svg viewBox="0 0 160 160" className="w-36 h-36">
-          {/* Top Hand (Defender) */}
           <path
             d="M 80,20 Q 95,20 100,45 L 105,75 Q 80,85 55,75 L 60,45 Q 65,20 80,20 Z"
             fill="#fbbf24"
             stroke="#b45309"
             strokeWidth="3"
           />
-          <line x1="72" y1="35" x2="72" y2="65" stroke="#d97706" strokeWidth="2" />
-          <line x1="88" y1="35" x2="88" y2="65" stroke="#d97706" strokeWidth="2" />
-
-          {/* Bottom Hand (Attacker Slapping) */}
           <path
             d="M 80,140 Q 65,140 60,115 L 55,85 Q 80,75 105,85 L 100,115 Q 95,140 80,140 Z"
             fill="#ef4444"
             stroke="#991b1b"
             strokeWidth="3"
           />
-          {/* Slap Impact Sparks */}
           <circle cx="80" cy="80" r="14" fill="#fef08a" opacity="0.8" />
-          <path d="M 70,70 L 60,60 M 90,70 L 100,60 M 70,90 L 60,100 M 90,90 L 100,100" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round" />
         </svg>
       </div>
     </div>
@@ -282,17 +268,17 @@ export default function HandSlapGame({
   const howToPlaySteps = [
     {
       title: "Attacker vs. Defender",
-      desc: "Attacker tries to slap hands before Defender pulls away. First to 5 points wins!",
+      desc: "Attacker slaps before Defender dodges. Clean dodge swaps roles! First to 5 wins.",
       icon: "✋",
     },
     {
-      title: "Miss = Roles Swap",
-      desc: "If the Attacker strikes and Defender cleanly dodges, roles instantly swap.",
-      icon: "🔄",
+      title: "Micro-Feint Bait",
+      desc: "Use the FEINT button to trigger a finger twitch and bait opponent false retreats.",
+      icon: "👀",
     },
     {
-      title: "Feint Penalty",
-      desc: "Defender cannot retreat 3 times without an actual attack—false retreats award a penalty point!",
+      title: "3 Retreats Penalty",
+      desc: "Defender cannot retreat 3 times without an attack—false retreats award a point!",
       icon: "🚨",
     },
   ];
@@ -305,7 +291,7 @@ export default function HandSlapGame({
           subtitle="Red Hands Reflex Duel"
           categoryTag="QUICK-DRAW REFLEX"
           accentColor="#E53935"
-          objective="Attacker slaps before Defender dodges! 3 false retreats award a penalty point. First to 5 wins!"
+          objective="Attacker slaps before Defender dodges! Micro-feint to bait dodges. First to 5 wins!"
           heroGraphic={handSlapHero}
           howToPlaySteps={howToPlaySteps}
           onPlayFriend={() => startGame("friend")}
@@ -317,7 +303,7 @@ export default function HandSlapGame({
   }
 
   return (
-    <div className={`min-h-[90vh] flex flex-col items-center justify-between p-4 select-none touch-none bg-neutral-950 text-white font-sans ${screenShake ? "animate-bounce" : ""}`}>
+    <div className={`min-h-[90vh] flex flex-col items-center justify-between p-4 select-none touch-none bg-neutral-950 text-white font-sans ${screenShake ? "translate-y-1" : ""}`}>
       {/* Top Header & Scoreboard */}
       <div className="w-full max-w-sm flex items-center justify-between px-2 pt-2">
         <button
@@ -328,7 +314,7 @@ export default function HandSlapGame({
           <ArrowLeft className="w-5 h-5" />
         </button>
 
-        {/* Duel Score (P1 vs P2) */}
+        {/* Duel Score */}
         <div className="flex items-center gap-4 bg-neutral-900/80 px-4 py-2 rounded-2xl border border-white/15 shadow-md">
           <div className="flex flex-col items-center">
             <span className="text-[10px] uppercase font-bold text-blue-300">YOU</span>
@@ -343,7 +329,7 @@ export default function HandSlapGame({
 
         <div className="flex items-center gap-1 text-xs font-bold text-amber-400 bg-amber-950/60 px-2.5 py-1 rounded-full border border-amber-500/30">
           <Trophy className="w-3.5 h-3.5" />
-          <span>FIRST TO 5</span>
+          <span>TO 5</span>
         </div>
       </div>
 
@@ -375,24 +361,35 @@ export default function HandSlapGame({
             )}
           </div>
 
-          {/* Top Hand Visual */}
+          {/* Top Hand Visual with fingers */}
           <div
-            className={`w-32 h-24 bg-amber-300 border-4 border-amber-600 rounded-b-3xl shadow-xl flex items-center justify-center transition-all duration-150 ${
-              p1Role === "attacker" && isDodging ? "-translate-y-8 opacity-60" : "translate-y-0"
+            className={`w-36 h-26 bg-amber-300 border-4 border-amber-600 rounded-b-3xl shadow-2xl flex flex-col items-center justify-between p-2 transition-all duration-150 relative ${
+              p1Role === "attacker" && isDodging ? "-translate-y-10 opacity-50" : "translate-y-0"
             }`}
           >
+            {/* Fingernails */}
+            <div className="flex gap-2">
+              <div className="w-2.5 h-4 bg-amber-100 rounded-full border border-amber-400" />
+              <div className="w-2.5 h-4 bg-amber-100 rounded-full border border-amber-400" />
+              <div className="w-2.5 h-4 bg-amber-100 rounded-full border border-amber-400" />
+              <div className="w-2.5 h-4 bg-amber-100 rounded-full border border-amber-400" />
+            </div>
+            {/* Red slap mark on top hand */}
+            {slapRedness > 0 && p1Role === "attacker" && (
+              <div
+                className="absolute inset-2 rounded-2xl bg-red-600/40 border-2 border-red-500 animate-pulse pointer-events-none"
+                style={{ opacity: Math.min(1, slapRedness * 0.25) }}
+              />
+            )}
             <span className="text-3xl">🖐️</span>
           </div>
         </div>
 
-        {/* Fading Red Handprint Overlay */}
-        {redHandprint && (
-          <div
-            className="absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-1000"
-            style={{ opacity: redHandprint.opacity }}
-          >
-            <div className="w-32 h-32 rounded-full bg-red-600/30 blur-md flex items-center justify-center">
-              <span className="text-6xl animate-ping">✋</span>
+        {/* Dynamic Red Handprint Overlay */}
+        {screenShake && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
+            <div className="w-36 h-36 rounded-full bg-red-600/40 blur-lg flex items-center justify-center">
+              <span className="text-7xl animate-ping">✋</span>
             </div>
           </div>
         )}
@@ -401,11 +398,25 @@ export default function HandSlapGame({
         <div className="w-full flex flex-col items-center">
           {/* Player Hand Visual */}
           <div
-            className={`w-32 h-24 bg-red-500 border-4 border-red-700 rounded-t-3xl shadow-xl flex items-center justify-center transition-all duration-100 ${
-              p1Role === "attacker" && (isSlapping || feintTwitch) ? "-translate-y-12" : ""
-            } ${p1Role === "defender" && isDodging ? "translate-y-8 opacity-60" : ""}`}
+            className={`w-36 h-26 bg-red-500 border-4 border-red-700 rounded-t-3xl shadow-2xl flex flex-col items-center justify-between p-2 transition-all duration-100 relative ${
+              p1Role === "attacker" && (isSlapping || feintTwitch) ? "-translate-y-14" : ""
+            } ${p1Role === "defender" && isDodging ? "translate-y-10 opacity-50" : ""}`}
           >
             <span className="text-3xl">✋</span>
+            {/* Fingernails */}
+            <div className="flex gap-2">
+              <div className="w-2.5 h-4 bg-red-200 rounded-full border border-red-600" />
+              <div className="w-2.5 h-4 bg-red-200 rounded-full border border-red-600" />
+              <div className="w-2.5 h-4 bg-red-200 rounded-full border border-red-600" />
+              <div className="w-2.5 h-4 bg-red-200 rounded-full border border-red-600" />
+            </div>
+            {/* Redness on player hand if defending and hit */}
+            {slapRedness > 0 && p1Role === "defender" && (
+              <div
+                className="absolute inset-2 rounded-2xl bg-red-800/60 border-2 border-red-400 animate-pulse pointer-events-none"
+                style={{ opacity: Math.min(1, slapRedness * 0.25) }}
+              />
+            )}
           </div>
 
           <div className="text-[11px] font-black uppercase tracking-wider text-neutral-400 mt-2 flex items-center gap-1">
@@ -432,9 +443,7 @@ export default function HandSlapGame({
             <h2 className="text-3xl font-black text-white uppercase tracking-tight">
               {winner === "p1" ? "VICTORY!" : "DEFEATED!"}
             </h2>
-            <p className="text-sm font-bold text-neutral-400 mt-1">
-              Final Score: {p1Score} - {p2Score}
-            </p>
+            <p className="text-sm font-bold text-neutral-400 mt-1">Final Score: {p1Score} - {p2Score}</p>
 
             <button
               type="button"
@@ -452,7 +461,6 @@ export default function HandSlapGame({
       <div className="w-full max-w-sm flex flex-col gap-3 mt-4">
         {p1Role === "attacker" ? (
           <div className="grid grid-cols-3 gap-2">
-            {/* Feint Button */}
             <button
               type="button"
               onPointerDown={triggerFeint}
@@ -462,7 +470,6 @@ export default function HandSlapGame({
               <span className="text-[10px] uppercase font-bold">FEINT</span>
             </button>
 
-            {/* Slap Strike Button */}
             <button
               type="button"
               onPointerDown={() => triggerSlap("p1")}
