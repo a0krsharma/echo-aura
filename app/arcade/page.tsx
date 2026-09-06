@@ -57,6 +57,15 @@ import FruitMergeGame from "@/app/components/arcade/FruitMergeGame";
 import SnakesArenaGame from "@/app/components/arcade/SnakesArenaGame";
 import NutsAndBoltsGame from "@/app/components/arcade/NutsAndBoltsGame";
 import CandyMatchGame from "@/app/components/arcade/CandyMatchGame";
+import LumberjackGame from "@/app/components/arcade/LumberjackGame";
+import HandSlapGame from "@/app/components/arcade/HandSlapGame";
+import RockPaperScissorsGame from "@/app/components/arcade/RockPaperScissorsGame";
+import TrafficJamGame from "@/app/components/arcade/TrafficJamGame";
+import KnifeThrowerGame from "@/app/components/arcade/KnifeThrowerGame";
+import PingPongGame from "@/app/components/arcade/PingPongGame";
+import DartsGame from "@/app/components/arcade/DartsGame";
+import FindMatchGame from "@/app/components/arcade/FindMatchGame";
+import CupPongGame from "@/app/components/arcade/CupPongGame";
 import ArcadeInviteModal from "@/app/components/arcade/ArcadeInviteModal";
 import ArcadeCreateModal from "@/app/components/arcade/ArcadeCreateModal";
 import ArcadeGameRulesModal from "@/app/components/arcade/ArcadeGameRulesModal";
@@ -147,6 +156,15 @@ const CLEAN_GAMES: MasterRankedGame[] = [
   { id: "snakes", name: "Snakes Arena (Slither)", category: "PHYSICS", icon: "🐍", description: "60 FPS vector arena slither battle vs AI bots with boost trails" },
   { id: "nuts_and_bolts", name: "Nuts & Bolts", category: "PUZZLE", icon: "🔩", description: "Color sorting logic puzzle with threaded bolts & hex nuts" },
   { id: "candy_match", name: "Candy Match-3", category: "PUZZLE", icon: "🍬", description: "8x8 candy swap cascade with striped beams & color bombs" },
+  { id: "lumberjack", name: "Lumberjack", category: "PHYSICS", icon: "🪓", description: "Speed reflex timber chop avoiding falling branches" },
+  { id: "hand_slap", name: "Hand Slap (Red Hands)", category: "PHYSICS", icon: "✋", description: "Quick-draw reflex battle with attacker slap & defender dodge" },
+  { id: "rock_paper_scissors", name: "Rock Paper Scissors", category: "PAPER", icon: "🪨", description: "3D icon buttons, 1-2-3 rhythm bounce, sudden death overtime" },
+  { id: "traffic_jam", name: "Traffic Jam (Bumper Cars)", category: "PHYSICS", icon: "🚗", description: "Arena bumper cars on floating asphalt with collapsing ring" },
+  { id: "knife_thrower", name: "Knife Thrower", category: "PHYSICS", icon: "🗡️", description: "Rotating target log with variable speeds & blade clash physics" },
+  { id: "ping_pong", name: "Ping Pong", category: "PHYSICS", icon: "🏓", description: "Tabletop swipe tennis with curve spin & apex power smashes" },
+  { id: "darts", name: "Darts 301", category: "PHYSICS", icon: "🎯", description: "Official 301 countdown, swipe velocity & checkout calculator" },
+  { id: "find_match", name: "Find Match", category: "PUZZLE", icon: "🔍", description: "Projective geometry card deck with 1 exact matching symbol" },
+  { id: "cup_pong", name: "Cup Pong", category: "PHYSICS", icon: "🥤", description: "Parabolic 3D flick toss into red party cup pyramids" },
 ];
 
 function ArcadeContent() {
@@ -879,6 +897,33 @@ function ArcadeContent() {
             )}
             {activeMatch.gameType === "candy_match" && (
               <CandyMatchGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+            )}
+            {activeMatch.gameType === "lumberjack" && (
+              <LumberjackGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+            )}
+            {activeMatch.gameType === "hand_slap" && (
+              <HandSlapGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+            )}
+            {activeMatch.gameType === "rock_paper_scissors" && (
+              <RockPaperScissorsGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+            )}
+            {activeMatch.gameType === "traffic_jam" && (
+              <TrafficJamGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+            )}
+            {activeMatch.gameType === "knife_thrower" && (
+              <KnifeThrowerGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+            )}
+            {activeMatch.gameType === "ping_pong" && (
+              <PingPongGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+            )}
+            {activeMatch.gameType === "darts" && (
+              <DartsGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+            )}
+            {activeMatch.gameType === "find_match" && (
+              <FindMatchGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+            )}
+            {activeMatch.gameType === "cup_pong" && (
+              <CupPongGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
             )}
           </div>
         ) : (

@@ -47,6 +47,15 @@ const ARCADE_GAMES: { type: ArcadeGameType; name: string; icon: string; desc: st
   { type: "snakes", name: "SNAKES ARENA", icon: "🐍", desc: "60fps vector slither battle vs bots" },
   { type: "nuts_and_bolts", name: "NUTS & BOLTS", icon: "🔩", desc: "Color sorting threaded bolt puzzle" },
   { type: "candy_match", name: "CANDY MATCH-3", icon: "🍬", desc: "8x8 gem cascade combo clash" },
+  { type: "lumberjack", name: "LUMBERJACK", icon: "🪓", desc: "Speed reflex timber chop duel" },
+  { type: "hand_slap", name: "HAND SLAP (RED HANDS)", icon: "✋", desc: "Quick-draw reflex slap battle" },
+  { type: "rock_paper_scissors", name: "ROCK PAPER SCISSORS", icon: "🪨", desc: "3D icon buttons sudden death duel" },
+  { type: "traffic_jam", name: "TRAFFIC JAM", icon: "🚗", desc: "Arena bumper cars on collapsing asphalt" },
+  { type: "knife_thrower", name: "KNIFE THROWER", icon: "🗡️", desc: "Rotating target log precision throws" },
+  { type: "ping_pong", name: "PING PONG", icon: "🏓", desc: "Tabletop swipe tennis with curve spin" },
+  { type: "darts", name: "DARTS 301", icon: "🎯", desc: "301 countdown swipe aim duel" },
+  { type: "find_match", name: "FIND MATCH", icon: "🔍", desc: "Visual perception spot-it card duel" },
+  { type: "cup_pong", name: "CUP PONG", icon: "🥤", desc: "Parabolic 3D flick toss into red cups" },
 ];
 
 export default function ChallengeModal({

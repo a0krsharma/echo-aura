@@ -829,6 +829,171 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
     scoring: "+200 Aura for completing the 3,000 target score.",
     proTip: "Look for matches at the bottom of the board: bottom drops cause maximum cascade chain reactions!"
   },
+  lumberjack: {
+    id: "lumberjack",
+    name: "Lumberjack (Speed Reflex)",
+    rank: 36,
+    category: "Action & Reflex Arenas",
+    icon: "🪓",
+    overview: "Fast-paced timber chopping speed duel. Alternate left and right chops while dodging descending branches.",
+    howToPlay: [
+      "Tap the left side of the screen to chop from the left.",
+      "Tap the right side of the screen to chop from the right.",
+      "Each chop brings the entire tree down by one segment.",
+      "Never stand under a falling branch or you will be squashed!",
+      "Keep up with the accelerating timer bar to survive."
+    ],
+    voiceGuide: "Cheer on high-speed chopping streaks and call out close calls on open voice.",
+    scoring: "+150 Aura for scoring 50+ chops in a single run.",
+    proTip: "Look two segments ahead on the trunk so your fingers can rhythmically anticipate branch sides!"
+  },
+  hand_slap: {
+    id: "hand_slap",
+    name: "Hand Slap (Red Hands Reflex Battle)",
+    rank: 37,
+    category: "Action & Reflex Arenas",
+    icon: "✋",
+    overview: "Turn-based quick-draw reflex battle. Attacker slaps before Defender dodges. 3 false retreats award a penalty point.",
+    howToPlay: [
+      "Attacker taps to trigger a high-speed slap strike.",
+      "Defender taps to pull hands back and dodge the blow.",
+      "If the Defender successfully dodges, roles instantly swap!",
+      "If Defender retreats 3 times without an attack, Attacker scores a penalty point.",
+      "Use the Feint button to twitch your hands and bait false retreats.",
+      "First player to score 5 points wins the duel."
+    ],
+    voiceGuide: "Bait opponents with verbal mind games before unleashing your slap!",
+    scoring: "+200 Aura for winning a 5-point match.",
+    proTip: "Vary your timing! Pausing for 2-3 seconds creates immense tension that baits early dodges."
+  },
+  rock_paper_scissors: {
+    id: "rock_paper_scissors",
+    name: "Rock Paper Scissors",
+    rank: 38,
+    category: "Strategy & Mind Games",
+    icon: "🪨",
+    overview: "Tactical timing and psychological duel with 3D tactile icon buttons, 1-2-3 rhythm bounces, and sudden death overtime.",
+    howToPlay: [
+      "Lock in Rock (🪨), Paper (📄), or Scissors (✂️) before countdown ends.",
+      "Rock beats Scissors, Scissors beats Paper, Paper beats Rock.",
+      "Ties trigger rapid Sudden Death Overtime with a 1.5-second limit!",
+      "Consecutive wins ignite your card border with momentum flames.",
+      "First to 3 round wins takes the match."
+    ],
+    voiceGuide: "Psych out your opponent by calling out fake moves before locking in!",
+    scoring: "+100 Aura per match victory.",
+    proTip: "Novice players rarely repeat a losing move twice in a row—counter their predicted switch!"
+  },
+  traffic_jam: {
+    id: "traffic_jam",
+    name: "Traffic Jam (Arena Bumper Cars)",
+    rank: 39,
+    category: "Physics & Action Arenas",
+    icon: "🚗",
+    overview: "2-car physics bumper duel on a floating asphalt platform. Ram your opponent into the water while the outer edge tiles crumble every 15s.",
+    howToPlay: [
+      "Use on-screen controls or Arrow/WASD keys to accelerate and steer your car.",
+      "Ram into your opponent with high momentum to push them toward the edge.",
+      "Outer ring tiles collapse and sink into the water every 15 seconds.",
+      "The last car remaining on the platform scores a round win.",
+      "First player to score 3 rounds wins the match."
+    ],
+    voiceGuide: "Laugh and taunt over open mic as opponents skid into the water!",
+    scoring: "+200 Aura for winning 3 rounds.",
+    proTip: "Lure aggressive opponents toward the crumbling perimeter, then sharply brake and swerve to let their momentum carry them over!"
+  },
+  knife_thrower: {
+    id: "knife_thrower",
+    name: "Knife Thrower (Precision Arcade)",
+    rank: 40,
+    category: "Dexterity & Precision",
+    icon: "🗡️",
+    overview: "Precision blade launching arcade. Throw knives into a rotating wooden log without hitting existing blades.",
+    howToPlay: [
+      "Tap anywhere on the screen to launch a knife straight into the target log.",
+      "The log changes rotation speeds and reverses direction unpredictably.",
+      "Striking an existing knife shatters your blade and ends the streak!",
+      "Slice pinned apples on the log for massive score multipliers.",
+      "Successfully embed 20 knives to achieve a perfect log clear."
+    ],
+    voiceGuide: "Hold your breath during high-speed rotation reversals with channel listeners!",
+    scoring: "+250 Aura for a perfect 20-knife clear.",
+    proTip: "Release knives in rapid bursts of 2-3 when the log slows down during a directional reversal!"
+  },
+  ping_pong: {
+    id: "ping_pong",
+    name: "Ping Pong (Swipe Table Tennis)",
+    rank: 41,
+    category: "Tactical Sports & Physics",
+    icon: "🏓",
+    overview: "High-octane tabletop ping pong duel with curve spin physics, apex power smashes, and tactile wooden table clacks.",
+    howToPlay: [
+      "Drag your finger across your half of the table to position and swing the racket.",
+      "Fast horizontal swipes apply spin, curving the ball unpredictably mid-air.",
+      "Hit the ball at the apex of its bounce to trigger a blazing power smash.",
+      "Drive the ball past your opponent's baseline to score points.",
+      "First player to reach 7 points wins the match."
+    ],
+    voiceGuide: "Call out smashes and cheer intense table rallies on open voice!",
+    scoring: "+200 Aura for reaching 7 points.",
+    proTip: "Alternate hard diagonal slices between the far left and right corners to keep your opponent constantly scrambling!"
+  },
+  darts: {
+    id: "darts",
+    name: "Darts 301 (Countdown Aim Duel)",
+    rank: 42,
+    category: "Dexterity & Precision",
+    icon: "🎯",
+    overview: "Official 301 countdown darts match. Swipe upward to throw darts, subtract values from 301, and finish on exact zero without busting.",
+    howToPlay: [
+      "Swipe upward toward the dartboard to throw your dart.",
+      "Swipe speed determines throw power; swipe angle determines direction.",
+      "Each round consists of 3 darts per turn.",
+      "Subtract each hit from your total: target Trebles (3x), Doubles (2x), and Bullseye.",
+      "You must land on exactly 0 points—scoring below 0 triggers a BUST and resets your turn score.",
+      "Follow the on-screen Checkout Helper when score drops below 170."
+    ],
+    voiceGuide: "Discuss checkout math and optimal doubles finishes with your friends!",
+    scoring: "+300 Aura for completing 301 in under 15 darts.",
+    proTip: "T20 (Triple 20 = 60 points) is the fastest way to drop points early before setting up your final checkout!"
+  },
+  find_match: {
+    id: "find_match",
+    name: "Find Match (Visual Perception Duel)",
+    rank: 43,
+    category: "Solo Logic & Puzzles",
+    icon: "🔍",
+    overview: "Dobble-style projective geometry duel. Between both circular cards, there is mathematically ALWAYS exactly ONE matching symbol.",
+    howToPlay: [
+      "Examine both circular cards side-by-side.",
+      "Find the single identical symbol shared between the two cards.",
+      "Symbols are displayed at varying sizes and random orientations.",
+      "Tap the matching symbol on either card before your opponent does.",
+      "Wrong taps trigger a 1.2-second penalty lockout!",
+      "First player to score 10 correct matches wins the game."
+    ],
+    voiceGuide: "Shout out the matching symbol name as you tap it to assert dominance!",
+    scoring: "+200 Aura for reaching 10 points.",
+    proTip: "Scan Card A icon by icon and check if it appears anywhere on Card B rather than wandering your gaze aimlessly!"
+  },
+  cup_pong: {
+    id: "cup_pong",
+    name: "Cup Pong (Arcade Table Toss)",
+    rank: 44,
+    category: "Dexterity & Precision",
+    icon: "🥤",
+    overview: "Parabolic 3D flick toss arcade duel. Swipe ping pong balls across the table to sink red party cup pyramids with liquid splash physics.",
+    howToPlay: [
+      "Swipe upward from the bottom of the screen to toss your ping pong ball.",
+      "Swipe distance dictates trajectory height; swipe speed dictates toss depth.",
+      "Sinking a ball clears that cup with an authentic liquid splash animation.",
+      "Watch out for rim bounces that roll around before dropping.",
+      "Clear all 6 opponent cups before running out of balls to win the match."
+    ],
+    voiceGuide: "Celebrate dramatic rim-roll sinks and clutch final cup finishes on open mic!",
+    scoring: "+250 Aura for clearing all 6 cups.",
+    proTip: "Aim for the middle row cups first—a slight miss often bounces into the front or back cups!"
+  },
 };
 
 interface ArcadeGameRulesModalProps {

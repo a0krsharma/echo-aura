@@ -107,7 +107,16 @@ export type ArcadeGameType =
   | "fruit_merge"
   | "snakes"
   | "nuts_and_bolts"
-  | "candy_match";
+  | "candy_match"
+  | "lumberjack"
+  | "hand_slap"
+  | "rock_paper_scissors"
+  | "traffic_jam"
+  | "knife_thrower"
+  | "ping_pong"
+  | "darts"
+  | "find_match"
+  | "cup_pong";
 
 export type ArcadeMatchMode = "MULTIPLAYER" | "VS_COMPUTER";
 
