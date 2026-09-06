@@ -103,7 +103,11 @@ export type ArcadeGameType =
   | "liars_dice"
   | "yahtzee"
   | "pen_fight"
-  | "monopoly";
+  | "monopoly"
+  | "fruit_merge"
+  | "snakes"
+  | "nuts_and_bolts"
+  | "candy_match";
 
 export type ArcadeMatchMode = "MULTIPLAYER" | "VS_COMPUTER";
 
@@ -2703,6 +2707,30 @@ export async function updateSnakeScore(
     updates.status = "FINISHED";
     if (score >= 50) {
       await awardAura(playerUid, score);
+    }
+  }
+  await updateDoc(matchRef, updates);
+}
+
+// ── Universal Arcade Game Score Sync ─────────────────────────────────────────
+export async function updateArcadeGameScore(
+  matchId: string,
+  playerUid: string,
+  gameType: ArcadeGameType,
+  score: number,
+  isGameOver: boolean
+): Promise<void> {
+  const db = getFirebaseDb();
+  const matchRef = doc(db, ARCADE_COLLECTION, matchId);
+  const updates: any = {
+    [`${gameType}State.score`]: score,
+    [`${gameType}State.isGameOver`]: isGameOver,
+    updatedAt: serverTimestamp(),
+  };
+  if (isGameOver) {
+    updates.status = "FINISHED";
+    if (score >= 50) {
+      await awardAura(playerUid, Math.min(score, 500));
     }
   }
   await updateDoc(matchRef, updates);

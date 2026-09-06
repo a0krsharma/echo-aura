@@ -753,6 +753,82 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
     scoring: "+180 Aura for the top-voted pitch.",
     proTip: "Adopt a deadpan serious tone as if pitching a multi-billion dollar enterprise!"
   },
+  fruit_merge: {
+    id: "fruit_merge",
+    name: "Fruit Merge (Suika Physics)",
+    rank: 32,
+    category: "Physics & Cascades",
+    icon: "🍉",
+    overview: "Matter.js rigid-body circular physics puzzle. Drop fruits into the glass container; colliding identical fruits fuse into the next tier up to the Giant Watermelon.",
+    howToPlay: [
+      "Move your pointer or finger horizontally to aim the dropper.",
+      "Tap or click to drop the active fruit into the container.",
+      "Identical fruits merge on contact, popping into the next larger fruit tier.",
+      "Preview the NEXT upcoming fruit bubble to plan your stacking strategy.",
+      "Use the Tilt/Jiggle button (Zap) to dislodge trapped smaller fruits.",
+      "Do not let fruits rest above the red danger line for 3 seconds!"
+    ],
+    voiceGuide: "Cheer on high-tier merges and laugh at close container overflow calls with listeners.",
+    scoring: "+200 Aura for reaching Giant Watermelon (Tier 11) or scoring over 2,000 points.",
+    proTip: "Keep your largest fruits on one side (e.g. bottom-left) and build a descending staircase of sizes!"
+  },
+  snakes: {
+    id: "snakes",
+    name: "Snakes Arena (Slither Vector Battle)",
+    rank: 33,
+    category: "Physics & Action Arenas",
+    icon: "🐍",
+    overview: "60 FPS 2D vector arena survival. Steer your snake to devour radiant energy pellets, cut off opponent AI bots, and grow to dominate the leaderboard.",
+    howToPlay: [
+      "Steer your snake by pointing your cursor or dragging on touch screens.",
+      "Consume glowing energy pellets across the arena to increase length and score.",
+      "Hold Boost (Space, Right Click, or on-screen button) for 1.8x turbo speed.",
+      "Force opponent snakes to collide head-first into your body segments to eliminate them.",
+      "Devour the massive energy orb shower released by destroyed rival snakes.",
+      "Avoid colliding with the outer circular arena boundary or other snakes' bodies."
+    ],
+    voiceGuide: "Taunt opponents and celebrate epic cut-off maneuvers over open voice.",
+    scoring: "+250 Aura for reaching Rank #1 on the arena leaderboard.",
+    proTip: "Coil into a defensive circle when surrounded to protect your head while trapping smaller bots inside!"
+  },
+  nuts_and_bolts: {
+    id: "nuts_and_bolts",
+    name: "Nuts & Bolts (Color Sorting Logic)",
+    rank: 34,
+    category: "Solo Logic & Puzzles",
+    icon: "🔩",
+    overview: "Tactile industrial sorting puzzle. Transfer colored hex nuts between threaded bolts until every bolt contains exclusively one uniform color.",
+    howToPlay: [
+      "Tap a bolt stand to unscrew and lift its top hex nut.",
+      "Tap a target destination bolt to thread the nut down.",
+      "A nut can only be placed on an empty bolt OR on top of a matching color nut.",
+      "Each bolt holds a maximum of 4 nuts.",
+      "Use the Undo button if you reach a dead end.",
+      "Clear the level by sorting all colors onto their respective bolts."
+    ],
+    voiceGuide: "Strategize optimal sorting paths and move sequences with channel friends.",
+    scoring: "+150 Aura per level cleared with optimal move count.",
+    proTip: "Keep one bolt completely empty as a staging buffer to cycle and group colors efficiently!"
+  },
+  candy_match: {
+    id: "candy_match",
+    name: "Candy Match-3 (Jeweled Cascades)",
+    rank: 35,
+    category: "Solo Logic & Puzzles",
+    icon: "🍬",
+    overview: "8x8 gem swapping puzzle with recursive cascades. Create lines of 3 or more matching candies to trigger chain reaction combos and special explosive candies.",
+    howToPlay: [
+      "Click or swipe two adjacent candies horizontally or vertically to swap them.",
+      "Match 3 candies of the same color to clear them and score points.",
+      "Match 4 in a line to create a Striped Candy that clears entire rows or columns.",
+      "Match 5 in an L or T shape to create a Wrapped Candy Bomb (3x3 dual explosion).",
+      "Match 5 in a straight line to create a Rainbow Color Bomb (destroys all candies of selected color).",
+      "Reach the 3,000 point target score before running out of moves."
+    ],
+    voiceGuide: "Celebrate giant multi-stage cascade combos and call out special candy opportunities.",
+    scoring: "+200 Aura for completing the 3,000 target score.",
+    proTip: "Look for matches at the bottom of the board: bottom drops cause maximum cascade chain reactions!"
+  },
 };
 
 interface ArcadeGameRulesModalProps {

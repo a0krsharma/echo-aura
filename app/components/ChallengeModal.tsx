@@ -43,6 +43,10 @@ const ARCADE_GAMES: { type: ArcadeGameType; name: string; icon: string; desc: st
   { type: "hangman", name: "HANGMAN WORD SCAFFOLD", icon: "🔤", desc: "Secret cipher letter battle" },
   { type: "math_blitz", name: "MATRIX MATH BLITZ", icon: "⚡", desc: "1v1 mental math speed clash" },
   { type: "wordle", name: "CIPHER WORDLE DUEL", icon: "🔤", desc: "5-letter code-breaker clash" },
+  { type: "fruit_merge", name: "FRUIT MERGE (SUIKA)", icon: "🍉", desc: "Matter.js 11-tier fruit fusion duel" },
+  { type: "snakes", name: "SNAKES ARENA", icon: "🐍", desc: "60fps vector slither battle vs bots" },
+  { type: "nuts_and_bolts", name: "NUTS & BOLTS", icon: "🔩", desc: "Color sorting threaded bolt puzzle" },
+  { type: "candy_match", name: "CANDY MATCH-3", icon: "🍬", desc: "8x8 gem cascade combo clash" },
 ];
 
 export default function ChallengeModal({

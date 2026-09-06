@@ -53,6 +53,10 @@ import NPATGame from "@/app/components/arcade/NPATGame";
 import HangmanGame from "@/app/components/arcade/HangmanGame";
 import MathBlitzGame from "@/app/components/arcade/MathBlitzGame";
 import MonopolyGame from "@/app/components/arcade/MonopolyGame";
+import FruitMergeGame from "@/app/components/arcade/FruitMergeGame";
+import SnakesArenaGame from "@/app/components/arcade/SnakesArenaGame";
+import NutsAndBoltsGame from "@/app/components/arcade/NutsAndBoltsGame";
+import CandyMatchGame from "@/app/components/arcade/CandyMatchGame";
 import ArcadeInviteModal from "@/app/components/arcade/ArcadeInviteModal";
 import ArcadeCreateModal from "@/app/components/arcade/ArcadeCreateModal";
 import ArcadeGameRulesModal from "@/app/components/arcade/ArcadeGameRulesModal";
@@ -139,6 +143,10 @@ const CLEAN_GAMES: MasterRankedGame[] = [
   { id: "puzzle15", name: "15 Puzzle", category: "PUZZLE", icon: "🔢", description: "Sliding tile number ordering" },
   { id: "hangman", name: "Hangman", category: "PUZZLE", icon: "🔤", description: "Save the stickman with letter guesses" },
   { id: "math_blitz", name: "Math Blitz", category: "PUZZLE", icon: "⚡", description: "High-speed mental arithmetic test" },
+  { id: "fruit_merge", name: "Fruit Merge (Suika)", category: "PHYSICS", icon: "🍉", description: "Matter.js rigid-body 11-tier fruit fusion & juice splashes" },
+  { id: "snakes", name: "Snakes Arena (Slither)", category: "PHYSICS", icon: "🐍", description: "60 FPS vector arena slither battle vs AI bots with boost trails" },
+  { id: "nuts_and_bolts", name: "Nuts & Bolts", category: "PUZZLE", icon: "🔩", description: "Color sorting logic puzzle with threaded bolts & hex nuts" },
+  { id: "candy_match", name: "Candy Match-3", category: "PUZZLE", icon: "🍬", description: "8x8 candy swap cascade with striped beams & color bombs" },
 ];
 
 function ArcadeContent() {
@@ -859,6 +867,18 @@ function ArcadeContent() {
             )}
             {activeMatch.gameType === "math_blitz" && (
               <MathBlitzGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+            )}
+            {activeMatch.gameType === "fruit_merge" && (
+              <FruitMergeGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+            )}
+            {activeMatch.gameType === "snakes" && (
+              <SnakesArenaGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+            )}
+            {activeMatch.gameType === "nuts_and_bolts" && (
+              <NutsAndBoltsGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+            )}
+            {activeMatch.gameType === "candy_match" && (
+              <CandyMatchGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
             )}
           </div>
         ) : (
