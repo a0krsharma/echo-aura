@@ -994,60 +994,6 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
     scoring: "+250 Aura for clearing all 6 cups.",
     proTip: "Aim for the middle row cups first—a slight miss often bounces into the front or back cups!"
   },
-  squad_hunt: {
-    id: "squad_hunt",
-    name: "Squad Hunt 3D (Alien Swarm)",
-    rank: 45,
-    category: "Action & Reflex Arenas",
-    icon: "🪖",
-    overview: "Isometric 3D co-op horde hunter. Drop into an alien battlefield, blast arachnid bug swarms with plasma artillery, and survive until dropship extraction.",
-    howToPlay: [
-      "Use WASD or on-screen directional buttons to maneuver your commando across the terrain.",
-      "Hold FIRE to unleash continuous plasma rifle bursts.",
-      "Switch to Heavy Rockets (Q / toggle) to pierce armored Titan Bosses.",
-      "Stand inside the green extraction beacon zone when the 60-second timer expires.",
-      "Survive and extract with your squad to claim victory."
-    ],
-    voiceGuide: "Call out Titan Boss spawns and coordinate firing lines with squadmates over open voice.",
-    scoring: "+350 Aura for successful extraction with 0 squad wipes.",
-    proTip: "Keep moving in wide circles around the beacon—never stand still when arachnid swarms cluster!"
-  },
-  combat_brawler: {
-    id: "combat_brawler",
-    name: "Iron Strike 3D (Combat Brawler)",
-    rank: 46,
-    category: "Action & Reflex Arenas",
-    icon: "🥋",
-    overview: "Tekken and Smash-inspired 2.5D combat fighter with dynamic 3D camera pan, 60ms hit-stop frame freezes, and super ultimate finishers.",
-    howToPlay: [
-      "Use Left/Right to advance and retreat; Up (W) to perform airborne jump attacks.",
-      "Tap PUNCH (J) for rapid jab combos and KICK (K) for high-impact knockbacks.",
-      "Hold BLOCK (S) to absorb incoming strikes with 80% damage reduction.",
-      "Fill your Super Meter to 100% by landing hits, then trigger your cinematic Ultimate finisher.",
-      "Win 2 out of 3 rounds to become arena champion."
-    ],
-    voiceGuide: "Psych out opponents and call out whiffed combos on open mic!",
-    scoring: "+250 Aura for a 2-0 clean sweep victory.",
-    proTip: "Bait your opponent into a heavy kick, block the impact, and immediately counter with a full punch combo!"
-  },
-  arcade_racer: {
-    id: "arcade_racer",
-    name: "Hyper Drift 3D (Circuit Racer)",
-    rank: 47,
-    category: "Action & Reflex Arenas",
-    icon: "🏎️",
-    overview: "High-octane 3D arcade circuit racer with third-person chase camera, banked chicanes, power-slide drift physics, and mystery nitro crates.",
-    howToPlay: [
-      "Hold GAS (W / Gas pedal) to accelerate to top speed; use Left/Right to steer.",
-      "Hold DRIFT around banked curves to initiate power slide drifting through tight corners.",
-      "Drive through yellow mystery crates to collect Nitro Boosts and defensive shields.",
-      "Trigger Nitro (Shift / Boost button) along long straightaways to blast past rivals.",
-      "Complete 3 laps in 1st place to take the Grand Prix trophy."
-    ],
-    voiceGuide: "Trash talk rivals as you drift past them on the final chicane!",
-    scoring: "+300 Aura for finishing 1st place.",
-    proTip: "Initiate your drift slightly before entering the apex of a turn to maintain maximum exit velocity!"
-  },
 };
 
 interface ArcadeGameRulesModalProps {

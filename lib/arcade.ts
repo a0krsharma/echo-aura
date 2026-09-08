@@ -116,10 +116,7 @@ export type ArcadeGameType =
   | "ping_pong"
   | "darts"
   | "find_match"
-  | "cup_pong"
-  | "squad_hunt"
-  | "combat_brawler"
-  | "arcade_racer";
+  | "cup_pong";
 
 export type ArcadeMatchMode = "MULTIPLAYER" | "VS_COMPUTER";
 

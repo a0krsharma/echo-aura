@@ -56,9 +56,6 @@ const ARCADE_GAMES: { type: ArcadeGameType; name: string; icon: string; desc: st
   { type: "darts", name: "DARTS 301", icon: "🎯", desc: "301 countdown swipe aim duel" },
   { type: "find_match", name: "FIND MATCH", icon: "🔍", desc: "Visual perception spot-it card duel" },
   { type: "cup_pong", name: "CUP PONG", icon: "🥤", desc: "Parabolic 3D flick toss into red cups" },
-  { type: "squad_hunt", name: "SQUAD HUNT 3D", icon: "🪖", desc: "Helldivers-style 3D co-op horde hunter" },
-  { type: "combat_brawler", name: "IRON STRIKE 3D", icon: "🥋", desc: "Tekken/Smash 2.5D combat brawler" },
-  { type: "arcade_racer", name: "HYPER DRIFT 3D", icon: "🏎️", desc: "Mario Kart/Forza 3D circuit racer" },
 ];
 
 export default function ChallengeModal({

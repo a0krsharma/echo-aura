@@ -66,9 +66,6 @@ import PingPongGame from "@/app/components/arcade/PingPongGame";
 import DartsGame from "@/app/components/arcade/DartsGame";
 import FindMatchGame from "@/app/components/arcade/FindMatchGame";
 import CupPongGame from "@/app/components/arcade/CupPongGame";
-import SquadHuntGame from "@/app/components/arcade/SquadHuntGame";
-import CombatBrawlerGame from "@/app/components/arcade/CombatBrawlerGame";
-import ArcadeRacerGame from "@/app/components/arcade/ArcadeRacerGame";
 import ArcadeInviteModal from "@/app/components/arcade/ArcadeInviteModal";
 import ArcadeCreateModal from "@/app/components/arcade/ArcadeCreateModal";
 import ArcadeGameRulesModal from "@/app/components/arcade/ArcadeGameRulesModal";
@@ -168,9 +165,6 @@ const CLEAN_GAMES: MasterRankedGame[] = [
   { id: "darts", name: "Darts 301", category: "PHYSICS", icon: "🎯", description: "Official 301 countdown, swipe velocity & checkout calculator" },
   { id: "find_match", name: "Find Match", category: "PUZZLE", icon: "🔍", description: "Projective geometry card deck with 1 exact matching symbol" },
   { id: "cup_pong", name: "Cup Pong", category: "PHYSICS", icon: "🥤", description: "Parabolic 3D flick toss into red party cup pyramids" },
-  { id: "squad_hunt", name: "Squad Hunt 3D", category: "PHYSICS", icon: "🪖", description: "Helldivers-style 3D co-op horde hunter vs alien swarms & Titan boss" },
-  { id: "combat_brawler", name: "Iron Strike 3D", category: "PHYSICS", icon: "🥋", description: "Tekken/Smash 2.5D combat fighter with hit-stop & super finishers" },
-  { id: "arcade_racer", name: "Hyper Drift 3D", category: "PHYSICS", icon: "🏎️", description: "Mario Kart/Forza 3D circuit racer with power slide drift & nitro boosts" },
 ];
 
 function ArcadeContent() {
@@ -930,15 +924,6 @@ function ArcadeContent() {
             )}
             {activeMatch.gameType === "cup_pong" && (
               <CupPongGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
-            )}
-            {activeMatch.gameType === "squad_hunt" && (
-              <SquadHuntGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
-            )}
-            {activeMatch.gameType === "combat_brawler" && (
-              <CombatBrawlerGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
-            )}
-            {activeMatch.gameType === "arcade_racer" && (
-              <ArcadeRacerGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
             )}
           </div>
         ) : (
