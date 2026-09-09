@@ -1119,6 +1119,7 @@ function ArcadeContent() {
                 match={activeMatch}
                 currentUid={user?.uid || ""}
                 isHost={activeMatch.hostUid === user?.uid}
+                onBack={handleExitActiveMatch}
                 onInviteFriend={() => {
                   if (activeMatch.mode === "VS_COMPUTER") {
                     handleOpenCreate(activeMatch.gameType);
@@ -1134,6 +1135,7 @@ function ArcadeContent() {
                 match={activeMatch}
                 currentUid={user?.uid || ""}
                 isHost={activeMatch.hostUid === user?.uid}
+                onBack={handleExitActiveMatch}
                 onInviteFriend={() => {
                   if (activeMatch.mode === "VS_COMPUTER") {
                     handleOpenCreate(activeMatch.gameType);
@@ -1218,13 +1220,17 @@ function ArcadeContent() {
                     className="group relative bg-gradient-to-b from-neutral-900/90 via-neutral-950/90 to-neutral-950 border border-neutral-800/80 hover:border-neutral-600 p-4 rounded-2xl transition-all duration-200 hover:-translate-y-0.5 shadow-lg flex flex-col justify-between"
                   >
                     <div>
-                      <div className="flex items-start gap-3">
+                      <div
+                        className="flex items-start gap-3 cursor-pointer"
+                        onClick={() => handleLaunchSolo(game.id, "MEDIUM")}
+                        title={`Launch ${game.name}`}
+                      >
                         <div className="w-12 h-12 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-center justify-center text-2xl group-hover:scale-105 transition-transform shrink-0 shadow-inner">
                           {game.icon}
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-1">
-                            <h4 className="font-black text-sm uppercase text-white tracking-wide truncate">
+                            <h4 className="font-black text-sm uppercase text-white tracking-wide truncate group-hover:text-amber-400 transition-colors">
                               {game.name}
                             </h4>
                             {game.category === "VOICE" && (

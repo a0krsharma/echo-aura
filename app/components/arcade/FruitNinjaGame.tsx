@@ -242,8 +242,9 @@ export default function FruitNinjaGame({
   onInviteFriend,
   onRandomMatch,
 }: FruitNinjaProps) {
-  const [inMenu, setInMenu] = useState(true);
-  const [botDiff, setBotDiff] = useState<BotDifficulty>("medium");
+  const initialDiff = ((match?.difficulty?.toLowerCase() as BotDifficulty) || "medium");
+  const [inMenu, setInMenu] = useState(false);
+  const [botDiff, setBotDiff] = useState<BotDifficulty>(initialDiff);
   const [selectedBlade, setSelectedBlade] = useState(0);
 
   // Score & Strikes
@@ -578,6 +579,7 @@ export default function FruitNinjaGame({
   // Periodic fruit wave spawner
   useEffect(() => {
     if (inMenu || gameOver) return;
+    spawnFruitWave();
     const t = setInterval(() => {
       spawnFruitWave();
     }, 2200);
@@ -899,7 +901,7 @@ export default function FruitNinjaGame({
 
     animId = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animId);
-  }, [selectedBlade, isMuted]);
+  }, [inMenu, selectedBlade, isMuted]);
 
   // Pointer Movement (Touch & Mouse Blade Tracking)
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -1012,7 +1014,7 @@ export default function FruitNinjaGame({
       <div className="w-full flex items-center justify-between px-3 py-1.5 z-30">
         <button
           type="button"
-          onClick={() => setInMenu(true)}
+          onClick={() => (onBack ? onBack() : setInMenu(true))}
           className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-neutral-300 transition-all cursor-pointer"
         >
           <ArrowLeft className="w-5 h-5" />

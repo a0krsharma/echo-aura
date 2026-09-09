@@ -176,8 +176,9 @@ export default function BottleShooterGame({
   onInviteFriend,
   onRandomMatch,
 }: BottleShooterProps) {
-  const [inMenu, setInMenu] = useState(true);
-  const [botDiff, setBotDiff] = useState<BotDifficulty>("medium");
+  const initialDiff = ((match?.difficulty?.toLowerCase() as BotDifficulty) || "medium");
+  const [inMenu, setInMenu] = useState(false);
+  const [botDiff, setBotDiff] = useState<BotDifficulty>(initialDiff);
 
   // Game Progress
   const [score, setScore] = useState(0);
@@ -271,9 +272,14 @@ export default function BottleShooterGame({
     targetsRef.current = list;
   }, []);
 
+  // Ensure targets are populated on initial mount
+  useEffect(() => {
+    populateTargets();
+  }, [populateTargets]);
+
   // Start / Reset Session
-  const startGame = useCallback((diff: BotDifficulty = "medium") => {
-    setBotDiff(diff);
+  const startGame = useCallback((diff?: BotDifficulty) => {
+    if (diff) setBotDiff(diff);
     setScore(0);
     setAmmo(6);
     setIsReloading(false);
@@ -751,7 +757,7 @@ export default function BottleShooterGame({
 
     animId = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animId);
-  }, []);
+  }, [inMenu, isMuted]);
 
   // Pointer Interaction
   const handleCanvasPointer = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -838,7 +844,7 @@ export default function BottleShooterGame({
       <div className="w-full flex items-center justify-between px-2 py-1.5 z-30">
         <button
           type="button"
-          onClick={() => setInMenu(true)}
+          onClick={() => (onBack ? onBack() : setInMenu(true))}
           className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-neutral-300 transition-all cursor-pointer"
         >
           <ArrowLeft className="w-5 h-5" />
