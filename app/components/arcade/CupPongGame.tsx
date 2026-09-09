@@ -48,14 +48,9 @@ export default function CupPongGame({
   currentUid,
   onBack,
 }: CupPongProps) {
-  const initialMode: "bot" | "friend" = match?.mode === "MULTIPLAYER" ? "friend" : "bot";
-  const rawDiff = (match?.difficulty || "").toLowerCase();
-  const initialDiff: BotDifficulty = rawDiff === "easy" || rawDiff === "hard" ? rawDiff : "medium";
-  const hasPreselectedMode = Boolean(match?.mode);
-
-  const [inMenu, setInMenu] = useState(!hasPreselectedMode);
-  const [playMode, setPlayMode] = useState<"bot" | "friend">(initialMode);
-  const [botDiff, setBotDiff] = useState<BotDifficulty>(initialDiff);
+  const [inMenu, setInMenu] = useState(true);
+  const [playMode, setPlayMode] = useState<"bot" | "friend">("bot");
+  const [botDiff, setBotDiff] = useState<BotDifficulty>("medium");
 
   // Head-to-head game state
   const [cups, setCups] = useState<Cup[]>([]);
@@ -112,13 +107,6 @@ export default function CupPongGame({
     foamParticlesRef.current = [];
     setInMenu(false);
   }, [createInitialCups]);
-
-  // Auto-start immediately if mode & difficulty were chosen in lobby (never ask twice)
-  useEffect(() => {
-    if (hasPreselectedMode) {
-      startGame(initialMode, initialDiff);
-    }
-  }, [hasPreselectedMode, initialMode, initialDiff, startGame]);
 
   // Launch a toss
   const launchBall = (tossedBy: "p1" | "p2", targetX: number, targetY: number) => {

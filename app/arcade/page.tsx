@@ -180,8 +180,6 @@ function ArcadeContent() {
   const [initialTournamentId, setInitialTournamentId] = useState<string | undefined>(undefined);
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
-  const [botDifficultyModalOpen, setBotDifficultyModalOpen] = useState(false);
-  const [pendingBotGameType, setPendingBotGameType] = useState<ArcadeGameType | null>(null);
   const [friendsModalOpen, setFriendsModalOpen] = useState(false);
   const [pendingFriendsGameType, setPendingFriendsGameType] = useState<ArcadeGameType | null>(null);
   const [randomMatchSearching, setRandomMatchSearching] = useState(false);
@@ -304,11 +302,6 @@ function ArcadeContent() {
   const handleOpenRules = (gameId: string) => {
     setRulesModalGameType(gameId);
     setRulesModalOpen(true);
-  };
-
-  const handleOpenBotDifficulty = (gameId: ArcadeGameType) => {
-    setPendingBotGameType(gameId);
-    setBotDifficultyModalOpen(true);
   };
 
   const handleOpenFriendsModal = (gameId: ArcadeGameType) => {
@@ -1002,7 +995,7 @@ function ArcadeContent() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="SEARCH 39 GAMES (ANTAKSHARI, MONOPOLY, CHESS, POOL, LUDO, CARROM)..."
+                  placeholder={`SEARCH ${CLEAN_GAMES.length} GAMES (ANTAKSHARI, MONOPOLY, CHESS, POOL, LUDO, CARROM)...`}
                   className="w-full bg-neutral-950 border border-neutral-800 focus:border-neutral-500 pl-10 pr-4 py-3 text-xs font-mono text-white placeholder-neutral-500 uppercase outline-none rounded-2xl transition-all shadow-inner"
                 />
                 {searchQuery && (
@@ -1088,7 +1081,7 @@ function ArcadeContent() {
                       <button
                         type="button"
                         disabled={!user}
-                        onClick={() => handleOpenBotDifficulty(game.id)}
+                        onClick={() => handleLaunchSolo(game.id)}
                         className="py-2 px-2 bg-neutral-900 hover:bg-neutral-800 text-neutral-200 border border-neutral-700/80 hover:border-neutral-500 font-bold text-xs uppercase transition-all cursor-pointer text-center truncate rounded-xl shadow-sm flex items-center justify-center gap-1"
                         title={`Play ${game.name} with AI Bot`}
                       >
@@ -1267,67 +1260,7 @@ function ArcadeContent() {
         }}
       />
 
-      {/* Bot Difficulty Modal (EASY, MEDIUM, HARD) */}
-      {botDifficultyModalOpen && pendingBotGameType && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/90 backdrop-blur-md animate-in fade-in select-none">
-          <div className="relative w-full max-w-sm bg-neutral-950 border-2 border-white p-6 font-mono text-white shadow-[0_0_50px_rgba(255,255,255,0.2)] flex flex-col items-center rounded-2xl">
-            <button
-              onClick={() => {
-                setBotDifficultyModalOpen(false);
-                setPendingBotGameType(null);
-              }}
-              className="absolute top-4 right-4 p-1.5 border border-neutral-700 hover:border-white text-neutral-400 hover:text-white transition-all cursor-pointer rounded-lg"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <div className="flex items-center justify-center mb-3 w-12 h-12 bg-white rounded-full text-2xl text-black">
-              🤖
-            </div>
-            <h2 className="text-lg font-black uppercase text-center mb-1 tracking-wider">
-              PLAY WITH BOT
-            </h2>
-            <p className="text-xs text-neutral-400 text-center mb-5">
-              Select AI difficulty level for {CLEAN_GAMES.find((g) => g.id === pendingBotGameType)?.name || "Game"}
-            </p>
 
-            <div className="w-full space-y-2.5">
-              <button
-                type="button"
-                onClick={() => {
-                  handleLaunchSolo(pendingBotGameType, "EASY");
-                  setBotDifficultyModalOpen(false);
-                }}
-                className="w-full py-3.5 border-2 border-emerald-500 bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-300 font-black text-sm uppercase transition-all cursor-pointer flex justify-between px-4 items-center rounded-xl"
-              >
-                <span>EASY</span>
-                <span className="text-[10px] font-bold opacity-75">CASUAL AI</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  handleLaunchSolo(pendingBotGameType, "MEDIUM");
-                  setBotDifficultyModalOpen(false);
-                }}
-                className="w-full py-3.5 border-2 border-amber-500 bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 font-black text-sm uppercase transition-all cursor-pointer flex justify-between px-4 items-center rounded-xl"
-              >
-                <span>MEDIUM</span>
-                <span className="text-[10px] font-bold opacity-75">NEURAL AI</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  handleLaunchSolo(pendingBotGameType, "HARD");
-                  setBotDifficultyModalOpen(false);
-                }}
-                className="w-full py-3.5 border-2 border-red-500 bg-red-950/40 hover:bg-red-900/60 text-red-300 font-black text-sm uppercase transition-all cursor-pointer shadow-[0_0_15px_rgba(239,68,68,0.25)] flex justify-between px-4 items-center rounded-xl"
-              >
-                <span>HARD</span>
-                <span className="text-[10px] font-bold opacity-75">MASTER AI</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Play with Friends Modal (Random Match vs Invite Friends) */}
       {friendsModalOpen && pendingFriendsGameType && (

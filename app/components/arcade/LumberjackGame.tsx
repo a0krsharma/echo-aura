@@ -47,14 +47,9 @@ export default function LumberjackGame({
   currentUid,
   onBack,
 }: LumberjackGameProps) {
-  const initialMode: "bot" | "friend" = match?.mode === "MULTIPLAYER" ? "friend" : "bot";
-  const rawDiff = (match?.difficulty || "").toLowerCase();
-  const initialDiff: BotDifficulty = rawDiff === "easy" || rawDiff === "hard" ? rawDiff : "medium";
-  const hasPreselectedMode = Boolean(match?.mode);
-
-  const [inMenu, setInMenu] = useState(!hasPreselectedMode);
-  const [playMode, setPlayMode] = useState<"bot" | "friend">(initialMode);
-  const [botDiff, setBotDiff] = useState<BotDifficulty>(initialDiff);
+  const [inMenu, setInMenu] = useState(true);
+  const [playMode, setPlayMode] = useState<"bot" | "friend">("bot");
+  const [botDiff, setBotDiff] = useState<BotDifficulty>("medium");
 
   // Duel match scores (First to 3 legs)
   const [p1Wins, setP1Wins] = useState(0);
@@ -124,6 +119,17 @@ export default function LumberjackGame({
     return list;
   }, []);
 
+  // Start new game match
+  const startGame = useCallback((mode: "bot" | "friend", diff: BotDifficulty = "medium") => {
+    setPlayMode(mode);
+    setBotDiff(diff);
+    setP1Wins(0);
+    setP2Wins(0);
+    setMatchWinner(null);
+    setInMenu(false);
+    resetRound();
+  }, []);
+
   // Reset round
   const resetRound = useCallback(() => {
     setRoundOver(false);
@@ -146,24 +152,6 @@ export default function LumberjackGame({
     setP1Trunk(generateInitialTree());
     setP2Trunk(generateInitialTree());
   }, [generateInitialTree]);
-
-  // Start new game match
-  const startGame = useCallback((mode: "bot" | "friend", diff: BotDifficulty = "medium") => {
-    setPlayMode(mode);
-    setBotDiff(diff);
-    setP1Wins(0);
-    setP2Wins(0);
-    setMatchWinner(null);
-    setInMenu(false);
-    resetRound();
-  }, [resetRound]);
-
-  // Auto-start immediately if mode & difficulty were chosen in lobby (never ask twice)
-  useEffect(() => {
-    if (hasPreselectedMode) {
-      startGame(initialMode, initialDiff);
-    }
-  }, [hasPreselectedMode, initialMode, initialDiff, startGame]);
 
   // Handle round completion
   const handleRoundEnd = useCallback(

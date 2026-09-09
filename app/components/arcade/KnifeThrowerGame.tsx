@@ -100,14 +100,9 @@ export default function KnifeThrowerGame({
   currentUid,
   onBack,
 }: KnifeThrowerProps) {
-  const initialMode: "bot" | "friend" = match?.mode === "MULTIPLAYER" ? "friend" : "bot";
-  const rawDiff = (match?.difficulty || "").toLowerCase();
-  const initialDiff: BotDifficulty = rawDiff === "easy" || rawDiff === "hard" ? rawDiff : "medium";
-  const hasPreselectedMode = Boolean(match?.mode);
-
-  const [inMenu, setInMenu] = useState(!hasPreselectedMode);
-  const [playMode, setPlayMode] = useState<"bot" | "friend">(initialMode);
-  const [botDiff, setBotDiff] = useState<BotDifficulty>(initialDiff);
+  const [inMenu, setInMenu] = useState(true);
+  const [playMode, setPlayMode] = useState<"bot" | "friend">("bot");
+  const [botDiff, setBotDiff] = useState<BotDifficulty>("medium");
 
   // Round scores (First to 3 wins)
   const [p1Wins, setP1Wins] = useState(0);
@@ -164,6 +159,20 @@ export default function KnifeThrowerGame({
     const t = setTimeout(() => setScreenShake((s) => Math.max(0, s - 2.5)), 30);
     return () => clearTimeout(t);
   }, [screenShake]);
+
+  // Start new match
+  const startGame = useCallback((mode: "bot" | "friend", diff: BotDifficulty = "medium") => {
+    setPlayMode(mode);
+    setBotDiff(diff);
+    setP1Wins(0);
+    setP2Wins(0);
+    setP1Score(0);
+    setP2Score(0);
+    setCurrentRound(1);
+    setMatchWinner(null);
+    setInMenu(false);
+    resetRound(1);
+  }, []);
 
   // Reset round with stage progression
   const resetRound = useCallback((roundNum = 1) => {
@@ -230,27 +239,6 @@ export default function KnifeThrowerGame({
     setEmbeddedKnives(initial);
     setApples(initialApples);
   }, []);
-
-  // Start new match
-  const startGame = useCallback((mode: "bot" | "friend", diff: BotDifficulty = "medium") => {
-    setPlayMode(mode);
-    setBotDiff(diff);
-    setP1Wins(0);
-    setP2Wins(0);
-    setP1Score(0);
-    setP2Score(0);
-    setCurrentRound(1);
-    setMatchWinner(null);
-    setInMenu(false);
-    resetRound(1);
-  }, [resetRound]);
-
-  // Auto-start immediately if mode & difficulty were chosen in lobby (never ask twice)
-  useEffect(() => {
-    if (hasPreselectedMode) {
-      startGame(initialMode, initialDiff);
-    }
-  }, [hasPreselectedMode, initialMode, initialDiff, startGame]);
 
   // Trigger floating score popup
   const addFloatingScore = (x: number, y: number, text: string, color = "#facc15") => {

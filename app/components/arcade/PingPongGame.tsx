@@ -58,14 +58,9 @@ export default function PingPongGame({
   currentUid,
   onBack,
 }: PingPongProps) {
-  const initialMode: "bot" | "friend" = match?.mode === "MULTIPLAYER" ? "friend" : "bot";
-  const rawDiff = (match?.difficulty || "").toLowerCase();
-  const initialDiff: BotDifficulty = rawDiff === "easy" || rawDiff === "hard" ? rawDiff : "medium";
-  const hasPreselectedMode = Boolean(match?.mode);
-
-  const [inMenu, setInMenu] = useState(!hasPreselectedMode);
-  const [playMode, setPlayMode] = useState<"bot" | "friend">(initialMode);
-  const [botDiff, setBotDiff] = useState<BotDifficulty>(initialDiff);
+  const [inMenu, setInMenu] = useState(true);
+  const [playMode, setPlayMode] = useState<"bot" | "friend">("bot");
+  const [botDiff, setBotDiff] = useState<BotDifficulty>("medium");
 
   // Scores: First to 7
   const [p1Score, setP1Score] = useState(0);
@@ -150,13 +145,6 @@ export default function PingPongGame({
     setInMenu(false);
     resetBall(1);
   }, [resetBall]);
-
-  // Auto-start immediately if mode & difficulty were chosen in lobby (never ask twice)
-  useEffect(() => {
-    if (hasPreselectedMode) {
-      startGame(initialMode, initialDiff);
-    }
-  }, [hasPreselectedMode, initialMode, initialDiff, startGame]);
 
   // Score point handler
   const scorePoint = useCallback(
