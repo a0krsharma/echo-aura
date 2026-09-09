@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { updateArcadeGameScore, type ArcadeMatch } from "@/lib/arcade";
 import { arcadeSfx } from "@/lib/arcadeSfx";
 import EchoArcadeModalCard, { type BotDifficulty } from "./EchoArcadeModalCard";
-import { ArrowLeft, RotateCcw, Shield, Zap, Trophy, Flame, AlertTriangle, Users, Bot } from "lucide-react";
+import { ArrowLeft, RotateCcw, Shield, Zap, Trophy, AlertTriangle, Users, Bot, Flame } from "lucide-react";
 
 interface HandSlapGameProps {
   match: ArcadeMatch;
@@ -58,7 +58,7 @@ export default function HandSlapGame({
   // Psychological Tension & Flinch Rules
   const [p1Flinches, setP1Flinches] = useState(0);
   const [p2Flinches, setP2Flinches] = useState(0);
-  const [slapRednessP1, setSlapRednessP1] = useState(0); // 0 to 5 trauma level
+  const [slapRednessP1, setSlapRednessP1] = useState(0); // 0 to 5 redness trauma
   const [slapRednessP2, setSlapRednessP2] = useState(0);
   const [statusBanner, setStatusBanner] = useState<string>("READY! TENSION RISING...");
   const [lastReactionMs, setLastReactionMs] = useState<number | null>(null);
@@ -67,7 +67,7 @@ export default function HandSlapGame({
   const [winner, setWinner] = useState<"p1" | "p2" | null>(null);
 
   // Animation states
-  // Attacker Hand Position: 0 (rest), 1 (slap strike), -0.3 (feint twitch)
+  // Attacker Hand Position: 0 (rest), 1 (slap strike), -0.25 (feint twitch)
   const [attackerProgress, setAttackerProgress] = useState(0);
   // Defender Hand Position: 0 (rest), -1 (retracted dodge)
   const [defenderProgress, setDefenderProgress] = useState(0);
@@ -76,6 +76,10 @@ export default function HandSlapGame({
   const actionLock = useRef(false);
   const slapInitiatedTime = useRef<number>(0);
   const botTimer = useRef<NodeJS.Timeout | null>(null);
+
+  // Flash & vibration refs for slapped hands
+  const slapFlashP1Ref = useRef(0);
+  const slapFlashP2Ref = useRef(0);
 
   // Particle & FX refs
   const particlesRef = useRef<ImpactParticle[]>([]);
@@ -101,6 +105,8 @@ export default function HandSlapGame({
     setP2Flinches(0);
     setSlapRednessP1(0);
     setSlapRednessP2(0);
+    slapFlashP1Ref.current = 0;
+    slapFlashP2Ref.current = 0;
     setAttackerProgress(0);
     setDefenderProgress(0);
     setScreenShake(0);
@@ -134,12 +140,12 @@ export default function HandSlapGame({
       if (by !== activeAttacker || actionLock.current || gameOver) return;
 
       arcadeSfx.playButtonTap();
-      setAttackerProgress(-0.4); // Quick twitch forward
+      setAttackerProgress(-0.35); // Quick twitch forward
 
       // Popups
       popupsRef.current.push({
         x: 180,
-        y: 190,
+        y: 195,
         text: "👀 FEINT BAIT!",
         color: "#fbbf24",
         alpha: 1,
@@ -147,7 +153,7 @@ export default function HandSlapGame({
 
       setTimeout(() => {
         setAttackerProgress(0);
-      }, 120);
+      }, 130);
     },
     [p1Role, gameOver]
   );
@@ -172,7 +178,7 @@ export default function HandSlapGame({
         setLastReactionMs(reactionDuration);
 
         if (!defenderDodged) {
-          // DIRECT HIT! Bone-cracking THWACK!
+          // DIRECT HIT! THWACK!
           arcadeSfx.playSlap();
           setScreenShake(14);
 
@@ -180,33 +186,34 @@ export default function HandSlapGame({
           shockwavesRef.current.push({
             x: 180,
             y: 200,
-            radius: 10,
-            maxRadius: 65,
+            radius: 12,
+            maxRadius: 75,
             alpha: 1,
           });
 
-          // Impact Sparks & Sweat Droplets
-          for (let i = 0; i < 20; i++) {
+          // Impact Sparks & Stinging Sweat Droplets
+          for (let i = 0; i < 24; i++) {
             const angle = Math.random() * Math.PI * 2;
-            const speed = 3 + Math.random() * 6;
+            const speed = 3 + Math.random() * 7;
             particlesRef.current.push({
               x: 180,
               y: 200,
               vx: Math.cos(angle) * speed,
               vy: Math.sin(angle) * speed,
               life: 1,
-              color: i % 2 === 0 ? "#ef4444" : "#fef08a",
-              size: 2.5 + Math.random() * 2.5,
+              color: i % 2 === 0 ? "#ef4444" : "#fde047",
+              size: 2.5 + Math.random() * 3,
             });
           }
 
-          // Increase redness of the defender
+          // Increase redness and trigger sting flash of the defender
           if (activeAttacker === "p1") {
+            slapFlashP2Ref.current = 1.0;
             setSlapRednessP2((r) => Math.min(5, r + 1));
             popupsRef.current.push({
               x: 180,
-              y: 190,
-              text: "💥 THWACK! +1 POINT!",
+              y: 180,
+              text: "💥 THWACK! OPPONENT TURNS RED!",
               color: "#ef4444",
               alpha: 1,
             });
@@ -218,11 +225,12 @@ export default function HandSlapGame({
               return;
             }
           } else {
+            slapFlashP1Ref.current = 1.0;
             setSlapRednessP1((r) => Math.min(5, r + 1));
             popupsRef.current.push({
               x: 180,
-              y: 190,
-              text: "💥 OUCH! +1 POINT!",
+              y: 210,
+              text: "🔥 OUCH! YOUR HAND TURNS RED!",
               color: "#ef4444",
               alpha: 1,
             });
@@ -239,7 +247,7 @@ export default function HandSlapGame({
           arcadeSfx.playPingPongBounce(false);
           popupsRef.current.push({
             x: 180,
-            y: 190,
+            y: 195,
             text: "💨 WHIFF! CLEAN DODGE!",
             color: "#38bdf8",
             alpha: 1,
@@ -257,7 +265,7 @@ export default function HandSlapGame({
           setAttackerProgress(0);
           setDefenderProgress(0);
           actionLock.current = false;
-        }, 350);
+        }, 360);
       }, 160);
     },
     [p1Role, defenderProgress, p1Score, p2Score, concludeGame, gameOver]
@@ -283,7 +291,7 @@ export default function HandSlapGame({
             arcadeSfx.playPenaltyBuzz();
             popupsRef.current.push({
               x: 180,
-              y: 190,
+              y: 195,
               text: "🚨 3 FLINCHES! PENALTY TO P2!",
               color: "#f43f5e",
               alpha: 1,
@@ -302,7 +310,7 @@ export default function HandSlapGame({
             arcadeSfx.playPenaltyBuzz();
             popupsRef.current.push({
               x: 180,
-              y: 190,
+              y: 195,
               text: "🚨 3 FLINCHES! PENALTY TO P1!",
               color: "#f43f5e",
               alpha: 1,
@@ -322,7 +330,7 @@ export default function HandSlapGame({
         if (!actionLock.current) {
           setDefenderProgress(0);
         }
-      }, 420);
+      }, 400);
     },
     [p1Role, attackerProgress, p1Flinches, p2Flinches, p1Score, p2Score, concludeGame, gameOver]
   );
@@ -340,42 +348,42 @@ export default function HandSlapGame({
       // Bot is attacking: delays, feints, and strikes
       const waitMs =
         botDiff === "hard"
-          ? 800 + Math.random() * 1200
+          ? 750 + Math.random() * 1100
           : botDiff === "medium"
-          ? 1100 + Math.random() * 1600
-          : 1500 + Math.random() * 2000;
+          ? 1000 + Math.random() * 1400
+          : 1400 + Math.random() * 1800;
 
       botTimer.current = setTimeout(() => {
         if (actionLock.current) return;
         // 35% chance to feint first
         if (Math.random() < 0.35) {
           triggerFeint("p2");
-          // Follow up with slap shortly after feint
+          // Follow up with real slap shortly after
           botTimer.current = setTimeout(() => {
-            triggerSlap("p2");
-          }, 350 + Math.random() * 400);
+            if (!actionLock.current) triggerSlap("p2");
+          }, 350 + Math.random() * 300);
         } else {
           triggerSlap("p2");
         }
       }, waitMs);
     } else {
-      // Bot is defending: reacts when attacker initiates strike
-      if (attackerProgress > 0) {
-        const reactionMs =
+      // Bot is defender: reacts to player's attack
+      if (attackerProgress > 0.15 && !actionLock.current) {
+        // Reaction delay based on difficulty
+        const reactionDelay =
           botDiff === "hard"
-            ? 120 + Math.random() * 60 // Razor-sharp reflex
+            ? 120 + Math.random() * 70 // ~155ms (Hard)
             : botDiff === "medium"
-            ? 160 + Math.random() * 90
-            : 220 + Math.random() * 130;
-
-        const willDodge =
-          Math.random() < (botDiff === "hard" ? 0.88 : botDiff === "medium" ? 0.65 : 0.42);
+            ? 170 + Math.random() * 80 // ~210ms (Medium)
+            : 240 + Math.random() * 90; // ~285ms (Easy)
 
         botTimer.current = setTimeout(() => {
-          if (willDodge) {
+          // 85% chance to successfully dodge on Hard, 65% on Medium, 40% on Easy
+          const dodgeChance = botDiff === "hard" ? 0.85 : botDiff === "medium" ? 0.65 : 0.4;
+          if (Math.random() < dodgeChance) {
             triggerDodge("p2");
           }
-        }, reactionMs);
+        }, reactionDelay);
       }
     }
 
@@ -384,7 +392,7 @@ export default function HandSlapGame({
     };
   }, [inMenu, playMode, gameOver, p1Role, attackerProgress, botDiff, triggerSlap, triggerFeint, triggerDodge]);
 
-  // Main Canvas Render Loop (Hyper-Realistic Anatomical Hands)
+  // Main Canvas Render Loop (Normal Human Hands & Slap Redness)
   useEffect(() => {
     if (inMenu) return;
 
@@ -395,7 +403,69 @@ export default function HandSlapGame({
 
     let animId: number;
 
-    // Helper: Draw realistic anatomical hand
+    // Normal hand contour path
+    // Origin (0, 0) is at palm center. Fingers extend towards -y, wrist towards +y.
+    const traceNormalHandPath = (c: CanvasRenderingContext2D) => {
+      c.beginPath();
+      // Left forearm
+      c.moveTo(-22, 95);
+      c.lineTo(-22, 52);
+
+      // Thenar eminence (palm thumb mound)
+      c.bezierCurveTo(-26, 40, -38, 28, -42, 12);
+
+      // Thumb projection outward
+      c.bezierCurveTo(-46, -2, -50, -14, -48, -26);
+
+      // Rounded thumb tip
+      c.quadraticCurveTo(-44, -36, -34, -33);
+
+      // Thumb inner edge
+      c.bezierCurveTo(-28, -26, -25, -12, -22, 4);
+
+      // Web space between thumb and index finger
+      c.quadraticCurveTo(-20, -10, -24, -26);
+
+      // Index finger (2nd digit)
+      c.lineTo(-26, -64);
+      c.quadraticCurveTo(-19, -76, -12, -64);
+      c.lineTo(-12, -26);
+
+      // Web space between index and middle finger
+      c.quadraticCurveTo(-11, -16, -9, -26);
+
+      // Middle finger (3rd digit - longest)
+      c.lineTo(-9, -78);
+      c.quadraticCurveTo(0, -92, 9, -78);
+      c.lineTo(9, -26);
+
+      // Web space between middle and ring finger
+      c.quadraticCurveTo(10, -16, 12, -26);
+
+      // Ring finger (4th digit)
+      c.lineTo(12, -68);
+      c.quadraticCurveTo(19, -80, 26, -68);
+      c.lineTo(26, -22);
+
+      // Web space between ring and pinky finger
+      c.quadraticCurveTo(27, -14, 29, -18);
+
+      // Pinky finger (5th digit - shortest)
+      c.lineTo(29, -50);
+      c.quadraticCurveTo(35, -59, 41, -50);
+      c.lineTo(39, -14);
+
+      // Hypothenar (outer palm edge)
+      c.bezierCurveTo(42, 6, 40, 32, 34, 50);
+
+      // Right wrist & forearm
+      c.lineTo(22, 52);
+      c.lineTo(22, 95);
+
+      c.closePath();
+    };
+
+    // Draw normal human hand with authentic slap redness
     const drawHand = (
       x: number,
       y: number,
@@ -403,166 +473,253 @@ export default function HandSlapGame({
       isAttackingHand: boolean,
       rednessLevel: number,
       displacementY: number,
-      idleTremor: number
+      idleTremor: number,
+      flashIntensity: number
     ) => {
       ctx.save();
-      ctx.translate(x, y + displacementY + idleTremor);
+
+      // Recoil vibration when slapped
+      const stingJolt = flashIntensity > 0 ? Math.sin(flashIntensity * 30) * flashIntensity * 8 : 0;
+      ctx.translate(x, y + displacementY + idleTremor + stingJolt);
 
       if (isTop) {
-        ctx.scale(1, -1); // Invert vertically for opponent / top player
+        // Inverted 180° so opponent's hand points down toward player across the table
+        ctx.rotate(Math.PI);
       }
 
-      // Hand Drop Shadow
-      ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+      // Soft natural hand drop shadow on table
+      ctx.save();
+      ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
       ctx.beginPath();
-      ctx.ellipse(0, 18, 55, 30, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 15, 52, 28, 0, 0, Math.PI * 2);
       ctx.fill();
+      ctx.restore();
 
-      // Base Realistic Skin Tone Gradient (Healthy Tan)
-      let baseColor = "#e0a97c";
-      let shadeColor = "#c58a5e";
-      let knuckleColor = "#ad7148";
+      // Palette calculation:
+      // Normal healthy skin (Level 0) -> progressively reddens as slapped (Level 1 to 5)
+      const r = Math.min(5, Math.max(0, rednessLevel));
 
-      // Apply dynamic redness / bruise trauma
-      if (rednessLevel > 0) {
-        const rRatio = Math.min(1, rednessLevel * 0.22);
-        // Blend towards inflamed scarlet
-        baseColor = rRatio > 0.6 ? "#e15353" : "#e68478";
-        shadeColor = rRatio > 0.6 ? "#b91c1c" : "#b85348";
-        knuckleColor = rRatio > 0.6 ? "#991b1b" : "#8e3830";
+      let cHighlight: string;
+      let cBase: string;
+      let cShadow: string;
+      let cStroke: string;
+      let cCrease: string;
+
+      if (r === 0) {
+        // Normal healthy human skin tone
+        cHighlight = "#fde2cb";
+        cBase = "#f4be9b";
+        cShadow = "#dd9a73";
+        cStroke = "#c48259";
+        cCrease = "rgba(160, 95, 60, 0.25)";
+      } else if (r === 1) {
+        // Level 1: Flushed warm pink-red from first slap
+        cHighlight = "#fca898";
+        cBase = "#f29888";
+        cShadow = "#db6654";
+        cStroke = "#c44e3c";
+        cCrease = "rgba(180, 50, 40, 0.35)";
+      } else if (r === 2) {
+        // Level 2: Distinctly red and irritated
+        cHighlight = "#f8786b";
+        cBase = "#ea5446";
+        cShadow = "#c83327";
+        cStroke = "#aa2217";
+        cCrease = "rgba(170, 30, 25, 0.45)";
+      } else if (r === 3) {
+        // Level 3: Fiery bright red inflamed skin
+        cHighlight = "#ef4444";
+        cBase = "#dc2626";
+        cShadow = "#991b1b";
+        cStroke = "#7f1d1d";
+        cCrease = "rgba(130, 15, 15, 0.55)";
+      } else if (r === 4) {
+        // Level 4: Swollen deep crimson red
+        cHighlight = "#dc2626";
+        cBase = "#b91c1c";
+        cShadow = "#7f1d1d";
+        cStroke = "#550b0b";
+        cCrease = "rgba(90, 10, 10, 0.65)";
+      } else {
+        // Level 5: Scorched burning bright red
+        cHighlight = "#ff3b30";
+        cBase = "#991b1b";
+        cShadow = "#450a0a";
+        cStroke = "#2b0505";
+        cCrease = "rgba(60, 5, 5, 0.8)";
       }
 
-      // Palm Contour Path
-      const palmGrad = ctx.createLinearGradient(-45, 0, 45, 50);
-      palmGrad.addColorStop(0, baseColor);
-      palmGrad.addColorStop(1, shadeColor);
-      ctx.fillStyle = palmGrad;
+      // Red heat aura when slapped
+      if (r >= 2) {
+        ctx.shadowColor = `rgba(239, 68, 68, ${0.25 + r * 0.12})`;
+        ctx.shadowBlur = 8 + r * 5;
+      }
 
-      ctx.beginPath();
-      ctx.moveTo(-38, 20);
-      // Thumb abductor swell
-      ctx.quadraticCurveTo(-52, 0, -42, -22);
-      // Index finger base
-      ctx.lineTo(-24, -38);
-      // Middle finger base
-      ctx.lineTo(0, -42);
-      // Ring finger base
-      ctx.lineTo(24, -38);
-      // Pinky finger base
-      ctx.lineTo(42, -24);
-      // Outer palm edge
-      ctx.quadraticCurveTo(46, 12, 38, 32);
-      // Wrist
-      ctx.lineTo(-38, 32);
-      ctx.closePath();
+      // 1. Fill base hand with smooth natural skin gradient
+      const skinGrad = ctx.createLinearGradient(-36, 0, 36, 30);
+      skinGrad.addColorStop(0, cShadow);
+      skinGrad.addColorStop(0.28, cHighlight);
+      skinGrad.addColorStop(0.68, cBase);
+      skinGrad.addColorStop(1, cShadow);
+
+      traceNormalHandPath(ctx);
+      ctx.fillStyle = skinGrad;
       ctx.fill();
 
-      ctx.strokeStyle = shadeColor;
-      ctx.lineWidth = 2;
+      // Reset shadow for inner details
+      ctx.shadowColor = "transparent";
+      ctx.shadowBlur = 0;
+
+      // 2. Subtle dorsal tendon highlights (natural hand ridges)
+      ctx.save();
+      ctx.strokeStyle = cHighlight;
+      ctx.lineWidth = 2.2;
+      ctx.globalAlpha = 0.28;
+      // Index tendon
+      ctx.beginPath();
+      ctx.moveTo(-18, 25);
+      ctx.lineTo(-19, -35);
       ctx.stroke();
+      // Middle tendon
+      ctx.beginPath();
+      ctx.moveTo(-2, 30);
+      ctx.lineTo(0, -45);
+      ctx.stroke();
+      // Ring tendon
+      ctx.beginPath();
+      ctx.moveTo(14, 25);
+      ctx.lineTo(18, -35);
+      ctx.stroke();
+      ctx.restore();
 
-      // Finger Anatomical Rendering Function
-      const drawFinger = (
-        fx: number,
-        fy: number,
-        fWidth: number,
-        fLength: number,
-        fAngle: number
+      // 3. Natural Translucent Fingernails
+      const drawNail = (
+        nx: number,
+        ny: number,
+        nw: number,
+        nh: number,
+        angle: number
       ) => {
         ctx.save();
-        ctx.translate(fx, fy);
-        ctx.rotate(fAngle);
+        ctx.translate(nx, ny);
+        ctx.rotate(angle);
 
-        // Finger body gradient
-        const fGrad = ctx.createLinearGradient(-fWidth / 2, 0, fWidth / 2, -fLength);
-        fGrad.addColorStop(0, baseColor);
-        fGrad.addColorStop(1, shadeColor);
-        ctx.fillStyle = fGrad;
-
+        // Nail bed pink flush
+        ctx.fillStyle = r > 0 ? "rgba(220, 38, 38, 0.45)" : "rgba(235, 175, 160, 0.35)";
         ctx.beginPath();
-        ctx.roundRect(-fWidth / 2, -fLength, fWidth, fLength, [fWidth / 2, fWidth / 2, 2, 2]);
+        ctx.ellipse(0, 0, nw, nh, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = shadeColor;
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
 
-        // Knuckle Joint Creases
-        ctx.strokeStyle = knuckleColor;
-        ctx.lineWidth = 1.5;
-        [-fLength * 0.35, -fLength * 0.68].forEach((ky) => {
-          ctx.beginPath();
-          ctx.arc(0, ky, fWidth * 0.35, Math.PI * 0.2, Math.PI * 0.8);
-          ctx.stroke();
-        });
-
-        // Fingernail
-        ctx.fillStyle = "rgba(255, 235, 235, 0.8)";
+        // Translucent nail shine
+        ctx.fillStyle = "rgba(255, 250, 245, 0.45)";
         ctx.beginPath();
-        ctx.roundRect(-fWidth * 0.32, -fLength + 2, fWidth * 0.64, fLength * 0.22, 3);
+        ctx.ellipse(0, -nh * 0.25, nw * 0.75, nh * 0.45, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = "rgba(180, 100, 100, 0.4)";
-        ctx.lineWidth = 1;
-        ctx.stroke();
 
         ctx.restore();
       };
 
-      // Draw 5 Articulated Fingers
-      // 1. Thumb
-      drawFinger(-40, -10, 15, 34, -0.65);
-      // 2. Index
-      drawFinger(-22, -36, 13.5, 46, -0.08);
-      // 3. Middle (Longest)
-      drawFinger(0, -40, 14, 52, 0.02);
-      // 4. Ring
-      drawFinger(20, -36, 13, 47, 0.12);
-      // 5. Pinky
-      drawFinger(38, -24, 11.5, 38, 0.25);
+      drawNail(-38, -30, 5.5, 4.5, -0.4); // Thumb
+      drawNail(-19, -68, 5, 4.5, 0); // Index
+      drawNail(0, -83, 5.5, 5, 0); // Middle
+      drawNail(19, -72, 5, 4.5, 0); // Ring
+      drawNail(35, -53, 4, 3.5, 0.15); // Pinky
 
-      // Wrist Forearm
-      ctx.fillStyle = shadeColor;
-      ctx.fillRect(-34, 30, 68, 50);
+      // 4. Natural Knuckle Creases (Soft, thin horizontal wrinkles)
+      ctx.save();
+      ctx.strokeStyle = cCrease;
+      ctx.lineWidth = 1.2;
 
-      // Palm Creases & Life Lines
-      ctx.strokeStyle = "rgba(100, 40, 20, 0.25)";
-      ctx.lineWidth = 2;
+      // Thumb joint
       ctx.beginPath();
-      ctx.arc(-15, 10, 25, 0.2, Math.PI * 0.6);
+      ctx.arc(-39, -16, 5, -0.2, Math.PI * 0.5);
       ctx.stroke();
 
-      // Slap Welt / Bruise overlay on dorsal hand
-      if (rednessLevel > 0) {
-        ctx.save();
-        const bruiseAlpha = Math.min(0.85, rednessLevel * 0.18);
-        ctx.fillStyle = `rgba(185, 28, 28, ${bruiseAlpha})`;
+      // Finger joint creases
+      const fingerCreases = [
+        { x: -19, y1: -46, y2: -32, w: 4.5 },
+        { x: 0, y1: -56, y2: -38, w: 5 },
+        { x: 19, y1: -48, y2: -34, w: 4.5 },
+        { x: 35, y1: -36, y2: -24, w: 3.5 },
+      ];
+
+      fingerCreases.forEach((fc) => {
         ctx.beginPath();
-        ctx.ellipse(0, -5, 34, 25, 0, 0, Math.PI * 2);
+        ctx.moveTo(fc.x - fc.w, fc.y1);
+        ctx.lineTo(fc.x + fc.w, fc.y1);
+        ctx.moveTo(fc.x - fc.w + 0.5, fc.y2);
+        ctx.lineTo(fc.x + fc.w - 0.5, fc.y2);
+        ctx.stroke();
+      });
+
+      // Wrist fold line
+      ctx.beginPath();
+      ctx.moveTo(-16, 50);
+      ctx.quadraticCurveTo(0, 52, 16, 50);
+      ctx.stroke();
+      ctx.restore();
+
+      // 5. Authentic Slap Marks & Red Stinging Welts (when slapped)
+      if (r > 0) {
+        ctx.save();
+        // Central red impact blush
+        const weltAlpha = Math.min(0.85, 0.3 + r * 0.12);
+        const weltGrad = ctx.createRadialGradient(0, 5, 2, 0, 5, 34);
+        weltGrad.addColorStop(0, `rgba(185, 28, 28, ${weltAlpha})`);
+        weltGrad.addColorStop(0.6, `rgba(225, 29, 72, ${weltAlpha * 0.7})`);
+        weltGrad.addColorStop(1, "rgba(239, 68, 68, 0)");
+        ctx.fillStyle = weltGrad;
+        ctx.beginPath();
+        ctx.ellipse(0, 5, 32, 24, 0.1, 0, Math.PI * 2);
         ctx.fill();
 
-        // Stinging welt fingerprint lines
-        if (rednessLevel >= 2) {
-          ctx.strokeStyle = "rgba(127, 29, 29, 0.6)";
-          ctx.lineWidth = 3;
-          [-12, -4, 4, 12].forEach((wx) => {
-            ctx.beginPath();
-            ctx.moveTo(wx - 2, -18);
-            ctx.lineTo(wx + 2, 10);
-            ctx.stroke();
-          });
-        }
+        // 4 Slap Finger Streaks stamped across the hand
+        const weltFingerAlpha = Math.min(0.8, 0.25 + r * 0.12);
+        ctx.fillStyle = `rgba(180, 20, 20, ${weltFingerAlpha})`;
+        const slapFingerMarks = [
+          { x: -16, y: 0, w: 6, h: 26, rot: -0.15 },
+          { x: -5, y: -4, w: 7, h: 32, rot: -0.05 },
+          { x: 6, y: -2, w: 6.5, h: 30, rot: 0.05 },
+          { x: 17, y: 3, w: 5.5, h: 24, rot: 0.18 },
+        ];
 
-        // Severe heat steam smoke wisps at level 5
-        if (rednessLevel >= 4 && Math.random() < 0.4) {
+        slapFingerMarks.forEach((m) => {
+          ctx.save();
+          ctx.translate(m.x, m.y);
+          ctx.rotate(m.rot);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, m.w * 0.5, m.h * 0.5, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        });
+
+        // Heat smoke wisps for heavily slapped hands (Level 3+)
+        if (r >= 3 && Math.random() < 0.35) {
           particlesRef.current.push({
-            x: x + (Math.random() - 0.5) * 40,
-            y: y + displacementY,
-            vx: (Math.random() - 0.5) * 1.5,
-            vy: isTop ? 2 : -2,
+            x: x + (Math.random() - 0.5) * 45,
+            y: y + displacementY + (isTop ? -10 : 10),
+            vx: (Math.random() - 0.5) * 1.2,
+            vy: isTop ? 1.8 : -1.8,
             life: 1,
-            color: "rgba(255, 200, 200, 0.6)",
-            size: 3 + Math.random() * 3,
+            color: "rgba(255, 180, 180, 0.65)",
+            size: 2.5 + Math.random() * 3,
           });
         }
+        ctx.restore();
+      }
+
+      // 6. Clean, natural outer hand contour outline
+      traceNormalHandPath(ctx);
+      ctx.strokeStyle = cStroke;
+      ctx.lineWidth = 1.8;
+      ctx.stroke();
+
+      // 7. Instant Stinging Red Flash overlay upon impact
+      if (flashIntensity > 0) {
+        ctx.save();
+        traceNormalHandPath(ctx);
+        ctx.fillStyle = `rgba(239, 68, 68, ${flashIntensity * 0.65})`;
+        ctx.fill();
         ctx.restore();
       }
 
@@ -572,7 +729,15 @@ export default function HandSlapGame({
     const loop = () => {
       idleTimeRef.current += 0.05;
       const t = idleTimeRef.current;
-      const naturalTremor = Math.sin(t * 4) * 1.5;
+      const naturalTremor = Math.sin(t * 3.5) * 1.2;
+
+      // Decay slap impact flashes
+      if (slapFlashP1Ref.current > 0) {
+        slapFlashP1Ref.current = Math.max(0, slapFlashP1Ref.current - 0.05);
+      }
+      if (slapFlashP2Ref.current > 0) {
+        slapFlashP2Ref.current = Math.max(0, slapFlashP2Ref.current - 0.05);
+      }
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -582,37 +747,34 @@ export default function HandSlapGame({
         ctx.translate((Math.random() - 0.5) * screenShake, (Math.random() - 0.5) * screenShake);
       }
 
-      // Wooden Tavern Duel Table Background
-      const tableGrad = ctx.createLinearGradient(0, 0, 0, 420);
-      tableGrad.addColorStop(0, "#291307");
-      tableGrad.addColorStop(0.5, "#451a03");
-      tableGrad.addColorStop(1, "#1a0c04");
+      // Warm Wooden Duel Table Background
+      const tableGrad = ctx.createLinearGradient(0, 0, 0, 400);
+      tableGrad.addColorStop(0, "#381c0e");
+      tableGrad.addColorStop(0.5, "#542a15");
+      tableGrad.addColorStop(1, "#271207");
       ctx.fillStyle = tableGrad;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       // Wood plank seams
-      ctx.strokeStyle = "rgba(251, 191, 36, 0.08)";
+      ctx.strokeStyle = "rgba(254, 215, 170, 0.09)";
       ctx.lineWidth = 2;
-      [70, 140, 210, 280, 350].forEach((lineY) => {
+      [65, 130, 200, 270, 340].forEach((lineY) => {
         ctx.beginPath();
         ctx.moveTo(0, lineY);
         ctx.lineTo(360, lineY);
         ctx.stroke();
       });
 
-      // Table Center Red Line Divider
-      ctx.strokeStyle = "rgba(239, 68, 68, 0.25)";
-      ctx.lineWidth = 3;
+      // Table Center Clash Line Divider
+      ctx.strokeStyle = "rgba(239, 68, 68, 0.35)";
+      ctx.lineWidth = 2.5;
       ctx.setLineDash([8, 6]);
       ctx.beginPath();
-      ctx.moveTo(20, 210);
-      ctx.lineTo(340, 210);
+      ctx.moveTo(15, 200);
+      ctx.lineTo(345, 200);
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Calculate hand positions
-      // Top Hand (P2 / Opponent): Centered around y = 120
-      // Bottom Hand (P1 / You): Centered around y = 300
       const isP1Attacking = p1Role === "attacker";
 
       // Slap velocity offsets
@@ -634,30 +796,32 @@ export default function HandSlapGame({
       // Render Top Hand (Opponent / P2)
       drawHand(
         180,
-        120,
+        110,
         true,
         !isP1Attacking,
         slapRednessP2,
         topDisplace,
-        naturalTremor
+        naturalTremor,
+        slapFlashP2Ref.current
       );
 
-      // Render Bottom Hand (Player 1)
+      // Render Bottom Hand (Player 1 / You)
       drawHand(
         180,
-        300,
+        290,
         false,
         isP1Attacking,
         slapRednessP1,
         bottomDisplace,
-        naturalTremor
+        naturalTremor,
+        slapFlashP1Ref.current
       );
 
       // Update & Render Shockwaves
       shockwavesRef.current = shockwavesRef.current
         .map((sw) => ({
           ...sw,
-          radius: sw.radius + 4,
+          radius: sw.radius + 4.5,
           alpha: sw.alpha - 0.06,
         }))
         .filter((sw) => sw.alpha > 0);
@@ -666,7 +830,7 @@ export default function HandSlapGame({
         ctx.save();
         ctx.globalAlpha = sw.alpha;
         ctx.strokeStyle = "#fef08a";
-        ctx.lineWidth = 4;
+        ctx.lineWidth = 3.5;
         ctx.beginPath();
         ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
         ctx.stroke();
@@ -679,7 +843,7 @@ export default function HandSlapGame({
           ...p,
           x: p.x + p.vx,
           y: p.y + p.vy,
-          vy: p.vy + 0.2, // gravity
+          vy: p.vy + 0.18,
           life: p.life - 0.04,
         }))
         .filter((p) => p.life > 0);
@@ -698,7 +862,7 @@ export default function HandSlapGame({
       popupsRef.current = popupsRef.current
         .map((pop) => ({
           ...pop,
-          y: pop.y - 1.5,
+          y: pop.y - 1.4,
           alpha: pop.alpha - 0.03,
         }))
         .filter((pop) => pop.alpha > 0);
@@ -706,16 +870,16 @@ export default function HandSlapGame({
       popupsRef.current.forEach((pop) => {
         ctx.save();
         ctx.globalAlpha = pop.alpha;
-        ctx.font = "900 16px sans-serif";
+        ctx.font = "900 15px sans-serif";
         ctx.fillStyle = pop.color;
         ctx.textAlign = "center";
-        ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
+        ctx.shadowColor = "rgba(0, 0, 0, 0.85)";
         ctx.shadowBlur = 6;
         ctx.fillText(pop.text, pop.x, pop.y);
         ctx.restore();
       });
 
-      ctx.restore(); // end shake transform
+      ctx.restore();
 
       animId = requestAnimationFrame(loop);
     };
@@ -724,29 +888,54 @@ export default function HandSlapGame({
     return () => cancelAnimationFrame(animId);
   }, [inMenu, p1Role, attackerProgress, defenderProgress, slapRednessP1, slapRednessP2, screenShake]);
 
-  // Hero Graphic
+  // Redness pip status helper
+  const renderRednessMeter = (level: number, label: string) => {
+    return (
+      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-neutral-900/90 border border-white/10 shadow-sm text-[10px] font-bold">
+        <span className="text-neutral-400">{label}:</span>
+        <div className="flex items-center gap-0.5">
+          {[1, 2, 3, 4, 5].map((idx) => (
+            <span
+              key={idx}
+              className={`w-2 h-2 rounded-full transition-colors ${
+                idx <= level
+                  ? idx <= 2
+                    ? "bg-amber-500 shadow-[0_0_6px_#f59e0b]"
+                    : "bg-red-500 shadow-[0_0_6px_#ef4444]"
+                  : "bg-neutral-700"
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // Hero Graphic (Normal Hands Clashing with Red Slap Marks)
   const handSlapHero = (
     <div className="w-full h-full flex items-center justify-center relative">
       <div className="absolute inset-0 bg-red-950/40 rounded-2xl flex items-center justify-center border border-red-500/20">
         <svg viewBox="0 0 160 160" className="w-36 h-36">
-          <ellipse cx="80" cy="80" rx="70" ry="70" fill="#451a03" stroke="#92400e" strokeWidth="4" />
-          {/* Top Hand */}
+          <ellipse cx="80" cy="80" rx="72" ry="72" fill="#451a03" stroke="#92400e" strokeWidth="4" />
+          {/* Top Hand (Normal Healthy Tan) */}
           <path
-            d="M 80,25 Q 95,25 98,50 L 102,75 Q 80,82 58,75 L 62,50 Q 65,25 80,25 Z"
-            fill="#e0a97c"
-            stroke="#b45309"
-            strokeWidth="3"
+            d="M 68,18 Q 72,42 70,62 Q 80,68 90,62 Q 88,42 92,18 Z"
+            fill="#f4be9b"
+            stroke="#c48259"
+            strokeWidth="2.5"
           />
-          {/* Bottom Hand */}
+          {/* Bottom Slapped Hand (Turning Red from Slap!) */}
           <path
-            d="M 80,135 Q 65,135 62,110 L 58,85 Q 80,78 102,85 L 98,110 Q 95,135 80,135 Z"
-            fill="#e0a97c"
-            stroke="#b45309"
-            strokeWidth="3"
+            d="M 68,142 Q 72,118 70,98 Q 80,92 90,98 Q 88,118 92,142 Z"
+            fill="#ef4444"
+            stroke="#b91c1c"
+            strokeWidth="2.5"
           />
-          {/* Slap Clash Ring */}
-          <circle cx="80" cy="80" r="16" fill="none" stroke="#fef08a" strokeWidth="4" strokeDasharray="6 4" />
-          <polygon points="80,68 85,76 94,76 87,82 90,91 80,85 70,91 73,82 66,76 75,76" fill="#ef4444" />
+          {/* Red Slap Handprint Marks */}
+          <ellipse cx="80" cy="104" rx="10" ry="6" fill="#991b1b" opacity="0.8" />
+          {/* Slap Impact Burst */}
+          <circle cx="80" cy="80" r="15" fill="none" stroke="#fef08a" strokeWidth="3" strokeDasharray="5 3" />
+          <polygon points="80,66 84,75 94,75 86,81 89,91 80,84 71,91 74,81 66,75 76,75" fill="#ef4444" />
         </svg>
       </div>
     </div>
@@ -759,14 +948,14 @@ export default function HandSlapGame({
       icon: "⚡",
     },
     {
-      title: "Tactical Micro-Feints",
-      desc: "Attacker can tap FEINT to twitch fingers forward! Baits defender into panicking.",
-      icon: "👀",
+      title: "Slapped Hands Turn Red",
+      desc: "Every time a hand gets slapped, it visibly turns redder and more inflamed! 5 slaps = victory.",
+      icon: "✋",
     },
     {
-      title: "3 Flinch Penalty",
-      desc: "Defender cannot retreat without an attack! 3 false dodges awards a free point to opponent.",
-      icon: "🚨",
+      title: "Tactical Micro-Feints",
+      desc: "Attacker can tap FEINT to twitch fingers forward! Baits defender into false retreats (3 flinches penalty).",
+      icon: "👀",
     },
   ];
 
@@ -778,7 +967,7 @@ export default function HandSlapGame({
           subtitle="Red Hands Reflex Duel"
           categoryTag="QUICK-DRAW REFLEX"
           accentColor="#E53935"
-          objective="Attacker slaps before Defender dodges! Micro-feint to bait false retreats. First to 5 wins!"
+          objective="Attacker slaps before Defender dodges! Slapped hands turn redder with each hit. First to 5 wins!"
           heroGraphic={handSlapHero}
           howToPlaySteps={howToPlaySteps}
           onPlayFriend={() => startGame("friend")}
@@ -823,6 +1012,12 @@ export default function HandSlapGame({
           <Trophy className="w-3.5 h-3.5" />
           <span>TO 5</span>
         </div>
+      </div>
+
+      {/* Redness & Damage Readout */}
+      <div className="w-full max-w-sm flex items-center justify-between px-3 mt-1 z-20">
+        {renderRednessMeter(slapRednessP1, "YOUR REDNESS")}
+        {renderRednessMeter(slapRednessP2, playMode === "bot" ? "BOT REDNESS" : "P2 REDNESS")}
       </div>
 
       {/* Tension Banner & Flinch / Reflex Info */}
@@ -946,4 +1141,3 @@ export default function HandSlapGame({
     </div>
   );
 }
-
