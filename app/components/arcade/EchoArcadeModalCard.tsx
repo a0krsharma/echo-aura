@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { arcadeSfx } from "@/lib/arcadeSfx";
-import { Star, X, Play, HelpCircle, Trophy, User, Bot, ArrowLeft } from "lucide-react";
+import { Star, X, Play, HelpCircle, Trophy, User, Bot, ArrowLeft, Zap } from "lucide-react";
 
 export type BotDifficulty = "easy" | "medium" | "hard";
 
@@ -40,12 +40,35 @@ export default function EchoArcadeModalCard({
   const [showHowToPlay, setShowHowToPlay] = useState(false);
   const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>("medium");
   const [localFav, setLocalFav] = useState(isFavorite);
+  const [isSearchingRandom, setIsSearchingRandom] = useState(false);
+  const [randomCountdown, setRandomCountdown] = useState(5);
+
+  // Random match search countdown: automatically falls back to bot if no player joins in 5s
+  useEffect(() => {
+    if (!isSearchingRandom) return;
+    if (randomCountdown <= 0) {
+      setIsSearchingRandom(false);
+      arcadeSfx.playButtonTap();
+      onPlayBot(botDifficulty);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setRandomCountdown((c) => c - 1);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [isSearchingRandom, randomCountdown, botDifficulty, onPlayBot]);
 
   const handleToggleFav = (e: React.PointerEvent) => {
     e.stopPropagation();
     arcadeSfx.playButtonTap();
     setLocalFav(!localFav);
     onToggleFavorite?.();
+  };
+
+  const handleStartRandomMatch = () => {
+    arcadeSfx.playButtonTap();
+    setRandomCountdown(5);
+    setIsSearchingRandom(true);
   };
 
   const handleStartFriend = () => {
@@ -132,69 +155,94 @@ export default function EchoArcadeModalCard({
         <span className="tracking-wide uppercase text-xs">How to Play</span>
       </button>
 
-      {/* Game Mode Selection Buttons */}
-      <div className="w-full space-y-3 mt-5">
-        {/* Play vs Friend */}
-        <button
-          type="button"
-          onPointerDown={handleStartFriend}
-          className="w-full bg-[#1E88E5] hover:bg-[#1976D2] border-b-4 border-[#1565C0] active:border-b-0 active:translate-y-1 text-white font-black text-lg sm:text-xl py-3.5 rounded-2xl shadow-lg flex items-center px-5 space-x-4 transition-all cursor-pointer"
-        >
-          <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center shrink-0">
-            <User className="w-6 h-6 text-white" />
-          </div>
-          <div className="text-left leading-tight">
-            <div className="text-[10px] uppercase text-blue-200 tracking-wider font-bold">
-              Play vs.
+      {/* Game Mode Selection */}
+      <div className="w-full space-y-3 mt-4">
+        {/* 1. Play with Bot */}
+        <div className="w-full bg-cyan-50/70 border border-cyan-200/80 rounded-2xl p-3 flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-black uppercase tracking-wider text-cyan-900 flex items-center gap-1.5">
+              <Bot className="w-3.5 h-3.5 text-cyan-600" />
+              <span>PLAY WITH BOT</span>
+            </span>
+            <div className="flex items-center gap-1">
+              {(["easy", "medium", "hard"] as const).map((diff) => (
+                <button
+                  key={diff}
+                  type="button"
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    arcadeSfx.playButtonTap();
+                    setBotDifficulty(diff);
+                  }}
+                  className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer ${
+                    botDifficulty === diff
+                      ? "bg-cyan-600 text-white shadow-xs"
+                      : "bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-50"
+                  }`}
+                >
+                  {diff}
+                </button>
+              ))}
             </div>
-            <div>FRIEND</div>
           </div>
-        </button>
 
-        {/* Play vs Bot */}
-        <div className="w-full flex flex-col gap-1.5">
           <button
             type="button"
             onPointerDown={handleStartBot}
-            className="w-full bg-[#0288D1] hover:bg-[#0277BD] border-b-4 border-[#01579B] active:border-b-0 active:translate-y-1 text-white font-black text-lg sm:text-xl py-3.5 rounded-2xl shadow-lg flex items-center px-5 space-x-4 transition-all cursor-pointer"
+            className="w-full bg-[#0288D1] hover:bg-[#0277BD] border-b-4 border-[#01579B] active:border-b-0 active:translate-y-1 text-white font-black text-base py-2.5 rounded-xl shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer"
           >
-            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center shrink-0">
-              <Bot className="w-6 h-6 text-white" />
-            </div>
-            <div className="text-left leading-tight">
-              <div className="text-[10px] uppercase text-cyan-200 tracking-wider font-bold">
-                Play vs.
-              </div>
-              <div className="flex items-center gap-2">
-                <span>BOT</span>
-                <span className="text-[10px] uppercase bg-cyan-900/60 px-2 py-0.5 rounded-full font-bold">
-                  {botDifficulty}
-                </span>
-              </div>
-            </div>
+            <span>START BOT ({botDifficulty.toUpperCase()})</span>
           </button>
+        </div>
 
-          {/* Difficulty Switcher Pills */}
-          <div className="flex items-center justify-center gap-1.5 pt-1">
-            {(["easy", "medium", "hard"] as const).map((diff) => (
+        {/* 2. Play with Friends */}
+        <div className="w-full bg-blue-50/70 border border-blue-200/80 rounded-2xl p-3 flex flex-col gap-2">
+          <span className="text-[11px] font-black uppercase tracking-wider text-blue-900 flex items-center gap-1.5">
+            <User className="w-3.5 h-3.5 text-blue-600" />
+            <span>PLAY WITH FRIENDS</span>
+          </span>
+
+          {isSearchingRandom ? (
+            <div className="w-full bg-white border-2 border-amber-400 rounded-xl p-3 flex flex-col items-center gap-2 shadow-sm">
+              <div className="flex items-center gap-2 text-xs font-black text-amber-600 uppercase">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                <span>SEARCHING FOR OPPONENT... ({randomCountdown}s)</span>
+              </div>
+              <p className="text-[10px] text-neutral-500 text-center font-bold">
+                Matching with Bot if no player joins in {randomCountdown}s...
+              </p>
               <button
-                key={diff}
                 type="button"
-                onPointerDown={(e) => {
-                  e.stopPropagation();
+                onPointerDown={() => {
                   arcadeSfx.playButtonTap();
-                  setBotDifficulty(diff);
+                  setIsSearchingRandom(false);
                 }}
-                className={`flex-1 text-[11px] font-black uppercase py-1 px-2 rounded-lg border transition-all cursor-pointer ${
-                  botDifficulty === diff
-                    ? "bg-cyan-50 border-cyan-500 text-cyan-700 shadow-xs"
-                    : "bg-neutral-50 border-neutral-200 text-neutral-500 hover:bg-neutral-100"
-                }`}
+                className="px-3 py-1 text-[10px] font-black uppercase text-red-600 bg-red-50 hover:bg-red-100 rounded-lg border border-red-200 cursor-pointer"
               >
-                {diff}
+                CANCEL SEARCH
               </button>
-            ))}
-          </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onPointerDown={handleStartRandomMatch}
+                className="py-2.5 px-3 bg-amber-500 hover:bg-amber-600 border-b-4 border-amber-700 active:border-b-0 active:translate-y-1 text-white font-black text-xs uppercase rounded-xl shadow-md flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+              >
+                <Zap className="w-3.5 h-3.5 fill-white" />
+                <span>RANDOM MATCH</span>
+              </button>
+
+              <button
+                type="button"
+                onPointerDown={handleStartFriend}
+                className="py-2.5 px-3 bg-[#1E88E5] hover:bg-[#1976D2] border-b-4 border-[#1565C0] active:border-b-0 active:translate-y-1 text-white font-black text-xs uppercase rounded-xl shadow-md flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+              >
+                <User className="w-3.5 h-3.5" />
+                <span>INVITE FRIENDS</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

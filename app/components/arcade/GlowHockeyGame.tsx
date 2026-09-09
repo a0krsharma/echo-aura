@@ -56,7 +56,7 @@ const MIN_PUCK_SPEED = 0.3;
 const SUB_STEPS = 8; // CCD sub-stepping to prevent any tunneling at 32px/frame
 
 export type PlayMode = "SOLO_AI" | "LOCAL_2P" | "ONLINE_DUEL";
-export type AIDifficulty = "AMATEUR" | "SEMI_PRO" | "USAA_PRO" | "CHAMPION_TAS";
+export type AIDifficulty = "EASY" | "MEDIUM" | "HARD";
 
 // ── 4 Authentic Vibrant Neon Glow Themes ──
 export interface GlowTheme {
@@ -379,7 +379,7 @@ export default function GlowHockeyGame({ match, currentUid, isHost, onRematch }:
   const [showProTips, setShowProTips] = useState(false);
   const [themeKey, setThemeKey] = useState<string>("classic");
   const [playMode, setPlayMode] = useState<PlayMode>(match.mode === "VS_COMPUTER" ? "SOLO_AI" : "LOCAL_2P");
-  const [aiDifficulty, setAiDifficulty] = useState<AIDifficulty>("SEMI_PRO");
+  const [aiDifficulty, setAiDifficulty] = useState<AIDifficulty>("MEDIUM");
   const [targetScore, setTargetScore] = useState<number>(7);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [isPaused, setIsPaused] = useState<boolean>(false);
@@ -538,26 +538,22 @@ export default function GlowHockeyGame({ match, currentUid, isHost, onRematch }:
         p2.prevY = p2.y;
 
         if (playMode === "SOLO_AI") {
-          let aiSpeed = 0.38;
+          let aiSpeed = 0.48;
           let aiPredict = 1;
-          let aiAggressionY = 0.5;
+          let aiAggressionY = 0.65;
 
-          if (aiDifficulty === "AMATEUR") {
-            aiSpeed = 0.22;
+          if (aiDifficulty === "EASY") {
+            aiSpeed = 0.28;
             aiPredict = 0;
-            aiAggressionY = 0.2;
-          } else if (aiDifficulty === "SEMI_PRO") {
-            aiSpeed = 0.42;
+            aiAggressionY = 0.3;
+          } else if (aiDifficulty === "MEDIUM") {
+            aiSpeed = 0.48;
             aiPredict = 1;
-            aiAggressionY = 0.6;
-          } else if (aiDifficulty === "USAA_PRO") {
-            aiSpeed = 0.68;
+            aiAggressionY = 0.65;
+          } else if (aiDifficulty === "HARD") {
+            aiSpeed = 0.76;
             aiPredict = 2;
-            aiAggressionY = 0.85;
-          } else if (aiDifficulty === "CHAMPION_TAS") {
-            aiSpeed = 0.92;
-            aiPredict = 3;
-            aiAggressionY = 1.0;
+            aiAggressionY = 0.9;
           }
 
           let aiTargetX = WIDTH / 2;
@@ -1302,18 +1298,18 @@ export default function GlowHockeyGame({ match, currentUid, isHost, onRematch }:
               <Bot className="w-3 h-3 text-neutral-400" /> AI BOT:
             </span>
             <div className="flex items-center gap-1">
-              {(["AMATEUR", "SEMI_PRO", "USAA_PRO", "CHAMPION_TAS"] as AIDifficulty[]).map((lvl) => (
+              {(["EASY", "MEDIUM", "HARD"] as AIDifficulty[]).map((lvl) => (
                 <button
                   key={lvl}
                   type="button"
                   onClick={() => setAiDifficulty(lvl)}
-                  className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase transition-all cursor-pointer ${
+                  className={`px-2 py-0.5 rounded text-[9px] font-black uppercase transition-all cursor-pointer ${
                     aiDifficulty === lvl
-                      ? "bg-white text-black font-black"
+                      ? "bg-white text-black font-black shadow-xs"
                       : "bg-neutral-900 text-neutral-400 hover:text-white"
                   }`}
                 >
-                  {lvl === "AMATEUR" ? "EASY" : lvl === "SEMI_PRO" ? "MED" : lvl === "USAA_PRO" ? "PRO" : "GOD"}
+                  {lvl}
                 </button>
               ))}
             </div>

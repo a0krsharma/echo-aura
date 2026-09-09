@@ -386,7 +386,7 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
     ],
     voiceGuide: "Fast-paced trash talk, shot calls, and goal celebrations over open mic audio.",
     scoring: "+150 Aura to the match victor (+double stakes in wager matches).",
-    proTip: "Use the AI Difficulty toggle (Amateur, Semi-Pro, USAA World Champion) to practice bank shots and rapid-fire crease defense!"
+    proTip: "Use the AI Difficulty toggle (Easy, Medium, Hard) to practice bank shots and rapid-fire crease defense!"
   },
   npat: {
     id: "npat",

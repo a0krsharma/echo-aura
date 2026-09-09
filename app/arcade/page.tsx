@@ -182,6 +182,12 @@ function ArcadeContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [botDifficultyModalOpen, setBotDifficultyModalOpen] = useState(false);
   const [pendingBotGameType, setPendingBotGameType] = useState<ArcadeGameType | null>(null);
+  const [friendsModalOpen, setFriendsModalOpen] = useState(false);
+  const [pendingFriendsGameType, setPendingFriendsGameType] = useState<ArcadeGameType | null>(null);
+  const [randomMatchSearching, setRandomMatchSearching] = useState(false);
+  const [randomMatchGame, setRandomMatchGame] = useState<ArcadeGameType | null>(null);
+  const [randomMatchTimer, setRandomMatchTimer] = useState(5);
+  const queueCancelRef = useRef<(() => void) | null>(null);
 
   const [soundCheckOpen, setSoundCheckOpen] = useState(false);
   const [ghostTimerSec, setGhostTimerSec] = useState<number | null>(null);
@@ -304,6 +310,68 @@ function ArcadeContent() {
     setPendingBotGameType(gameId);
     setBotDifficultyModalOpen(true);
   };
+
+  const handleOpenFriendsModal = (gameId: ArcadeGameType) => {
+    setPendingFriendsGameType(gameId);
+    setFriendsModalOpen(true);
+  };
+
+  const handleStartRandomMatch = async (gameType: ArcadeGameType) => {
+    if (!user) return;
+    setFriendsModalOpen(false);
+    setRandomMatchGame(gameType);
+    setRandomMatchTimer(5);
+    setRandomMatchSearching(true);
+    soundSynth.playSubtlePop();
+
+    try {
+      const cancelFn = await findOrJoinQueue(
+        user.uid,
+        user.handle || "@ANON",
+        user.photoUrl || user.photoURL || "",
+        gameType,
+        (matchId) => {
+          soundSynth.playFanfare();
+          setRandomMatchSearching(false);
+          setRandomMatchGame(null);
+          setActiveMatchId(matchId);
+        }
+      );
+      queueCancelRef.current = cancelFn;
+    } catch (e) {
+      console.warn("Queue error:", e);
+    }
+  };
+
+  const handleCancelRandomMatch = () => {
+    if (queueCancelRef.current) {
+      queueCancelRef.current();
+      queueCancelRef.current = null;
+    }
+    setRandomMatchSearching(false);
+    setRandomMatchGame(null);
+  };
+
+  // Random match timer: if no opponent is found in 5s, auto-launch vs Bot!
+  useEffect(() => {
+    if (!randomMatchSearching || !randomMatchGame) return;
+    if (randomMatchTimer <= 0) {
+      if (queueCancelRef.current) {
+        queueCancelRef.current();
+        queueCancelRef.current = null;
+      }
+      setRandomMatchSearching(false);
+      const targetGame = randomMatchGame;
+      setRandomMatchGame(null);
+      soundSynth.playSubtlePop();
+      handleLaunchSolo(targetGame, "MEDIUM");
+      return;
+    }
+    const t = setTimeout(() => {
+      setRandomMatchTimer((prev) => prev - 1);
+    }, 1000);
+    return () => clearTimeout(t);
+  }, [randomMatchSearching, randomMatchTimer, randomMatchGame]);
 
   const handleLaunchSolo = async (
     type: ArcadeGameType,
@@ -1021,20 +1089,20 @@ function ArcadeContent() {
                         type="button"
                         disabled={!user}
                         onClick={() => handleOpenBotDifficulty(game.id)}
-                        className="py-2 px-2.5 bg-neutral-900 hover:bg-neutral-800 text-neutral-200 border border-neutral-700/80 hover:border-neutral-500 font-bold text-xs uppercase transition-all cursor-pointer text-center truncate rounded-xl shadow-sm"
-                        title={`Play ${game.name} vs AI Bot`}
+                        className="py-2 px-2 bg-neutral-900 hover:bg-neutral-800 text-neutral-200 border border-neutral-700/80 hover:border-neutral-500 font-bold text-xs uppercase transition-all cursor-pointer text-center truncate rounded-xl shadow-sm flex items-center justify-center gap-1"
+                        title={`Play ${game.name} with AI Bot`}
                       >
-                        🤖 SOLO BOT
+                        <span>🤖 PLAY WITH BOT</span>
                       </button>
 
                       <button
                         type="button"
                         disabled={!user}
-                        onClick={() => handleOpenCreate(game.id)}
-                        className="py-2 px-2.5 bg-white text-black hover:bg-neutral-200 font-black text-xs uppercase transition-all cursor-pointer text-center truncate rounded-xl shadow-md active:scale-95"
-                        title={`Create Multiplayer Room in ${game.name}`}
+                        onClick={() => handleOpenFriendsModal(game.id)}
+                        className="py-2 px-2 bg-white text-black hover:bg-neutral-200 font-black text-xs uppercase transition-all cursor-pointer text-center truncate rounded-xl shadow-md active:scale-95 flex items-center justify-center gap-1"
+                        title={`Play ${game.name} with Friends (Random Match or Invite)`}
                       >
-                        👥 MULTI
+                        <span>👥 FRIENDS</span>
                       </button>
                     </div>
                   </div>
@@ -1199,7 +1267,7 @@ function ArcadeContent() {
         }}
       />
 
-      {/* Bot Difficulty Modal */}
+      {/* Bot Difficulty Modal (EASY, MEDIUM, HARD) */}
       {botDifficultyModalOpen && pendingBotGameType && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/90 backdrop-blur-md animate-in fade-in select-none">
           <div className="relative w-full max-w-sm bg-neutral-950 border-2 border-white p-6 font-mono text-white shadow-[0_0_50px_rgba(255,255,255,0.2)] flex flex-col items-center rounded-2xl">
@@ -1212,27 +1280,27 @@ function ArcadeContent() {
             >
               <X className="w-5 h-5" />
             </button>
-            <div className="flex items-center justify-center mb-4 w-12 h-12 bg-white rounded-full text-2xl text-black flex items-center justify-center">
+            <div className="flex items-center justify-center mb-3 w-12 h-12 bg-white rounded-full text-2xl text-black">
               🤖
             </div>
             <h2 className="text-lg font-black uppercase text-center mb-1 tracking-wider">
-              SELECT AI DIFFICULTY
+              PLAY WITH BOT
             </h2>
-            <p className="text-xs text-neutral-400 text-center mb-6 max-w-[250px]">
-              Choose the intelligence level of your Neural Bot opponent.
+            <p className="text-xs text-neutral-400 text-center mb-5">
+              Select AI difficulty level for {CLEAN_GAMES.find((g) => g.id === pendingBotGameType)?.name || "Game"}
             </p>
 
-            <div className="w-full space-y-3">
+            <div className="w-full space-y-2.5">
               <button
                 type="button"
                 onClick={() => {
                   handleLaunchSolo(pendingBotGameType, "EASY");
                   setBotDifficultyModalOpen(false);
                 }}
-                className="w-full py-3 border-2 border-green-500 bg-green-950/40 text-green-400 font-black text-sm uppercase hover:bg-green-900 transition-colors cursor-pointer group flex justify-between px-4 items-center rounded-xl"
+                className="w-full py-3.5 border-2 border-emerald-500 bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-300 font-black text-sm uppercase transition-all cursor-pointer flex justify-between px-4 items-center rounded-xl"
               >
-                <span>[ CASUAL ]</span>
-                <span className="text-[10px] font-bold opacity-70 group-hover:opacity-100">EASY</span>
+                <span>EASY</span>
+                <span className="text-[10px] font-bold opacity-75">CASUAL AI</span>
               </button>
               <button
                 type="button"
@@ -1240,10 +1308,10 @@ function ArcadeContent() {
                   handleLaunchSolo(pendingBotGameType, "MEDIUM");
                   setBotDifficultyModalOpen(false);
                 }}
-                className="w-full py-3 border-2 border-yellow-500 bg-yellow-950/40 text-yellow-400 font-black text-sm uppercase hover:bg-yellow-900 transition-colors cursor-pointer group flex justify-between px-4 items-center rounded-xl"
+                className="w-full py-3.5 border-2 border-amber-500 bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 font-black text-sm uppercase transition-all cursor-pointer flex justify-between px-4 items-center rounded-xl"
               >
-                <span>[ NEURAL ]</span>
-                <span className="text-[10px] font-bold opacity-70 group-hover:opacity-100">MEDIUM</span>
+                <span>MEDIUM</span>
+                <span className="text-[10px] font-bold opacity-75">NEURAL AI</span>
               </button>
               <button
                 type="button"
@@ -1251,12 +1319,115 @@ function ArcadeContent() {
                   handleLaunchSolo(pendingBotGameType, "HARD");
                   setBotDifficultyModalOpen(false);
                 }}
-                className="w-full py-3 border-2 border-red-500 bg-red-950/40 text-red-400 font-black text-sm uppercase hover:bg-red-900 transition-colors cursor-pointer shadow-[0_0_15px_rgba(239,68,68,0.3)] group flex justify-between px-4 items-center rounded-xl"
+                className="w-full py-3.5 border-2 border-red-500 bg-red-950/40 hover:bg-red-900/60 text-red-300 font-black text-sm uppercase transition-all cursor-pointer shadow-[0_0_15px_rgba(239,68,68,0.25)] flex justify-between px-4 items-center rounded-xl"
               >
-                <span>[ TERMINATOR ]</span>
-                <span className="text-[10px] font-bold opacity-70 group-hover:opacity-100">HARD</span>
+                <span>HARD</span>
+                <span className="text-[10px] font-bold opacity-75">MASTER AI</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Play with Friends Modal (Random Match vs Invite Friends) */}
+      {friendsModalOpen && pendingFriendsGameType && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/90 backdrop-blur-md animate-in fade-in select-none">
+          <div className="relative w-full max-w-sm bg-neutral-950 border-2 border-white p-6 font-mono text-white shadow-[0_0_50px_rgba(255,255,255,0.2)] flex flex-col items-center rounded-2xl">
+            <button
+              onClick={() => {
+                setFriendsModalOpen(false);
+                setPendingFriendsGameType(null);
+              }}
+              className="absolute top-4 right-4 p-1.5 border border-neutral-700 hover:border-white text-neutral-400 hover:text-white transition-all cursor-pointer rounded-lg"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="flex items-center justify-center mb-3 w-12 h-12 bg-white rounded-full text-2xl text-black">
+              👥
+            </div>
+            <h2 className="text-lg font-black uppercase text-center mb-1 tracking-wider">
+              PLAY WITH FRIENDS
+            </h2>
+            <p className="text-xs text-neutral-400 text-center mb-5">
+              Choose quick random matchmaking or invite friends to a private table
+            </p>
+
+            <div className="w-full space-y-3">
+              {/* Option 1: Random Match */}
+              <button
+                type="button"
+                onClick={() => handleStartRandomMatch(pendingFriendsGameType)}
+                className="w-full py-3.5 px-4 border-2 border-amber-400 bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 font-black text-sm uppercase transition-all cursor-pointer rounded-xl flex items-center justify-between group shadow-sm"
+              >
+                <div className="flex items-center gap-2.5 text-left">
+                  <Zap className="w-5 h-5 text-amber-400 shrink-0" />
+                  <div>
+                    <div className="leading-tight">RANDOM MATCH</div>
+                    <div className="text-[10px] text-amber-200/70 font-sans font-normal normal-case">
+                      Find player online (auto-bot in 5s)
+                    </div>
+                  </div>
+                </div>
+                <span className="text-xs">⚡</span>
+              </button>
+
+              {/* Option 2: Invite Friends */}
+              <button
+                type="button"
+                onClick={() => {
+                  const game = pendingFriendsGameType;
+                  setFriendsModalOpen(false);
+                  handleOpenCreate(game);
+                }}
+                className="w-full py-3.5 px-4 border-2 border-blue-500 bg-blue-950/40 hover:bg-blue-900/60 text-blue-300 font-black text-sm uppercase transition-all cursor-pointer rounded-xl flex items-center justify-between group shadow-sm"
+              >
+                <div className="flex items-center gap-2.5 text-left">
+                  <Users className="w-5 h-5 text-blue-400 shrink-0" />
+                  <div>
+                    <div className="leading-tight">INVITE FRIENDS</div>
+                    <div className="text-[10px] text-blue-200/70 font-sans font-normal normal-case">
+                      Create room &amp; share invite link
+                    </div>
+                  </div>
+                </div>
+                <span className="text-xs">🔗</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Random Match Searching Overlay */}
+      {randomMatchSearching && randomMatchGame && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in select-none">
+          <div className="relative w-full max-w-sm bg-neutral-950 border-2 border-amber-400 p-6 font-mono text-white shadow-[0_0_60px_rgba(245,158,11,0.3)] flex flex-col items-center rounded-2xl text-center space-y-4">
+            <div className="w-16 h-16 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-3xl animate-pulse">
+              ⚡
+            </div>
+
+            <div>
+              <h2 className="text-base sm:text-lg font-black uppercase text-amber-400 tracking-wider">
+                SEARCHING FOR CHALLENGER...
+              </h2>
+              <p className="text-xs text-neutral-400 mt-1">
+                Looking for players online in {CLEAN_GAMES.find((g) => g.id === randomMatchGame)?.name}
+              </p>
+            </div>
+
+            <div className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-3 flex items-center justify-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+              <span className="text-xs font-bold text-amber-300 font-sans">
+                Auto-matching with Neural Bot in <strong>{randomMatchTimer}s</strong>...
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleCancelRandomMatch}
+              className="w-full py-2.5 border border-neutral-700 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white font-bold text-xs uppercase rounded-xl transition-all cursor-pointer"
+            >
+              CANCEL
+            </button>
           </div>
         </div>
       )}
