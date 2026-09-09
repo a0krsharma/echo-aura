@@ -40,9 +40,14 @@ export default function DartsGame({
   currentUid,
   onBack,
 }: DartsGameProps) {
-  const [inMenu, setInMenu] = useState(true);
-  const [playMode, setPlayMode] = useState<"bot" | "friend">("bot");
-  const [botDiff, setBotDiff] = useState<BotDifficulty>("medium");
+  const initialMode: "bot" | "friend" = match?.mode === "MULTIPLAYER" ? "friend" : "bot";
+  const rawDiff = (match?.difficulty || "").toLowerCase();
+  const initialDiff: BotDifficulty = rawDiff === "easy" || rawDiff === "hard" ? rawDiff : "medium";
+  const hasPreselectedMode = Boolean(match?.mode);
+
+  const [inMenu, setInMenu] = useState(!hasPreselectedMode);
+  const [playMode, setPlayMode] = useState<"bot" | "friend">(initialMode);
+  const [botDiff, setBotDiff] = useState<BotDifficulty>(initialDiff);
 
   // 301 Countdown
   const [p1Score, setP1Score] = useState(301);
@@ -132,6 +137,13 @@ export default function DartsGame({
     isThrowing.current = false;
     setInMenu(false);
   }, []);
+
+  // Auto-start immediately if mode & difficulty were chosen in lobby (never ask twice)
+  useEffect(() => {
+    if (hasPreselectedMode) {
+      startGame(initialMode, initialDiff);
+    }
+  }, [hasPreselectedMode, initialMode, initialDiff, startGame]);
 
   // Evaluate hit from board coordinates (Board center: 180, 190)
   const evaluateHit = (x: number, y: number): DartThrow => {

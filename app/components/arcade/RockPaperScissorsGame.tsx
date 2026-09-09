@@ -26,9 +26,14 @@ export default function RockPaperScissorsGame({
   currentUid,
   onBack,
 }: RPSGameProps) {
-  const [inMenu, setInMenu] = useState(true);
-  const [playMode, setPlayMode] = useState<"bot" | "friend">("bot");
-  const [botDiff, setBotDiff] = useState<BotDifficulty>("medium");
+  const initialMode: "bot" | "friend" = match?.mode === "MULTIPLAYER" ? "friend" : "bot";
+  const rawDiff = (match?.difficulty || "").toLowerCase();
+  const initialDiff: BotDifficulty = rawDiff === "easy" || rawDiff === "hard" ? rawDiff : "medium";
+  const hasPreselectedMode = Boolean(match?.mode);
+
+  const [inMenu, setInMenu] = useState(!hasPreselectedMode);
+  const [playMode, setPlayMode] = useState<"bot" | "friend">(initialMode);
+  const [botDiff, setBotDiff] = useState<BotDifficulty>(initialDiff);
 
   // Scores
   const [p1Score, setP1Score] = useState(0);
@@ -48,40 +53,6 @@ export default function RockPaperScissorsGame({
 
   const historyRef = useRef<Choice[]>([]);
   const countdownTimer = useRef<NodeJS.Timeout | null>(null);
-
-  // Start new match
-  const startGame = useCallback((mode: "bot" | "friend", diff: BotDifficulty = "medium") => {
-    setPlayMode(mode);
-    setBotDiff(diff);
-    setP1Score(0);
-    setP2Score(0);
-    setP1Streak(0);
-    setIsOvertime(false);
-    setGameOver(false);
-    setWinner(null);
-    historyRef.current = [];
-    setInMenu(false);
-    startRound(false);
-  }, []);
-
-  // Bot AI
-  const predictPlayerMove = useCallback((): Choice => {
-    const history = historyRef.current;
-    if (history.length < 2 || botDiff === "easy") {
-      return CHOICES[Math.floor(Math.random() * CHOICES.length)].id;
-    }
-
-    const lastMove = history[history.length - 1];
-    if (botDiff === "hard") {
-      const counterToLast = CHOICES.find((c) => c.beats === lastMove)?.id || "rock";
-      return CHOICES.find((c) => c.beats === counterToLast)?.id || "paper";
-    }
-
-    if (Math.random() < 0.6) {
-      return CHOICES.find((c) => c.beats === lastMove)?.id || "scissors";
-    }
-    return CHOICES[Math.floor(Math.random() * CHOICES.length)].id;
-  }, [botDiff]);
 
   // Start a round
   const startRound = useCallback((overtime: boolean) => {
@@ -108,6 +79,47 @@ export default function RockPaperScissorsGame({
       }
     }, 650);
   }, []);
+
+  // Start new match
+  const startGame = useCallback((mode: "bot" | "friend", diff: BotDifficulty = "medium") => {
+    setPlayMode(mode);
+    setBotDiff(diff);
+    setP1Score(0);
+    setP2Score(0);
+    setP1Streak(0);
+    setIsOvertime(false);
+    setGameOver(false);
+    setWinner(null);
+    historyRef.current = [];
+    setInMenu(false);
+    startRound(false);
+  }, [startRound]);
+
+  // Auto-start immediately if mode & difficulty were chosen in lobby (never ask twice)
+  useEffect(() => {
+    if (hasPreselectedMode) {
+      startGame(initialMode, initialDiff);
+    }
+  }, [hasPreselectedMode, initialMode, initialDiff, startGame]);
+
+  // Bot AI
+  const predictPlayerMove = useCallback((): Choice => {
+    const history = historyRef.current;
+    if (history.length < 2 || botDiff === "easy") {
+      return CHOICES[Math.floor(Math.random() * CHOICES.length)].id;
+    }
+
+    const lastMove = history[history.length - 1];
+    if (botDiff === "hard") {
+      const counterToLast = CHOICES.find((c) => c.beats === lastMove)?.id || "rock";
+      return CHOICES.find((c) => c.beats === counterToLast)?.id || "paper";
+    }
+
+    if (Math.random() < 0.6) {
+      return CHOICES.find((c) => c.beats === lastMove)?.id || "scissors";
+    }
+    return CHOICES[Math.floor(Math.random() * CHOICES.length)].id;
+  }, [botDiff]);
 
   // Evaluate round
   const evaluateRound = useCallback(
