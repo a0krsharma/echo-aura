@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { updateArcadeGameScore, type ArcadeMatch } from "@/lib/arcade";
 import { arcadeSfx } from "@/lib/arcadeSfx";
 import EchoArcadeModalCard, { type BotDifficulty } from "./EchoArcadeModalCard";
-import { ArrowLeft, RotateCcw, Zap, Trophy, Shield, AlertTriangle } from "lucide-react";
+import { ArrowLeft, RotateCcw, Zap, Trophy, Shield, AlertTriangle, Sparkles } from "lucide-react";
 
 interface TrafficJamGameProps {
   match: ArcadeMatch;
@@ -20,12 +20,15 @@ interface Car {
   vy: number;
   angle: number;
   speed: number;
+  angularVel: number;
   radius: number;
   color: string;
   isFallen: boolean;
   fallScale: number;
   isBoosting: boolean;
   boostCharge: number; // 0 to 100
+  bumperSquash: number; // 0 to 1 for impact compression
+  squashAngle: number;
 }
 
 interface SkidMark {
@@ -35,11 +38,21 @@ interface SkidMark {
   opacity: number;
 }
 
+interface SmokeParticle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  radius: number;
+  alpha: number;
+}
+
 interface WaterSplash {
   id: number;
   x: number;
   y: number;
   radius: number;
+  maxRadius: number;
   opacity: number;
 }
 
@@ -58,6 +71,15 @@ interface Spark {
   vy: number;
   life: number;
   color: string;
+  size: number;
+}
+
+interface SinkingSlab {
+  angle: number;
+  distance: number;
+  scale: number;
+  alpha: number;
+  tilt: number;
 }
 
 export default function TrafficJamGame({
@@ -77,7 +99,8 @@ export default function TrafficJamGame({
   const [matchWinner, setMatchWinner] = useState<"p1" | "p2" | null>(null);
 
   // Arena shrinking stage
-  const [arenaRadius, setArenaRadius] = useState(150);
+  const INITIAL_RADIUS = 152;
+  const [arenaRadius, setArenaRadius] = useState(INITIAL_RADIUS);
   const [shrinkTimer, setShrinkTimer] = useState(15);
   const [isWobbling, setIsWobbling] = useState(false);
   const [screenShake, setScreenShake] = useState(0);
@@ -85,39 +108,48 @@ export default function TrafficJamGame({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const p1Ref = useRef<Car>({
-    x: 130,
+    x: 125,
     y: 190,
     vx: 0,
     vy: 0,
     angle: 0,
     speed: 0,
-    radius: 16,
+    angularVel: 0,
+    radius: 17,
     color: "#ef4444",
     isFallen: false,
     fallScale: 1,
     isBoosting: false,
     boostCharge: 100,
+    bumperSquash: 0,
+    squashAngle: 0,
   });
 
   const p2Ref = useRef<Car>({
-    x: 230,
+    x: 235,
     y: 190,
     vx: 0,
     vy: 0,
     angle: Math.PI,
     speed: 0,
-    radius: 16,
+    angularVel: 0,
+    radius: 17,
     color: "#3b82f6",
     isFallen: false,
     fallScale: 1,
     isBoosting: false,
     boostCharge: 100,
+    bumperSquash: 0,
+    squashAngle: 0,
   });
 
   const skidMarksRef = useRef<SkidMark[]>([]);
+  const smokeParticlesRef = useRef<SmokeParticle[]>([]);
   const splashesRef = useRef<WaterSplash[]>([]);
   const cracksRef = useRef<CrackLine[]>([]);
   const sparksRef = useRef<Spark[]>([]);
+  const sinkingSlabsRef = useRef<SinkingSlab[]>([]);
+  const shockwavesRef = useRef<{ x: number; y: number; r: number; alpha: number; color: string }[]>([]);
   const splashId = useRef(1);
 
   // Controls for P1 & P2
@@ -138,7 +170,7 @@ export default function TrafficJamGame({
   // Shake decay
   useEffect(() => {
     if (screenShake <= 0) return;
-    const t = setTimeout(() => setScreenShake((s) => Math.max(0, s - 2)), 35);
+    const t = setTimeout(() => setScreenShake((s) => Math.max(0, s - 2.5)), 30);
     return () => clearTimeout(t);
   }, [screenShake]);
 
@@ -157,13 +189,16 @@ export default function TrafficJamGame({
   const resetRound = useCallback(() => {
     setRoundOver(false);
     setRoundWinner(null);
-    setArenaRadius(150);
+    setArenaRadius(INITIAL_RADIUS);
     setShrinkTimer(15);
     setIsWobbling(false);
     skidMarksRef.current = [];
+    smokeParticlesRef.current = [];
     splashesRef.current = [];
     cracksRef.current = [];
     sparksRef.current = [];
+    sinkingSlabsRef.current = [];
+    shockwavesRef.current = [];
 
     p1Ref.current = {
       x: 125,
@@ -172,12 +207,15 @@ export default function TrafficJamGame({
       vy: 0,
       angle: 0,
       speed: 0,
-      radius: 16,
+      angularVel: 0,
+      radius: 17,
       color: "#ef4444",
       isFallen: false,
       fallScale: 1,
       isBoosting: false,
       boostCharge: 100,
+      bumperSquash: 0,
+      squashAngle: 0,
     };
 
     p2Ref.current = {
@@ -187,12 +225,15 @@ export default function TrafficJamGame({
       vy: 0,
       angle: Math.PI,
       speed: 0,
-      radius: 16,
+      angularVel: 0,
+      radius: 17,
       color: "#3b82f6",
       isFallen: false,
       fallScale: 1,
       isBoosting: false,
       boostCharge: 100,
+      bumperSquash: 0,
+      squashAngle: 0,
     };
   }, []);
 
@@ -202,15 +243,15 @@ export default function TrafficJamGame({
 
     const interval = setInterval(() => {
       setShrinkTimer((prev) => {
-        if (prev === 4) {
-          // Warning wobble & cracks
+        if (prev === 5) {
+          // Warning wobble & perimeter fissure cracks
           setIsWobbling(true);
           arcadeSfx.playButtonTap();
-          for (let i = 0; i < 10; i++) {
-            const angle = (i * Math.PI * 2) / 10;
+          for (let i = 0; i < 12; i++) {
+            const angle = (i * Math.PI * 2) / 12;
             cracksRef.current.push({
-              startX: 180 + Math.cos(angle) * (arenaRadius - 25),
-              startY: 190 + Math.sin(angle) * (arenaRadius - 25),
+              startX: 180 + Math.cos(angle) * (arenaRadius - 28),
+              startY: 190 + Math.sin(angle) * (arenaRadius - 28),
               endX: 180 + Math.cos(angle) * arenaRadius,
               endY: 190 + Math.sin(angle) * arenaRadius,
               opacity: 1,
@@ -219,19 +260,34 @@ export default function TrafficJamGame({
         }
 
         if (prev <= 1) {
-          // Collapse outer ring into water
-          setArenaRadius((r) => Math.max(65, r - 25));
+          // Collapse outer slabs into ocean
+          const nextRadius = Math.max(65, arenaRadius - 26);
+          setArenaRadius(nextRadius);
           setIsWobbling(false);
           cracksRef.current = [];
           arcadeSfx.playCarBump();
+          setScreenShake(8);
+
+          // Spawn sinking slabs
+          for (let i = 0; i < 8; i++) {
+            const a = (i * Math.PI * 2) / 8;
+            sinkingSlabsRef.current.push({
+              angle: a,
+              distance: arenaRadius - 10,
+              scale: 1,
+              alpha: 1,
+              tilt: (Math.random() - 0.5) * 0.4,
+            });
+          }
 
           // Water ring splashes
-          for (let a = 0; a < Math.PI * 2; a += 0.6) {
+          for (let a = 0; a < Math.PI * 2; a += 0.5) {
             splashesRef.current.push({
               id: splashId.current++,
-              x: 180 + Math.cos(a) * arenaRadius,
-              y: 190 + Math.sin(a) * arenaRadius,
-              radius: 9,
+              x: 180 + Math.cos(a) * (arenaRadius - 10),
+              y: 190 + Math.sin(a) * (arenaRadius - 10),
+              radius: 8,
+              maxRadius: 24,
               opacity: 1,
             });
           }
@@ -244,7 +300,7 @@ export default function TrafficJamGame({
     return () => clearInterval(interval);
   }, [inMenu, roundOver, matchWinner, arenaRadius]);
 
-  // Keyboard controls (P1: WASD / Arrows, P2: IJKL or Arrows)
+  // Keyboard controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // P1
@@ -252,9 +308,9 @@ export default function TrafficJamGame({
       if (e.key === "s" || e.key === "S") p1InputRef.current.down = true;
       if (e.key === "a" || e.key === "A") p1InputRef.current.left = true;
       if (e.key === "d" || e.key === "D") p1InputRef.current.right = true;
-      if (e.key === " " || e.key === "Shift") triggerBoost("p1");
+      if (e.code === "Space" || e.key === "Shift") triggerBoost("p1");
 
-      // P2 (Arrows or IJKL for local dual keyboard)
+      // P2 (Dual local keyboard)
       if (e.key === "ArrowUp" || e.key === "i" || e.key === "I") p2InputRef.current.up = true;
       if (e.key === "ArrowDown" || e.key === "k" || e.key === "K") p2InputRef.current.down = true;
       if (e.key === "ArrowLeft" || e.key === "j" || e.key === "J") p2InputRef.current.left = true;
@@ -284,20 +340,35 @@ export default function TrafficJamGame({
     };
   }, []);
 
+  // Trigger Nitro Boost
   const triggerBoost = (who: "p1" | "p2") => {
     const car = who === "p1" ? p1Ref.current : p2Ref.current;
     if (car.boostCharge >= 35 && !car.isFallen) {
       car.boostCharge -= 35;
       car.isBoosting = true;
-      car.speed = Math.min(6.2, car.speed + 3.0);
+      car.speed = Math.min(6.6, car.speed + 3.2);
       arcadeSfx.playWhoosh();
+      setScreenShake(6);
+
+      // Nitro exhaust puff
+      for (let i = 0; i < 8; i++) {
+        smokeParticlesRef.current.push({
+          x: car.x - Math.cos(car.angle) * car.radius,
+          y: car.y - Math.sin(car.angle) * car.radius,
+          vx: -Math.cos(car.angle) * 3 + (Math.random() - 0.5) * 2,
+          vy: -Math.sin(car.angle) * 3 + (Math.random() - 0.5) * 2,
+          radius: 3 + Math.random() * 4,
+          alpha: 0.9,
+        });
+      }
+
       setTimeout(() => {
         car.isBoosting = false;
-      }, 350);
+      }, 380);
     }
   };
 
-  // Bot AI behavior (3 tiers)
+  // Upgraded Predator Bot AI with Tactical Flanking & Edge Shove
   const updateBotAI = () => {
     if (playMode !== "bot") return;
     const p1 = p1Ref.current;
@@ -307,41 +378,57 @@ export default function TrafficJamGame({
     const dx = p1.x - p2.x;
     const dy = p1.y - p2.y;
     const dist = Math.hypot(dx, dy);
-    const targetAngle = Math.atan2(dy, dx);
 
-    // Arena center distance
-    const distFromCenter = Math.hypot(p2.x - 180, p2.y - 190);
-    const isNearEdge = distFromCenter > arenaRadius - 35;
+    // Calculate nearest edge from P1 to shove them into water!
+    const p1AngleFromCenter = Math.atan2(p1.y - 190, p1.x - 180);
+    const p2DistFromCenter = Math.hypot(p2.x - 180, p2.y - 190);
+    const isNearEdge = p2DistFromCenter > arenaRadius - 38;
 
-    // Angle difference normalized
+    // Tactical target: If hard bot, aim for P1's center-side to shove them OUTWARDS
+    let targetX = p1.x;
+    let targetY = p1.y;
+
+    if (botDiff === "hard" && dist > 40) {
+      // Flank around: position between P1 and center
+      const pushX = p1.x - Math.cos(p1AngleFromCenter) * 16;
+      const pushY = p1.y - Math.sin(p1AngleFromCenter) * 16;
+      targetX = pushX;
+      targetY = pushY;
+    }
+
+    const tdx = targetX - p2.x;
+    const tdy = targetY - p2.y;
+    const targetAngle = Math.atan2(tdy, tdx);
+
     let diffAngle = targetAngle - p2.angle;
     while (diffAngle < -Math.PI) diffAngle += Math.PI * 2;
     while (diffAngle > Math.PI) diffAngle -= Math.PI * 2;
 
-    const turnRate = botDiff === "hard" ? 0.12 : botDiff === "medium" ? 0.08 : 0.05;
+    const turnRate = botDiff === "hard" ? 0.13 : botDiff === "medium" ? 0.085 : 0.055;
 
-    if (isNearEdge && botDiff !== "easy") {
-      // Avoid falling off the ring: turn back toward arena center
+    // If P2 is close to the falling edge, prioritize emergency center steering
+    if (isNearEdge && (botDiff !== "easy" || Math.random() < 0.6)) {
       const centerAngle = Math.atan2(190 - p2.y, 180 - p2.x);
       let cDiff = centerAngle - p2.angle;
       while (cDiff < -Math.PI) cDiff += Math.PI * 2;
       while (cDiff > Math.PI) cDiff -= Math.PI * 2;
-      p2.angle += Math.sign(cDiff) * Math.min(Math.abs(cDiff), turnRate * 1.5);
+      p2.angle += Math.sign(cDiff) * Math.min(Math.abs(cDiff), turnRate * 1.6);
       p2InputRef.current.up = true;
     } else {
-      // Steer toward player
+      // Steer toward target
       p2.angle += Math.sign(diffAngle) * Math.min(Math.abs(diffAngle), turnRate);
 
-      if (Math.abs(diffAngle) < 0.6) {
+      if (Math.abs(diffAngle) < 0.55) {
         p2InputRef.current.up = true;
-        // Hard / Medium nitro attack when lined up
-        if (botDiff === "hard" && dist < 95 && Math.abs(diffAngle) < 0.25) {
+
+        // Tactical Nitro Ram
+        if (botDiff === "hard" && dist < 110 && Math.abs(diffAngle) < 0.22) {
           triggerBoost("p2");
-        } else if (botDiff === "medium" && dist < 70 && Math.random() < 0.05) {
+        } else if (botDiff === "medium" && dist < 85 && Math.abs(diffAngle) < 0.35 && Math.random() < 0.08) {
           triggerBoost("p2");
         }
       } else {
-        p2InputRef.current.up = botDiff === "hard" || Math.random() < 0.6;
+        p2InputRef.current.up = botDiff === "hard" || Math.random() < 0.55;
       }
     }
   };
@@ -365,54 +452,71 @@ export default function TrafficJamGame({
       const p2 = p2Ref.current;
 
       // 2. Recharge Nitro Boosts
-      if (p1.boostCharge < 100) p1.boostCharge = Math.min(100, p1.boostCharge + 0.25);
-      if (p2.boostCharge < 100) p2.boostCharge = Math.min(100, p2.boostCharge + 0.25);
+      if (p1.boostCharge < 100) p1.boostCharge = Math.min(100, p1.boostCharge + 0.3);
+      if (p2.boostCharge < 100) p2.boostCharge = Math.min(100, p2.boostCharge + 0.3);
+
+      // Recover bumper squash
+      if (p1.bumperSquash > 0) p1.bumperSquash = Math.max(0, p1.bumperSquash - 0.08);
+      if (p2.bumperSquash > 0) p2.bumperSquash = Math.max(0, p2.bumperSquash - 0.08);
 
       // 3. Process Player 1 Physics
       if (!p1.isFallen) {
-        if (p1InputRef.current.left) p1.angle -= 0.075;
-        if (p1InputRef.current.right) p1.angle += 0.075;
+        if (p1InputRef.current.left) p1.angle -= 0.08;
+        if (p1InputRef.current.right) p1.angle += 0.08;
 
         if (p1InputRef.current.up) {
-          p1.speed = Math.min(3.8, p1.speed + 0.16);
+          p1.speed = Math.min(4.0, p1.speed + 0.18);
         } else if (p1InputRef.current.down) {
-          p1.speed = Math.max(-2.0, p1.speed - 0.12);
+          p1.speed = Math.max(-2.2, p1.speed - 0.14);
         } else {
-          p1.speed *= 0.95; // Friction
+          p1.speed *= 0.94; // Friction
         }
 
-        // Add velocity
+        // Add velocity with inertia
         p1.vx = p1.vx * 0.9 + Math.cos(p1.angle) * p1.speed * 0.1;
         p1.vy = p1.vy * 0.9 + Math.sin(p1.angle) * p1.speed * 0.1;
         p1.x += Math.cos(p1.angle) * p1.speed + p1.vx;
         p1.y += Math.sin(p1.angle) * p1.speed + p1.vy;
 
-        // Skid marks when turning at high speed
-        if (Math.abs(p1.speed) > 2.2 && (p1InputRef.current.left || p1InputRef.current.right || p1.isBoosting)) {
+        // Drifting Skid Marks & Tire Smoke
+        const isTurningSharp = p1InputRef.current.left || p1InputRef.current.right;
+        if (Math.abs(p1.speed) > 2.0 && (isTurningSharp || p1.isBoosting)) {
           skidMarksRef.current.push({
             x: p1.x - Math.cos(p1.angle) * 12,
             y: p1.y - Math.sin(p1.angle) * 12,
             angle: p1.angle,
-            opacity: 0.7,
+            opacity: 0.75,
           });
+
+          // Drift smoke puff
+          if (Math.random() < 0.4) {
+            smokeParticlesRef.current.push({
+              x: p1.x - Math.cos(p1.angle) * 14 + (Math.random() - 0.5) * 6,
+              y: p1.y - Math.sin(p1.angle) * 14 + (Math.random() - 0.5) * 6,
+              vx: (Math.random() - 0.5) * 0.8,
+              vy: -0.4 - Math.random() * 0.5,
+              radius: 3 + Math.random() * 3.5,
+              alpha: 0.7,
+            });
+          }
         }
       } else {
-        // Falling into water
-        p1.fallScale = Math.max(0, p1.fallScale - 0.04);
-        p1.angle += 0.15;
+        // Sinking into ocean
+        p1.fallScale = Math.max(0, p1.fallScale - 0.035);
+        p1.angle += 0.18;
       }
 
       // 4. Process Player 2 Physics
       if (!p2.isFallen) {
-        if (p2InputRef.current.left) p2.angle -= 0.075;
-        if (p2InputRef.current.right) p2.angle += 0.075;
+        if (p2InputRef.current.left) p2.angle -= 0.08;
+        if (p2InputRef.current.right) p2.angle += 0.08;
 
         if (p2InputRef.current.up) {
-          p2.speed = Math.min(3.8, p2.speed + 0.16);
+          p2.speed = Math.min(4.0, p2.speed + 0.18);
         } else if (p2InputRef.current.down) {
-          p2.speed = Math.max(-2.0, p2.speed - 0.12);
+          p2.speed = Math.max(-2.2, p2.speed - 0.14);
         } else {
-          p2.speed *= 0.95;
+          p2.speed *= 0.94;
         }
 
         p2.vx = p2.vx * 0.9 + Math.cos(p2.angle) * p2.speed * 0.1;
@@ -420,20 +524,32 @@ export default function TrafficJamGame({
         p2.x += Math.cos(p2.angle) * p2.speed + p2.vx;
         p2.y += Math.sin(p2.angle) * p2.speed + p2.vy;
 
-        if (Math.abs(p2.speed) > 2.2 && (p2InputRef.current.left || p2InputRef.current.right || p2.isBoosting)) {
+        const isTurningSharp = p2InputRef.current.left || p2InputRef.current.right;
+        if (Math.abs(p2.speed) > 2.0 && (isTurningSharp || p2.isBoosting)) {
           skidMarksRef.current.push({
             x: p2.x - Math.cos(p2.angle) * 12,
             y: p2.y - Math.sin(p2.angle) * 12,
             angle: p2.angle,
-            opacity: 0.7,
+            opacity: 0.75,
           });
+
+          if (Math.random() < 0.4) {
+            smokeParticlesRef.current.push({
+              x: p2.x - Math.cos(p2.angle) * 14 + (Math.random() - 0.5) * 6,
+              y: p2.y - Math.sin(p2.angle) * 14 + (Math.random() - 0.5) * 6,
+              vx: (Math.random() - 0.5) * 0.8,
+              vy: -0.4 - Math.random() * 0.5,
+              radius: 3 + Math.random() * 3.5,
+              alpha: 0.7,
+            });
+          }
         }
       } else {
-        p2.fallScale = Math.max(0, p2.fallScale - 0.04);
-        p2.angle += 0.15;
+        p2.fallScale = Math.max(0, p2.fallScale - 0.035);
+        p2.angle += 0.18;
       }
 
-      // 5. Bumper-to-Bumper Collision Elastic Impulse
+      // 5. Bumper-to-Bumper Elastic Impulse & Compression Physics
       if (!p1.isFallen && !p2.isFallen) {
         const dx = p2.x - p1.x;
         const dy = p2.y - p1.y;
@@ -445,44 +561,62 @@ export default function TrafficJamGame({
           const ny = dy / dist;
 
           // Push apart
-          const overlap = (minDist - dist) * 0.5;
+          const overlap = (minDist - dist) * 0.55;
           p1.x -= nx * overlap;
           p1.y -= ny * overlap;
           p2.x += nx * overlap;
           p2.y += ny * overlap;
 
+          // Visual bumper squash
+          p1.bumperSquash = 0.85;
+          p1.squashAngle = Math.atan2(ny, nx) - p1.angle;
+          p2.bumperSquash = 0.85;
+          p2.squashAngle = Math.atan2(-ny, -nx) - p2.angle;
+
           // Impulse force calculation
-          const boostMultiplier = (p1.isBoosting ? 2.0 : 1.0) + (p2.isBoosting ? 2.0 : 1.0);
-          const force = (Math.abs(p1.speed) + Math.abs(p2.speed) + 2.5) * 1.35 * boostMultiplier;
+          const boostMultiplier = (p1.isBoosting ? 2.2 : 1.0) + (p2.isBoosting ? 2.2 : 1.0);
+          const force = (Math.abs(p1.speed) + Math.abs(p2.speed) + 2.8) * 1.45 * boostMultiplier;
 
           p1.vx = -nx * force;
           p1.vy = -ny * force;
           p2.vx = nx * force;
           p2.vy = ny * force;
 
-          p1.speed *= -0.3;
-          p2.speed *= -0.3;
+          p1.speed *= -0.35;
+          p2.speed *= -0.35;
 
-          setScreenShake(Math.min(14, 4 + force * 1.2));
+          setScreenShake(Math.min(16, 5 + force * 1.3));
           arcadeSfx.playCarBump();
 
-          // Spawn collision sparks
-          for (let i = 0; i < 14; i++) {
+          // Shockwave at impact point
+          const midX = (p1.x + p2.x) * 0.5;
+          const midY = (p1.y + p2.y) * 0.5;
+          shockwavesRef.current.push({
+            x: midX,
+            y: midY,
+            r: 5,
+            alpha: 1,
+            color: "#facc15",
+          });
+
+          // Spawn friction welding sparks
+          for (let i = 0; i < 24; i++) {
             const angle = Math.random() * Math.PI * 2;
-            const spd = 2 + Math.random() * 5;
+            const spd = 3 + Math.random() * 7;
             sparksRef.current.push({
-              x: (p1.x + p2.x) * 0.5,
-              y: (p1.y + p2.y) * 0.5,
+              x: midX,
+              y: midY,
               vx: Math.cos(angle) * spd,
               vy: Math.sin(angle) * spd,
               life: 1,
-              color: i % 2 === 0 ? "#fde047" : "#f97316",
+              color: i % 3 === 0 ? "#ffffff" : i % 3 === 1 ? "#fde047" : "#f97316",
+              size: 2 + Math.random() * 2,
             });
           }
         }
       }
 
-      // 6. Check Ring-Outs / Water Falls
+      // 6. Check Ring-Outs / Ocean Plunges
       const p1Dist = Math.hypot(p1.x - 180, p1.y - 190);
       const p2Dist = Math.hypot(p2.x - 180, p2.y - 190);
 
@@ -493,7 +627,8 @@ export default function TrafficJamGame({
           id: splashId.current++,
           x: p1.x,
           y: p1.y,
-          radius: 12,
+          radius: 10,
+          maxRadius: 36,
           opacity: 1,
         });
         handleRoundEnd("p2");
@@ -506,191 +641,301 @@ export default function TrafficJamGame({
           id: splashId.current++,
           x: p2.x,
           y: p2.y,
-          radius: 12,
+          radius: 10,
+          maxRadius: 36,
           opacity: 1,
         });
         handleRoundEnd("p1");
       }
 
-      // 7. RENDER TO CANVAS
+      // =====================================================================
+      // 7. CANVAS RENDERING
+      // =====================================================================
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       ctx.save();
-      // Screen shake
       if (screenShake > 0) {
         ctx.translate((Math.random() - 0.5) * screenShake, (Math.random() - 0.5) * screenShake);
       }
 
       // Deep Ocean Water Background
-      const waterGrad = ctx.createRadialGradient(180, 190, 50, 180, 190, 200);
-      waterGrad.addColorStop(0, "#082f49");
-      waterGrad.addColorStop(0.6, "#0c4a6e");
-      waterGrad.addColorStop(1, "#030712");
+      const waterGrad = ctx.createRadialGradient(180, 190, 40, 180, 190, 220);
+      waterGrad.addColorStop(0, "#0369a1");
+      waterGrad.addColorStop(0.5, "#075985");
+      waterGrad.addColorStop(0.85, "#0c4a6e");
+      waterGrad.addColorStop(1, "#020617");
       ctx.fillStyle = waterGrad;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Water Ripple Waves
-      const t = Date.now() * 0.002;
-      ctx.strokeStyle = "rgba(56, 189, 248, 0.15)";
-      ctx.lineWidth = 1.5;
-      for (let r = arenaRadius + 15; r < 210; r += 20) {
+      // Ocean Caustic Waves
+      const t = Date.now() * 0.0022;
+      ctx.lineWidth = 2;
+      for (let r = arenaRadius + 14; r < 230; r += 22) {
+        ctx.strokeStyle = `rgba(56, 189, 248, ${0.12 - (r / 230) * 0.06})`;
         ctx.beginPath();
-        ctx.arc(180, 190, r + Math.sin(t + r) * 3, 0, Math.PI * 2);
+        ctx.arc(180, 190, r + Math.sin(t + r * 0.5) * 3.5, 0, Math.PI * 2);
         ctx.stroke();
       }
 
-      // Floating Asphalt Arena Island
+      // Sinking outer slabs (when ring collapsed)
+      sinkingSlabsRef.current = sinkingSlabsRef.current
+        .map((sl) => ({
+          ...sl,
+          scale: sl.scale - 0.02,
+          alpha: sl.alpha - 0.025,
+          distance: sl.distance + 0.5,
+        }))
+        .filter((sl) => sl.alpha > 0);
+
+      sinkingSlabsRef.current.forEach((sl) => {
+        ctx.save();
+        ctx.translate(180, 190);
+        ctx.rotate(sl.angle);
+        ctx.translate(0, sl.distance);
+        ctx.scale(sl.scale, sl.scale);
+        ctx.globalAlpha = sl.alpha;
+        ctx.fillStyle = "#334155";
+        ctx.fillRect(-12, -8, 24, 16);
+        ctx.restore();
+      });
+
+      // FLOATING ASPHALT ARENA ISLAND
       ctx.save();
       if (isWobbling) {
-        ctx.translate((Math.random() - 0.5) * 3.5, (Math.random() - 0.5) * 3.5);
+        ctx.translate((Math.random() - 0.5) * 4.0, (Math.random() - 0.5) * 4.0);
       }
 
-      // Platform Outer Drop Shadow in Water
-      ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+      // Platform Outer Drop Shadow
+      ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
       ctx.beginPath();
-      ctx.arc(180, 198, arenaRadius, 0, Math.PI * 2);
+      ctx.arc(180, 200, arenaRadius + 2, 0, Math.PI * 2);
       ctx.fill();
 
-      // Platform Rim (Concrete Curb)
-      ctx.fillStyle = "#334155";
+      // Concrete Curb Edge Rim
+      ctx.fillStyle = "#1e293b";
       ctx.beginPath();
       ctx.arc(180, 190, arenaRadius + 4, 0, Math.PI * 2);
       ctx.fill();
 
-      // Hazard Stripes on Edge Rim
+      // Safety Hazard Stripes / Warning Beacons on Rim
       ctx.save();
       ctx.beginPath();
       ctx.arc(180, 190, arenaRadius + 4, 0, Math.PI * 2);
-      ctx.arc(180, 190, arenaRadius - 6, 0, Math.PI * 2, true);
+      ctx.arc(180, 190, arenaRadius - 7, 0, Math.PI * 2, true);
       ctx.clip();
 
-      for (let a = 0; a < Math.PI * 2; a += 0.2) {
-        ctx.fillStyle = Math.floor(a * 5) % 2 === 0 ? "#eab308" : "#0f172a";
+      const stripeCount = 28;
+      for (let i = 0; i < stripeCount; i++) {
+        const a = (i * Math.PI * 2) / stripeCount;
+        ctx.fillStyle =
+          isWobbling && Math.floor(Date.now() / 150) % 2 === 0
+            ? i % 2 === 0 ? "#ef4444" : "#111827"
+            : i % 2 === 0 ? "#eab308" : "#0f172a";
         ctx.beginPath();
         ctx.moveTo(180, 190);
-        ctx.arc(180, 190, arenaRadius + 10, a, a + 0.1);
+        ctx.arc(180, 190, arenaRadius + 12, a, a + (Math.PI * 2) / stripeCount);
         ctx.fill();
       }
       ctx.restore();
 
-      // Inner Asphalt Surface
-      const asphaltGrad = ctx.createRadialGradient(180, 190, 10, 180, 190, arenaRadius);
+      // Inner Asphalt Tarmac Surface
+      const asphaltGrad = ctx.createRadialGradient(180, 190, 8, 180, 190, arenaRadius);
       asphaltGrad.addColorStop(0, "#27272a");
-      asphaltGrad.addColorStop(0.85, "#18181b");
+      asphaltGrad.addColorStop(0.75, "#18181b");
       asphaltGrad.addColorStop(1, "#09090b");
       ctx.fillStyle = asphaltGrad;
       ctx.beginPath();
-      ctx.arc(180, 190, arenaRadius - 6, 0, Math.PI * 2);
+      ctx.arc(180, 190, arenaRadius - 7, 0, Math.PI * 2);
       ctx.fill();
 
-      // Center Arena Bullseye Ring
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+      // Center Bullseye Target & Starting Lines
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
       ctx.lineWidth = 2.5;
       ctx.beginPath();
-      ctx.arc(180, 190, 45, 0, Math.PI * 2);
+      ctx.arc(180, 190, 48, 0, Math.PI * 2);
       ctx.stroke();
 
-      // Render Crumbling Edge Cracks
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(180, 190, 95, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Crumbling Edge Fissures
       cracksRef.current.forEach((c) => {
         ctx.strokeStyle = "#f87171";
-        ctx.lineWidth = 2.5;
+        ctx.lineWidth = 2.8;
         ctx.beginPath();
         ctx.moveTo(c.startX, c.startY);
         ctx.lineTo(c.endX, c.endY);
         ctx.stroke();
       });
 
-      // Render Skid Marks
+      // Render Skid Marks on Tarmac
       skidMarksRef.current = skidMarksRef.current
-        .map((sm) => ({ ...sm, opacity: sm.opacity - 0.005 }))
+        .map((sm) => ({ ...sm, opacity: sm.opacity - 0.006 }))
         .filter((sm) => sm.opacity > 0);
 
       skidMarksRef.current.forEach((sm) => {
         ctx.save();
         ctx.translate(sm.x, sm.y);
         ctx.rotate(sm.angle);
-        ctx.fillStyle = `rgba(0, 0, 0, ${sm.opacity * 0.45})`;
+        ctx.fillStyle = `rgba(0, 0, 0, ${sm.opacity * 0.55})`;
         ctx.fillRect(-4, -10, 8, 3.5);
         ctx.fillRect(-4, 7, 8, 3.5);
         ctx.restore();
       });
 
-      ctx.restore(); // end wobbling platform
+      ctx.restore(); // end wobbling island
 
-      // Helper to Draw Bumper Car
+      // Helper to Draw High-Octane 2.5D Bumper Car
       const drawBumperCar = (car: Car, isPlayer1: boolean) => {
         ctx.save();
         ctx.translate(car.x, car.y);
         ctx.scale(car.fallScale, car.fallScale);
         ctx.rotate(car.angle);
 
-        // Car drop shadow
-        ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+        // 1. Neon Chassis Underglow
+        const underglowColor = isPlayer1 ? "rgba(244, 63, 94, 0.45)" : "rgba(6, 182, 212, 0.45)";
+        ctx.fillStyle = underglowColor;
         ctx.beginPath();
-        ctx.ellipse(0, 4, car.radius + 3, car.radius, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, car.radius + 6, car.radius + 4, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Heavy Rubber Outer Bumper Strip (Thick protective ring)
+        // 2. Drop shadow
+        ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+        ctx.beginPath();
+        ctx.ellipse(0, 4, car.radius + 4, car.radius + 1, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 3. Thick Heavy Rubber Bumper Rim with Compression Elasticity
+        ctx.save();
+        if (car.bumperSquash > 0) {
+          ctx.rotate(car.squashAngle);
+          ctx.scale(1 - car.bumperSquash * 0.15, 1);
+          ctx.rotate(-car.squashAngle);
+        }
+
         ctx.fillStyle = "#1e293b";
         ctx.strokeStyle = "#475569";
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2.5;
         ctx.beginPath();
-        ctx.ellipse(0, 0, car.radius + 2, car.radius, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, car.radius + 3, car.radius + 1.5, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
 
-        // Main Vibrant Metallic Fiberglass Body
+        // Segmented Rubber Bumper Ridges
+        ctx.strokeStyle = "#0f172a";
+        ctx.lineWidth = 1.5;
+        for (let b = 0; b < Math.PI * 2; b += Math.PI / 4) {
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(b) * (car.radius - 1), Math.sin(b) * (car.radius - 1));
+          ctx.lineTo(Math.cos(b) * (car.radius + 3), Math.sin(b) * (car.radius + 3));
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        // 4. Metallic Molded Fiberglass Racing Body
         const carGrad = ctx.createLinearGradient(-car.radius, -car.radius, car.radius, car.radius);
-        carGrad.addColorStop(0, isPlayer1 ? "#ef4444" : "#3b82f6");
-        carGrad.addColorStop(0.6, isPlayer1 ? "#b91c1c" : "#1d4ed8");
-        carGrad.addColorStop(1, isPlayer1 ? "#7f1d1d" : "#1e3a8a");
+        carGrad.addColorStop(0, isPlayer1 ? "#f87171" : "#60a5fa");
+        carGrad.addColorStop(0.4, isPlayer1 ? "#dc2626" : "#2563eb");
+        carGrad.addColorStop(0.85, isPlayer1 ? "#991b1b" : "#1e40af");
+        carGrad.addColorStop(1, isPlayer1 ? "#450a0a" : "#172554");
         ctx.fillStyle = carGrad;
         ctx.beginPath();
-        ctx.ellipse(0, 0, car.radius - 2, car.radius - 3, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, car.radius - 1.5, car.radius - 2.5, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Cockpit / Driver Helmet
+        // Hood Racing Stripe
+        ctx.fillStyle = isPlayer1 ? "#fee2e2" : "#dbeafe";
+        ctx.fillRect(-2, -car.radius + 3, 4, car.radius * 1.6);
+
+        // 5. Cockpit & Driver Helmet
         ctx.fillStyle = "#0f172a";
         ctx.beginPath();
-        ctx.arc(-2, 0, 7, 0, Math.PI * 2);
+        ctx.ellipse(-2, 0, 7.5, 6.5, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Driver Visor Helmet
-        ctx.fillStyle = isPlayer1 ? "#fde047" : "#38bdf8";
+        // Racing Helmet with Reflective Visor
+        ctx.fillStyle = isPlayer1 ? "#facc15" : "#38bdf8";
         ctx.beginPath();
-        ctx.arc(0, 0, 4.5, -0.6, 0.6);
+        ctx.arc(0, 0, 4.8, 0, Math.PI * 2);
         ctx.fill();
 
-        // Chrome Roll Bar
+        // Dark Visor Reflection
+        ctx.fillStyle = "#0f172a";
+        ctx.beginPath();
+        ctx.arc(1.5, 0, 3.2, -0.7, 0.7);
+        ctx.fill();
+
+        // 6. Chrome Rear Roll Bar
         ctx.strokeStyle = "#e2e8f0";
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2.2;
         ctx.beginPath();
-        ctx.arc(-6, 0, 7.5, Math.PI * 0.5, Math.PI * 1.5);
+        ctx.arc(-7, 0, 7.5, Math.PI * 0.5, Math.PI * 1.5);
         ctx.stroke();
 
-        // Glowing Headlights
-        ctx.fillStyle = "#fef08a";
-        ctx.shadowColor = "#fef08a";
-        ctx.shadowBlur = 8;
+        // 7. Overhead Electric Contact Spark Pole
+        ctx.fillStyle = "#64748b";
         ctx.beginPath();
-        ctx.arc(car.radius - 4, -6, 2.5, 0, Math.PI * 2);
-        ctx.arc(car.radius - 4, 6, 2.5, 0, Math.PI * 2);
+        ctx.arc(-11, 0, 2.2, 0, Math.PI * 2);
         ctx.fill();
-        ctx.shadowBlur = 0;
+        ctx.strokeStyle = "#94a3b8";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(-11, 0);
+        ctx.lineTo(-14, 0);
+        ctx.stroke();
 
-        // Nitro Exhaust Flames
+        // Occasional pole electrical spark
+        if (Math.random() < 0.15) {
+          ctx.strokeStyle = "#fde047";
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(-14, 0);
+          ctx.lineTo(-17 + (Math.random() - 0.5) * 3, (Math.random() - 0.5) * 4);
+          ctx.stroke();
+        }
+
+        // 8. Twin Xenon Headlights with Projected Light Cones
+        ctx.fillStyle = "rgba(254, 240, 138, 0.25)";
+        ctx.beginPath();
+        ctx.moveTo(car.radius - 2, -6);
+        ctx.lineTo(car.radius + 34, -16);
+        ctx.lineTo(car.radius + 34, -1);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(car.radius - 2, 6);
+        ctx.lineTo(car.radius + 34, 1);
+        ctx.lineTo(car.radius + 34, 16);
+        ctx.closePath();
+        ctx.fill();
+
+        // Headlight bulbs
+        ctx.fillStyle = "#fef08a";
+        ctx.beginPath();
+        ctx.arc(car.radius - 3, -6, 2.5, 0, Math.PI * 2);
+        ctx.arc(car.radius - 3, 6, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 9. Nitro Afterburner Exhaust Flames
         if (car.isBoosting) {
+          // Orange outer flame
           ctx.fillStyle = "#f97316";
           ctx.beginPath();
-          ctx.moveTo(-car.radius, -4);
-          ctx.lineTo(-car.radius - 14 - Math.random() * 8, 0);
-          ctx.lineTo(-car.radius, 4);
+          ctx.moveTo(-car.radius - 2, -5);
+          ctx.lineTo(-car.radius - 18 - Math.random() * 10, 0);
+          ctx.lineTo(-car.radius - 2, 5);
           ctx.fill();
+
+          // Blue core flame
           ctx.fillStyle = "#38bdf8";
           ctx.beginPath();
-          ctx.moveTo(-car.radius, -2);
-          ctx.lineTo(-car.radius - 8, 0);
-          ctx.lineTo(-car.radius, 2);
+          ctx.moveTo(-car.radius - 2, -3);
+          ctx.lineTo(-car.radius - 10 - Math.random() * 6, 0);
+          ctx.lineTo(-car.radius - 2, 3);
           ctx.fill();
         }
 
@@ -701,13 +946,53 @@ export default function TrafficJamGame({
       drawBumperCar(p1, true);
       drawBumperCar(p2, false);
 
+      // Render Drift Smoke Particles
+      smokeParticlesRef.current = smokeParticlesRef.current
+        .map((sm) => ({
+          ...sm,
+          x: sm.x + sm.vx,
+          y: sm.y + sm.vy,
+          radius: sm.radius + 0.35,
+          alpha: sm.alpha - 0.035,
+        }))
+        .filter((sm) => sm.alpha > 0);
+
+      smokeParticlesRef.current.forEach((sm) => {
+        ctx.save();
+        ctx.fillStyle = `rgba(226, 232, 240, ${sm.alpha * 0.4})`;
+        ctx.beginPath();
+        ctx.arc(sm.x, sm.y, sm.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+
+      // Render Shockwaves
+      shockwavesRef.current = shockwavesRef.current
+        .map((sw) => ({
+          ...sw,
+          r: sw.r + 3.5,
+          alpha: sw.alpha - 0.07,
+        }))
+        .filter((sw) => sw.alpha > 0);
+
+      shockwavesRef.current.forEach((sw) => {
+        ctx.save();
+        ctx.strokeStyle = sw.color;
+        ctx.globalAlpha = sw.alpha;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(sw.x, sw.y, sw.r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      });
+
       // Render Collision Sparks
       sparksRef.current = sparksRef.current
         .map((s) => ({
           ...s,
           x: s.x + s.vx,
           y: s.y + s.vy,
-          life: s.life - 0.05,
+          life: s.life - 0.045,
         }))
         .filter((s) => s.life > 0);
 
@@ -716,7 +1001,7 @@ export default function TrafficJamGame({
         ctx.fillStyle = s.color;
         ctx.globalAlpha = s.life;
         ctx.beginPath();
-        ctx.arc(s.x, s.y, 2, 0, Math.PI * 2);
+        ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
       });
@@ -725,18 +1010,23 @@ export default function TrafficJamGame({
       splashesRef.current = splashesRef.current
         .map((sp) => ({
           ...sp,
-          radius: sp.radius + 1.2,
-          opacity: sp.opacity - 0.03,
+          radius: sp.radius + 1.6,
+          opacity: sp.opacity - 0.035,
         }))
         .filter((sp) => sp.opacity > 0);
 
       splashesRef.current.forEach((sp) => {
         ctx.save();
         ctx.strokeStyle = `rgba(56, 189, 248, ${sp.opacity})`;
-        ctx.lineWidth = 2.5;
+        ctx.lineWidth = 2.8;
         ctx.beginPath();
         ctx.arc(sp.x, sp.y, sp.radius, 0, Math.PI * 2);
         ctx.stroke();
+
+        ctx.fillStyle = `rgba(186, 230, 253, ${sp.opacity * 0.5})`;
+        ctx.beginPath();
+        ctx.arc(sp.x, sp.y, sp.radius * 0.4, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
       });
 
@@ -779,24 +1069,31 @@ export default function TrafficJamGame({
 
   const trafficHero = (
     <div className="w-full h-full flex items-center justify-center relative">
-      <div className="absolute inset-0 bg-slate-950/40 rounded-2xl flex items-center justify-center border border-slate-500/20">
-        <svg viewBox="0 0 160 160" className="w-36 h-36">
+      <div className="absolute inset-0 bg-slate-950/40 rounded-2xl flex items-center justify-center border border-slate-500/20 overflow-hidden">
+        <svg viewBox="0 0 160 160" className="w-40 h-40">
           {/* Water */}
-          <circle cx="80" cy="80" r="70" fill="#082f49" />
+          <circle cx="80" cy="80" r="70" fill="#0369a1" />
+          <circle cx="80" cy="80" r="62" fill="none" stroke="#38bdf8" strokeWidth="1.5" opacity="0.3" />
           {/* Asphalt Arena */}
-          <circle cx="80" cy="80" r="54" fill="#27272a" stroke="#eab308" strokeWidth="3" strokeDasharray="8 4" />
+          <circle cx="80" cy="80" r="54" fill="#27272a" stroke="#eab308" strokeWidth="3.5" strokeDasharray="9 4" />
+          <circle cx="80" cy="80" r="22" fill="none" stroke="white" strokeWidth="1.5" opacity="0.15" />
+
           {/* Red Car */}
-          <g transform="translate(62, 80) rotate(15)">
-            <ellipse cx="0" cy="0" rx="14" ry="11" fill="#ef4444" stroke="#475569" strokeWidth="2.5" />
-            <circle cx="-2" cy="0" r="4" fill="#0f172a" />
+          <g transform="translate(60, 80) rotate(15)">
+            <ellipse cx="0" cy="0" rx="16" ry="12" fill="#ef4444" stroke="#475569" strokeWidth="2.5" />
+            <circle cx="-3" cy="0" r="4.5" fill="#0f172a" />
+            <circle cx="0" cy="0" r="3" fill="#facc15" />
           </g>
+
           {/* Blue Car */}
-          <g transform="translate(98, 80) rotate(-165)">
-            <ellipse cx="0" cy="0" rx="14" ry="11" fill="#3b82f6" stroke="#475569" strokeWidth="2.5" />
-            <circle cx="-2" cy="0" r="4" fill="#0f172a" />
+          <g transform="translate(100, 80) rotate(-165)">
+            <ellipse cx="0" cy="0" rx="16" ry="12" fill="#3b82f6" stroke="#475569" strokeWidth="2.5" />
+            <circle cx="-3" cy="0" r="4.5" fill="#0f172a" />
+            <circle cx="0" cy="0" r="3" fill="#38bdf8" />
           </g>
+
           {/* Sparks */}
-          <circle cx="80" cy="80" r="12" fill="none" stroke="#fef08a" strokeWidth="3" strokeDasharray="4 3" />
+          <circle cx="80" cy="80" r="14" fill="none" stroke="#fef08a" strokeWidth="3" strokeDasharray="4 3" />
         </svg>
       </div>
     </div>
@@ -804,18 +1101,18 @@ export default function TrafficJamGame({
 
   const howToPlaySteps = [
     {
-      title: "Steer & Ram Rivals",
-      desc: "Turn your bumper car and slam into the enemy to send them spinning toward the water!",
+      title: "Steer, Drift & Ram Rivals",
+      desc: "Turn your bumper car and slam into the enemy to launch them toward the water!",
       icon: "🚗",
     },
     {
       title: "Turbo Nitro Ram (`⚡`)",
-      desc: "Tap NITRO to unleash a supersonic high-impulse ramming blast!",
+      desc: "Tap NITRO to unleash a supersonic impulse blast and shatter enemy defense!",
       icon: "⚡",
     },
     {
-      title: "Collapsing Outer Ring",
-      desc: "Platform perimeter cracks and drops into the water every 15s. First to 3 wins!",
+      title: "Collapsing Outer Slabs",
+      desc: "Perimeter fissures wobble and plunge into the ocean every 15s. First to 3 wins!",
       icon: "⚠️",
     },
   ];
@@ -828,7 +1125,7 @@ export default function TrafficJamGame({
           subtitle="Arena Bumper Cars"
           categoryTag="PHYSICS ARENA"
           accentColor="#37474F"
-          objective="Ram opponents into the water! Use Nitro charges to push rivals off collapsing edge tiles! First to 3 wins."
+          objective="Ram opponents into the ocean! Use Nitro charges to push rivals off collapsing asphalt tiles! First to 3 wins."
           heroGraphic={trafficHero}
           howToPlaySteps={howToPlaySteps}
           onPlayFriend={() => startGame("friend")}
@@ -854,7 +1151,7 @@ export default function TrafficJamGame({
             onPointerDown={() => { inputRefTarget.current.left = true; }}
             onPointerUp={() => { inputRefTarget.current.left = false; }}
             onPointerLeave={() => { inputRefTarget.current.left = false; }}
-            className="w-14 h-14 bg-neutral-800 active:bg-neutral-700 border-2 border-neutral-600 rounded-2xl font-black text-xl flex items-center justify-center text-white cursor-pointer select-none touch-none shadow-md"
+            className="w-14 h-14 bg-neutral-800 active:bg-neutral-700 border-2 border-neutral-600 rounded-2xl font-black text-xl flex items-center justify-center text-white cursor-pointer select-none touch-none shadow-md active:scale-95 transition-transform"
           >
             ◄
           </button>
@@ -863,13 +1160,13 @@ export default function TrafficJamGame({
             onPointerDown={() => { inputRefTarget.current.right = true; }}
             onPointerUp={() => { inputRefTarget.current.right = false; }}
             onPointerLeave={() => { inputRefTarget.current.right = false; }}
-            className="w-14 h-14 bg-neutral-800 active:bg-neutral-700 border-2 border-neutral-600 rounded-2xl font-black text-xl flex items-center justify-center text-white cursor-pointer select-none touch-none shadow-md"
+            className="w-14 h-14 bg-neutral-800 active:bg-neutral-700 border-2 border-neutral-600 rounded-2xl font-black text-xl flex items-center justify-center text-white cursor-pointer select-none touch-none shadow-md active:scale-95 transition-transform"
           >
             ►
           </button>
         </div>
 
-        {/* Drive Forward */}
+        {/* Drive Forward GAS */}
         <button
           type="button"
           onPointerDown={() => { inputRefTarget.current.up = true; }}
@@ -884,19 +1181,24 @@ export default function TrafficJamGame({
         <button
           type="button"
           onPointerDown={() => triggerBoost(who)}
-          className="w-16 h-14 bg-amber-600 hover:bg-amber-700 active:bg-amber-800 border-b-4 border-amber-900 active:border-b-0 active:translate-y-1 rounded-2xl font-black text-xs flex flex-col items-center justify-center text-white cursor-pointer select-none touch-none shadow-lg"
+          className="w-16 h-14 bg-amber-600 hover:bg-amber-700 active:bg-amber-800 border-b-4 border-amber-900 active:border-b-0 active:translate-y-1 rounded-2xl font-black text-xs flex flex-col items-center justify-center text-white cursor-pointer select-none touch-none shadow-lg relative overflow-hidden"
         >
           <Zap className="w-4 h-4 text-amber-300" />
           <span className="text-[9px] font-black">NITRO</span>
+          {/* Charge indicator meter */}
+          <div
+            className="absolute bottom-0 inset-x-0 h-1 bg-amber-300"
+            style={{ width: `${carRef.current.boostCharge}%` }}
+          />
         </button>
       </div>
     );
   };
 
   return (
-    <div className="min-h-[90vh] flex flex-col items-center justify-between p-2 select-none touch-none bg-neutral-950 text-white font-sans relative">
+    <div className="min-h-[90vh] flex flex-col items-center justify-between p-2 select-none touch-none bg-neutral-950 text-white font-sans relative overflow-hidden">
       {/* Top HUD */}
-      <div className="w-full max-w-sm flex items-center justify-between px-2 pt-1 z-20">
+      <div className="w-full max-w-sm flex items-center justify-between px-2 pt-1 z-30">
         <button
           type="button"
           onPointerDown={() => setInMenu(true)}
@@ -905,7 +1207,7 @@ export default function TrafficJamGame({
           <ArrowLeft className="w-5 h-5" />
         </button>
 
-        {/* Score */}
+        {/* Scoreboard */}
         <div className="flex items-center gap-4 bg-neutral-900/90 px-4 py-1.5 rounded-2xl border border-white/15 shadow-md">
           <div className="flex flex-col items-center">
             <span className="text-[10px] uppercase font-bold text-red-400">RED (P1)</span>
@@ -920,8 +1222,14 @@ export default function TrafficJamGame({
           </div>
         </div>
 
-        {/* Collapse Countdown */}
-        <div className="flex items-center gap-1 text-xs font-bold text-amber-400 bg-amber-950/70 px-2.5 py-1 rounded-full border border-amber-500/40">
+        {/* Collapse Countdown Warning */}
+        <div
+          className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full border ${
+            shrinkTimer <= 5
+              ? "bg-red-950 text-red-400 border-red-500/50 animate-pulse"
+              : "bg-amber-950/70 text-amber-400 border-amber-500/40"
+          }`}
+        >
           <span>⚠️ {shrinkTimer}s</span>
         </div>
       </div>
@@ -930,12 +1238,12 @@ export default function TrafficJamGame({
       {playMode === "friend" && renderControls("p2", true)}
 
       {/* Main Canvas Arena */}
-      <div className="relative w-full max-w-sm h-[360px] rounded-3xl overflow-hidden shadow-2xl border border-white/15 my-1 flex items-center justify-center">
+      <div className="relative w-full max-w-sm h-[370px] rounded-3xl overflow-hidden shadow-2xl border border-white/15 my-1 flex items-center justify-center">
         <canvas ref={canvasRef} width={360} height={380} className="w-full h-full" />
 
         {/* Round Over Banner */}
         {roundOver && !matchWinner && (
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-xs flex flex-col items-center justify-center p-6 animate-fadeIn z-30">
+          <div className="absolute inset-0 bg-black/85 backdrop-blur-xs flex flex-col items-center justify-center p-6 animate-fadeIn z-40 text-center">
             <h3 className="text-2xl font-black text-amber-400 uppercase tracking-tight">
               {roundWinner === "p1" ? "🎉 RED SCORES POINT!" : "💥 BLUE SCORES POINT!"}
             </h3>
@@ -952,7 +1260,7 @@ export default function TrafficJamGame({
 
         {/* Match Winner Modal */}
         {matchWinner && (
-          <div className="absolute inset-0 bg-black/90 backdrop-blur-xs flex flex-col items-center justify-center p-6 z-40 animate-fadeIn text-center">
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-xs flex flex-col items-center justify-center p-6 z-50 animate-fadeIn text-center">
             <div className="w-16 h-16 rounded-full bg-yellow-500/20 text-yellow-400 flex items-center justify-center text-3xl mb-2">
               🏆
             </div>
@@ -975,6 +1283,13 @@ export default function TrafficJamGame({
 
       {/* Player 1 Controls (Bottom) */}
       {renderControls("p1", false)}
+
+      {/* Footer prompt */}
+      <div className="w-full max-w-sm text-center pb-1 z-30">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">
+          WASD / ARROWS TO STEER & DRIVE • SPACE TO NITRO RAM
+        </span>
+      </div>
     </div>
   );
 }
