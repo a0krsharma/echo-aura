@@ -74,15 +74,15 @@ export default function PingPongGame({
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // Paddles & Ball
-  const p1PaddleRef = useRef({ x: 180, y: 350, vx: 0, targetX: 180, width: 74, height: 16 });
-  const p2PaddleRef = useRef({ x: 180, y: 50, vx: 0, targetX: 180, width: 74, height: 16 });
+  // Paddles & Ball (enlarged width for better game feel: 88px)
+  const p1PaddleRef = useRef({ x: 180, y: 350, vx: 0, targetX: 180, width: 88, height: 18 });
+  const p2PaddleRef = useRef({ x: 180, y: 50, vx: 0, targetX: 180, width: 88, height: 18 });
   const ballRef = useRef<Ball>({
     x: 180,
     y: 200,
     z: 16,
-    vx: (Math.random() - 0.5) * 3,
-    vy: 4.8,
+    vx: (Math.random() - 0.5) * 2.0,
+    vy: 3.2,
     vz: 0,
     radius: 7,
     spin: 0,
@@ -93,6 +93,7 @@ export default function PingPongGame({
   const trailRef = useRef<TrailPoint[]>([]);
   const particlesRef = useRef<Particle[]>([]);
   const shockwavesRef = useRef<Shockwave[]>([]);
+  const netCooldownRef = useRef(0);
 
   // Key states for smooth keyboard movement
   const keyState = useRef({
@@ -113,14 +114,14 @@ export default function PingPongGame({
     return () => clearTimeout(t);
   }, [screenShake]);
 
-  // Reset ball after point
+  // Reset ball after point (Balanced, pleasant serve speed)
   const resetBall = useCallback((direction: 1 | -1) => {
     ballRef.current = {
-      x: 180 + (Math.random() - 0.5) * 40,
+      x: 180 + (Math.random() - 0.5) * 36,
       y: 200,
-      z: 24,
-      vx: (Math.random() - 0.5) * 3.2,
-      vy: direction * (4.5 + Math.random() * 0.8),
+      z: 22,
+      vx: (Math.random() - 0.5) * 2.2,
+      vy: direction * (3.0 + Math.random() * 0.4),
       vz: 0,
       radius: 7,
       spin: 0,
@@ -128,6 +129,7 @@ export default function PingPongGame({
       spinRotation: 0,
     };
     trailRef.current = [];
+    netCooldownRef.current = 15;
     setRallyCount(0);
     setSmashPrompt(false);
   }, []);
@@ -215,6 +217,7 @@ export default function PingPongGame({
     if (!canvas) return;
 
     const handleTouchStart = (e: TouchEvent) => {
+      e.preventDefault();
       const rect = canvas.getBoundingClientRect();
       const scaleX = canvas.width / rect.width;
       const scaleY = canvas.height / rect.height;
@@ -224,17 +227,22 @@ export default function PingPongGame({
         const canvasY = (touch.clientY - rect.top) * scaleY;
         const canvasX = (touch.clientX - rect.left) * scaleX;
 
-        if (canvasY > 200 && p1TouchId.current === null) {
+        if (canvasY > 190 && p1TouchId.current === null) {
           p1TouchId.current = touch.identifier;
-          p1PaddleRef.current.targetX = Math.max(48, Math.min(312, canvasX));
-        } else if (canvasY <= 200 && playMode === "friend" && p2TouchId.current === null) {
+          const target = Math.max(52, Math.min(308, canvasX));
+          p1PaddleRef.current.targetX = target;
+          p1PaddleRef.current.x = target;
+        } else if (canvasY <= 190 && playMode === "friend" && p2TouchId.current === null) {
           p2TouchId.current = touch.identifier;
-          p2PaddleRef.current.targetX = Math.max(48, Math.min(312, canvasX));
+          const target = Math.max(52, Math.min(308, canvasX));
+          p2PaddleRef.current.targetX = target;
+          p2PaddleRef.current.x = target;
         }
       }
     };
 
     const handleTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
       const rect = canvas.getBoundingClientRect();
       const scaleX = canvas.width / rect.width;
 
@@ -243,9 +251,15 @@ export default function PingPongGame({
         const canvasX = (touch.clientX - rect.left) * scaleX;
 
         if (touch.identifier === p1TouchId.current) {
-          p1PaddleRef.current.targetX = Math.max(48, Math.min(312, canvasX));
+          const target = Math.max(52, Math.min(308, canvasX));
+          p1PaddleRef.current.vx = target - p1PaddleRef.current.x;
+          p1PaddleRef.current.targetX = target;
+          p1PaddleRef.current.x = target;
         } else if (touch.identifier === p2TouchId.current && playMode === "friend") {
-          p2PaddleRef.current.targetX = Math.max(48, Math.min(312, canvasX));
+          const target = Math.max(52, Math.min(308, canvasX));
+          p2PaddleRef.current.vx = target - p2PaddleRef.current.x;
+          p2PaddleRef.current.targetX = target;
+          p2PaddleRef.current.x = target;
         }
       }
     };
@@ -308,59 +322,70 @@ export default function PingPongGame({
       const p2 = p2PaddleRef.current;
 
       // 1. Process Keyboard Movement
-      const keySpeed = 7.5;
-      if (keyState.current.p1Left) p1.targetX = Math.max(48, p1.targetX - keySpeed);
-      if (keyState.current.p1Right) p1.targetX = Math.min(312, p1.targetX + keySpeed);
+      const keySpeed = 8.5;
+      if (keyState.current.p1Left) p1.targetX = Math.max(52, p1.targetX - keySpeed);
+      if (keyState.current.p1Right) p1.targetX = Math.min(308, p1.targetX + keySpeed);
       if (playMode === "friend") {
-        if (keyState.current.p2Left) p2.targetX = Math.max(48, p2.targetX - keySpeed);
-        if (keyState.current.p2Right) p2.targetX = Math.min(312, p2.targetX + keySpeed);
+        if (keyState.current.p2Left) p2.targetX = Math.max(52, p2.targetX - keySpeed);
+        if (keyState.current.p2Right) p2.targetX = Math.min(308, p2.targetX + keySpeed);
       }
 
-      // Smooth Lerp Paddle to Target with Velocity Tracking
-      const p1Prev = p1.x;
-      p1.x += (p1.targetX - p1.x) * 0.45;
-      p1.vx = p1.x - p1Prev;
+      // Smooth Lerp Paddle to Target with Velocity Tracking (if not directly touching)
+      if (p1TouchId.current === null) {
+        const p1Prev = p1.x;
+        p1.x += (p1.targetX - p1.x) * 0.65;
+        p1.vx = p1.x - p1Prev;
+      }
+      p1.x = Math.max(52, Math.min(308, p1.x));
 
-      const p2Prev = p2.x;
       if (playMode === "bot") {
-        const botMaxSpeed = botDiff === "hard" ? 6.5 : botDiff === "medium" ? 4.8 : 3.0;
-        // Bot prediction: intercept ball trajectory when incoming
+        const botMaxSpeed = botDiff === "hard" ? 4.8 : botDiff === "medium" ? 3.6 : 2.6;
         let targetX = 180;
         if (ball.vy < 0) {
-          const timeToIntercept = (p2.y - ball.y) / ball.vy;
-          const predictedX = ball.x + (ball.vx + ball.spin * 1.5) * timeToIntercept;
-          // Apply difficulty variance
-          const variance = botDiff === "hard" ? 4 : botDiff === "medium" ? 14 : 32;
-          targetX = predictedX + Math.sin(Date.now() * 0.003) * variance;
+          // Intercept incoming ball with prediction
+          const timeToIntercept = Math.max(1, (p2.y - ball.y) / ball.vy);
+          const predictedX = ball.x + (ball.vx + ball.spin * 1.2) * timeToIntercept;
+          const variance = botDiff === "hard" ? 6 : botDiff === "medium" ? 18 : 34;
+          targetX = predictedX + Math.sin(Date.now() * 0.002) * variance;
+        } else {
+          // Ease back toward center table during player's turn
+          targetX = 180 + Math.sin(Date.now() * 0.001) * 20;
         }
+        targetX = Math.max(52, Math.min(308, targetX));
         const diffX = targetX - p2.x;
+        const p2Prev = p2.x;
         p2.x += Math.sign(diffX) * Math.min(Math.abs(diffX), botMaxSpeed);
+        p2.vx = p2.x - p2Prev;
       } else {
-        p2.x += (p2.targetX - p2.x) * 0.45;
+        if (p2TouchId.current === null) {
+          const p2Prev = p2.x;
+          p2.x += (p2.targetX - p2.x) * 0.65;
+          p2.vx = p2.x - p2Prev;
+        }
       }
-      p2.x = Math.max(48, Math.min(312, p2.x));
-      p2.vx = p2.x - p2Prev;
+      p2.x = Math.max(52, Math.min(308, p2.x));
 
       // 2. Ball Physics & 3D Altitude Parabola
-      ball.x += ball.vx + ball.spin * 1.8;
+      const prevY = ball.y;
+      ball.x += ball.vx + ball.spin * 1.2;
       ball.y += ball.vy;
-      ball.spinRotation += ball.vx * 0.05 + ball.spin * 0.1;
+      ball.spinRotation += ball.vx * 0.04 + ball.spin * 0.08;
 
       // Vertical bounce altitude
-      ball.vz -= 0.24; // Gravity
+      ball.vz -= 0.18; // Balanced gravity
       ball.z += ball.vz;
       if (ball.z <= 0) {
         ball.z = 0;
-        ball.vz = Math.abs(ball.vz) * 0.76;
-        if (ball.vz < 1.4) ball.vz = 3.4; // Maintain lively bounce
+        ball.vz = Math.abs(ball.vz) * 0.74;
+        if (ball.vz < 1.0) ball.vz = 2.6; // Maintain lively bounce
 
         // Table contact dust particles
         if (Math.random() < 0.6) {
           particlesRef.current.push({
             x: ball.x,
             y: ball.y,
-            vx: (Math.random() - 0.5) * 2,
-            vy: (Math.random() - 0.5) * 2,
+            vx: (Math.random() - 0.5) * 1.8,
+            vy: (Math.random() - 0.5) * 1.8,
             life: 1,
             color: "#e0f2fe",
             size: 2,
@@ -369,23 +394,28 @@ export default function PingPongGame({
       }
 
       // Detect Apex height for Power Smash prompt
-      if (ball.z > 14 && ball.vy > 0 && ball.y > 230 && ball.y < 315) {
-        setSmashPrompt(true);
-      } else {
-        setSmashPrompt(false);
-      }
+      const isApexReady = ball.z > 10 && Math.abs(ball.vz) < 1.4 && ball.vy > 0 && ball.y > 220 && ball.y < 320;
+      setSmashPrompt(isApexReady);
 
-      // Net Collision Physics (y = 200, Net height = 10)
-      const prevY = ball.y - ball.vy;
-      if ((prevY < 200 && ball.y >= 200) || (prevY > 200 && ball.y <= 200)) {
-        if (ball.z < 8.5) {
-          // Ball clips the tournament net!
+      // Net Collision Physics with Cooldown (y = 200, Net height = 8)
+      if (netCooldownRef.current > 0) {
+        netCooldownRef.current--;
+      } else {
+        const crossedNet = (prevY < 200 && ball.y >= 200) || (prevY > 200 && ball.y <= 200);
+        if (crossedNet && ball.z < 8) {
+          netCooldownRef.current = 18;
           arcadeSfx.playPingPongBounce(false);
-          ball.vy *= -0.4;
-          ball.vz = 2.5;
+          if (ball.vy > 0) {
+            ball.y = 196;
+            ball.vy = -Math.abs(ball.vy) * 0.55;
+          } else {
+            ball.y = 204;
+            ball.vy = Math.abs(ball.vy) * 0.55;
+          }
+          ball.vz = 2.4;
           ball.vx *= 0.6;
           setAnnouncement("⚠️ NET CLIP!");
-          setTimeout(() => setAnnouncement(null), 900);
+          setTimeout(() => setAnnouncement(null), 800);
         }
       }
 
@@ -402,91 +432,102 @@ export default function PingPongGame({
         arcadeSfx.playPingPongBounce(false);
       }
 
-      // 3. Paddle 1 (Bottom / Player 1) Collision
-      if (
-        ball.y + ball.radius >= p1.y - p1.height / 2 &&
-        ball.y - ball.radius <= p1.y + p1.height / 2 + 6 &&
-        ball.x >= p1.x - p1.width / 2 &&
-        ball.x <= p1.x + p1.width / 2 &&
-        ball.vy > 0
-      ) {
-        const offset = (ball.x - p1.x) / (p1.width / 2);
-        const swipeSpeed = Math.abs(p1.vx);
-        const isSmashHit = swipeSpeed > 4.2 || ball.z > 13;
+      // 3. Paddle 1 (Bottom / Player 1) - Continuous Swept Collision Detection (Zero Tunneling)
+      const p1Top = p1.y - p1.height / 2;
+      const p1Bottom = p1.y + p1.height / 2;
+      const p1Left = p1.x - p1.width / 2 - 4;
+      const p1Right = p1.x + p1.width / 2 + 4;
 
-        ball.isSmash = isSmashHit;
-        ball.vy = isSmashHit ? -9.8 : -6.2;
-        ball.vz = isSmashHit ? 5.6 : 3.8;
-        ball.vx = offset * 5.6 + p1.vx * 0.28;
-        ball.spin = p1.vx * 0.055;
+      if (ball.vy > 0 && ball.y + ball.radius >= p1Top && prevY - ball.radius <= p1Bottom + 4) {
+        if (ball.x >= p1Left && ball.x <= p1Right) {
+          const offset = (ball.x - p1.x) / (p1.width / 2);
+          const swipeSpeed = Math.abs(p1.vx);
+          const isApexHit = ball.z > 10 && Math.abs(ball.vz) < 1.4;
+          const isSmashHit = isApexHit || swipeSpeed > 5.5;
 
-        // Visual shockwave on smash
-        if (isSmashHit) {
-          setScreenShake(10);
-          setAnnouncement("🔥 APEX POWER SMASH!");
-          setTimeout(() => setAnnouncement(null), 1000);
-          shockwavesRef.current.push({
-            x: ball.x,
-            y: p1.y,
-            radius: 8,
-            maxRadius: 46,
-            alpha: 1,
-            color: "#f97316",
+          const baseSpeed = 3.2 + Math.min(rallyCount * 0.08, 1.4);
+          ball.isSmash = isSmashHit;
+          ball.vy = isSmashHit ? -5.4 : -baseSpeed;
+          ball.vz = isSmashHit ? 4.2 : 2.8;
+          ball.vx = Math.max(-4.5, Math.min(4.5, offset * 3.4 + p1.vx * 0.22));
+          ball.spin = Math.max(-0.8, Math.min(0.8, p1.vx * 0.04));
+
+          // Immediate position snap to paddle face prevents any tunneling
+          ball.y = p1Top - ball.radius - 1;
+
+          // Visual shockwave on smash
+          if (isSmashHit) {
+            setScreenShake(10);
+            setAnnouncement("🔥 APEX POWER SMASH!");
+            setTimeout(() => setAnnouncement(null), 1000);
+            shockwavesRef.current.push({
+              x: ball.x,
+              y: p1.y,
+              radius: 8,
+              maxRadius: 46,
+              alpha: 1,
+              color: "#f97316",
+            });
+          }
+
+          arcadeSfx.playPingPongBounce(isSmashHit);
+          setRallyCount((r) => {
+            const next = r + 1;
+            setMaxRally((m) => Math.max(m, next));
+            return next;
           });
         }
-
-        arcadeSfx.playPingPongBounce(isSmashHit);
-        setRallyCount((r) => {
-          const next = r + 1;
-          setMaxRally((m) => Math.max(m, next));
-          return next;
-        });
       }
 
-      // 4. Paddle 2 (Top / Player 2 or Bot) Collision
-      if (
-        ball.y - ball.radius <= p2.y + p2.height / 2 &&
-        ball.y + ball.radius >= p2.y - p2.height / 2 - 6 &&
-        ball.x >= p2.x - p2.width / 2 &&
-        ball.x <= p2.x + p2.width / 2 &&
-        ball.vy < 0
-      ) {
-        const offset = (ball.x - p2.x) / (p2.width / 2);
-        const isSmashHit =
-          (playMode === "bot" && botDiff === "hard" && Math.random() < 0.32) || Math.abs(p2.vx) > 4.5;
+      // 4. Paddle 2 (Top / Player 2 or Bot) - Continuous Swept Collision Detection (Zero Tunneling)
+      const p2Top = p2.y - p2.height / 2;
+      const p2Bottom = p2.y + p2.height / 2;
+      const p2Left = p2.x - p2.width / 2 - 4;
+      const p2Right = p2.x + p2.width / 2 + 4;
 
-        ball.isSmash = isSmashHit;
-        ball.vy = isSmashHit ? 9.8 : 6.2;
-        ball.vz = isSmashHit ? 5.6 : 3.8;
-        ball.vx = offset * 5.6 + p2.vx * 0.28;
-        ball.spin = p2.vx * 0.055;
+      if (ball.vy < 0 && ball.y - ball.radius <= p2Bottom && prevY + ball.radius >= p2Top - 4) {
+        if (ball.x >= p2Left && ball.x <= p2Right) {
+          const offset = (ball.x - p2.x) / (p2.width / 2);
+          const isSmashHit =
+            (playMode === "bot" && botDiff === "hard" && Math.random() < 0.25) || Math.abs(p2.vx) > 5.0;
 
-        if (isSmashHit) {
-          setScreenShake(10);
-          setAnnouncement("💥 ENEMY POWER SMASH!");
-          setTimeout(() => setAnnouncement(null), 1000);
-          shockwavesRef.current.push({
-            x: ball.x,
-            y: p2.y,
-            radius: 8,
-            maxRadius: 46,
-            alpha: 1,
-            color: "#ef4444",
+          const baseSpeed = 3.2 + Math.min(rallyCount * 0.08, 1.4);
+          ball.isSmash = isSmashHit;
+          ball.vy = isSmashHit ? 5.4 : baseSpeed;
+          ball.vz = isSmashHit ? 4.2 : 2.8;
+          ball.vx = Math.max(-4.5, Math.min(4.5, offset * 3.4 + p2.vx * 0.22));
+          ball.spin = Math.max(-0.8, Math.min(0.8, p2.vx * 0.04));
+
+          // Immediate position snap to paddle face prevents any tunneling
+          ball.y = p2Bottom + ball.radius + 1;
+
+          if (isSmashHit) {
+            setScreenShake(10);
+            setAnnouncement("💥 ENEMY POWER SMASH!");
+            setTimeout(() => setAnnouncement(null), 1000);
+            shockwavesRef.current.push({
+              x: ball.x,
+              y: p2.y,
+              radius: 8,
+              maxRadius: 46,
+              alpha: 1,
+              color: "#ef4444",
+            });
+          }
+
+          arcadeSfx.playPingPongBounce(isSmashHit);
+          setRallyCount((r) => {
+            const next = r + 1;
+            setMaxRally((m) => Math.max(m, next));
+            return next;
           });
         }
-
-        arcadeSfx.playPingPongBounce(isSmashHit);
-        setRallyCount((r) => {
-          const next = r + 1;
-          setMaxRally((m) => Math.max(m, next));
-          return next;
-        });
       }
 
       // 5. Baseline Out of Bounds Scoring
-      if (ball.y < 5) {
+      if (ball.y < 0) {
         scorePoint("p1", "🎉 POINT BLUE!");
-      } else if (ball.y > 395) {
+      } else if (ball.y > 400) {
         scorePoint("p2", "💥 POINT RED!");
       }
 
@@ -903,20 +944,24 @@ export default function PingPongGame({
       <div className="w-full max-w-sm flex items-center justify-between gap-3 px-3 py-1.5 z-30">
         <button
           type="button"
+          onContextMenu={(e) => e.preventDefault()}
           onPointerDown={() => { keyState.current.p1Left = true; }}
           onPointerUp={() => { keyState.current.p1Left = false; }}
           onPointerLeave={() => { keyState.current.p1Left = false; }}
-          className="flex-1 h-12 bg-blue-900/60 hover:bg-blue-800/80 active:bg-blue-700 border-2 border-blue-500/40 rounded-xl font-black text-lg flex items-center justify-center text-white cursor-pointer select-none touch-none shadow-md"
+          onPointerCancel={() => { keyState.current.p1Left = false; }}
+          className="flex-1 h-12 bg-blue-900/60 hover:bg-blue-800/80 active:bg-blue-700 border-2 border-blue-500/40 rounded-xl font-black text-lg flex items-center justify-center text-white cursor-pointer select-none touch-none shadow-md active:scale-95 transition-transform"
         >
           ◄ SLIDE LEFT
         </button>
 
         <button
           type="button"
+          onContextMenu={(e) => e.preventDefault()}
           onPointerDown={() => { keyState.current.p1Right = true; }}
           onPointerUp={() => { keyState.current.p1Right = false; }}
           onPointerLeave={() => { keyState.current.p1Right = false; }}
-          className="flex-1 h-12 bg-blue-900/60 hover:bg-blue-800/80 active:bg-blue-700 border-2 border-blue-500/40 rounded-xl font-black text-lg flex items-center justify-center text-white cursor-pointer select-none touch-none shadow-md"
+          onPointerCancel={() => { keyState.current.p1Right = false; }}
+          className="flex-1 h-12 bg-blue-900/60 hover:bg-blue-800/80 active:bg-blue-700 border-2 border-blue-500/40 rounded-xl font-black text-lg flex items-center justify-center text-white cursor-pointer select-none touch-none shadow-md active:scale-95 transition-transform"
         >
           SLIDE RIGHT ►
         </button>
