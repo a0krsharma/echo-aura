@@ -62,6 +62,8 @@ const GAME_META: Record<string, { name: string; icon: string; desc: string; maxA
   two_truths: { name: "TWO TRUTHS & A LIE", icon: "🎭", desc: "Voice verification & spot the lie debate", maxAllowed: 8 },
   hangman: { name: "HANGMAN WORD SCAFFOLD", icon: "🔤", desc: "Guess secret cipher letters before gallows completes", maxAllowed: 4 },
   math_blitz: { name: "MATRIX MATH BLITZ", icon: "⚡", desc: "Rapid 1v1 mental arithmetic speed duel", maxAllowed: 2 },
+  fruit_ninja: { name: "FRUIT NINJA DOJO", icon: "🍉", desc: "60 FPS blade swipe slicing, multi-fruit combos & bomb dodging", maxAllowed: 2 },
+  bottle_shooter: { name: "SALOON BOTTLE SHOOTER", icon: "🍾", desc: "6-shot revolver precision target gunner with glass shrapnel & TNT chain blasts", maxAllowed: 2 },
 };
 
 export default function ArcadeCreateModal({

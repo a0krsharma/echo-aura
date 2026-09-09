@@ -976,6 +976,44 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
     scoring: "+250 Aura for clearing all 6 cups.",
     proTip: "Aim for the middle row cups first—a slight miss often bounces into the front or back cups!"
   },
+  fruit_ninja: {
+    id: "fruit_ninja",
+    name: "Fruit Ninja Dojo",
+    rank: 45,
+    category: "Dexterity & Precision",
+    icon: "🍉",
+    overview: "60 FPS HTML5 canvas blade swipe slicing duel. Slice airborne fruits with geometric bifurcation physics, trigger juicy wall splatters, build 3x-6x multi-fruit combos, and avoid ticking fuse bombs.",
+    howToPlay: [
+      "Drag your finger or mouse across the canvas to draw an authentic neon blade trail.",
+      "Cut through flying watermelons, oranges, strawberries, bananas, pineapples, coconuts, and dragonfruits.",
+      "Slice 3 or more fruits in a single fluid stroke to trigger multi-fruit Combo Fanfares and score multipliers.",
+      "Golden Starfruits award +50 bonus points and trigger a celebratory fireworks shower!",
+      "Never slice glowing fuse bombs! Slicing a bomb detonates an explosion and instantly ends the game.",
+      "Letting 3 uncut fruits fall past the bottom boundary records 3 Strikes and ends the match."
+    ],
+    voiceGuide: "Microphone banter, trash-talking during tight combo streaks, and shouting bomb warnings!",
+    scoring: "+250 Aura for achieving 200+ points in Dojo mode.",
+    proTip: "Wait for multiple fruits to reach the apex of their arcs where vertical velocity is near zero before slashing through them simultaneously for massive combo multipliers!"
+  },
+  bottle_shooter: {
+    id: "bottle_shooter",
+    name: "Saloon Bottle Shooter",
+    rank: 46,
+    category: "Dexterity & Precision",
+    icon: "🍾",
+    overview: "6-shot heavy revolver precision gunner duel. Tap to shoot moving bottles on conveyors and pendulums with 16-shard dynamic glass shattering, beverage fluid bursts, TNT barrel chain reactions, and steel armor ricochets.",
+    howToPlay: [
+      "Tap directly on moving targets or swipe your crosshairs to fire your 6-shot cylinder revolver.",
+      "Shatter wine, beer, bourbon, champagne, and golden bottles for escalating point values.",
+      "Tap the RELOAD button (or press Space / R) whenever your 6-round chamber empties to spin-load fresh cartridges.",
+      "Detonate red TNT Barrels to trigger a violent screen-clearing explosion that shatters all nearby bottles!",
+      "Avoid shooting armored Steel Shields—bullets will violently ricochet and break your combo streak.",
+      "Build up your Hit Streak without missing to trigger 2x, 3x, and 4x frenzy scoring."
+    ],
+    voiceGuide: "Count your opponent's shots out loud and strike while they are caught empty-chamber reloading!",
+    scoring: "+250 Aura for scoring 300+ points before the 60-second timer expires.",
+    proTip: "Shoot TNT barrels when swinging pendulums or fast conveyor bottles are passing right beside them for double the point returns!"
+  },
 };
 
 interface ArcadeGameRulesModalProps {

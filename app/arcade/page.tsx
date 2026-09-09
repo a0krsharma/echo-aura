@@ -65,6 +65,8 @@ import PingPongGame from "@/app/components/arcade/PingPongGame";
 import DartsGame from "@/app/components/arcade/DartsGame";
 import FindMatchGame from "@/app/components/arcade/FindMatchGame";
 import CupPongGame from "@/app/components/arcade/CupPongGame";
+import FruitNinjaGame from "@/app/components/arcade/FruitNinjaGame";
+import BottleShooterGame from "@/app/components/arcade/BottleShooterGame";
 import ArcadeInviteModal from "@/app/components/arcade/ArcadeInviteModal";
 import ArcadeCreateModal from "@/app/components/arcade/ArcadeCreateModal";
 import ArcadeGameRulesModal from "@/app/components/arcade/ArcadeGameRulesModal";
@@ -163,6 +165,8 @@ const CLEAN_GAMES: MasterRankedGame[] = [
   { id: "darts", name: "Darts 301", category: "PHYSICS", icon: "🎯", description: "Official 301 countdown, swipe velocity & checkout calculator" },
   { id: "find_match", name: "Find Match", category: "PUZZLE", icon: "🔍", description: "Projective geometry card deck with 1 exact matching symbol" },
   { id: "cup_pong", name: "Cup Pong", category: "PHYSICS", icon: "🥤", description: "Parabolic 3D flick toss into red party cup pyramids" },
+  { id: "fruit_ninja", name: "Fruit Ninja Dojo", category: "PHYSICS", icon: "🍉", description: "60 FPS blade swipe slicing, multi-fruit combos, juicy wall splatters & bomb dodging" },
+  { id: "bottle_shooter", name: "Saloon Bottle Shooter", category: "PHYSICS", icon: "🍾", description: "6-shot revolver precision target gunner with glass shrapnel physics & TNT chain blasts" },
 ];
 
 function ArcadeContent() {
@@ -1097,6 +1101,36 @@ function ArcadeContent() {
             )}
             {activeMatch.gameType === "cup_pong" && (
               <CupPongGame
+                match={activeMatch}
+                currentUid={user?.uid || ""}
+                isHost={activeMatch.hostUid === user?.uid}
+                onInviteFriend={() => {
+                  if (activeMatch.mode === "VS_COMPUTER") {
+                    handleOpenCreate(activeMatch.gameType);
+                  } else {
+                    setInviteModalMatch(activeMatch);
+                  }
+                }}
+                onRandomMatch={() => handleStartRandomMatch(activeMatch.gameType)}
+              />
+            )}
+            {activeMatch.gameType === "fruit_ninja" && (
+              <FruitNinjaGame
+                match={activeMatch}
+                currentUid={user?.uid || ""}
+                isHost={activeMatch.hostUid === user?.uid}
+                onInviteFriend={() => {
+                  if (activeMatch.mode === "VS_COMPUTER") {
+                    handleOpenCreate(activeMatch.gameType);
+                  } else {
+                    setInviteModalMatch(activeMatch);
+                  }
+                }}
+                onRandomMatch={() => handleStartRandomMatch(activeMatch.gameType)}
+              />
+            )}
+            {activeMatch.gameType === "bottle_shooter" && (
+              <BottleShooterGame
                 match={activeMatch}
                 currentUid={user?.uid || ""}
                 isHost={activeMatch.hostUid === user?.uid}

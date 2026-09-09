@@ -308,6 +308,247 @@ class ArcadeSoundEngine {
       });
     } catch {}
   }
+
+  // 14. Fruit Ninja: Razor Blade Swipe (Whoosh)
+  playBladeSwipe() {
+    this.haptic(8);
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const filter = ctx.createBiquadFilter();
+      osc.type = "sawtooth";
+      filter.type = "bandpass";
+      filter.frequency.setValueAtTime(1200, ctx.currentTime);
+      filter.frequency.exponentialRampToValueAtTime(320, ctx.currentTime + 0.12);
+      filter.Q.setValueAtTime(3.5, ctx.currentTime);
+
+      osc.frequency.setValueAtTime(480, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(120, ctx.currentTime + 0.12);
+
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.12);
+    } catch {}
+  }
+
+  // 15. Fruit Ninja: Juicy Fruit Splat & Squish
+  playFruitSquish() {
+    this.haptic(15);
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc1.type = "sine";
+      osc1.frequency.setValueAtTime(320, ctx.currentTime);
+      osc1.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.14);
+
+      osc2.type = "triangle";
+      osc2.frequency.setValueAtTime(640, ctx.currentTime);
+      osc2.frequency.exponentialRampToValueAtTime(120, ctx.currentTime + 0.14);
+
+      gain.gain.setValueAtTime(0.35, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.14);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc1.start(ctx.currentTime);
+      osc2.start(ctx.currentTime);
+      osc1.stop(ctx.currentTime + 0.14);
+      osc2.stop(ctx.currentTime + 0.14);
+    } catch {}
+  }
+
+  // 16. Fruit Ninja: Sizzling Bomb Fuse
+  playBombFuse() {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "square";
+      osc.frequency.setValueAtTime(1800 + Math.random() * 400, ctx.currentTime);
+      gain.gain.setValueAtTime(0.06, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.04);
+    } catch {}
+  }
+
+  // 17. Fruit Ninja / Bottle Shooter: Bomb & TNT Detonation Blast
+  playBombExplosion() {
+    this.haptic(90);
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(90, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(25, ctx.currentTime + 0.6);
+
+      gain.gain.setValueAtTime(0.7, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.6);
+    } catch {}
+  }
+
+  // 18. Fruit Ninja: Combo Fanfare
+  playComboFanfare(combo = 3) {
+    this.haptic(30);
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      const baseFreq = 300 + Math.min(combo, 8) * 60;
+      [baseFreq, baseFreq * 1.25, baseFreq * 1.5].forEach((f, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(f, ctx.currentTime + i * 0.06);
+        gain.gain.setValueAtTime(0.25, ctx.currentTime + i * 0.06);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.06 + 0.25);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + i * 0.06);
+        osc.stop(ctx.currentTime + i * 0.06 + 0.25);
+      });
+    } catch {}
+  }
+
+  // 19. Bottle Shooter: High-Velocity Gunshot
+  playGunshot() {
+    this.haptic(45);
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      // 1. Initial transient thump
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(180, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(30, ctx.currentTime + 0.18);
+      gain.gain.setValueAtTime(0.6, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.18);
+
+      // 2. High snap click
+      const snap = ctx.createOscillator();
+      const snapGain = ctx.createGain();
+      snap.type = "square";
+      snap.frequency.setValueAtTime(900, ctx.currentTime);
+      snap.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.04);
+      snapGain.gain.setValueAtTime(0.4, ctx.currentTime);
+      snapGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
+      snap.connect(snapGain);
+      snapGain.connect(ctx.destination);
+      snap.start(ctx.currentTime);
+      snap.stop(ctx.currentTime + 0.04);
+    } catch {}
+  }
+
+  // 20. Bottle Shooter: Glass Shattering Impact
+  playGlassShatter() {
+    this.haptic(25);
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      const frequencies = [1400, 1850, 2400, 3100, 4200];
+      frequencies.forEach((f, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        const detune = (Math.random() - 0.5) * 80;
+        osc.frequency.setValueAtTime(f + detune, ctx.currentTime + idx * 0.015);
+        gain.gain.setValueAtTime(0.2, ctx.currentTime + idx * 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.015 + 0.22);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + idx * 0.015);
+        osc.stop(ctx.currentTime + idx * 0.015 + 0.22);
+      });
+    } catch {}
+  }
+
+  // 21. Bottle Shooter: Steel Armor Bullet Ricochet
+  playRicochet() {
+    this.haptic(20);
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(2200, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(700, ctx.currentTime + 0.25);
+      gain.gain.setValueAtTime(0.35, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.25);
+    } catch {}
+  }
+
+  // 22. Bottle Shooter: Revolver Cylinder Reload
+  playRevolverReload() {
+    this.haptic(15);
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      [0, 0.09].forEach((delay) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(800, ctx.currentTime + delay);
+        osc.frequency.exponentialRampToValueAtTime(1400, ctx.currentTime + delay + 0.04);
+        gain.gain.setValueAtTime(0.3, ctx.currentTime + delay);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.04);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + delay);
+        osc.stop(ctx.currentTime + delay + 0.04);
+      });
+    } catch {}
+  }
+
+  // 23. Bottle Shooter: Empty Chamber Hammer Click
+  playEmptyChamber() {
+    this.haptic(10);
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(1600, ctx.currentTime);
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.03);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.03);
+    } catch {}
+  }
 }
 
 export const arcadeSfx = new ArcadeSoundEngine();
