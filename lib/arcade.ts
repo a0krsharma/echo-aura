@@ -111,7 +111,6 @@ export type ArcadeGameType =
   | "lumberjack"
   | "hand_slap"
   | "rock_paper_scissors"
-  | "traffic_jam"
   | "knife_thrower"
   | "ping_pong"
   | "darts"

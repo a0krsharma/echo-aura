@@ -60,7 +60,6 @@ import CandyMatchGame from "@/app/components/arcade/CandyMatchGame";
 import LumberjackGame from "@/app/components/arcade/LumberjackGame";
 import HandSlapGame from "@/app/components/arcade/HandSlapGame";
 import RockPaperScissorsGame from "@/app/components/arcade/RockPaperScissorsGame";
-import TrafficJamGame from "@/app/components/arcade/TrafficJamGame";
 import KnifeThrowerGame from "@/app/components/arcade/KnifeThrowerGame";
 import PingPongGame from "@/app/components/arcade/PingPongGame";
 import DartsGame from "@/app/components/arcade/DartsGame";
@@ -159,7 +158,6 @@ const CLEAN_GAMES: MasterRankedGame[] = [
   { id: "lumberjack", name: "Lumberjack", category: "PHYSICS", icon: "🪓", description: "Speed reflex timber chop avoiding falling branches" },
   { id: "hand_slap", name: "Hand Slap (Red Hands)", category: "PHYSICS", icon: "✋", description: "Quick-draw reflex battle with attacker slap & defender dodge" },
   { id: "rock_paper_scissors", name: "Rock Paper Scissors", category: "PAPER", icon: "🪨", description: "3D icon buttons, 1-2-3 rhythm bounce, sudden death overtime" },
-  { id: "traffic_jam", name: "Traffic Jam (Bumper Cars)", category: "PHYSICS", icon: "🚗", description: "Arena bumper cars on floating asphalt with collapsing ring" },
   { id: "knife_thrower", name: "Knife Thrower", category: "PHYSICS", icon: "🗡️", description: "Rotating target log with variable speeds & blade clash physics" },
   { id: "ping_pong", name: "Ping Pong", category: "PHYSICS", icon: "🏓", description: "Tabletop swipe tennis with curve spin & apex power smashes" },
   { id: "darts", name: "Darts 301", category: "PHYSICS", icon: "🎯", description: "Official 301 countdown, swipe velocity & checkout calculator" },
@@ -906,9 +904,6 @@ function ArcadeContent() {
             )}
             {activeMatch.gameType === "rock_paper_scissors" && (
               <RockPaperScissorsGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
-            )}
-            {activeMatch.gameType === "traffic_jam" && (
-              <TrafficJamGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
             )}
             {activeMatch.gameType === "knife_thrower" && (
               <KnifeThrowerGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />

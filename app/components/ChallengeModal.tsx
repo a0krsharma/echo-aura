@@ -50,7 +50,6 @@ const ARCADE_GAMES: { type: ArcadeGameType; name: string; icon: string; desc: st
   { type: "lumberjack", name: "LUMBERJACK", icon: "🪓", desc: "Speed reflex timber chop duel" },
   { type: "hand_slap", name: "HAND SLAP (RED HANDS)", icon: "✋", desc: "Quick-draw reflex slap battle" },
   { type: "rock_paper_scissors", name: "ROCK PAPER SCISSORS", icon: "🪨", desc: "3D icon buttons sudden death duel" },
-  { type: "traffic_jam", name: "TRAFFIC JAM", icon: "🚗", desc: "Arena bumper cars on collapsing asphalt" },
   { type: "knife_thrower", name: "KNIFE THROWER", icon: "🗡️", desc: "Rotating target log precision throws" },
   { type: "ping_pong", name: "PING PONG", icon: "🏓", desc: "Tabletop swipe tennis with curve spin" },
   { type: "darts", name: "DARTS 301", icon: "🎯", desc: "301 countdown swipe aim duel" },

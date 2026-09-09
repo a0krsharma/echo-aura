@@ -884,24 +884,6 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
     scoring: "+100 Aura per match victory.",
     proTip: "Novice players rarely repeat a losing move twice in a row—counter their predicted switch!"
   },
-  traffic_jam: {
-    id: "traffic_jam",
-    name: "Traffic Jam (Arena Bumper Cars)",
-    rank: 39,
-    category: "Physics & Action Arenas",
-    icon: "🚗",
-    overview: "2-car physics bumper duel on a floating asphalt platform. Ram your opponent into the water while the outer edge tiles crumble every 15s.",
-    howToPlay: [
-      "Use on-screen controls or Arrow/WASD keys to accelerate and steer your car.",
-      "Ram into your opponent with high momentum to push them toward the edge.",
-      "Outer ring tiles collapse and sink into the water every 15 seconds.",
-      "The last car remaining on the platform scores a round win.",
-      "First player to score 3 rounds wins the match."
-    ],
-    voiceGuide: "Laugh and taunt over open mic as opponents skid into the water!",
-    scoring: "+200 Aura for winning 3 rounds.",
-    proTip: "Lure aggressive opponents toward the crumbling perimeter, then sharply brake and swerve to let their momentum carry them over!"
-  },
   knife_thrower: {
     id: "knife_thrower",
     name: "Knife Thrower (Precision Arcade)",
