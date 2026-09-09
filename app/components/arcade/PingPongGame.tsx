@@ -93,7 +93,6 @@ export default function PingPongGame({
   const trailRef = useRef<TrailPoint[]>([]);
   const particlesRef = useRef<Particle[]>([]);
   const shockwavesRef = useRef<Shockwave[]>([]);
-  const netCooldownRef = useRef(0);
 
   // Key states for smooth keyboard movement
   const keyState = useRef({
@@ -114,13 +113,13 @@ export default function PingPongGame({
     return () => clearTimeout(t);
   }, [screenShake]);
 
-  // Reset ball after point (Balanced, pleasant serve speed)
+  // Reset ball after point: serve starts from the serving player's half
   const resetBall = useCallback((direction: 1 | -1) => {
     ballRef.current = {
       x: 180 + (Math.random() - 0.5) * 36,
-      y: 200,
+      y: direction === 1 ? 140 : 260,
       z: 22,
-      vx: (Math.random() - 0.5) * 2.2,
+      vx: (Math.random() - 0.5) * 2.0,
       vy: direction * (3.0 + Math.random() * 0.4),
       vz: 0,
       radius: 7,
@@ -129,7 +128,6 @@ export default function PingPongGame({
       spinRotation: 0,
     };
     trailRef.current = [];
-    netCooldownRef.current = 15;
     setRallyCount(0);
     setSmashPrompt(false);
   }, []);
@@ -396,28 +394,6 @@ export default function PingPongGame({
       // Detect Apex height for Power Smash prompt
       const isApexReady = ball.z > 10 && Math.abs(ball.vz) < 1.4 && ball.vy > 0 && ball.y > 220 && ball.y < 320;
       setSmashPrompt(isApexReady);
-
-      // Net Collision Physics with Cooldown (y = 200, Net height = 8)
-      if (netCooldownRef.current > 0) {
-        netCooldownRef.current--;
-      } else {
-        const crossedNet = (prevY < 200 && ball.y >= 200) || (prevY > 200 && ball.y <= 200);
-        if (crossedNet && ball.z < 8) {
-          netCooldownRef.current = 18;
-          arcadeSfx.playPingPongBounce(false);
-          if (ball.vy > 0) {
-            ball.y = 196;
-            ball.vy = -Math.abs(ball.vy) * 0.55;
-          } else {
-            ball.y = 204;
-            ball.vy = Math.abs(ball.vy) * 0.55;
-          }
-          ball.vz = 2.4;
-          ball.vx *= 0.6;
-          setAnnouncement("⚠️ NET CLIP!");
-          setTimeout(() => setAnnouncement(null), 800);
-        }
-      }
 
       // Ball side boundary wall bounce
       if (ball.x - ball.radius <= 18) {
@@ -828,8 +804,8 @@ export default function PingPongGame({
       icon: "⚡",
     },
     {
-      title: "Watch the Tournament Net",
-      desc: "Low-altitude shots clip the net tape. First to 7 points takes the tournament championship!",
+      title: "First to 7 Points Wins",
+      desc: "Outplay your opponent with fast rallies and execute power smashes. First to 7 points takes the cup!",
       icon: "🏆",
     },
   ];
