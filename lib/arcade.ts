@@ -117,7 +117,9 @@ export type ArcadeGameType =
   | "find_match"
   | "cup_pong"
   | "fruit_ninja"
-  | "bottle_shooter";
+  | "bottle_shooter"
+  | "subway_surfer"
+  | "hill_climb";
 
 export type ArcadeMatchMode = "MULTIPLAYER" | "VS_COMPUTER";
 

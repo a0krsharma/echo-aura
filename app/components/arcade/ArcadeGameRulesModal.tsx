@@ -1014,6 +1014,44 @@ export const ARCADE_GAME_RULES: Record<string, GameRuleDetail> = {
     scoring: "+250 Aura for scoring 300+ points before the 60-second timer expires.",
     proTip: "Shoot TNT barrels when swinging pendulums or fast conveyor bottles are passing right beside them for double the point returns!"
   },
+  subway_surfer: {
+    id: "subway_surfer",
+    name: "Subway Surf Rush",
+    rank: 47,
+    category: "2D Physics & Tabletop",
+    icon: "🏃‍♂️",
+    overview: "High-octane 3-track 3D perspective infinite runner. Dash along railway tracks, swipe across 3 lanes, leap over roadblocks, roll under overhead train barriers, surf atop moving passenger cars, grab coin magnets and jetpacks, and outrun the grumpy inspector!",
+    howToPlay: [
+      "Swipe or press Arrow Left / Right (A / D) to switch between the 3 railway tracks.",
+      "Swipe UP or press Arrow Up / Space (W) to jump over road barriers and onto stationary trains.",
+      "Swipe DOWN or press Arrow Down (S) to roll under high signal barriers.",
+      "Double-tap anywhere on screen to deploy your neon Hoverboard for crash immunity and glowing wheel trails.",
+      "Collect 5 unique Power-ups: Coin Magnet (auto-attract), Jetpack (sky coin highway), Super Sneakers (high-jump), 2x Multiplier, and Hoverboard.",
+      "Evade the grumpy Inspector and avoid train collisions to sustain high-speed combo multipliers."
+    ],
+    voiceGuide: "Call out oncoming trains, warn your friends of high barriers, and scream as speed escalates!",
+    scoring: "+300 Aura for runs exceeding 1,500m or collecting 150+ gold coins.",
+    proTip: "Save your Hoverboard activation for tight multi-train chokepoints—a collision consumes the board while keeping your run alive!"
+  },
+  hill_climb: {
+    id: "hill_climb",
+    name: "Hill Climb Legends",
+    rank: 48,
+    category: "2D Physics & Tabletop",
+    icon: "🚗",
+    overview: "Physics-based hill racing with deformable harmonic terrain, realistic 2-pedal drive controls, dual-spring suspension dampening, neck-snap ragdoll rollover detection, fuel conservation, and stunt flips across 3 distinct vehicles.",
+    howToPlay: [
+      "Press and hold GAS (Arrow Right / D / screen button) to accelerate forward and pitch the vehicle backwards.",
+      "Press and hold BRAKE (Arrow Left / A / screen button) to brake/reverse and pitch the vehicle forwards.",
+      "Balance your pitch angle mid-air to land parallel to the slope and avoid snapping the driver's neck on rollovers.",
+      "Collect red Jerry Cans (⛽ FUEL) before your fuel gauge depletes to zero.",
+      "Perform airborne 360° backflips and frontflips for +500 Stunt bonuses and huge coin rewards.",
+      "Switch between 3 distinct vehicles: Classic 4x4 Jeep (balanced), Monster Truck (massive wheels & torque), and Dune Buggy (low center of gravity & air agility)."
+    ],
+    voiceGuide: "Root for epic air-time flips over the mic and shout when your buddy's fuel gauge enters the red zone!",
+    scoring: "+300 Aura for conquering 1,000m or landing 3 backflips in a single run.",
+    proTip: "Tap the brake lightly mid-air to keep the front bumper aligned with downhill slopes for smooth momentum preservation upon touchdown."
+  },
 };
 
 interface ArcadeGameRulesModalProps {
