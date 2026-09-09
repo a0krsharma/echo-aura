@@ -11,6 +11,8 @@ interface RPSGameProps {
   currentUid: string;
   isHost?: boolean;
   onBack?: () => void;
+  onInviteFriend?: () => void;
+  onRandomMatch?: () => void;
 }
 
 type Choice = "rock" | "paper" | "scissors";
@@ -25,6 +27,8 @@ export default function RockPaperScissorsGame({
   match,
   currentUid,
   onBack,
+  onInviteFriend,
+  onRandomMatch,
 }: RPSGameProps) {
   const [inMenu, setInMenu] = useState(true);
   const [playMode, setPlayMode] = useState<"bot" | "friend">("bot");
@@ -224,8 +228,9 @@ export default function RockPaperScissorsGame({
           objective="Select Rock, Paper, or Scissors before countdown ends! Ties trigger rapid overtime. First to 3 wins!"
           heroGraphic={rpsHero}
           howToPlaySteps={howToPlaySteps}
-          onPlayFriend={() => startGame("friend")}
+          onPlayFriend={onInviteFriend || (() => startGame("friend"))}
           onPlayBot={(diff) => startGame("bot", diff)}
+          onRandomMatch={onRandomMatch}
           onBack={onBack || (() => window.history.back())}
         />
       </div>

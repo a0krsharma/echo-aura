@@ -11,6 +11,8 @@ interface LumberjackGameProps {
   currentUid: string;
   isHost?: boolean;
   onBack?: () => void;
+  onInviteFriend?: () => void;
+  onRandomMatch?: () => void;
 }
 
 type BranchSide = "none" | "left" | "right";
@@ -46,6 +48,8 @@ export default function LumberjackGame({
   match,
   currentUid,
   onBack,
+  onInviteFriend,
+  onRandomMatch,
 }: LumberjackGameProps) {
   const [inMenu, setInMenu] = useState(true);
   const [playMode, setPlayMode] = useState<"bot" | "friend">("bot");
@@ -1056,8 +1060,9 @@ export default function LumberjackGame({
           objective="Chop trees with lightning speed! Dodge falling branches and beat the bot to 50 chops!"
           heroGraphic={lumberHero}
           howToPlaySteps={howToPlaySteps}
-          onPlayFriend={() => startGame("friend")}
+          onPlayFriend={onInviteFriend || (() => startGame("friend"))}
           onPlayBot={(diff) => startGame("bot", diff)}
+          onRandomMatch={onRandomMatch}
           onBack={onBack || (() => window.history.back())}
         />
       </div>

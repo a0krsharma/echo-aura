@@ -11,6 +11,8 @@ interface DartsGameProps {
   currentUid: string;
   isHost?: boolean;
   onBack?: () => void;
+  onInviteFriend?: () => void;
+  onRandomMatch?: () => void;
 }
 
 interface DartThrow {
@@ -39,6 +41,8 @@ export default function DartsGame({
   match,
   currentUid,
   onBack,
+  onInviteFriend,
+  onRandomMatch,
 }: DartsGameProps) {
   const [inMenu, setInMenu] = useState(true);
   const [playMode, setPlayMode] = useState<"bot" | "friend">("bot");
@@ -652,8 +656,9 @@ export default function DartsGame({
           objective="Countdown from 301 to 0! Must finish on a Double or Bullseye. 3 darts per turn."
           heroGraphic={dartsHero}
           howToPlaySteps={howToPlaySteps}
-          onPlayFriend={() => startGame("friend")}
+          onPlayFriend={onInviteFriend || (() => startGame("friend"))}
           onPlayBot={(diff) => startGame("bot", diff)}
+          onRandomMatch={onRandomMatch}
           onBack={onBack || (() => window.history.back())}
         />
       </div>

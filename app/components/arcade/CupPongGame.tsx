@@ -11,6 +11,8 @@ interface CupPongProps {
   currentUid: string;
   isHost?: boolean;
   onBack?: () => void;
+  onInviteFriend?: () => void;
+  onRandomMatch?: () => void;
 }
 
 interface Cup {
@@ -47,6 +49,8 @@ export default function CupPongGame({
   match,
   currentUid,
   onBack,
+  onInviteFriend,
+  onRandomMatch,
 }: CupPongProps) {
   const [inMenu, setInMenu] = useState(true);
   const [playMode, setPlayMode] = useState<"bot" | "friend">("bot");
@@ -476,8 +480,9 @@ export default function CupPongGame({
           objective="Sink all 6 opponent party cups with 3D parabolic flick tosses! Clear opponent cups first to win."
           heroGraphic={pongHero}
           howToPlaySteps={howToPlaySteps}
-          onPlayFriend={() => startGame("friend")}
+          onPlayFriend={onInviteFriend || (() => startGame("friend"))}
           onPlayBot={(diff) => startGame("bot", diff)}
+          onRandomMatch={onRandomMatch}
           onBack={onBack || (() => window.history.back())}
         />
       </div>

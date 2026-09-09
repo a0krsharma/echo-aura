@@ -11,6 +11,8 @@ interface HandSlapGameProps {
   currentUid: string;
   isHost?: boolean;
   onBack?: () => void;
+  onInviteFriend?: () => void;
+  onRandomMatch?: () => void;
 }
 
 type Role = "attacker" | "defender";
@@ -45,6 +47,8 @@ export default function HandSlapGame({
   match,
   currentUid,
   onBack,
+  onInviteFriend,
+  onRandomMatch,
 }: HandSlapGameProps) {
   const [inMenu, setInMenu] = useState(true);
   const [playMode, setPlayMode] = useState<"bot" | "friend">("bot");
@@ -970,8 +974,9 @@ export default function HandSlapGame({
           objective="Attacker slaps before Defender dodges! Slapped hands turn redder with each hit. First to 5 wins!"
           heroGraphic={handSlapHero}
           howToPlaySteps={howToPlaySteps}
-          onPlayFriend={() => startGame("friend")}
+          onPlayFriend={onInviteFriend || (() => startGame("friend"))}
           onPlayBot={(diff) => startGame("bot", diff)}
+          onRandomMatch={onRandomMatch}
           onBack={onBack || (() => window.history.back())}
         />
       </div>

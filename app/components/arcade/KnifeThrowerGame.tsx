@@ -11,6 +11,8 @@ interface KnifeThrowerProps {
   currentUid: string;
   isHost?: boolean;
   onBack?: () => void;
+  onInviteFriend?: () => void;
+  onRandomMatch?: () => void;
 }
 
 interface EmbeddedKnife {
@@ -99,6 +101,8 @@ export default function KnifeThrowerGame({
   match,
   currentUid,
   onBack,
+  onInviteFriend,
+  onRandomMatch,
 }: KnifeThrowerProps) {
   const [inMenu, setInMenu] = useState(true);
   const [playMode, setPlayMode] = useState<"bot" | "friend">("bot");
@@ -1330,8 +1334,9 @@ export default function KnifeThrowerGame({
           objective="Launch blades into the spinning timber round! Dodge obstacles and slice apples. First to 3 round wins!"
           heroGraphic={knifeHero}
           howToPlaySteps={howToPlaySteps}
-          onPlayFriend={() => startGame("friend")}
+          onPlayFriend={onInviteFriend || (() => startGame("friend"))}
           onPlayBot={(diff) => startGame("bot", diff)}
+          onRandomMatch={onRandomMatch}
           onBack={onBack || (() => window.history.back())}
         />
       </div>

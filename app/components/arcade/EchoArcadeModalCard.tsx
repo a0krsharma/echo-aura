@@ -16,6 +16,7 @@ export interface EchoArcadeModalCardProps {
   howToPlaySteps: { title: string; desc: string; icon?: string }[];
   onPlayFriend: () => void;
   onPlayBot: (diff: BotDifficulty) => void;
+  onRandomMatch?: () => void;
   onBack: () => void;
   hiScore?: number;
   isFavorite?: boolean;
@@ -32,6 +33,7 @@ export default function EchoArcadeModalCard({
   howToPlaySteps,
   onPlayFriend,
   onPlayBot,
+  onRandomMatch,
   onBack,
   hiScore,
   isFavorite = false,
@@ -67,8 +69,12 @@ export default function EchoArcadeModalCard({
 
   const handleStartRandomMatch = () => {
     arcadeSfx.playButtonTap();
-    setRandomCountdown(5);
-    setIsSearchingRandom(true);
+    if (onRandomMatch) {
+      onRandomMatch();
+    } else {
+      setRandomCountdown(5);
+      setIsSearchingRandom(true);
+    }
   };
 
   const handleStartFriend = () => {

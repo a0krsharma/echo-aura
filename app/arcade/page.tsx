@@ -626,18 +626,33 @@ function ArcadeContent() {
                 <span className="hidden sm:inline">RULES</span>
               </button>
 
-              {/* Invite Button for Multiplayer */}
-              {activeMatch.mode !== "VS_COMPUTER" && (
-                <button
-                  type="button"
-                  onClick={() => setInviteModalMatch(activeMatch)}
-                  className="p-1.5 sm:px-3 sm:py-1.5 border-2 border-white bg-white text-black hover:bg-neutral-200 font-black uppercase text-xs transition-all flex items-center gap-1 cursor-pointer rounded-lg shadow-sm active:scale-95"
-                  title="Invite Players"
-                >
-                  <Share2 className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">INVITE</span>
-                </button>
-              )}
+              {/* Play with Friends: Random Match (5s auto-bot fallback) */}
+              <button
+                type="button"
+                onClick={() => handleStartRandomMatch(activeMatch.gameType)}
+                className="p-1.5 sm:px-2.5 sm:py-1.5 border border-amber-500/50 bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 font-bold uppercase text-xs transition-all flex items-center gap-1 cursor-pointer rounded-lg shadow-sm"
+                title="Search online random opponent (auto-bot in 5s)"
+              >
+                <Zap className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden md:inline">RANDOM MATCH</span>
+              </button>
+
+              {/* Play with Friends: Invite Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (activeMatch.mode === "VS_COMPUTER") {
+                    handleOpenCreate(activeMatch.gameType);
+                  } else {
+                    setInviteModalMatch(activeMatch);
+                  }
+                }}
+                className="p-1.5 sm:px-3 sm:py-1.5 border-2 border-white bg-white text-black hover:bg-neutral-200 font-black uppercase text-xs transition-all flex items-center gap-1 cursor-pointer rounded-lg shadow-sm active:scale-95"
+                title="Invite Friends"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">INVITE</span>
+              </button>
 
               {user?.uid === activeMatch.hostUid && (
                 <button
@@ -734,10 +749,10 @@ function ArcadeContent() {
           <div className="space-y-4">
             {/* Ghost Participant Fallback Notification Bar */}
             {activeMatch.status === "WAITING" && activeMatch.mode !== "VS_COMPUTER" && Object.keys(activeMatch.players || {}).length < activeMatch.maxPlayers && (
-              <div className="p-3.5 rounded-2xl bg-neutral-950 border border-neutral-800 flex items-center justify-between gap-3 shadow-md">
-                <div className="flex items-center gap-2.5">
-                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-                  <span className="text-xs text-neutral-300 font-sans">
+              <div className="p-3.5 rounded-2xl bg-neutral-950 border border-neutral-800 flex items-center justify-between gap-3 shadow-md flex-wrap">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping shrink-0" />
+                  <span className="text-xs text-neutral-300 font-sans truncate">
                     {ghostTimerSec !== null ? (
                       <>Waiting for challenger... Auto-dropping <strong>Ghost AI</strong> in <strong>{ghostTimerSec}s</strong> so the room never stays dead.</>
                     ) : (
@@ -745,12 +760,30 @@ function ArcadeContent() {
                     )}
                   </span>
                 </div>
-                <button
-                  onClick={() => addGhostParticipantToMatch(activeMatch.id)}
-                  className="px-3 py-1 bg-white text-black font-black text-xs uppercase rounded-xl hover:bg-neutral-200 transition-colors cursor-pointer shadow-sm shrink-0"
-                >
-                  🤖 DROP GHOST AI NOW
-                </button>
+                <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => handleStartRandomMatch(activeMatch.gameType)}
+                    className="px-2.5 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 font-black text-xs uppercase rounded-xl transition-colors cursor-pointer shadow-sm flex items-center gap-1"
+                  >
+                    <Zap className="w-3 h-3 text-amber-400" />
+                    <span>⚡ RANDOM MATCH</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInviteModalMatch(activeMatch)}
+                    className="px-2.5 py-1 bg-blue-500/20 text-blue-300 border border-blue-500/40 hover:bg-blue-500/30 font-black text-xs uppercase rounded-xl transition-colors cursor-pointer shadow-sm flex items-center gap-1"
+                  >
+                    <Share2 className="w-3 h-3" />
+                    <span>INVITE FRIENDS</span>
+                  </button>
+                  <button
+                    onClick={() => addGhostParticipantToMatch(activeMatch.id)}
+                    className="px-2.5 py-1 bg-white text-black font-black text-xs uppercase rounded-xl hover:bg-neutral-200 transition-colors cursor-pointer shadow-sm"
+                  >
+                    🤖 DROP GHOST NOW
+                  </button>
+                </div>
               </div>
             )}
 
@@ -958,28 +991,124 @@ function ArcadeContent() {
               <CandyMatchGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
             )}
             {activeMatch.gameType === "lumberjack" && (
-              <LumberjackGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+              <LumberjackGame
+                match={activeMatch}
+                currentUid={user?.uid || ""}
+                isHost={activeMatch.hostUid === user?.uid}
+                onInviteFriend={() => {
+                  if (activeMatch.mode === "VS_COMPUTER") {
+                    handleOpenCreate(activeMatch.gameType);
+                  } else {
+                    setInviteModalMatch(activeMatch);
+                  }
+                }}
+                onRandomMatch={() => handleStartRandomMatch(activeMatch.gameType)}
+              />
             )}
             {activeMatch.gameType === "hand_slap" && (
-              <HandSlapGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+              <HandSlapGame
+                match={activeMatch}
+                currentUid={user?.uid || ""}
+                isHost={activeMatch.hostUid === user?.uid}
+                onInviteFriend={() => {
+                  if (activeMatch.mode === "VS_COMPUTER") {
+                    handleOpenCreate(activeMatch.gameType);
+                  } else {
+                    setInviteModalMatch(activeMatch);
+                  }
+                }}
+                onRandomMatch={() => handleStartRandomMatch(activeMatch.gameType)}
+              />
             )}
             {activeMatch.gameType === "rock_paper_scissors" && (
-              <RockPaperScissorsGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+              <RockPaperScissorsGame
+                match={activeMatch}
+                currentUid={user?.uid || ""}
+                isHost={activeMatch.hostUid === user?.uid}
+                onInviteFriend={() => {
+                  if (activeMatch.mode === "VS_COMPUTER") {
+                    handleOpenCreate(activeMatch.gameType);
+                  } else {
+                    setInviteModalMatch(activeMatch);
+                  }
+                }}
+                onRandomMatch={() => handleStartRandomMatch(activeMatch.gameType)}
+              />
             )}
             {activeMatch.gameType === "knife_thrower" && (
-              <KnifeThrowerGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+              <KnifeThrowerGame
+                match={activeMatch}
+                currentUid={user?.uid || ""}
+                isHost={activeMatch.hostUid === user?.uid}
+                onInviteFriend={() => {
+                  if (activeMatch.mode === "VS_COMPUTER") {
+                    handleOpenCreate(activeMatch.gameType);
+                  } else {
+                    setInviteModalMatch(activeMatch);
+                  }
+                }}
+                onRandomMatch={() => handleStartRandomMatch(activeMatch.gameType)}
+              />
             )}
             {activeMatch.gameType === "ping_pong" && (
-              <PingPongGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+              <PingPongGame
+                match={activeMatch}
+                currentUid={user?.uid || ""}
+                isHost={activeMatch.hostUid === user?.uid}
+                onInviteFriend={() => {
+                  if (activeMatch.mode === "VS_COMPUTER") {
+                    handleOpenCreate(activeMatch.gameType);
+                  } else {
+                    setInviteModalMatch(activeMatch);
+                  }
+                }}
+                onRandomMatch={() => handleStartRandomMatch(activeMatch.gameType)}
+              />
             )}
             {activeMatch.gameType === "darts" && (
-              <DartsGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+              <DartsGame
+                match={activeMatch}
+                currentUid={user?.uid || ""}
+                isHost={activeMatch.hostUid === user?.uid}
+                onInviteFriend={() => {
+                  if (activeMatch.mode === "VS_COMPUTER") {
+                    handleOpenCreate(activeMatch.gameType);
+                  } else {
+                    setInviteModalMatch(activeMatch);
+                  }
+                }}
+                onRandomMatch={() => handleStartRandomMatch(activeMatch.gameType)}
+              />
             )}
             {activeMatch.gameType === "find_match" && (
-              <FindMatchGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+              <FindMatchGame
+                match={activeMatch}
+                currentUid={user?.uid || ""}
+                isHost={activeMatch.hostUid === user?.uid}
+                onInviteFriend={() => {
+                  if (activeMatch.mode === "VS_COMPUTER") {
+                    handleOpenCreate(activeMatch.gameType);
+                  } else {
+                    setInviteModalMatch(activeMatch);
+                  }
+                }}
+                onRandomMatch={() => handleStartRandomMatch(activeMatch.gameType)}
+              />
             )}
             {activeMatch.gameType === "cup_pong" && (
-              <CupPongGame match={activeMatch} currentUid={user?.uid || ""} isHost={activeMatch.hostUid === user?.uid} />
+              <CupPongGame
+                match={activeMatch}
+                currentUid={user?.uid || ""}
+                isHost={activeMatch.hostUid === user?.uid}
+                onInviteFriend={() => {
+                  if (activeMatch.mode === "VS_COMPUTER") {
+                    handleOpenCreate(activeMatch.gameType);
+                  } else {
+                    setInviteModalMatch(activeMatch);
+                  }
+                }}
+                onRandomMatch={() => handleStartRandomMatch(activeMatch.gameType)}
+              />
             )}
           </div>
         ) : (
@@ -1077,26 +1206,68 @@ function ArcadeContent() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 pt-3 border-t border-neutral-800/60 mt-3.5">
-                      <button
-                        type="button"
-                        disabled={!user}
-                        onClick={() => handleLaunchSolo(game.id)}
-                        className="py-2 px-2 bg-neutral-900 hover:bg-neutral-800 text-neutral-200 border border-neutral-700/80 hover:border-neutral-500 font-bold text-xs uppercase transition-all cursor-pointer text-center truncate rounded-xl shadow-sm flex items-center justify-center gap-1"
-                        title={`Play ${game.name} with AI Bot`}
-                      >
-                        <span>🤖 PLAY WITH BOT</span>
-                      </button>
+                    <div className="mt-3.5 pt-3 border-t border-neutral-800/80 space-y-2">
+                      {/* 1. Solo Bot (Easy / Medium / Hard) */}
+                      <div className="bg-neutral-900/90 border border-neutral-800/90 rounded-xl p-2 flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-cyan-400 flex items-center gap-1 shrink-0">
+                          <Bot className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>BOT:</span>
+                        </span>
+                        <div className="grid grid-cols-3 gap-1 flex-1">
+                          {(["EASY", "MEDIUM", "HARD"] as const).map((diff) => (
+                            <button
+                              key={diff}
+                              type="button"
+                              disabled={!user}
+                              onClick={() => handleLaunchSolo(game.id, diff)}
+                              className={`py-1 px-1 text-[10px] font-black uppercase rounded-lg border transition-all cursor-pointer text-center ${
+                                diff === "EASY"
+                                  ? "border-emerald-500/40 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-800/60 hover:border-emerald-400"
+                                  : diff === "MEDIUM"
+                                  ? "border-amber-500/40 bg-amber-950/40 text-amber-300 hover:bg-amber-800/60 hover:border-amber-400"
+                                  : "border-red-500/40 bg-red-950/40 text-red-300 hover:bg-red-800/60 hover:border-red-400"
+                              }`}
+                              title={`Play ${game.name} vs ${diff} Bot`}
+                            >
+                              {diff}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
 
-                      <button
-                        type="button"
-                        disabled={!user}
-                        onClick={() => handleOpenFriendsModal(game.id)}
-                        className="py-2 px-2 bg-white text-black hover:bg-neutral-200 font-black text-xs uppercase transition-all cursor-pointer text-center truncate rounded-xl shadow-md active:scale-95 flex items-center justify-center gap-1"
-                        title={`Play ${game.name} with Friends (Random Match or Invite)`}
-                      >
-                        <span>👥 FRIENDS</span>
-                      </button>
+                      {/* 2. Play with Friends (Random Match with 5s auto-bot & Invite Friends) */}
+                      <div className="bg-neutral-900/90 border border-neutral-800/90 rounded-xl p-2 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-blue-400 flex items-center gap-1">
+                            <Users className="w-3.5 h-3.5 text-blue-400" />
+                            <span>PLAY WITH FRIENDS:</span>
+                          </span>
+                          <span className="text-[9px] text-neutral-500 font-mono">5s AUTO-BOT</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <button
+                            type="button"
+                            disabled={!user}
+                            onClick={() => handleStartRandomMatch(game.id)}
+                            className="py-1.5 px-2 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 hover:from-amber-500/30 hover:to-yellow-500/30 border border-amber-500/60 hover:border-amber-400 text-amber-300 font-black text-[10px] uppercase rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 shadow-sm active:scale-95 truncate"
+                            title={`Search for random online player in ${game.name} with 5s auto-bot fallback`}
+                          >
+                            <Zap className="w-3 h-3 text-amber-400 shrink-0" />
+                            <span className="truncate">⚡ RANDOM MATCH</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={!user}
+                            onClick={() => handleOpenCreate(game.id)}
+                            className="py-1.5 px-2 bg-white text-black hover:bg-neutral-200 border border-white font-black text-[10px] uppercase rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 shadow-sm active:scale-95 truncate"
+                            title={`Create room & invite friends to play ${game.name}`}
+                          >
+                            <Share2 className="w-3 h-3 text-black shrink-0" />
+                            <span className="truncate">👥 INVITE FRIENDS</span>
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
