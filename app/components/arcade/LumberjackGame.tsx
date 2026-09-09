@@ -284,10 +284,10 @@ export default function LumberjackGame({
         ...prev,
         {
           id: idCounter.current++,
-          x: targetSide === "left" ? -20 : 20,
+          x: targetSide === "left" ? -25 : 25,
           y: 0,
           vx: targetSide === "left" ? 14 + Math.random() * 5 : -14 - Math.random() * 5,
-          vy: -8 - Math.random() * 3,
+          vy: -8 - Math.random() * 4,
           rot: 0,
           vrot: targetSide === "left" ? 0.35 : -0.35,
           branch: choppedSegment ? choppedSegment.branch : "none",
@@ -296,17 +296,17 @@ export default function LumberjackGame({
 
       // 5. Sawdust Splinters Spray
       const newSawdust: SawdustParticle[] = [];
-      for (let i = 0; i < 8; i++) {
+      for (let i = 0; i < 10; i++) {
         const angle = targetSide === "left" ? -0.2 - Math.random() * 0.8 : Math.PI + 0.2 + Math.random() * 0.8;
-        const spd = 4 + Math.random() * 6;
+        const spd = 4 + Math.random() * 7;
         newSawdust.push({
           id: idCounter.current++,
-          x: targetSide === "left" ? -15 : 15,
+          x: targetSide === "left" ? -18 : 18,
           y: 10,
           vx: Math.cos(angle) * spd,
           vy: Math.sin(angle) * spd,
-          size: 3 + Math.random() * 3,
-          color: i % 2 === 0 ? "#facc15" : "#b45309",
+          size: 3 + Math.random() * 3.5,
+          color: i % 3 === 0 ? "#facc15" : i % 3 === 1 ? "#d97706" : "#78350f",
           life: 1,
         });
       }
@@ -357,10 +357,6 @@ export default function LumberjackGame({
     }
 
     const scheduleBotChop = () => {
-      // Cadence:
-      // Hard: ~135ms (~7.4 chops/sec)
-      // Medium: ~220ms (~4.5 chops/sec)
-      // Easy: ~380ms (~2.6 chops/sec)
       const delay =
         botDiff === "hard"
           ? 120 + Math.random() * 30
@@ -433,27 +429,598 @@ export default function LumberjackGame({
     return () => clearInterval(interval);
   }, [inMenu]);
 
+  // =========================================================================
+  // REALISTIC BOTANICAL TREE RENDERING ENGINE (ORGANIC SVG)
+  // =========================================================================
+
+  // 1. Realistic Organic Trunk Segment (128px wide × 64px tall)
+  // Each segment has natural volumetric cylindrical shading, deep bark furrows,
+  // knot variations, living emerald moss clinging to crevices, and cut sawn grain lines.
+  const renderRealisticTrunkSVG = (segId: number) => {
+    const variant = segId % 4;
+    const gradId = `barkGrad_${segId}`;
+    const mossGradId = `mossGrad_${segId}`;
+
+    return (
+      <svg
+        viewBox="0 0 128 64"
+        className="w-32 h-16 shrink-0 block overflow-visible select-none pointer-events-none drop-shadow-md"
+      >
+        <defs>
+          {/* Volumetric 3D cylindrical lighting across the trunk */}
+          <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#1e1008" />
+            <stop offset="7%" stopColor="#432212" />
+            <stop offset="22%" stopColor="#2c160b" />
+            <stop offset="42%" stopColor="#5c3218" />
+            <stop offset="60%" stopColor="#7a4422" />
+            <stop offset="78%" stopColor="#532d16" />
+            <stop offset="92%" stopColor="#281409" />
+            <stop offset="100%" stopColor="#120803" />
+          </linearGradient>
+
+          {/* Living forest moss gradient */}
+          <linearGradient id={mossGradId} x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#65a30d" />
+            <stop offset="50%" stopColor="#4d7c0f" />
+            <stop offset="100%" stopColor="#1e3a0f" />
+          </linearGradient>
+        </defs>
+
+        {/* Base Cylindrical Trunk Body */}
+        <rect x="0" y="0" width="128" height="64" fill={`url(#${gradId})`} />
+
+        {/* Sawn Cut Joint Seams (Top & Bottom subtle timber grain) */}
+        <line x1="0" y1="0.5" x2="128" y2="0.5" stroke="#120803" strokeWidth="1.2" opacity="0.9" />
+        <line x1="0" y1="63.5" x2="128" y2="63.5" stroke="#0a0402" strokeWidth="1.2" opacity="0.95" />
+
+        {/* Deep Vertical Bark Furrows & Raised Ridges */}
+        {/* Furrow 1 (Left shade) */}
+        <path
+          d="M 16,0 Q 18,22 14,40 T 17,64"
+          fill="none"
+          stroke="#150a04"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        />
+        <path
+          d="M 18.5,0 Q 20.5,22 16.5,40 T 19.5,64"
+          fill="none"
+          stroke="#8a4f29"
+          strokeWidth="1.2"
+          opacity="0.6"
+        />
+
+        {/* Furrow 2 (Center-Left deep crease) */}
+        <path
+          d="M 38,0 Q 35,18 40,36 T 36,64"
+          fill="none"
+          stroke="#120703"
+          strokeWidth="3"
+          strokeLinecap="round"
+        />
+        <path
+          d="M 41,0 Q 38,18 43,36 T 39,64"
+          fill="none"
+          stroke="#9a5a30"
+          strokeWidth="1.4"
+          opacity="0.75"
+        />
+
+        {/* Furrow 3 (Center sunny ridge) */}
+        <path
+          d="M 64,0 Q 67,26 62,44 T 66,64"
+          fill="none"
+          stroke="#1d0e06"
+          strokeWidth="2"
+        />
+        <path
+          d="M 66.5,0 Q 69.5,26 64.5,44 T 68.5,64"
+          fill="none"
+          stroke="#a66235"
+          strokeWidth="1.8"
+          opacity="0.85"
+        />
+
+        {/* Furrow 4 (Right mid-ridge) */}
+        <path
+          d="M 88,0 Q 85,20 90,38 T 86,64"
+          fill="none"
+          stroke="#150904"
+          strokeWidth="3.2"
+          strokeLinecap="round"
+        />
+        <path
+          d="M 90.5,0 Q 87.5,20 92.5,38 T 88.5,64"
+          fill="none"
+          stroke="#854823"
+          strokeWidth="1.4"
+          opacity="0.65"
+        />
+
+        {/* Furrow 5 (Right edge shadow groove) */}
+        <path
+          d="M 110,0 Q 112,28 108,46 T 111,64"
+          fill="none"
+          stroke="#0d0502"
+          strokeWidth="2.8"
+        />
+
+        {/* Organic Variant Variations: Knots, Moss, Bark Plates */}
+        {variant === 0 && (
+          /* Natural Wood Knot with Concentric Swirling Grain */
+          <g transform="translate(54, 28)">
+            <ellipse cx="0" cy="0" rx="9" ry="6" fill="#1b0c05" stroke="#3b1d0c" strokeWidth="1.5" />
+            <ellipse cx="-1" cy="0" rx="5" ry="3" fill="#0d0502" />
+            <path
+              d="M -16,-12 Q 0,-18 16,-10 M -18,12 Q 0,18 18,10"
+              fill="none"
+              stroke="#8c5029"
+              strokeWidth="1"
+              opacity="0.7"
+            />
+          </g>
+        )}
+
+        {variant === 1 && (
+          /* Velvet Forest Moss clinging to bark hollow */
+          <g transform="translate(30, 22)">
+            <path
+              d="M 0,0 C 4,-6 14,-5 18,0 C 22,6 18,16 12,18 C 6,20 0,14 0,8 Z"
+              fill={`url(#${mossGradId})`}
+              opacity="0.9"
+            />
+            {/* Moss spore specks */}
+            <circle cx="6" cy="4" r="1.2" fill="#a3e635" opacity="0.8" />
+            <circle cx="12" cy="8" r="1.5" fill="#bef264" opacity="0.75" />
+            <circle cx="8" cy="12" r="1" fill="#84cc16" opacity="0.8" />
+          </g>
+        )}
+
+        {variant === 2 && (
+          /* Prominent Bark Plate Flakes & Lichen */
+          <g>
+            <path
+              d="M 72,12 Q 82,14 84,26 Q 74,28 72,12 Z"
+              fill="#522a13"
+              stroke="#210f06"
+              strokeWidth="1"
+              opacity="0.8"
+            />
+            <circle cx="78" cy="46" r="2" fill="#84cc16" opacity="0.65" />
+            <circle cx="82" cy="48" r="1.4" fill="#a3e635" opacity="0.7" />
+          </g>
+        )}
+
+        {variant === 3 && (
+          /* Weathered Lichen cluster & twin bark crevices */
+          <g>
+            <circle cx="24" cy="32" r="2.5" fill="#4ade80" opacity="0.45" />
+            <circle cx="26" cy="35" r="1.8" fill="#86efac" opacity="0.5" />
+            <line x1="48" y1="18" x2="52" y2="46" stroke="#120703" strokeWidth="2" opacity="0.8" />
+          </g>
+        )}
+
+        {/* Ambient Left Rim Highlight (Sunlight filtering through canopy) */}
+        <line x1="2" y1="0" x2="2" y2="64" stroke="#e09f67" strokeWidth="1" opacity="0.3" />
+      </svg>
+    );
+  };
+
+  // 2. Realistic Sculpted Branch Limb with Botanical Needle Boughs & Pinecone
+  // Rendered with natural woody tapering branch collar, multi-tiered pine needle sprays,
+  // rich forest foliage shading, and an authentic dangling pinecone.
+  const renderRealisticBranchSVG = (side: "left" | "right") => {
+    const isLeft = side === "left";
+
+    return (
+      <div
+        className={`absolute top-1 pointer-events-none z-20 select-none ${
+          isLeft ? "-left-[118px]" : "-right-[118px]"
+        }`}
+        style={{
+          transform: isLeft ? "none" : "scaleX(-1)",
+        }}
+      >
+        <svg
+          viewBox="0 0 128 76"
+          className="w-32 h-20 overflow-visible drop-shadow-xl"
+        >
+          <defs>
+            {/* Branch wood gradient with cylindrical lighting */}
+            <linearGradient id={`branchWood_${side}`} x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#7c4322" />
+              <stop offset="35%" stopColor="#5a2f16" />
+              <stop offset="75%" stopColor="#381b0c" />
+              <stop offset="100%" stopColor="#1a0b05" />
+            </linearGradient>
+
+            {/* Pine needle multi-tone gradients */}
+            <linearGradient id={`needleDark_${side}`} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#064e3b" />
+              <stop offset="100%" stopColor="#022c22" />
+            </linearGradient>
+            <linearGradient id={`needleMid_${side}`} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#059669" />
+              <stop offset="100%" stopColor="#047857" />
+            </linearGradient>
+            <linearGradient id={`needleSun_${side}`} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#34d399" />
+              <stop offset="100%" stopColor="#10b981" />
+            </linearGradient>
+
+            {/* Pinecone scale gradient */}
+            <linearGradient id={`coneGrad_${side}`} x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#78350f" />
+              <stop offset="100%" stopColor="#291104" />
+            </linearGradient>
+          </defs>
+
+          {/* 1. Branch Collar Swelling (Natural organic junction into trunk on right) */}
+          <path
+            d="M 128,14 C 114,14 100,22 80,24 C 60,26 40,28 16,32 C 12,33 10,36 12,38 C 16,42 42,40 68,38 C 96,36 114,48 128,52 Z"
+            fill={`url(#branchWood_${side})`}
+            stroke="#1c0c05"
+            strokeWidth="1.2"
+          />
+
+          {/* Woody bark grain lines along branch limb */}
+          <path
+            d="M 126,26 Q 84,28 32,34"
+            fill="none"
+            stroke="#96542c"
+            strokeWidth="1.5"
+            opacity="0.8"
+          />
+          <path
+            d="M 126,38 Q 90,36 45,38"
+            fill="none"
+            stroke="#1a0b05"
+            strokeWidth="1.8"
+            opacity="0.9"
+          />
+
+          {/* 2. Hanging Organic Pinecone */}
+          <g transform="translate(68, 38)">
+            {/* Small wood twig */}
+            <line x1="0" y1="0" x2="3" y2="7" stroke="#381b0c" strokeWidth="1.5" />
+            {/* Pinecone body */}
+            <path
+              d="M 0,6 C 7,6 10,12 8,19 C 6,24 1,26 0,26 C -1,26 -6,24 -8,19 C -10,12 -7,6 0,6 Z"
+              fill={`url(#coneGrad_${side})`}
+              stroke="#1a0b05"
+              strokeWidth="0.8"
+            />
+            {/* Pinecone wooden scale ridges */}
+            <path d="M -6,11 Q 0,14 6,11" stroke="#a16207" strokeWidth="1.2" fill="none" opacity="0.85" />
+            <path d="M -7,16 Q 0,19 7,16" stroke="#a16207" strokeWidth="1.2" fill="none" opacity="0.85" />
+            <path d="M -5,21 Q 0,23 5,21" stroke="#a16207" strokeWidth="1.2" fill="none" opacity="0.85" />
+          </g>
+
+          {/* 3. Layered Botanical Pine Needle Boughs */}
+          {/* Back Shadow Needle Cluster */}
+          <g fill={`url(#needleDark_${side})`}>
+            {/* Fan 1 (Tip bough) */}
+            <path d="M 16,32 C -4,26 -14,20 -18,12 C -12,24 -2,32 12,36 Z" />
+            <path d="M 14,34 C -8,32 -20,28 -24,22 C -18,34 -4,38 10,38 Z" />
+            <path d="M 12,36 C -10,40 -20,44 -22,50 C -14,46 -2,42 12,38 Z" />
+            {/* Fan 2 (Mid bough) */}
+            <path d="M 45,28 C 30,16 20,8 14,0 C 22,12 36,22 42,30 Z" />
+            <path d="M 46,30 C 28,24 16,18 8,10 C 18,22 34,28 42,32 Z" />
+          </g>
+
+          {/* Middle Dense Pine Needle Cluster */}
+          <g fill={`url(#needleMid_${side})`}>
+            {/* Outer tip sprays */}
+            <path d="M 18,31 C 2,24 -6,18 -12,12 C -6,22 4,28 16,33 Z" />
+            <path d="M 18,32 C -2,28 -14,26 -20,22 C -12,30 2,34 16,35 Z" />
+            <path d="M 18,33 C 0,36 -12,40 -16,46 C -8,42 4,38 16,36 Z" />
+            {/* Upper sprigs */}
+            <path d="M 48,27 C 34,14 26,6 18, -2 C 26,8 38,18 46,28 Z" />
+            <path d="M 52,27 C 38,18 30,12 24, 4 C 32,14 42,22 48,29 Z" />
+            <path d="M 56,26 C 44,16 38,10 32, 2 C 40,12 48,20 54,28 Z" />
+            {/* Lower lush tuft */}
+            <path d="M 38,36 C 24,44 14,52 10,60 C 18,52 30,44 38,38 Z" />
+            <path d="M 42,35 C 28,46 20,56 16,66 C 24,56 34,46 40,38 Z" />
+          </g>
+
+          {/* Front Sun-Drenched Needle Tips (Vibrant highlights) */}
+          <g fill={`url(#needleSun_${side})`} opacity="0.95">
+            <path d="M 19,30 C 6,22 0,16 -6,10 C -1,18 8,24 18,31 Z" />
+            <path d="M 19,32 C 2,30 -6,28 -12,24 C -5,30 6,33 17,34 Z" />
+            <path d="M 49,26 C 36,15 28,8 22, 1 C 28,10 38,18 47,27 Z" />
+            <path d="M 53,26 C 42,16 34,11 28, 5 C 34,13 44,20 50,27 Z" />
+            <path d="M 39,35 C 28,42 20,49 16,56 C 22,49 32,42 38,37 Z" />
+          </g>
+
+          {/* Crisp needle stroke lines for authentic botanical sharpness */}
+          <g stroke="#6ee7b7" strokeWidth="0.8" opacity="0.6">
+            <line x1="18" y1="31" x2="-8" y2="11" />
+            <line x1="18" y1="33" x2="-14" y2="23" />
+            <line x1="18" y1="35" x2="-10" y2="44" />
+            <line x1="48" y1="26" x2="20" y2="0" />
+            <line x1="54" y1="25" x2="30" y2="3" />
+            <line x1="40" y1="36" x2="14" y2="62" />
+          </g>
+        </svg>
+      </div>
+    );
+  };
+
+  // 3. Render Trunk Segment Container
+  const renderTrunkSegment = (seg: TrunkSegment) => {
+    return (
+      <div
+        key={seg.id}
+        className="relative w-32 h-16 shrink-0 flex items-center justify-center select-none"
+      >
+        {/* Realistic Organic Trunk SVG */}
+        {renderRealisticTrunkSVG(seg.id)}
+
+        {/* Realistic Left Branch */}
+        {seg.branch === "left" && renderRealisticBranchSVG("left")}
+
+        {/* Realistic Right Branch */}
+        {seg.branch === "right" && renderRealisticBranchSVG("right")}
+      </div>
+    );
+  };
+
+  // 4. Massive Ancient Buttress Roots & Forest Loam Base (260px wide × 72px tall)
+  const renderRealisticTreeBase = () => {
+    return (
+      <div className="relative w-64 h-18 -mb-2 z-10 flex items-end justify-center pointer-events-none select-none">
+        <svg viewBox="0 0 256 72" className="w-64 h-18 overflow-visible drop-shadow-2xl">
+          <defs>
+            <linearGradient id="rootWoodGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#5a2f16" />
+              <stop offset="40%" stopColor="#381b0c" />
+              <stop offset="85%" stopColor="#200d04" />
+              <stop offset="100%" stopColor="#0d0401" />
+            </linearGradient>
+
+            <linearGradient id="rootMossGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#65a30d" />
+              <stop offset="60%" stopColor="#3f6212" />
+              <stop offset="100%" stopColor="#142607" />
+            </linearGradient>
+
+            <linearGradient id="forestLoamGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#1c1917" />
+              <stop offset="100%" stopColor="#0c0a09" />
+            </linearGradient>
+          </defs>
+
+          {/* Forest Loam Earth Bed */}
+          <path
+            d="M 0,58 Q 128,52 256,58 L 256,72 L 0,72 Z"
+            fill="url(#forestLoamGrad)"
+          />
+
+          {/* Sprawling Buttressed Ancient Roots */}
+          {/* Main Trunk flare & 3 giant arching buttresses */}
+          <path
+            d="M 64,0 L 192,0 C 190,14 200,28 218,44 C 234,56 250,62 254,66 C 240,68 214,64 196,56 C 182,50 176,38 168,26 C 158,40 152,54 154,68 C 142,68 126,67 122,54 C 118,40 110,26 98,24 C 88,38 80,52 68,64 C 52,66 26,68 4,66 C 14,60 32,54 46,42 C 60,30 62,14 64,0 Z"
+            fill="url(#rootWoodGrad)"
+            stroke="#120703"
+            strokeWidth="1.5"
+          />
+
+          {/* Deep root hollow crevices */}
+          <path
+            d="M 88,24 Q 78,44 68,64 M 168,26 Q 174,44 186,60 M 128,12 Q 132,36 134,66"
+            fill="none"
+            stroke="#0a0301"
+            strokeWidth="3"
+            strokeLinecap="round"
+          />
+          {/* Sunlit root ridge crests */}
+          <path
+            d="M 66,4 Q 52,30 36,46 M 190,4 Q 206,32 230,52 M 124,14 Q 122,34 118,52"
+            fill="none"
+            stroke="#8c5029"
+            strokeWidth="1.5"
+            opacity="0.75"
+          />
+
+          {/* Lush Velvet Moss Blankets covering the root crowns */}
+          <path
+            d="M 60,6 C 72,2 96,8 108,16 C 96,20 74,18 60,6 Z"
+            fill="url(#rootMossGrad)"
+            opacity="0.9"
+          />
+          <path
+            d="M 152,14 C 168,8 188,4 196,8 C 192,18 174,22 152,14 Z"
+            fill="url(#rootMossGrad)"
+            opacity="0.9"
+          />
+          <path
+            d="M 28,48 C 38,44 48,46 54,54 C 44,56 34,54 28,48 Z"
+            fill="url(#rootMossGrad)"
+            opacity="0.85"
+          />
+          <path
+            d="M 204,50 C 214,46 226,48 232,56 C 222,58 212,56 204,50 Z"
+            fill="url(#rootMossGrad)"
+            opacity="0.85"
+          />
+
+          {/* Forest floor grass tufts & fallen pine needles */}
+          <g stroke="#65a30d" strokeWidth="1.5" strokeLinecap="round">
+            <line x1="20" y1="64" x2="16" y2="52" />
+            <line x1="22" y1="64" x2="24" y2="50" />
+            <line x1="24" y1="64" x2="28" y2="54" />
+
+            <line x1="140" y1="68" x2="138" y2="58" />
+            <line x1="142" y1="68" x2="146" y2="56" />
+
+            <line x1="238" y1="66" x2="234" y2="54" />
+            <line x1="240" y1="66" x2="244" y2="52" />
+          </g>
+        </svg>
+      </div>
+    );
+  };
+
+  // 5. Realistic Flying Chopped Log with Cut End-Grain Growth Rings & Branch
+  const renderRealisticFlyingLog = (fl: FlyingLog) => {
+    return (
+      <div
+        key={fl.id}
+        className="absolute w-32 h-16 pointer-events-none z-40 select-none drop-shadow-2xl"
+        style={{
+          transform: `translate(${fl.x}px, ${fl.y}px) rotate(${fl.rot}rad)`,
+          bottom: "55px",
+        }}
+      >
+        <svg viewBox="0 0 128 64" className="w-full h-full overflow-visible">
+          <defs>
+            <linearGradient id={`flyBark_${fl.id}`} x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#7a4422" />
+              <stop offset="50%" stopColor="#532d16" />
+              <stop offset="100%" stopColor="#281409" />
+            </linearGradient>
+
+            {/* Sawn end-grain cross-section */}
+            <radialGradient id={`endGrain_${fl.id}`} cx="45%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#451a03" />
+              <stop offset="25%" stopColor="#78350f" />
+              <stop offset="55%" stopColor="#b45309" />
+              <stop offset="85%" stopColor="#d97706" />
+              <stop offset="94%" stopColor="#f59e0b" />
+              <stop offset="100%" stopColor="#291104" />
+            </radialGradient>
+          </defs>
+
+          {/* Cylindrical Bark Trunk Flank */}
+          <rect x="22" y="6" width="102" height="52" rx="4" fill={`url(#flyBark_${fl.id})`} stroke="#170903" strokeWidth="1.5" />
+          {/* Bark ridges on flying log */}
+          <line x1="45" y1="6" x2="45" y2="58" stroke="#170903" strokeWidth="2" />
+          <line x1="47" y1="6" x2="47" y2="58" stroke="#9a5a30" strokeWidth="1.2" opacity="0.7" />
+          <line x1="82" y1="6" x2="82" y2="58" stroke="#170903" strokeWidth="2" />
+          <line x1="84" y1="6" x2="84" y2="58" stroke="#9a5a30" strokeWidth="1.2" opacity="0.7" />
+
+          {/* Sawn Timber Round (Cut Face with Concentric Annual Growth Rings) */}
+          <ellipse cx="22" cy="32" rx="20" ry="26" fill={`url(#endGrain_${fl.id})`} stroke="#170903" strokeWidth="2" />
+          {/* Growth Rings */}
+          <ellipse cx="22" cy="32" rx="15" ry="19" fill="none" stroke="#78350f" strokeWidth="1" opacity="0.85" />
+          <ellipse cx="22" cy="32" rx="10" ry="13" fill="none" stroke="#522409" strokeWidth="1" opacity="0.9" />
+          <ellipse cx="22" cy="32" rx="5" ry="6" fill="none" stroke="#361504" strokeWidth="1.2" />
+          {/* Pith center */}
+          <circle cx="21" cy="32" r="2" fill="#200a02" />
+          {/* Radial check split crack */}
+          <path d="M 21,32 L 35,22 M 21,32 L 28,45" stroke="#1f0a02" strokeWidth="1" />
+        </svg>
+
+        {/* If the chopped segment had a branch, it tumbles along with it! */}
+        {fl.branch === "left" && renderRealisticBranchSVG("left")}
+        {fl.branch === "right" && renderRealisticBranchSVG("right")}
+      </div>
+    );
+  };
+
+  // Render Handsome Animated Lumberjack Character
+  const renderLumberjack = (
+    side: "left" | "right",
+    isChopping: boolean,
+    isSquashed: boolean,
+    theme: "blue" | "red"
+  ) => {
+    const isBlue = theme === "blue";
+    return (
+      <div
+        className={`absolute bottom-4 z-30 transition-all duration-75 pointer-events-none ${
+          isSquashed
+            ? "scale-y-40 opacity-80"
+            : side === "left"
+            ? "left-4"
+            : "right-4 scale-x-[-1]"
+        }`}
+      >
+        <div className="relative w-20 h-28 flex flex-col items-center">
+          {/* Beanie Knit Cap */}
+          <div
+            className={`w-9 h-5 ${
+              isBlue ? "bg-orange-600" : "bg-red-600"
+            } rounded-t-full border-t border-white/40 shadow-sm`}
+          />
+          {/* Head & Rugged Beard */}
+          <div className="w-8 h-7 bg-amber-200 rounded-b-md flex items-center justify-center relative shadow-xs">
+            <span className="text-sm">{isSquashed ? "😵" : "🧔"}</span>
+          </div>
+          {/* Buffalo Plaid Flannel Shirt */}
+          <div
+            className={`w-12 h-11 ${
+              isBlue ? "bg-blue-700" : "bg-red-700"
+            } border border-black/40 rounded-md relative flex justify-between px-1.5 shadow-md`}
+          >
+            <div className="w-1.5 h-full bg-neutral-950 opacity-60" />
+            <div className="w-1.5 h-full bg-neutral-950 opacity-60" />
+          </div>
+          {/* Denim Jeans & Boots */}
+          <div className="flex gap-1.5 -mt-1">
+            <div className="w-4 h-7 bg-slate-900 rounded-b-md border-b-2 border-amber-900" />
+            <div className="w-4 h-7 bg-slate-900 rounded-b-md border-b-2 border-amber-900" />
+          </div>
+          {/* Steel Double-Bit Axe */}
+          <div
+            className={`absolute -top-1 -right-4 text-2xl transition-transform duration-75 ${
+              isChopping ? "rotate-45 translate-x-2" : "-rotate-15"
+            }`}
+          >
+            🪓
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const isSolo = playMode === "bot";
+
   const lumberHero = (
     <div className="w-full h-full flex items-center justify-center relative">
-      <div className="absolute inset-0 bg-emerald-950/40 rounded-2xl flex items-center justify-center border border-emerald-500/20">
-        <svg viewBox="0 0 160 160" className="w-36 h-36">
-          {/* Majestic Redwood Trunk */}
-          <rect x="62" y="15" width="36" height="130" fill="#78350f" stroke="#451a03" strokeWidth="2.5" />
-          <line x1="72" y1="15" x2="72" y2="145" stroke="#92400e" strokeWidth="2" />
-          <line x1="88" y1="15" x2="88" y2="145" stroke="#5c2406" strokeWidth="2" />
-          {/* Branches with lush needle clusters */}
-          <g transform="translate(30, 45)">
-            <path d="M 32,10 L 0,10 Q -4,5 0,0 L 32,0 Z" fill="#5c2406" />
-            <ellipse cx="6" cy="5" rx="14" ry="8" fill="#15803d" />
+      <div className="absolute inset-0 bg-emerald-950/40 rounded-2xl flex items-center justify-center border border-emerald-500/20 overflow-hidden">
+        <svg viewBox="0 0 160 160" className="w-40 h-40">
+          {/* Sunbeams filtering through redwood canopy */}
+          <polygon points="0,0 80,0 120,160 20,160" fill="white" opacity="0.05" />
+          <polygon points="60,0 140,0 160,160 80,160" fill="white" opacity="0.04" />
+
+          {/* Grand Ancient Redwood Trunk */}
+          <rect x="58" y="10" width="44" height="135" fill="#5a2f16" stroke="#1f0e06" strokeWidth="2" />
+          <line x1="70" y1="10" x2="70" y2="145" stroke="#170803" strokeWidth="2.5" />
+          <line x1="72" y1="10" x2="72" y2="145" stroke="#9a5a30" strokeWidth="1.2" opacity="0.8" />
+          <line x1="90" y1="10" x2="90" y2="145" stroke="#170803" strokeWidth="2.5" />
+          <line x1="92" y1="10" x2="92" y2="145" stroke="#9a5a30" strokeWidth="1.2" opacity="0.8" />
+
+          {/* Moss Patch */}
+          <circle cx="76" cy="70" r="5" fill="#65a30d" opacity="0.85" />
+          <circle cx="80" cy="73" r="3.5" fill="#a3e635" opacity="0.8" />
+
+          {/* Realistic Branch Left */}
+          <g transform="translate(18, 38)">
+            <path d="M 40,10 C 25,10 10,16 0,20 C 10,22 25,20 40,24 Z" fill="#451e0b" />
+            <path d="M 12,18 C -4,12 -10,6 -14,0 C -8,12 2,18 10,20 Z" fill="#047857" />
+            <path d="M 14,19 C -2,16 -12,14 -16,10 C -8,18 4,20 12,21 Z" fill="#10b981" />
+            {/* Hanging Pinecone */}
+            <ellipse cx="22" cy="24" rx="4" ry="7" fill="#78350f" stroke="#291104" strokeWidth="0.8" />
           </g>
-          <g transform="translate(98, 95)">
-            <path d="M 0,10 L 32,10 Q 36,5 32,0 L 0,0 Z" fill="#5c2406" />
-            <ellipse cx="26" cy="5" rx="14" ry="8" fill="#15803d" />
+
+          {/* Realistic Branch Right */}
+          <g transform="translate(102, 85) scale(-1, 1)">
+            <path d="M 40,10 C 25,10 10,16 0,20 C 10,22 25,20 40,24 Z" fill="#451e0b" />
+            <path d="M 12,18 C -4,12 -10,6 -14,0 C -8,12 2,18 10,20 Z" fill="#047857" />
+            <path d="M 14,19 C -2,16 -12,14 -16,10 C -8,18 4,20 12,21 Z" fill="#10b981" />
           </g>
-          {/* Lumberjack Axe */}
-          <g transform="translate(45, 125) rotate(-35)">
-            <polygon points="0,-16 14,-10 10,2 0,-3" fill="#94a3b8" stroke="#f8fafc" strokeWidth="1" />
-            <rect x="-2" y="-3" width="4" height="26" fill="#ca8a04" />
+
+          {/* Buttressed Root Base */}
+          <path d="M 46,145 C 32,152 15,158 8,160 L 152,160 C 145,158 128,152 114,145 Z" fill="#381b0c" stroke="#120703" strokeWidth="1.5" />
+          <ellipse cx="60" cy="148" rx="10" ry="3" fill="#65a30d" opacity="0.85" />
+          <ellipse cx="102" cy="148" rx="12" ry="3" fill="#65a30d" opacity="0.85" />
+
+          {/* Steel Lumberjack Double-Bit Axe */}
+          <g transform="translate(42, 120) rotate(-35)">
+            <polygon points="0,-16 16,-10 12,2 0,-3" fill="#cbd5e1" stroke="#f8fafc" strokeWidth="1" />
+            <rect x="-2" y="-3" width="4.5" height="28" fill="#d97706" rx="1" />
           </g>
         </svg>
       </div>
@@ -496,104 +1063,6 @@ export default function LumberjackGame({
       </div>
     );
   }
-
-  // Render an Authentic Majestic Tree Segment
-  const renderTrunkSegment = (seg: TrunkSegment) => {
-    return (
-      <div
-        key={seg.id}
-        className="relative w-28 h-16 bg-gradient-to-r from-amber-950 via-amber-800 to-amber-950 border-y border-amber-950/80 shadow-md shrink-0 flex items-center justify-center"
-      >
-        {/* Deep Redwood Bark Texture Lines */}
-        <div className="w-1.5 h-full bg-amber-950/70 absolute left-4" />
-        <div className="w-2 h-full bg-amber-900/50 absolute left-9" />
-        <div className="w-1.5 h-full bg-amber-700/40 absolute right-8" />
-        <div className="w-2 h-full bg-amber-950/80 absolute right-4" />
-
-        {/* Real Sturdy Branch on Left */}
-        {seg.branch === "left" && (
-          <div className="absolute -left-24 top-2 flex items-center pointer-events-none z-20">
-            {/* Foliage pine cluster */}
-            <div className="w-12 h-10 -mr-3 bg-gradient-to-l from-emerald-900 to-emerald-700 rounded-full border border-emerald-950 shadow-md flex items-center justify-center">
-              <span className="text-xs">🌲</span>
-            </div>
-            {/* Wooden branch limb */}
-            <div className="w-16 h-8 bg-gradient-to-b from-amber-800 via-amber-900 to-amber-950 rounded-l-2xl border-y border-l border-amber-950 shadow-lg" />
-          </div>
-        )}
-
-        {/* Real Sturdy Branch on Right */}
-        {seg.branch === "right" && (
-          <div className="absolute -right-24 top-2 flex items-center pointer-events-none z-20">
-            {/* Wooden branch limb */}
-            <div className="w-16 h-8 bg-gradient-to-b from-amber-800 via-amber-900 to-amber-950 rounded-r-2xl border-y border-r border-amber-950 shadow-lg" />
-            {/* Foliage pine cluster */}
-            <div className="w-12 h-10 -ml-3 bg-gradient-to-r from-emerald-900 to-emerald-700 rounded-full border border-emerald-950 shadow-md flex items-center justify-center">
-              <span className="text-xs">🌲</span>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // Render Handsome Animated Lumberjack Character
-  const renderLumberjack = (
-    side: "left" | "right",
-    isChopping: boolean,
-    isSquashed: boolean,
-    theme: "blue" | "red"
-  ) => {
-    const isBlue = theme === "blue";
-    return (
-      <div
-        className={`absolute bottom-4 z-30 transition-all duration-75 pointer-events-none ${
-          isSquashed
-            ? "scale-y-40 opacity-80"
-            : side === "left"
-            ? "left-6"
-            : "right-6 scale-x-[-1]"
-        }`}
-      >
-        <div className="relative w-20 h-28 flex flex-col items-center">
-          {/* Beanie Knit Cap */}
-          <div
-            className={`w-9 h-5 ${
-              isBlue ? "bg-orange-600" : "bg-red-600"
-            } rounded-t-full border-t border-white/40 shadow-sm`}
-          />
-          {/* Head & Rugged Beard */}
-          <div className="w-8 h-7 bg-amber-200 rounded-b-md flex items-center justify-center relative shadow-xs">
-            <span className="text-sm">{isSquashed ? "😵" : "🧔"}</span>
-          </div>
-          {/* Buffalo Plaid Flannel Shirt */}
-          <div
-            className={`w-12 h-11 ${
-              isBlue ? "bg-blue-700" : "bg-red-700"
-            } border border-black/40 rounded-md relative flex justify-between px-1.5 shadow-md`}
-          >
-            <div className="w-1.5 h-full bg-neutral-950 opacity-60" />
-            <div className="w-1.5 h-full bg-neutral-950 opacity-60" />
-          </div>
-          {/* Denim Jeans & Boots */}
-          <div className="flex gap-1.5 -mt-1">
-            <div className="w-4 h-7 bg-slate-900 rounded-b-md border-b-2 border-amber-900" />
-            <div className="w-4 h-7 bg-slate-900 rounded-b-md border-b-2 border-amber-900" />
-          </div>
-          {/* Steel Double-Bit Axe */}
-          <div
-            className={`absolute -top-1 -right-4 text-2xl transition-transform duration-75 ${
-              isChopping ? "rotate-45 translate-x-2" : "-rotate-15"
-            }`}
-          >
-            🪓
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const isSolo = playMode === "bot";
 
   return (
     <div className="min-h-[90vh] flex flex-col items-center justify-between p-2 select-none touch-none bg-neutral-950 text-white font-sans relative overflow-hidden">
@@ -668,40 +1137,39 @@ export default function LumberjackGame({
 
       {/* Main Timber Arena */}
       <div
-        className={`relative w-full max-w-sm h-[420px] rounded-3xl overflow-hidden shadow-2xl border border-white/15 my-1 flex items-end justify-center pb-2 ${
+        className={`relative w-full max-w-sm h-[430px] rounded-3xl overflow-hidden shadow-2xl border border-white/15 my-1 flex items-end justify-center pb-2 ${
           screenShake > 0 ? "translate-y-1" : ""
         }`}
         style={{
-          background: "linear-gradient(180deg, #0f172a 0%, #14532d 75%, #052e16 100%)",
+          background: "linear-gradient(180deg, #09120e 0%, #0d2818 45%, #143e21 75%, #051a0d 100%)",
         }}
       >
-        {/* Distant Forest Silhouettes & Mist */}
-        <div className="absolute inset-0 opacity-25 pointer-events-none flex items-end">
-          <div className="w-full h-44 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-600 via-transparent to-transparent" />
+        {/* Atmospheric Forest Mist & God Rays */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-35">
+          {/* Volumetric sunbeams */}
+          <div
+            className="absolute -top-10 -left-20 w-[500px] h-[400px]"
+            style={{
+              background: "conic-gradient(from 135deg at 20% 0%, transparent 0deg, rgba(255,255,255,0.12) 15deg, transparent 30deg, rgba(255,255,255,0.08) 45deg, transparent 65deg)",
+            }}
+          />
+          {/* Deep distant pine silhouettes */}
+          <div className="absolute inset-x-0 bottom-12 h-36 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-800/40 via-emerald-950/20 to-transparent" />
         </div>
 
         {/* Tree Trunk Stack (Segment 0 at bottom, 5 above) */}
-        <div className="relative w-28 flex flex-col-reverse items-center z-10">
+        <div className="relative w-32 flex flex-col-reverse items-center z-10">
           {p1Trunk.slice(0, 6).map((seg) => renderTrunkSegment(seg))}
 
-          {/* Majestic Mossy Root Stump */}
-          <div className="w-40 h-10 bg-amber-950 rounded-t-2xl -mb-2 border-t-4 border-emerald-900 shadow-xl" />
+          {/* Majestic Sprawling Buttress Root Base */}
+          {renderRealisticTreeBase()}
         </div>
 
         {/* Lumberjack Character */}
         {renderLumberjack(p1Side, p1Chopping, p1Squashed, "blue")}
 
-        {/* Flying Chopped Logs */}
-        {flyingLogs.map((fl) => (
-          <div
-            key={fl.id}
-            className="absolute w-28 h-16 bg-gradient-to-r from-amber-950 via-amber-800 to-amber-950 rounded-sm border border-amber-950 shadow-lg pointer-events-none z-40"
-            style={{
-              transform: `translate(${fl.x}px, ${fl.y}px) rotate(${fl.rot}rad)`,
-              bottom: "45px",
-            }}
-          />
-        ))}
+        {/* Realistic Flying Chopped Logs */}
+        {flyingLogs.map((fl) => renderRealisticFlyingLog(fl))}
 
         {/* Sawdust Splinters Spray */}
         {sawdust.map((sp) => (
@@ -710,7 +1178,7 @@ export default function LumberjackGame({
             className="absolute rounded-xs pointer-events-none z-50"
             style={{
               left: `calc(50% + ${sp.x}px)`,
-              bottom: `calc(70px + ${sp.y}px)`,
+              bottom: `calc(75px + ${sp.y}px)`,
               width: `${sp.size}px`,
               height: `${sp.size * 1.5}px`,
               backgroundColor: sp.color,
