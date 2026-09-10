@@ -18,7 +18,7 @@ import SpatialVoiceManager from "@/app/components/spaces/SpatialVoiceManager";
 import AvatarStudioModal from "@/app/components/spaces/AvatarStudioModal";
 import HostSettingsModal from "@/app/components/spaces/HostSettingsModal";
 import WhiteboardCanvasModal from "@/app/components/spaces/WhiteboardCanvasModal";
-import ArcadeMiniGameModal from "@/app/components/spaces/ArcadeMiniGameModal";
+import SpaceArcadeModal from "@/app/components/spaces/SpaceArcadeModal";
 import JukeboxModal from "@/app/components/spaces/JukeboxModal";
 import {
   SpaceDoc,
@@ -610,9 +610,14 @@ export default function DynamicSpaceWorldPage() {
         onSave={handleSaveWhiteboard}
       />
 
-      <ArcadeMiniGameModal
+      <SpaceArcadeModal
         isOpen={arcadeModalOpen}
         onClose={() => setArcadeModalOpen(false)}
+        spaceId={space.id}
+        localAvatar={localAvatar}
+        remoteAvatars={remoteAvatars}
+        onUpdateStatus={handleUpdateStatus}
+        onSendSpeech={handleSendSpeech}
       />
 
       <JukeboxModal

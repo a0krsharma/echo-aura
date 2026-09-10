@@ -251,6 +251,9 @@ export default function EchoSpacesWorld({
       if (obj.type === "chair") {
         const nextSitting = !localAvatar.isSitting;
         onSit(nextSitting, nextSitting ? obj.id : undefined);
+        if (nextSitting && (obj.id === "office_arcade_stool_1" || obj.id === "office_arcade_stool_2")) {
+          if (onOpenArcade) onOpenArcade();
+        }
       } else if (obj.type === "arcade" || obj.id === "office_arcade_cabinet") {
         if (onOpenArcade) onOpenArcade();
         else onInteractObject(obj);
@@ -688,13 +691,20 @@ export default function EchoSpacesWorld({
         ctx.save();
         const { x, y, w, h, type, icon } = obj;
         if (type === "chair") {
-          ctx.fillStyle = "#334155";
+          const isArcadeStool = obj.id.includes("arcade_stool");
+          ctx.fillStyle = isArcadeStool ? "#312e81" : "#334155";
           ctx.beginPath();
-          ctx.roundRect(x, y, w, h, 8);
+          ctx.roundRect(x, y, w, h, isArcadeStool ? 16 : 8);
           ctx.fill();
-          ctx.strokeStyle = "#64748b";
+          ctx.strokeStyle = isArcadeStool ? "#818cf8" : "#64748b";
           ctx.lineWidth = 2;
           ctx.stroke();
+          if (isArcadeStool) {
+            ctx.fillStyle = "#818cf8";
+            ctx.beginPath();
+            ctx.arc(x + w / 2, y + h / 2, 4, 0, Math.PI * 2);
+            ctx.fill();
+          }
         } else if (type === "whiteboard") {
           ctx.fillStyle = "#ffffff";
           ctx.fillRect(x, y, w, h);
@@ -1256,10 +1266,29 @@ export default function EchoSpacesWorld({
         ctx.fillStyle = isSelf ? (isGhost ? "#a5b4fc" : "#38bdf8") : "#ffffff";
         ctx.fillText(isSelf ? `YOU (${av.handle})` : av.handle, 0, -44);
 
-        if (av.statusText) {
-          ctx.font = "8px monospace";
-          ctx.fillStyle = "#a1a1aa";
-          ctx.fillText(av.statusText, 0, -54);
+        const status = isSelf ? localAvatar.statusText : av.statusText;
+        if (status) {
+          const isPlayingGame = status.includes("🎮");
+          ctx.font = "bold 8px monospace";
+          ctx.fillStyle = isPlayingGame ? "#38bdf8" : "#a1a1aa";
+          ctx.fillText(status, 0, -54);
+
+          // If avatar is actively playing an arcade game, render floating controller badge!
+          if (isPlayingGame) {
+            ctx.save();
+            const gameBob = Math.sin(performance.now() * 0.008) * 3;
+            ctx.fillStyle = "#0284c7";
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = "#38bdf8";
+            ctx.beginPath();
+            ctx.arc(-14, -40 + gameBob, 8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.font = "10px sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("🎮", -14, -40 + gameBob);
+            ctx.restore();
+          }
         }
 
         // Speech Bubble
