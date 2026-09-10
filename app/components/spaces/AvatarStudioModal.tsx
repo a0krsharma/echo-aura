@@ -9,13 +9,15 @@ import {
   Check,
   X,
   Smile,
-  Shield,
   Ghost,
   Eye,
   Headphones,
   Glasses,
   Shirt,
   Scissors,
+  Crown,
+  Flame,
+  Zap,
 } from "lucide-react";
 
 interface AvatarStudioModalProps {
@@ -32,9 +34,78 @@ export const DEFAULT_AVATAR_CONFIG: AvatarConfig = {
   outfit: "hoodie",
   outfitColor: "#38bdf8",
   accessory: "none",
+  headwear: "none",
+  aura: "none",
+  expression: "smile",
   pet: "drone",
   isGhost: false,
 };
+
+const SKIN_TONES = ["#fef08a", "#fed7aa", "#fbcfe8", "#d4a373", "#a16207", "#451a03"];
+
+const HAIR_STYLES = [
+  { id: "short", label: "Short", icon: "✂️" },
+  { id: "spiky", label: "Spiky", icon: "⚡" },
+  { id: "waves", label: "Waves", icon: "🌊" },
+  { id: "ponytail", label: "Ponytail", icon: "🎀" },
+  { id: "afro", label: "Afro", icon: "☁️" },
+  { id: "beanie", label: "Beanie", icon: "🧶" },
+  { id: "cap", label: "Cap", icon: "🧢" },
+  { id: "bald", label: "Bald", icon: "✨" },
+];
+
+const HAIR_COLORS = ["#1e293b", "#78350f", "#facc15", "#f43f5e", "#0284c7", "#10b981", "#e2e8f0"];
+
+const OUTFITS = [
+  { id: "hoodie", label: "Hoodie", icon: "🧥" },
+  { id: "suit", label: "Suit", icon: "👔" },
+  { id: "bomber", label: "Bomber", icon: "🦺" },
+  { id: "tshirt", label: "Tee", icon: "👕" },
+  { id: "robe", label: "Robe", icon: "🥋" },
+];
+
+const OUTFIT_COLORS = [
+  "#38bdf8", // Cyan
+  "#f43f5e", // Rose
+  "#10b981", // Emerald
+  "#fbbf24", // Amber
+  "#a855f7", // Purple
+  "#0f172a", // Obsidian
+  "#ffffff", // White
+  "#ea580c", // Orange
+];
+
+const ACCESSORIES = [
+  { id: "none", label: "None", icon: "🚫" },
+  { id: "glasses", label: "Glasses", icon: "👓" },
+  { id: "shades", label: "Shades", icon: "🕶️" },
+  { id: "headphones", label: "Studio", icon: "🎧" },
+];
+
+const HEADWEAR = [
+  { id: "none", label: "None", icon: "🚫" },
+  { id: "crown", label: "Crown", icon: "👑" },
+  { id: "beret", label: "Beret", icon: "🎨" },
+  { id: "cowboy", label: "Cowboy", icon: "🤠" },
+  { id: "wizard", label: "Wizard", icon: "🧙" },
+  { id: "cyber_visor", label: "Visor", icon: "🥽" },
+];
+
+const AURAS = [
+  { id: "none", label: "None", icon: "🚫" },
+  { id: "stardust", label: "Stardust", icon: "✨" },
+  { id: "flame", label: "Flame", icon: "🔥" },
+  { id: "electric", label: "Electric", icon: "⚡" },
+  { id: "sakura", label: "Sakura", icon: "🌸" },
+];
+
+const PETS = [
+  { id: "none", label: "None", icon: "🚫" },
+  { id: "dog", label: "Puppy", icon: "🐕" },
+  { id: "cat", label: "Kitten", icon: "🐈" },
+  { id: "drone", label: "Drone", icon: "🛸" },
+  { id: "duck", label: "Duckling", icon: "🦆" },
+];
 
 export default function AvatarStudioModal({
   isOpen,
@@ -43,12 +114,14 @@ export default function AvatarStudioModal({
   onSave,
 }: AvatarStudioModalProps) {
   const [config, setConfig] = useState<AvatarConfig>(currentConfig || DEFAULT_AVATAR_CONFIG);
-  const [activeTab, setActiveTab] = useState<"appearance" | "outfit" | "accessories" | "pet">("appearance");
+  const [activeCategory, setActiveCategory] = useState<
+    "hair" | "outfit" | "headwear" | "accessories" | "pet" | "aura"
+  >("hair");
   const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
     if (currentConfig) {
-      setConfig(currentConfig);
+      setConfig({ ...DEFAULT_AVATAR_CONFIG, ...currentConfig });
     }
   }, [currentConfig]);
 
@@ -64,7 +137,7 @@ export default function AvatarStudioModal({
     const render = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const cX = canvas.width / 2;
-      const cY = canvas.height * 0.58;
+      const cY = canvas.height * 0.56;
 
       ctx.save();
       ctx.translate(cX, cY);
@@ -72,20 +145,52 @@ export default function AvatarStudioModal({
       // Ghost mode transparency
       if (config.isGhost) {
         ctx.globalAlpha = 0.55;
-        // Cyan ghost glow aura
         ctx.shadowColor = "#38bdf8";
         ctx.shadowBlur = 18;
       }
 
-      // 1. Ground Shadow
-      ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
+      // 1. Aura Particle Effects
+      if (config.aura && config.aura !== "none") {
+        const aTime = performance.now() * 0.003;
+        for (let i = 0; i < 8; i++) {
+          const angle = aTime + (i * Math.PI * 2) / 8;
+          const aDist = 28 + Math.sin(aTime * 2 + i) * 6;
+          const aX = Math.cos(angle) * aDist;
+          const aY = Math.sin(angle) * (aDist * 0.6) - 10;
+
+          ctx.save();
+          if (config.aura === "stardust") {
+            ctx.fillStyle = i % 2 === 0 ? "#fef08a" : "#38bdf8";
+            ctx.beginPath();
+            ctx.arc(aX, aY, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+          } else if (config.aura === "flame") {
+            ctx.fillStyle = i % 2 === 0 ? "#f97316" : "#ef4444";
+            ctx.beginPath();
+            ctx.arc(aX, aY, 3, 0, Math.PI * 2);
+            ctx.fill();
+          } else if (config.aura === "electric") {
+            ctx.fillStyle = "#38bdf8";
+            ctx.fillRect(aX - 2, aY - 2, 4, 4);
+          } else if (config.aura === "sakura") {
+            ctx.fillStyle = "#fb7185";
+            ctx.beginPath();
+            ctx.ellipse(aX, aY, 4, 2.5, Math.PI / 4, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+      }
+
+      // 2. Ground Shadow
+      ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
       ctx.beginPath();
       ctx.ellipse(0, 18, 30, 10, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // 2. Trailing Pet
+      // 3. Trailing Pet
       if (config.pet !== "none") {
-        const petX = 38;
+        const petX = 40;
         const petY = 8 + Math.sin(performance.now() * 0.008) * 3;
         ctx.save();
         ctx.font = "24px sans-serif";
@@ -102,136 +207,190 @@ export default function AvatarStudioModal({
         ctx.restore();
       }
 
-      // 3. Legs & Shoes
+      // 4. Legs & Shoes
       ctx.fillStyle = "#1e293b";
       ctx.fillRect(-14, 2, 11, 16);
       ctx.fillRect(3, 2, 11, 16);
-      // Shoes
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(-16, 14, 13, 6);
       ctx.fillRect(3, 14, 13, 6);
 
-      // 4. Torso / Outfit
+      // 5. Torso / Outfit
       ctx.fillStyle = config.outfitColor || "#38bdf8";
       ctx.beginPath();
       ctx.roundRect(-22, -32, 44, 36, 8);
       ctx.fill();
 
-      // Outfit-specific details
+      // Outfit accents
       if (config.outfit === "suit") {
-        // White shirt collar + red tie
         ctx.fillStyle = "#ffffff";
         ctx.beginPath();
         ctx.moveTo(-8, -32);
         ctx.lineTo(8, -32);
         ctx.lineTo(0, -18);
         ctx.fill();
-
-        ctx.fillStyle = "#dc2626"; // Tie
+        ctx.fillStyle = "#dc2626";
         ctx.fillRect(-3, -24, 6, 16);
       } else if (config.outfit === "hoodie") {
-        // White zipper
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(-2, -32, 4, 32);
+      } else if (config.outfit === "bomber") {
+        ctx.fillStyle = "#d97706";
+        ctx.fillRect(-2, -32, 4, 32);
       } else if (config.outfit === "robe") {
-        // Golden sash
         ctx.fillStyle = "#facc15";
         ctx.fillRect(-22, -8, 44, 5);
       }
 
-      // 5. Head & Neck
+      // 6. Hair Back
+      if (config.hairStyle !== "bald") {
+        ctx.fillStyle = config.hairColor || "#1e293b";
+        ctx.beginPath();
+        ctx.arc(0, -44, 20, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 7. Face
       ctx.fillStyle = config.skinTone || "#fed7aa";
       ctx.beginPath();
-      ctx.arc(0, -48, 18, 0, Math.PI * 2);
+      ctx.arc(0, -40, 16, 0, Math.PI * 2);
       ctx.fill();
 
       // Eyes
+      const blink = Math.sin(performance.now() * 0.002) > 0.98;
       ctx.fillStyle = "#0f172a";
-      ctx.fillRect(-6, -48, 4, 4);
-      ctx.fillRect(3, -48, 4, 4);
+      if (!blink) {
+        ctx.fillRect(-6, -42, 3.5, 4);
+        ctx.fillRect(3, -42, 3.5, 4);
+      } else {
+        ctx.fillRect(-6, -40, 4, 2);
+        ctx.fillRect(3, -40, 4, 2);
+      }
 
-      // 6. Hair Styles
+      // Smile mouth
+      ctx.strokeStyle = "#0f172a";
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.arc(0, -34, 4, 0.2, Math.PI - 0.2);
+      ctx.stroke();
+
+      // 8. Hair Style Front
       ctx.fillStyle = config.hairColor || "#1e293b";
-      if (config.hairStyle === "short") {
+      if (config.hairStyle === "spiky") {
         ctx.beginPath();
-        ctx.arc(0, -53, 19, Math.PI, Math.PI * 2);
-        ctx.fill();
-        ctx.fillRect(-19, -54, 38, 8);
-      } else if (config.hairStyle === "spiky") {
-        ctx.beginPath();
-        ctx.moveTo(-18, -48);
-        ctx.lineTo(-12, -70);
-        ctx.lineTo(-4, -58);
-        ctx.lineTo(4, -72);
-        ctx.lineTo(12, -58);
-        ctx.lineTo(18, -48);
+        ctx.moveTo(-16, -48);
+        ctx.lineTo(-8, -62);
+        ctx.lineTo(0, -48);
+        ctx.lineTo(8, -62);
+        ctx.lineTo(16, -48);
         ctx.fill();
       } else if (config.hairStyle === "waves") {
         ctx.beginPath();
-        ctx.arc(0, -52, 20, Math.PI, Math.PI * 2);
+        ctx.arc(-8, -48, 8, 0, Math.PI * 2);
+        ctx.arc(8, -48, 8, 0, Math.PI * 2);
         ctx.fill();
-        // Long waves on sides
-        ctx.fillRect(-21, -52, 8, 28);
-        ctx.fillRect(13, -52, 8, 28);
-      } else if (config.hairStyle === "ponytail") {
-        ctx.beginPath();
-        ctx.arc(0, -52, 19, Math.PI, Math.PI * 2);
-        ctx.fill();
-        // High ponytail plume
-        ctx.fillRect(8, -72, 10, 24);
       } else if (config.hairStyle === "afro") {
         ctx.beginPath();
-        ctx.arc(0, -56, 26, 0, Math.PI * 2);
+        ctx.arc(0, -46, 26, 0, Math.PI * 2);
         ctx.fill();
-      } else if (config.hairStyle === "beanie") {
-        // Knit Beanie cap
-        ctx.fillStyle = "#dc2626";
+        ctx.fillStyle = config.skinTone;
         ctx.beginPath();
-        ctx.arc(0, -54, 20, Math.PI, Math.PI * 2);
+        ctx.arc(0, -40, 16, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillRect(-20, -56, 40, 8);
+        ctx.fillStyle = "#0f172a";
+        ctx.fillRect(-6, -42, 3.5, 4);
+        ctx.fillRect(3, -42, 3.5, 4);
+      } else if (config.hairStyle === "beanie") {
+        ctx.fillStyle = "#e11d48";
+        ctx.beginPath();
+        ctx.roundRect(-18, -60, 36, 22, 6);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(0, -64, 6, 0, Math.PI * 2);
+        ctx.fill();
       } else if (config.hairStyle === "cap") {
-        // Snapback cap with visor
         ctx.fillStyle = "#0284c7";
         ctx.beginPath();
-        ctx.arc(0, -52, 19, Math.PI, Math.PI * 2);
+        ctx.arc(0, -46, 17, Math.PI, Math.PI * 2);
         ctx.fill();
-        ctx.fillRect(4, -54, 16, 5); // Visor
+        ctx.fillRect(-18, -46, 36, 6);
       }
 
-      // 7. Accessories
+      // 9. Headwear
+      if (config.headwear && config.headwear !== "none") {
+        ctx.save();
+        if (config.headwear === "crown") {
+          ctx.fillStyle = "#eab308";
+          ctx.beginPath();
+          ctx.moveTo(-14, -58);
+          ctx.lineTo(-14, -68);
+          ctx.lineTo(-7, -62);
+          ctx.lineTo(0, -72);
+          ctx.lineTo(7, -62);
+          ctx.lineTo(14, -68);
+          ctx.lineTo(14, -58);
+          ctx.closePath();
+          ctx.fill();
+          ctx.fillStyle = "#dc2626";
+          ctx.beginPath();
+          ctx.arc(0, -64, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (config.headwear === "beret") {
+          ctx.fillStyle = "#1e1b4b";
+          ctx.beginPath();
+          ctx.ellipse(2, -58, 20, 8, -Math.PI / 10, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (config.headwear === "cowboy") {
+          ctx.fillStyle = "#78350f";
+          ctx.beginPath();
+          ctx.ellipse(0, -56, 26, 6, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.roundRect(-12, -68, 24, 14, 4);
+          ctx.fill();
+        } else if (config.headwear === "wizard") {
+          ctx.fillStyle = "#4c1d95";
+          ctx.beginPath();
+          ctx.moveTo(-16, -56);
+          ctx.lineTo(0, -82);
+          ctx.lineTo(16, -56);
+          ctx.closePath();
+          ctx.fill();
+        } else if (config.headwear === "cyber_visor") {
+          ctx.fillStyle = "#06b6d4";
+          ctx.fillRect(-14, -44, 28, 7);
+          ctx.strokeStyle = "#38bdf8";
+          ctx.lineWidth = 1;
+          ctx.strokeRect(-14, -44, 28, 7);
+        }
+        ctx.restore();
+      }
+
+      // 10. Accessories
       if (config.accessory === "glasses") {
-        ctx.strokeStyle = "#0f172a";
-        ctx.lineWidth = 2.5;
-        ctx.strokeRect(-9, -51, 8, 7);
-        ctx.strokeRect(2, -51, 8, 7);
+        ctx.strokeStyle = "#000000";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-9, -44, 7, 6);
+        ctx.strokeRect(2, -44, 7, 6);
         ctx.beginPath();
-        ctx.moveTo(-1, -48);
-        ctx.lineTo(2, -48);
+        ctx.moveTo(-2, -41);
+        ctx.lineTo(2, -41);
         ctx.stroke();
       } else if (config.accessory === "shades") {
-        ctx.fillStyle = "#0f172a";
-        ctx.fillRect(-10, -52, 10, 8);
-        ctx.fillRect(1, -52, 10, 8);
-        ctx.strokeStyle = "#e2e8f0";
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(-10, -52, 10, 8);
-        ctx.strokeRect(1, -52, 10, 8);
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(-11, -44, 22, 7);
       } else if (config.accessory === "headphones") {
-        // Headphone headband
-        ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 4;
+        ctx.strokeStyle = "#38bdf8";
+        ctx.lineWidth = 3.5;
         ctx.beginPath();
-        ctx.arc(0, -52, 21, Math.PI, Math.PI * 2);
+        ctx.arc(0, -44, 19, Math.PI, Math.PI * 2);
         ctx.stroke();
-        // Ear cups
-        ctx.fillStyle = "#ef4444";
-        ctx.fillRect(-22, -54, 6, 14);
-        ctx.fillRect(16, -54, 6, 14);
+        ctx.fillStyle = "#0284c7";
+        ctx.fillRect(-21, -48, 6, 14);
+        ctx.fillRect(15, -48, 6, 14);
       }
 
       ctx.restore();
-
       animId = requestAnimationFrame(render);
     };
 
@@ -241,336 +400,356 @@ export default function AvatarStudioModal({
 
   if (!isOpen) return null;
 
-  const skinTones = [
-    { name: "Fair", hex: "#fef08a" },
-    { name: "Warm Peach", hex: "#fed7aa" },
-    { name: "Golden Tan", hex: "#fdba74" },
-    { name: "Rich Bronze", hex: "#d97706" },
-    { name: "Espresso", hex: "#78350f" },
-  ];
-
-  const hairStyles: { id: AvatarConfig["hairStyle"]; name: string }[] = [
-    { id: "short", name: "Short Crop" },
-    { id: "spiky", name: "Spiky Fade" },
-    { id: "waves", name: "Long Waves" },
-    { id: "ponytail", name: "High Ponytail" },
-    { id: "afro", name: "Afro Puff" },
-    { id: "beanie", name: "Red Beanie" },
-    { id: "cap", name: "Snapback Cap" },
-    { id: "bald", name: "Sleek Bald" },
-  ];
-
-  const hairColors = [
-    { name: "Jet Black", hex: "#0f172a" },
-    { name: "Chestnut", hex: "#78350f" },
-    { name: "Blonde", hex: "#fde047" },
-    { name: "Platinum", hex: "#e2e8f0" },
-    { name: "Cyber Cyan", hex: "#38bdf8" },
-    { name: "Crimson", hex: "#ef4444" },
-  ];
-
-  const outfits: { id: AvatarConfig["outfit"]; name: string }[] = [
-    { id: "hoodie", name: "Classic Hoodie" },
-    { id: "suit", name: "Business Suit & Tie" },
-    { id: "bomber", name: "Bomber Jacket" },
-    { id: "tshirt", name: "Casual T-Shirt" },
-    { id: "robe", name: "Scholar Robe" },
-  ];
-
-  const outfitColors = [
-    "#38bdf8", // Cyan
-    "#a855f7", // Purple
-    "#f43f5e", // Rose
-    "#10b981", // Emerald
-    "#f59e0b", // Amber
-    "#0f172a", // Obsidian
-    "#ffffff", // Clean White
-    "#475569", // Slate Gray
-  ];
-
-  const accessories: { id: AvatarConfig["accessory"]; name: string; icon: string }[] = [
-    { id: "none", name: "None", icon: "🚫" },
-    { id: "glasses", name: "Nerd Glasses", icon: "👓" },
-    { id: "shades", name: "Dark Aviators", icon: "🕶️" },
-    { id: "headphones", name: "Studio Headphones", icon: "🎧" },
-  ];
-
-  const pets: { id: AvatarConfig["pet"]; name: string; icon: string }[] = [
-    { id: "none", name: "No Companion", icon: "🚫" },
-    { id: "dog", name: "Golden Puppy", icon: "🐕" },
-    { id: "cat", name: "Calico Kitten", icon: "🐈" },
-    { id: "drone", name: "Hover-Drone", icon: "🛸" },
-    { id: "duck", name: "Rubber Duckling", icon: "🦆" },
-  ];
-
   const handleSave = () => {
-    spacesSfx.playSitPop();
+    spacesSfx.playZoneChime();
     onSave(config);
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 font-mono">
-      <div className="w-full max-w-2xl bg-neutral-950 border-2 border-neutral-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-150">
+      <div className="relative w-full max-w-xl bg-neutral-950 border border-neutral-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 bg-neutral-900 border-b border-neutral-800">
-          <div className="flex items-center gap-2">
-            <Palette className="w-4 h-4 text-cyan-400" />
-            <h2 className="text-sm font-black uppercase text-white tracking-widest">
-              // AVATAR CREATOR STUDIO // GATHER IDENTITY
+        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-800 bg-neutral-900/60">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+              <Palette className="w-4 h-4" />
+            </div>
+            <h2 className="text-sm font-bold text-white font-mono tracking-wider">
+              AVATAR STUDIO
             </h2>
           </div>
           <button
-            type="button"
             onClick={onClose}
-            className="p-1 rounded-lg text-neutral-400 hover:text-white cursor-pointer"
+            className="p-1.5 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Content Body */}
-        <div className="flex-1 grid grid-cols-1 sm:grid-cols-12 overflow-y-auto">
-          {/* Left Preview Pane */}
-          <div className="sm:col-span-5 bg-black/60 p-4 border-b sm:border-b-0 sm:border-r border-neutral-800 flex flex-col items-center justify-center">
-            <canvas
-              ref={previewCanvasRef}
-              width={180}
-              height={190}
-              className="rounded-xl border border-neutral-800/80 bg-neutral-900/50 shadow-inner"
-            />
+        {/* Live Preview Canvas Bar */}
+        <div className="relative h-44 bg-gradient-to-b from-neutral-900/70 to-neutral-950 flex items-center justify-center border-b border-neutral-800 overflow-hidden">
+          <canvas ref={previewCanvasRef} width={280} height={176} className="touch-none" />
 
-            {/* Ghost Mode Toggle */}
-            <div className="w-full mt-4 p-2.5 rounded-xl border border-neutral-800 bg-neutral-900/90 flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <Ghost className={`w-4 h-4 ${config.isGhost ? "text-cyan-400 animate-pulse" : "text-neutral-500"}`} />
-                <span className="text-xs font-bold text-white">GHOST MODE (G)</span>
-              </div>
+          {/* Quick Ghost Mode Toggle in Preview */}
+          <button
+            onClick={() => {
+              setConfig((prev) => ({ ...prev, isGhost: !prev.isGhost }));
+              spacesSfx.playKeyNote(4);
+            }}
+            className={`absolute bottom-3 right-4 px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+              config.isGhost
+                ? "border-indigo-400 bg-indigo-950/80 text-indigo-300 shadow-md"
+                : "border-neutral-800 bg-neutral-900/80 text-neutral-400 hover:text-white"
+            }`}
+          >
+            <Ghost className="w-3.5 h-3.5" />
+            <span>{config.isGhost ? "GHOST ON" : "GHOST MODE"}</span>
+          </button>
+        </div>
+
+        {/* Icon-Driven Category Navigation Tabs */}
+        <div className="flex items-center justify-around px-4 py-2.5 border-b border-neutral-800 bg-neutral-900/40 text-xs font-mono">
+          {[
+            { id: "hair", icon: "💇", label: "Hair" },
+            { id: "outfit", icon: "👕", label: "Outfit" },
+            { id: "headwear", icon: "👑", label: "Hats" },
+            { id: "accessories", icon: "👓", label: "Eyewear" },
+            { id: "pet", icon: "🐾", label: "Pets" },
+            { id: "aura", icon: "✨", label: "Auras" },
+          ].map((cat) => {
+            const isSelected = activeCategory === cat.id;
+            return (
               <button
-                type="button"
-                onClick={() => setConfig((p) => ({ ...p, isGhost: !p.isGhost }))}
-                className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer ${
-                  config.isGhost
-                    ? "bg-cyan-500 text-black shadow-sm font-black"
-                    : "bg-neutral-800 text-neutral-400 hover:text-white"
+                key={cat.id}
+                onClick={() => {
+                  setActiveCategory(cat.id as any);
+                  spacesSfx.playKeyNote(1);
+                }}
+                className={`px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-all cursor-pointer ${
+                  isSelected
+                    ? "bg-cyan-500 text-black font-bold shadow-md"
+                    : "text-neutral-400 hover:text-white hover:bg-neutral-800"
                 }`}
               >
-                {config.isGhost ? "ON" : "OFF"}
+                <span className="text-sm">{cat.icon}</span>
+                <span className="hidden sm:inline text-[11px]">{cat.label}</span>
               </button>
-            </div>
-            <p className="text-[9px] text-neutral-500 mt-1 text-center">
-              Pass freely through crowds and walls
-            </p>
-          </div>
+            );
+          })}
+        </div>
 
-          {/* Right Customization Controls */}
-          <div className="sm:col-span-7 p-4 space-y-4">
-            {/* Tabs */}
-            <div className="flex items-center gap-1 border-b border-neutral-800 pb-2">
-              {[
-                { id: "appearance", label: "HAIR & SKIN" },
-                { id: "outfit", label: "OUTFIT" },
-                { id: "accessories", label: "ITEMS" },
-                { id: "pet", label: "PET" },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer ${
-                    activeTab === tab.id
-                      ? "bg-white text-black font-black"
-                      : "text-neutral-400 hover:text-white"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Tab 1: Hair & Skin */}
-            {activeTab === "appearance" && (
-              <div className="space-y-3">
-                <div>
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-1.5">
-                    SKIN COMPLEXION
-                  </label>
-                  <div className="flex items-center gap-2">
-                    {skinTones.map((s) => (
-                      <button
-                        key={s.hex}
-                        type="button"
-                        onClick={() => setConfig((p) => ({ ...p, skinTone: s.hex }))}
-                        className={`w-8 h-8 rounded-full border-2 transition-all cursor-pointer ${
-                          config.skinTone === s.hex ? "border-white scale-110 shadow-md" : "border-transparent"
-                        }`}
-                        style={{ backgroundColor: s.hex }}
-                        title={s.name}
-                      />
-                    ))}
-                  </div>
+        {/* Content Pane */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-5">
+          {/* TAB: HAIR & SKIN */}
+          {activeCategory === "hair" && (
+            <div className="space-y-4">
+              {/* Skin Tones Swatches */}
+              <div className="space-y-2">
+                <span className="text-[11px] font-mono text-neutral-400 uppercase tracking-wider block">
+                  Skin Tone
+                </span>
+                <div className="flex items-center gap-2">
+                  {SKIN_TONES.map((tone) => (
+                    <button
+                      key={tone}
+                      onClick={() => setConfig({ ...config, skinTone: tone })}
+                      className={`w-9 h-9 rounded-xl transition-all cursor-pointer ${
+                        config.skinTone === tone
+                          ? "ring-2 ring-cyan-400 scale-110 shadow-lg"
+                          : "hover:scale-105"
+                      }`}
+                      style={{ backgroundColor: tone }}
+                    />
+                  ))}
                 </div>
+              </div>
 
-                <div>
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-1.5">
-                    HAIR STYLE
-                  </label>
-                  <div className="grid grid-cols-2 gap-1.5 max-h-36 overflow-y-auto">
-                    {hairStyles.map((h) => (
+              {/* Hairstyle Grid */}
+              <div className="space-y-2">
+                <span className="text-[11px] font-mono text-neutral-400 uppercase tracking-wider block">
+                  Hairstyle
+                </span>
+                <div className="grid grid-cols-4 gap-2">
+                  {HAIR_STYLES.map((h) => {
+                    const isSelected = config.hairStyle === h.id;
+                    return (
                       <button
                         key={h.id}
-                        type="button"
-                        onClick={() => setConfig((p) => ({ ...p, hairStyle: h.id }))}
-                        className={`p-2 rounded-xl border text-xs text-left transition-all cursor-pointer font-bold ${
-                          config.hairStyle === h.id
-                            ? "border-cyan-400 bg-cyan-500/20 text-white"
-                            : "border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white"
+                        onClick={() => {
+                          setConfig({ ...config, hairStyle: h.id as any });
+                          spacesSfx.playKeyNote(2);
+                        }}
+                        className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1 ${
+                          isSelected
+                            ? "border-cyan-400 bg-cyan-950/40 text-white font-bold"
+                            : "border-neutral-800 bg-neutral-900/60 text-neutral-400 hover:text-white"
                         }`}
                       >
-                        {h.name}
+                        <span className="text-lg">{h.icon}</span>
+                        <span className="text-[10px] font-mono">{h.label}</span>
                       </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-1.5">
-                    HAIR COLOR
-                  </label>
-                  <div className="flex items-center gap-2">
-                    {hairColors.map((hc) => (
-                      <button
-                        key={hc.hex}
-                        type="button"
-                        onClick={() => setConfig((p) => ({ ...p, hairColor: hc.hex }))}
-                        className={`w-7 h-7 rounded-full border-2 transition-all cursor-pointer ${
-                          config.hairColor === hc.hex ? "border-white scale-110 shadow-md" : "border-transparent"
-                        }`}
-                        style={{ backgroundColor: hc.hex }}
-                        title={hc.name}
-                      />
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
               </div>
-            )}
 
-            {/* Tab 2: Outfit */}
-            {activeTab === "outfit" && (
-              <div className="space-y-3">
-                <div>
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-1.5">
-                    APPAREL TYPE
-                  </label>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {outfits.map((o) => (
+              {/* Hair Colors Swatches */}
+              <div className="space-y-2">
+                <span className="text-[11px] font-mono text-neutral-400 uppercase tracking-wider block">
+                  Hair Color
+                </span>
+                <div className="flex items-center gap-2">
+                  {HAIR_COLORS.map((col) => (
+                    <button
+                      key={col}
+                      onClick={() => setConfig({ ...config, hairColor: col })}
+                      className={`w-8 h-8 rounded-xl transition-all cursor-pointer ${
+                        config.hairColor === col
+                          ? "ring-2 ring-cyan-400 scale-110 shadow-lg"
+                          : "hover:scale-105"
+                      }`}
+                      style={{ backgroundColor: col }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: OUTFIT */}
+          {activeCategory === "outfit" && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <span className="text-[11px] font-mono text-neutral-400 uppercase tracking-wider block">
+                  Apparel Cut
+                </span>
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                  {OUTFITS.map((o) => {
+                    const isSelected = config.outfit === o.id;
+                    return (
                       <button
                         key={o.id}
-                        type="button"
-                        onClick={() => setConfig((p) => ({ ...p, outfit: o.id }))}
-                        className={`p-2.5 rounded-xl border text-xs text-left transition-all cursor-pointer font-bold ${
-                          config.outfit === o.id
-                            ? "border-cyan-400 bg-cyan-500/20 text-white"
-                            : "border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white"
+                        onClick={() => {
+                          setConfig({ ...config, outfit: o.id as any });
+                          spacesSfx.playKeyNote(3);
+                        }}
+                        className={`p-3 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 ${
+                          isSelected
+                            ? "border-cyan-400 bg-cyan-950/40 text-white font-bold"
+                            : "border-neutral-800 bg-neutral-900/60 text-neutral-400 hover:text-white"
                         }`}
                       >
-                        {o.name}
+                        <span className="text-xl">{o.icon}</span>
+                        <span className="text-[10px] font-mono">{o.label}</span>
                       </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-1.5">
-                    OUTFIT COLOR PALETTE
-                  </label>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {outfitColors.map((col) => (
-                      <button
-                        key={col}
-                        type="button"
-                        onClick={() => setConfig((p) => ({ ...p, outfitColor: col }))}
-                        className={`w-8 h-8 rounded-xl border-2 transition-all cursor-pointer ${
-                          config.outfitColor === col ? "border-white scale-110 shadow-md" : "border-neutral-800"
-                        }`}
-                        style={{ backgroundColor: col }}
-                      />
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
               </div>
-            )}
 
-            {/* Tab 3: Accessories */}
-            {activeTab === "accessories" && (
-              <div className="space-y-3">
-                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-1.5">
-                  FACIAL & HEAD ACCESSORIES
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {accessories.map((acc) => (
+              {/* Outfit Color Swatches */}
+              <div className="space-y-2">
+                <span className="text-[11px] font-mono text-neutral-400 uppercase tracking-wider block">
+                  Colorway
+                </span>
+                <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+                  {OUTFIT_COLORS.map((col) => (
+                    <button
+                      key={col}
+                      onClick={() => setConfig({ ...config, outfitColor: col })}
+                      className={`h-9 rounded-xl transition-all cursor-pointer border border-neutral-700 ${
+                        config.outfitColor === col
+                          ? "ring-2 ring-cyan-400 scale-110 shadow-lg"
+                          : "hover:scale-105"
+                      }`}
+                      style={{ backgroundColor: col }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: HEADWEAR */}
+          {activeCategory === "headwear" && (
+            <div className="space-y-2">
+              <span className="text-[11px] font-mono text-neutral-400 uppercase tracking-wider block">
+                Select Headwear
+              </span>
+              <div className="grid grid-cols-3 gap-2.5">
+                {HEADWEAR.map((hw) => {
+                  const isSelected = (config.headwear || "none") === hw.id;
+                  return (
+                    <button
+                      key={hw.id}
+                      onClick={() => {
+                        setConfig({ ...config, headwear: hw.id as any });
+                        spacesSfx.playKeyNote(2);
+                      }}
+                      className={`p-3 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 ${
+                        isSelected
+                          ? "border-cyan-400 bg-cyan-950/40 text-white font-bold"
+                          : "border-neutral-800 bg-neutral-900/60 text-neutral-400 hover:text-white"
+                      }`}
+                    >
+                      <span className="text-2xl">{hw.icon}</span>
+                      <span className="text-xs font-mono">{hw.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* TAB: ACCESSORIES */}
+          {activeCategory === "accessories" && (
+            <div className="space-y-2">
+              <span className="text-[11px] font-mono text-neutral-400 uppercase tracking-wider block">
+                Select Eyewear / Audio
+              </span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                {ACCESSORIES.map((acc) => {
+                  const isSelected = config.accessory === acc.id;
+                  return (
                     <button
                       key={acc.id}
-                      type="button"
-                      onClick={() => setConfig((p) => ({ ...p, accessory: acc.id }))}
-                      className={`p-3 rounded-xl border text-xs flex items-center gap-2 transition-all cursor-pointer font-bold ${
-                        config.accessory === acc.id
-                          ? "border-cyan-400 bg-cyan-500/20 text-white"
-                          : "border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white"
+                      onClick={() => {
+                        setConfig({ ...config, accessory: acc.id as any });
+                        spacesSfx.playKeyNote(2);
+                      }}
+                      className={`p-3 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 ${
+                        isSelected
+                          ? "border-cyan-400 bg-cyan-950/40 text-white font-bold"
+                          : "border-neutral-800 bg-neutral-900/60 text-neutral-400 hover:text-white"
                       }`}
                     >
-                      <span className="text-base">{acc.icon}</span>
-                      <span>{acc.name}</span>
+                      <span className="text-2xl">{acc.icon}</span>
+                      <span className="text-xs font-mono">{acc.label}</span>
                     </button>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
-            )}
+            </div>
+          )}
 
-            {/* Tab 4: Companion Pet */}
-            {activeTab === "pet" && (
-              <div className="space-y-3">
-                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-1.5">
-                  CHOOSE A COMPANION PET (FOLLOWS AVATAR)
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {pets.map((pt) => (
+          {/* TAB: PETS */}
+          {activeCategory === "pet" && (
+            <div className="space-y-2">
+              <span className="text-[11px] font-mono text-neutral-400 uppercase tracking-wider block">
+                Choose Companion Pet
+              </span>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                {PETS.map((p) => {
+                  const isSelected = config.pet === p.id;
+                  return (
                     <button
-                      key={pt.id}
-                      type="button"
-                      onClick={() => setConfig((p) => ({ ...p, pet: pt.id }))}
-                      className={`p-3 rounded-xl border text-xs flex items-center gap-2 transition-all cursor-pointer font-bold ${
-                        config.pet === pt.id
-                          ? "border-cyan-400 bg-cyan-500/20 text-white"
-                          : "border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white"
+                      key={p.id}
+                      onClick={() => {
+                        setConfig({ ...config, pet: p.id as any });
+                        spacesSfx.playKeyNote(3);
+                      }}
+                      className={`p-3 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 ${
+                        isSelected
+                          ? "border-cyan-400 bg-cyan-950/40 text-white font-bold"
+                          : "border-neutral-800 bg-neutral-900/60 text-neutral-400 hover:text-white"
                       }`}
                     >
-                      <span className="text-xl">{pt.icon}</span>
-                      <span>{pt.name}</span>
+                      <span className="text-2xl">{p.icon}</span>
+                      <span className="text-xs font-mono">{p.label}</span>
                     </button>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
-            )}
-          </div>
+            </div>
+          )}
+
+          {/* TAB: AURAS */}
+          {activeCategory === "aura" && (
+            <div className="space-y-2">
+              <span className="text-[11px] font-mono text-neutral-400 uppercase tracking-wider block">
+                Ambient Particle Aura
+              </span>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                {AURAS.map((au) => {
+                  const isSelected = (config.aura || "none") === au.id;
+                  return (
+                    <button
+                      key={au.id}
+                      onClick={() => {
+                        setConfig({ ...config, aura: au.id as any });
+                        spacesSfx.playKeyNote(4);
+                      }}
+                      className={`p-3 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 ${
+                        isSelected
+                          ? "border-cyan-400 bg-cyan-950/40 text-white font-bold"
+                          : "border-neutral-800 bg-neutral-900/60 text-neutral-400 hover:text-white"
+                      }`}
+                    >
+                      <span className="text-2xl">{au.icon}</span>
+                      <span className="text-xs font-mono">{au.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-5 py-3 bg-neutral-900 border-t border-neutral-800">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-neutral-800 bg-neutral-900/80">
           <button
-            type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-bold text-neutral-400 hover:text-white uppercase transition-colors cursor-pointer"
+            className="px-4 py-2 rounded-xl text-xs font-mono text-neutral-400 hover:text-white transition-colors cursor-pointer"
           >
             CANCEL
           </button>
           <button
-            type="button"
             onClick={handleSave}
-            className="px-5 py-2 rounded-xl bg-white text-black font-black text-xs uppercase hover:bg-neutral-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95"
+            className="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-mono font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer shadow-lg shadow-cyan-500/20"
           >
-            <Check className="w-3.5 h-3.5" />
-            <span>SAVE AVATAR</span>
+            <Check className="w-4 h-4" />
+            <span>EQUIP AVATAR</span>
           </button>
         </div>
       </div>

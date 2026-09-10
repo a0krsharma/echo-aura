@@ -93,9 +93,70 @@ export interface AvatarConfig {
   outfit: "hoodie" | "suit" | "bomber" | "tshirt" | "robe";
   outfitColor: string; // Hex color
   accessory: "none" | "glasses" | "headphones" | "shades";
+  headwear?: "none" | "crown" | "beret" | "cowboy" | "wizard" | "cyber_visor";
+  aura?: "none" | "stardust" | "flame" | "electric" | "sakura";
+  expression?: "smile" | "cool" | "wink" | "neutral";
   pet: "none" | "dog" | "cat" | "drone" | "duck";
   isGhost: boolean;
 }
+
+export interface CustomDecoration {
+  id: string;
+  catalogId: string;
+  name: string;
+  category: "seating" | "plants" | "tech" | "amenities" | "lighting";
+  icon: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  placedBy: string;
+  placedAt: number;
+  color?: string;
+  canSit?: boolean;
+}
+
+export interface DecorationItemDef {
+  id: string;
+  name: string;
+  category: "seating" | "plants" | "tech" | "amenities" | "lighting";
+  icon: string;
+  w: number;
+  h: number;
+  color?: string;
+  canSit?: boolean;
+}
+
+export const DECORATION_CATALOG: DecorationItemDef[] = [
+  // 🪑 Seating
+  { id: "chair_mesh", name: "Ergo Mesh Chair", category: "seating", icon: "🪑", w: 36, h: 36, canSit: true },
+  { id: "sofa_velvet", name: "Velvet Loveseat", category: "seating", icon: "🛋️", w: 56, h: 38, canSit: true },
+  { id: "bean_bag", name: "Cozy Beanbag", category: "seating", icon: "🟣", w: 38, h: 38, canSit: true },
+  { id: "park_bench", name: "Park Wood Bench", category: "seating", icon: "🪵", w: 60, h: 32, canSit: true },
+
+  // 🪴 Plants
+  { id: "plant_monstera", name: "Monstera Deliciosa", category: "plants", icon: "🪴", w: 36, h: 40 },
+  { id: "plant_bonsai", name: "Sakura Bonsai", category: "plants", icon: "🌸", w: 32, h: 34 },
+  { id: "plant_palm", name: "Golden Palm", category: "plants", icon: "🌴", w: 40, h: 48 },
+  { id: "plant_fig", name: "Fiddle-Leaf Fig", category: "plants", icon: "🌳", w: 38, h: 46 },
+
+  // 💻 Tech & Desks
+  { id: "tech_dual_monitor", name: "Dual Battlestation", category: "tech", icon: "🖥️", w: 54, h: 38 },
+  { id: "tech_holoprojector", name: "Holo Projector", category: "tech", icon: "🛸", w: 36, h: 36 },
+  { id: "tech_server_rack", name: "Server Rack", category: "tech", icon: "🗄️", w: 38, h: 46 },
+  { id: "tech_standing_desk", name: "Standing Laptop Desk", category: "tech", icon: "💻", w: 48, h: 36 },
+
+  // ☕ Amenities & Fun
+  { id: "amenity_coffee", name: "Espresso Barista", category: "amenities", icon: "☕", w: 38, h: 36 },
+  { id: "amenity_arcade", name: "Retro Arcade Cab", category: "amenities", icon: "🕹️", w: 36, h: 44 },
+  { id: "amenity_firepit", name: "Campfire Firepit", category: "amenities", icon: "🔥", w: 44, h: 44 },
+  { id: "amenity_vinyl", name: "Vinyl Turntable", category: "amenities", icon: "📻", w: 36, h: 36 },
+
+  // 💡 Lighting
+  { id: "light_streetlamp", name: "Ornate Streetlamp", category: "lighting", icon: "🏮", w: 30, h: 48 },
+  { id: "light_neon_tube", name: "Cyan Neon Strip", category: "lighting", icon: "💡", w: 36, h: 22 },
+  { id: "light_lava_lamp", name: "Lava Lamp", category: "lighting", icon: "🧪", w: 26, h: 36 },
+];
 
 export interface SpatialAvatar {
   uid: string;
@@ -138,6 +199,7 @@ export interface SpaceDoc {
   whiteboardNotes?: string;
   whiteboardDrawings?: string; // Serialized drawing JSON
   announcement?: { text: string; expiresAt: number } | null;
+  decorations?: CustomDecoration[];
 }
 
 // ── WORLD MAP DIMENSIONS ──

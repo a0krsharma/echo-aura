@@ -12,6 +12,9 @@ import {
   PrivateRug,
   SPACE_DOORWAYS,
   SpaceDoorway,
+  CustomDecoration,
+  DecorationItemDef,
+  DECORATION_CATALOG,
   WORLD_WIDTH,
   WORLD_HEIGHT,
   getZoneAtCoordinates,
@@ -30,13 +33,20 @@ import {
   Maximize2,
   Minimize2,
   Compass,
-  MapPin,
+  Palette,
+  Wrench,
+  Trash2,
+  Smile,
+  X,
+  Check,
+  Plus,
 } from "lucide-react";
 
 interface EchoSpacesWorldProps {
   localAvatar: SpatialAvatar;
   remoteAvatars: SpatialAvatar[];
   vibe?: SpaceVibe;
+  decorations?: CustomDecoration[];
   onMove: (x: number, y: number, dir: "down" | "up" | "left" | "right", isMoving: boolean) => void;
   onSit: (isSitting: boolean, objectId?: string) => void;
   onSendSpeech: (text: string) => void;
@@ -46,12 +56,17 @@ interface EchoSpacesWorldProps {
   onInteractObject: (obj: InteractiveObject) => void;
   onToggleGhost?: () => void;
   onTeleport?: (x: number, y: number) => void;
+  onOpenAvatarStudio?: () => void;
+  onUpdateDecorations?: (decorations: CustomDecoration[]) => void;
 }
+
+const EMOTE_REACTIONS = ["💖", "🔥", "🎉", "👏", "💡", "☕", "🚀", "👋"];
 
 export default function EchoSpacesWorld({
   localAvatar,
   remoteAvatars,
   vibe = "MIDNIGHT_NEON",
+  decorations: externalDecorations = [],
   onMove,
   onSit,
   onSendSpeech,
@@ -61,12 +76,14 @@ export default function EchoSpacesWorld({
   onInteractObject,
   onToggleGhost,
   onTeleport,
+  onOpenAvatarStudio,
+  onUpdateDecorations,
 }: EchoSpacesWorldProps) {
   const { user } = useAuth();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // Viewport dimensions
+  // Viewport dimensions & fullscreen
   const [viewportDim, setViewportDim] = useState({ w: 1024, h: 680 });
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -82,21 +99,39 @@ export default function EchoSpacesWorld({
   const [nearbyPrompt, setNearbyPrompt] = useState<string | null>(null);
   const [activeRugPrompt, setActiveRugPrompt] = useState<string | null>(null);
 
-  // Chat message input
+  // Chat message input & Emote Picker
   const [chatInput, setChatInput] = useState("");
   const [activeSpeech, setActiveSpeech] = useState<string | null>(null);
+  const [emotePickerOpen, setEmotePickerOpen] = useState(false);
+
+  // Floating Physics Emotes Queue
+  const floatingEmotesRef = useRef<
+    Array<{ id: string; x: number; y: number; text: string; vy: number; alpha: number }>
+  >([]);
+
+  // ── SPACE DECORATION / BUILD MODE STATE ──
+  const [isDecorateMode, setIsDecorateMode] = useState(false);
+  const [selectedDeco, setSelectedDeco] = useState<DecorationItemDef | null>(null);
+  const [isEraserMode, setIsEraserMode] = useState(false);
+  const [activeDecoCategory, setActiveDecoCategory] = useState<string>("seating");
+  const [localDecorations, setLocalDecorations] = useState<CustomDecoration[]>(externalDecorations);
+  const mouseWorldPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  useEffect(() => {
+    if (externalDecorations) {
+      setLocalDecorations(externalDecorations);
+    }
+  }, [externalDecorations]);
 
   // Touch virtual joystick state
   const touchStartPos = useRef<{ x: number; y: number } | null>(null);
   const joystickVector = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isJoystickActive, setIsJoystickActive] = useState(false);
 
-  // Particles: rain, sakura, fireflies, fountain water spray
+  // Particles: rain, sakura, ambient motes, fountain water spray
   const particlesRef = useRef<
     Array<{ x: number; y: number; speed: number; size: number; alpha: number; angle?: number }>
   >([]);
-
-  // Water spray particles for courtyard fountain
   const waterSprayRef = useRef<
     Array<{ x: number; y: number; vx: number; vy: number; life: number; maxLife: number }>
   >([]);
@@ -132,7 +167,6 @@ export default function EchoSpacesWorld({
     }
     particlesRef.current = pts;
 
-    // Fountain spray
     const sprays: Array<{ x: number; y: number; vx: number; vy: number; life: number; maxLife: number }> = [];
     for (let i = 0; i < 30; i++) {
       sprays.push({
@@ -157,12 +191,10 @@ export default function EchoSpacesWorld({
       const key = e.key.toLowerCase();
       keysPressed.current[key] = true;
 
-      // Cancel click-to-move when user uses keys
       if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(key)) {
         clickTargetRef.current = null;
       }
 
-      // Interaction key [E]
       if (key === "e") {
         e.preventDefault();
         if (nearbyObjectRef.current) {
@@ -170,7 +202,6 @@ export default function EchoSpacesWorld({
         }
       }
 
-      // Ghost Mode toggle [G]
       if (key === "g") {
         e.preventDefault();
         onToggleGhost?.();
@@ -214,7 +245,35 @@ export default function EchoSpacesWorld({
     setTimeout(() => setActiveSpeech(null), 5500);
   };
 
-  // 3. Click-to-Move Handler on Canvas
+  // Trigger floating reaction emote
+  const triggerEmote = (emote: string) => {
+    spacesSfx.playEmotePop();
+    onSendEmote(emote);
+    floatingEmotesRef.current.push({
+      id: Math.random().toString(),
+      x: localAvatar.x,
+      y: localAvatar.y - 30,
+      text: emote,
+      vy: -2.2,
+      alpha: 1,
+    });
+    setEmotePickerOpen(false);
+  };
+
+  // 3. Canvas Mouse Move (Tracks world pos for decoration ghost preview)
+  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const camX = Math.max(0, Math.min(WORLD_WIDTH - viewportDim.w, cameraRef.current.x));
+    const camY = Math.max(0, Math.min(WORLD_HEIGHT - viewportDim.h, cameraRef.current.y));
+    mouseWorldPosRef.current = {
+      x: e.clientX - rect.left + camX,
+      y: e.clientY - rect.top + camY,
+    };
+  };
+
+  // 4. Click-to-Move or Place/Remove Decoration Handler
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -222,13 +281,59 @@ export default function EchoSpacesWorld({
     const clickScreenX = e.clientX - rect.left;
     const clickScreenY = e.clientY - rect.top;
 
-    // Convert screen coordinates to world coordinates using camera offset
     const camX = Math.max(0, Math.min(WORLD_WIDTH - viewportDim.w, cameraRef.current.x));
     const camY = Math.max(0, Math.min(WORLD_HEIGHT - viewportDim.h, cameraRef.current.y));
     const worldClickX = Math.max(40, Math.min(WORLD_WIDTH - 40, clickScreenX + camX));
     const worldClickY = Math.max(40, Math.min(WORLD_HEIGHT - 40, clickScreenY + camY));
 
-    // Check if clicked directly on an interactive doorway
+    // If in Decoration Build Mode:
+    if (isDecorateMode) {
+      if (isEraserMode) {
+        // Remove decoration nearest to click
+        const toRemove = localDecorations.find((d) => {
+          return (
+            worldClickX >= d.x - 10 &&
+            worldClickX <= d.x + d.w + 10 &&
+            worldClickY >= d.y - 10 &&
+            worldClickY <= d.y + d.h + 10
+          );
+        });
+        if (toRemove) {
+          spacesSfx.playRemoveSound();
+          const next = localDecorations.filter((d) => d.id !== toRemove.id);
+          setLocalDecorations(next);
+          onUpdateDecorations?.(next);
+        }
+        return;
+      }
+
+      if (selectedDeco) {
+        // Place new decoration
+        spacesSfx.playPlaceSound();
+        const newDeco: CustomDecoration = {
+          id: `deco_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+          catalogId: selectedDeco.id,
+          name: selectedDeco.name,
+          category: selectedDeco.category,
+          icon: selectedDeco.icon,
+          x: Math.round(worldClickX - selectedDeco.w / 2),
+          y: Math.round(worldClickY - selectedDeco.h / 2),
+          w: selectedDeco.w,
+          h: selectedDeco.h,
+          placedBy: user?.handle || "@EXPLORER",
+          placedAt: Date.now(),
+          color: selectedDeco.color,
+          canSit: selectedDeco.canSit,
+        };
+        const next = [...localDecorations, newDeco];
+        setLocalDecorations(next);
+        onUpdateDecorations?.(next);
+        return;
+      }
+    }
+
+    // Normal Click-to-Walk:
+    // Check if clicked directly on a doorway
     for (const d of SPACE_DOORWAYS) {
       if (
         worldClickX >= d.x - 20 &&
@@ -246,7 +351,7 @@ export default function EchoSpacesWorld({
     spacesSfx.playFootstep();
   };
 
-  // 4. 60 FPS Graphics-Intensive World Engine Loop
+  // 5. 60 FPS Render Engine Loop
   useEffect(() => {
     let animId: number;
     const canvas = canvasRef.current;
@@ -267,24 +372,21 @@ export default function EchoSpacesWorld({
       const canvasW = viewportDim.w;
       const canvasH = viewportDim.h;
 
-      // ── Player Movement Calculation ──
+      // ── Movement calculation ──
       let dx = 0;
       let dy = 0;
 
       if (!localAvatar.isSitting) {
-        // Keyboard inputs
         if (keysPressed.current["w"] || keysPressed.current["arrowup"]) dy -= 1;
         if (keysPressed.current["s"] || keysPressed.current["arrowdown"]) dy += 1;
         if (keysPressed.current["a"] || keysPressed.current["arrowleft"]) dx -= 1;
         if (keysPressed.current["d"] || keysPressed.current["arrowright"]) dx += 1;
 
-        // Virtual joystick input
         if (isJoystickActive) {
           dx += joystickVector.current.x;
           dy += joystickVector.current.y;
         }
 
-        // Click-to-Move pathfinding glide
         if (clickTargetRef.current && dx === 0 && dy === 0) {
           const targetDist = Math.hypot(clickTargetRef.current.x - posX, clickTargetRef.current.y - posY);
           if (targetDist > 6) {
@@ -308,7 +410,6 @@ export default function EchoSpacesWorld({
           posX = Math.max(30, Math.min(WORLD_WIDTH - 30, nextX));
           posY = Math.max(30, Math.min(WORLD_HEIGHT - 30, nextY));
         } else {
-          // Smooth sliding collision with 10px radius
           if (!checkCollision(nextX, posY, 10)) posX = nextX;
           if (!checkCollision(posX, nextY, 10)) posY = nextY;
         }
@@ -319,7 +420,6 @@ export default function EchoSpacesWorld({
           currentDir = dy > 0 ? "down" : "up";
         }
 
-        // Zone transition check
         const newZone = getZoneAtCoordinates(posX, posY);
         if (newZone !== currentZone) {
           currentZone = newZone;
@@ -327,7 +427,6 @@ export default function EchoSpacesWorld({
           spacesSfx.playZoneChime();
         }
 
-        // Private Rug check
         const activeRug = getPrivateRugAtCoordinates(posX, posY);
         const nextRugId = activeRug ? activeRug.id : null;
         if (nextRugId !== currentRugId) {
@@ -335,7 +434,7 @@ export default function EchoSpacesWorld({
           onRugChange?.(nextRugId);
           if (activeRug) {
             spacesSfx.playSitPop();
-            setActiveRugPrompt(`🔒 Joined ${activeRug.name} (Isolated Private Audio)`);
+            setActiveRugPrompt(`🔒 Joined ${activeRug.name}`);
           } else {
             setActiveRugPrompt(null);
           }
@@ -346,12 +445,11 @@ export default function EchoSpacesWorld({
         onMove(posX, posY, currentDir, false);
       }
 
-      // Check nearby interactive objects
       const nearby = getNearbyInteractiveObject(posX, posY);
       nearbyObjectRef.current = nearby;
       setNearbyPrompt(nearby ? nearby.prompt : null);
 
-      // Camera Smooth Tracking (Lerp)
+      // Smooth camera lerp
       const targetCamX = posX - canvasW / 2;
       const targetCamY = posY - canvasH / 2;
       cameraRef.current.x += (targetCamX - cameraRef.current.x) * 0.12;
@@ -360,23 +458,18 @@ export default function EchoSpacesWorld({
       const camX = Math.max(0, Math.min(WORLD_WIDTH - canvasW, cameraRef.current.x));
       const camY = Math.max(0, Math.min(WORLD_HEIGHT - canvasH, cameraRef.current.y));
 
-      // ── RENDERING PASS ──
+      // ── RENDERING ──
       ctx.save();
-
-      // Base Black Canvas Background
       ctx.fillStyle = "#09090b";
       ctx.fillRect(0, 0, canvasW, canvasH);
 
-      // Camera Transform
       ctx.save();
       ctx.translate(-camX, -camY);
 
-      // ── 1. MAP FLOORING TEXTURES ──
-      // Central Courtyard Pavers with beveled stone grid
+      // Floor cobblestones
       ctx.fillStyle = "#18181b";
       ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 
-      // Stone paver grooves
       ctx.strokeStyle = "rgba(255, 255, 255, 0.025)";
       ctx.lineWidth = 1;
       for (let px = 0; px < WORLD_WIDTH; px += 36) {
@@ -392,7 +485,7 @@ export default function EchoSpacesWorld({
         ctx.stroke();
       }
 
-      // Vibe: Midnight Neon Courtyard Cyan/Magenta Grid
+      // Neon grid
       if (vibe === "MIDNIGHT_NEON") {
         ctx.strokeStyle = "rgba(6, 182, 212, 0.1)";
         ctx.lineWidth = 1.2;
@@ -404,89 +497,54 @@ export default function EchoSpacesWorld({
         }
       }
 
-      // ── 2. THEMATIC ROOM FLOORS & INTERIORS ──
+      // Thematic Zone Floors
       Object.values(SPACES_ZONES).forEach((zone) => {
         const { bounds, id, color } = zone;
-
         ctx.save();
         if (id === "office") {
-          // Warm Parquet Hardwood Floor with individual beveled planks
           ctx.fillStyle = vibe === "SUNNY_DAYLIGHT" ? "#3f3c39" : "#24201e";
           ctx.fillRect(bounds.x, bounds.y, bounds.w, bounds.h);
-          ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
-          ctx.lineWidth = 1;
-          for (let py = bounds.y; py < bounds.y + bounds.h; py += 28) {
-            ctx.beginPath();
-            ctx.moveTo(bounds.x, py);
-            ctx.lineTo(bounds.x + bounds.w, py);
-            ctx.stroke();
-          }
         } else if (id === "library") {
-          // Rich Mahogany Floor with Regal Purple Velvet Carpet
           ctx.fillStyle = "#16133a";
           ctx.fillRect(bounds.x, bounds.y, bounds.w, bounds.h);
           ctx.fillStyle = "rgba(168, 85, 247, 0.09)";
           ctx.fillRect(bounds.x + 24, bounds.y + 24, bounds.w - 48, bounds.h - 48);
-          // Carpet gold trim
-          ctx.strokeStyle = "rgba(250, 204, 21, 0.2)";
-          ctx.lineWidth = 1.5;
-          ctx.strokeRect(bounds.x + 24, bounds.y + 24, bounds.w - 48, bounds.h - 48);
         } else if (id === "music") {
-          // Acoustic Soundproof Studio Checkered Floor
           ctx.fillStyle = "#18181b";
           ctx.fillRect(bounds.x, bounds.y, bounds.w, bounds.h);
-          ctx.fillStyle = "rgba(244, 63, 94, 0.07)";
-          ctx.fillRect(bounds.x + 20, bounds.y + 20, bounds.w - 40, bounds.h - 40);
         } else if (id === "concert") {
-          // Festival Concert Arena with Elevated Spotlight Stage
           ctx.fillStyle = "#0b1329";
           ctx.fillRect(bounds.x, bounds.y, bounds.w, bounds.h);
           const stageH = 140;
           ctx.fillStyle = "#0369a1";
           ctx.fillRect(bounds.x + 36, bounds.y + 36, bounds.w - 72, stageH);
-          ctx.strokeStyle = "#38bdf8";
-          ctx.lineWidth = 3;
-          ctx.strokeRect(bounds.x + 36, bounds.y + 36, bounds.w - 72, stageH);
         } else if (id === "debate") {
-          // Town Hall Walnut Courtroom
           ctx.fillStyle = "#111d17";
           ctx.fillRect(bounds.x, bounds.y, bounds.w, bounds.h);
-          ctx.fillStyle = "rgba(16, 185, 129, 0.08)";
-          ctx.fillRect(bounds.x + 24, bounds.y + 24, bounds.w - 48, bounds.h - 48);
         }
 
-        // Room Wall Trim & Glowing Perimeter (Except Open Doors)
         ctx.strokeStyle = color;
         ctx.lineWidth = 3;
         ctx.strokeRect(bounds.x, bounds.y, bounds.w, bounds.h);
-
-        // Room Banner Nameplate
-        ctx.fillStyle = color;
-        ctx.font = "bold 11px monospace";
-        ctx.fillText(`// ${zone.name.toUpperCase()} //`, bounds.x + 24, bounds.y + 28);
         ctx.restore();
       });
 
-      // ── 3. GRAND ARCHWAY DOORWAYS & ENTRANCE PORTALS (Visual Opening Markers) ──
+      // Archway Doorway Portals
       SPACE_DOORWAYS.forEach((door) => {
         ctx.save();
-        // Clear wall line behind doorway to visually OPEN the portal
         ctx.fillStyle = "#18181b";
         ctx.fillRect(door.x - 4, door.y - 4, door.w + 8, door.h + 8);
 
-        // Glowing Doorway Welcome Mat
         const pulse = Math.sin(performance.now() * 0.005) * 0.15 + 0.35;
         ctx.fillStyle = `rgba(56, 189, 248, ${pulse})`;
         ctx.beginPath();
         ctx.roundRect(door.x, door.y, door.w, door.h, 6);
         ctx.fill();
 
-        // Neon Border
         ctx.strokeStyle = "#38bdf8";
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        // Directional Doorway Chevron Arrows (>>>)
         ctx.fillStyle = "#ffffff";
         ctx.font = "900 10px monospace";
         ctx.textAlign = "center";
@@ -496,56 +554,34 @@ export default function EchoSpacesWorld({
         } else {
           ctx.fillText("▼ ENTER ▼", door.x + door.w / 2, door.y + door.h / 2);
         }
-
         ctx.restore();
       });
 
-      // ── 4. PRIVATE CONVERSATION RUGS (High-Definition Persian & Modern Pods) ──
+      // Private Rugs
       PRIVATE_RUGS.forEach((rug) => {
         ctx.save();
         const isPlayerOnRug = currentRugId === rug.id;
-
-        // Soft drop shadow
-        ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
-        ctx.beginPath();
-        ctx.roundRect(rug.x + 4, rug.y + 4, rug.w, rug.h, 14);
-        ctx.fill();
-
-        // Rug background
         ctx.fillStyle = isPlayerOnRug ? "rgba(56, 189, 248, 0.24)" : "rgba(30, 41, 59, 0.7)";
         ctx.beginPath();
         ctx.roundRect(rug.x, rug.y, rug.w, rug.h, 14);
         ctx.fill();
 
-        // Glowing stitched border
         ctx.strokeStyle = isPlayerOnRug ? "#38bdf8" : rug.color;
         ctx.lineWidth = isPlayerOnRug ? 3 : 2;
         ctx.setLineDash([8, 5]);
         ctx.stroke();
 
-        // Inner decorative medallion
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
-        ctx.lineWidth = 1;
-        ctx.setLineDash([]);
-        ctx.strokeRect(rug.x + 12, rug.y + 12, rug.w - 24, rug.h - 24);
-
-        // Rug Title & Capacity Badge
         ctx.fillStyle = isPlayerOnRug ? "#38bdf8" : rug.color;
         ctx.font = "bold 9px monospace";
         ctx.fillText(`🔒 ${rug.name.toUpperCase()} (${rug.capacity}P)`, rug.x + 16, rug.y + 24);
-
         ctx.restore();
       });
 
-      // ── 5. CENTRAL COURTYARD FOUNTAIN (Caustics & Splash Particles) ──
+      // Fountain
       const fX = 800;
       const fY = 590;
       ctx.save();
-      // Outer marble basin with radial gradient shadow
-      const basinGrad = ctx.createRadialGradient(fX, fY, 30, fX, fY, 48);
-      basinGrad.addColorStop(0, "#475569");
-      basinGrad.addColorStop(1, "#1e293b");
-      ctx.fillStyle = basinGrad;
+      ctx.fillStyle = "#334155";
       ctx.beginPath();
       ctx.arc(fX, fY, 48, 0, Math.PI * 2);
       ctx.fill();
@@ -553,28 +589,17 @@ export default function EchoSpacesWorld({
       ctx.lineWidth = 3.5;
       ctx.stroke();
 
-      // Rippling water caustics
       const rippleTime = performance.now() * 0.004;
-      const ripple1 = Math.sin(rippleTime) * 4;
-      const ripple2 = Math.cos(rippleTime * 1.3) * 3;
       ctx.fillStyle = "#0284c7";
       ctx.beginPath();
-      ctx.arc(fX, fY, 38 + ripple1, 0, Math.PI * 2);
+      ctx.arc(fX, fY, 38 + Math.sin(rippleTime) * 4, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.strokeStyle = "rgba(224, 242, 254, 0.4)";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(fX, fY, 26 + ripple2, 0, Math.PI * 2);
-      ctx.stroke();
-
-      // Spouting Fountain Center
       ctx.fillStyle = "#f8fafc";
       ctx.beginPath();
       ctx.arc(fX, fY, 9, 0, Math.PI * 2);
       ctx.fill();
 
-      // Water spray particle animation
       waterSprayRef.current.forEach((sp) => {
         sp.x += sp.vx;
         sp.y += sp.vy;
@@ -593,13 +618,11 @@ export default function EchoSpacesWorld({
       });
       ctx.restore();
 
-      // ── 6. GRAPHICS-INTENSIVE INTERACTIVE OBJECTS (Lamps, Desks, Screens, Books) ──
+      // Interactive Station Objects
       INTERACTIVE_OBJECTS.forEach((obj) => {
         ctx.save();
-        const { x, y, w, h, type, name, icon } = obj;
-
+        const { x, y, w, h, type, icon } = obj;
         if (type === "chair") {
-          // Ergonomic Rolling Desk Chair with Chrome Star Base
           ctx.fillStyle = "#334155";
           ctx.beginPath();
           ctx.roundRect(x, y, w, h, 8);
@@ -607,121 +630,104 @@ export default function EchoSpacesWorld({
           ctx.strokeStyle = "#64748b";
           ctx.lineWidth = 2;
           ctx.stroke();
-          // Cushion line
-          ctx.fillStyle = "#475569";
-          ctx.beginPath();
-          ctx.roundRect(x + 4, y + 4, w - 8, h - 8, 4);
-          ctx.fill();
         } else if (type === "whiteboard") {
-          // Team Whiteboard with Dry-Erase Frame
           ctx.fillStyle = "#ffffff";
           ctx.fillRect(x, y, w, h);
           ctx.strokeStyle = "#38bdf8";
           ctx.lineWidth = 3.5;
           ctx.strokeRect(x, y, w, h);
-          // Header banner
-          ctx.fillStyle = "#0284c7";
-          ctx.font = "bold 9px monospace";
-          ctx.fillText("TEAM SCRATCHPAD", x + 10, y + 24);
-          // Colorful sketch lines
-          ctx.strokeStyle = "#f43f5e";
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          ctx.moveTo(x + 12, y + 36);
-          ctx.lineTo(x + 50, y + 36);
-          ctx.stroke();
         } else if (type === "piano") {
-          // Grand Acoustic Piano with Black Lacquer & 3D Ivory Keys
           ctx.fillStyle = "#09090b";
           ctx.fillRect(x, y, w, h);
           ctx.strokeStyle = "#f43f5e";
           ctx.lineWidth = 2.5;
           ctx.strokeRect(x, y, w, h);
-          // Piano keys
           ctx.fillStyle = "#ffffff";
           for (let k = 0; k < w - 10; k += 9) {
             ctx.fillRect(x + 5 + k, y + h - 18, 7, 14);
           }
-          // Ebony sharps
-          ctx.fillStyle = "#000000";
-          for (let k = 0; k < w - 18; k += 18) {
-            ctx.fillRect(x + 10 + k, y + h - 18, 5, 8);
-          }
         } else if (type === "drums") {
-          // 4-Pad Drum Sampler with Backlit RGB Pads
           ctx.fillStyle = "#18181b";
           ctx.fillRect(x, y, w, h);
           ctx.strokeStyle = "#f43f5e";
           ctx.lineWidth = 2;
           ctx.strokeRect(x, y, w, h);
-          // 4 pads
-          const padW = (w - 18) / 2;
-          const padH = (h - 18) / 2;
-          ctx.fillStyle = "#e11d48";
-          ctx.fillRect(x + 6, y + 6, padW, padH);
-          ctx.fillStyle = "#06b6d4";
-          ctx.fillRect(x + w / 2 + 3, y + 6, padW, padH);
-          ctx.fillStyle = "#eab308";
-          ctx.fillRect(x + 6, y + h / 2 + 3, padW, padH);
-          ctx.fillStyle = "#10b981";
-          ctx.fillRect(x + w / 2 + 3, y + h / 2 + 3, padW, padH);
-        } else if (type === "podium") {
-          // Carved Oak Podium with Goose-Neck Brass Mic
-          ctx.fillStyle = "#78350f";
-          ctx.fillRect(x, y, w, h);
-          ctx.strokeStyle = "#d97706";
-          ctx.lineWidth = 2.5;
-          ctx.strokeRect(x, y, w, h);
-          // Mic stand
-          ctx.fillStyle = "#facc15";
-          ctx.fillRect(x + w / 2 - 2, y - 14, 4, 14);
-        } else if (type === "gavel") {
-          // Judge's Bench with Gold Gavel Striking Block
-          ctx.fillStyle = "#451a03";
-          ctx.fillRect(x, y, w, h);
-          ctx.strokeStyle = "#b45309";
-          ctx.lineWidth = 2;
-          ctx.strokeRect(x, y, w, h);
-          ctx.fillStyle = "#f59e0b";
-          ctx.font = "bold 9px sans-serif";
-          ctx.fillText("JUDGE", x + 12, y + 24);
-        } else if (type === "pomodoro") {
-          // Tibetan Singing Focus Bell Stand
-          ctx.fillStyle = "#4c1d95";
-          ctx.fillRect(x, y, w, h);
-          ctx.strokeStyle = "#c084fc";
-          ctx.lineWidth = 2;
-          ctx.strokeRect(x, y, w, h);
-          ctx.fillStyle = "#ffffff";
-          ctx.font = "bold 9px monospace";
-          ctx.fillText("25M FOCUS", x + 6, y + 28);
         }
-
-        // Floating icon badge above station
         ctx.font = "15px sans-serif";
         ctx.fillText(icon, x + w / 2 - 8, y - 8);
         ctx.restore();
       });
 
-      // ── 7. CLICK-TO-MOVE TARGET PULSE MARKER ──
+      // ── RENDER PLACED CUSTOM DECORATIONS (Build Mode Items) ──
+      localDecorations.forEach((d) => {
+        ctx.save();
+        // Drop shadow
+        ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
+        ctx.beginPath();
+        ctx.ellipse(d.x + d.w / 2, d.y + d.h - 4, d.w * 0.45, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Object frame
+        ctx.fillStyle = "#1e293b";
+        ctx.beginPath();
+        ctx.roundRect(d.x, d.y, d.w, d.h, 8);
+        ctx.fill();
+        ctx.strokeStyle = "#475569";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Icon
+        ctx.font = `${Math.min(d.w, d.h) * 0.6}px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(d.icon, d.x + d.w / 2, d.y + d.h / 2);
+
+        // Nameplate tag on hover in decoration mode
+        if (isDecorateMode) {
+          ctx.fillStyle = "#38bdf8";
+          ctx.font = "bold 8px monospace";
+          ctx.fillText(d.name.split(" ")[0], d.x + d.w / 2, d.y - 4);
+        }
+        ctx.restore();
+      });
+
+      // Ghost preview when placing in build mode
+      if (isDecorateMode && selectedDeco && !isEraserMode) {
+        ctx.save();
+        const mX = mouseWorldPosRef.current.x - selectedDeco.w / 2;
+        const mY = mouseWorldPosRef.current.y - selectedDeco.h / 2;
+
+        ctx.globalAlpha = 0.65;
+        ctx.fillStyle = "#0284c7";
+        ctx.beginPath();
+        ctx.roundRect(mX, mY, selectedDeco.w, selectedDeco.h, 8);
+        ctx.fill();
+
+        ctx.strokeStyle = "#38bdf8";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
+        ctx.stroke();
+
+        ctx.font = `${Math.min(selectedDeco.w, selectedDeco.h) * 0.6}px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(selectedDeco.icon, mX + selectedDeco.w / 2, mY + selectedDeco.h / 2);
+        ctx.restore();
+      }
+
+      // Click-to-Move Target
       if (clickTargetRef.current) {
         ctx.save();
-        const pulseElapsed = (Date.now() - clickTargetRef.current.time) * 0.008;
-        const targetRadius = (pulseElapsed % 3) * 6 + 6;
+        const targetRadius = ((Date.now() - clickTargetRef.current.time) * 0.008 % 3) * 6 + 6;
         ctx.strokeStyle = "#38bdf8";
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(clickTargetRef.current.x, clickTargetRef.current.y, targetRadius, 0, Math.PI * 2);
         ctx.stroke();
-
-        ctx.fillStyle = "#38bdf8";
-        ctx.beginPath();
-        ctx.arc(clickTargetRef.current.x, clickTargetRef.current.y, 3, 0, Math.PI * 2);
-        ctx.fill();
         ctx.restore();
       }
 
-      // ── 8. PROXIMITY HEARING RADIUS (Dashed 240px circle around player) ──
+      // Proximity Hearing Radius
       ctx.save();
       ctx.strokeStyle = "rgba(56, 189, 248, 0.22)";
       ctx.lineWidth = 1.5;
@@ -731,7 +737,7 @@ export default function EchoSpacesWorld({
       ctx.stroke();
       ctx.restore();
 
-      // ── 9. RENDER ALL AVATARS (Depth Sorted by Y) ──
+      // ── RENDER ALL AVATARS WITH ADVANCED GRAPHICS ──
       const allAvatars = [...remoteAvatars, localAvatar].sort((a, b) => a.y - b.y);
 
       allAvatars.forEach((av) => {
@@ -748,20 +754,52 @@ export default function EchoSpacesWorld({
         const outfit = cfg?.outfit || "hoodie";
         const outfitColor = cfg?.outfitColor || av.hoodieColor || "#38bdf8";
         const accessory = cfg?.accessory || "none";
+        const headwear = cfg?.headwear || "none";
+        const aura = cfg?.aura || "none";
         const pet = cfg?.pet || "none";
         const isGhost = cfg?.isGhost || false;
 
         ctx.save();
         ctx.translate(aX, aY);
 
-        // Ghost Mode ethereal transparency
         if (isGhost) {
           ctx.globalAlpha = 0.5;
           ctx.shadowBlur = 14;
           ctx.shadowColor = "#38bdf8";
         }
 
-        // Realistic Multi-Layer Soft Drop Shadow
+        // Animated Particle Aura around avatar
+        if (aura && aura !== "none") {
+          const aTime = performance.now() * 0.003;
+          for (let i = 0; i < 6; i++) {
+            const angle = aTime + (i * Math.PI * 2) / 6;
+            const aXpos = Math.cos(angle) * 22;
+            const aYpos = Math.sin(angle) * 12 - 8;
+            ctx.save();
+            if (aura === "stardust") {
+              ctx.fillStyle = i % 2 === 0 ? "#fef08a" : "#38bdf8";
+              ctx.beginPath();
+              ctx.arc(aXpos, aYpos, 2, 0, Math.PI * 2);
+              ctx.fill();
+            } else if (aura === "flame") {
+              ctx.fillStyle = i % 2 === 0 ? "#f97316" : "#ef4444";
+              ctx.beginPath();
+              ctx.arc(aXpos, aYpos, 2.5, 0, Math.PI * 2);
+              ctx.fill();
+            } else if (aura === "electric") {
+              ctx.fillStyle = "#38bdf8";
+              ctx.fillRect(aXpos - 1.5, aYpos - 1.5, 3, 3);
+            } else if (aura === "sakura") {
+              ctx.fillStyle = "#fb7185";
+              ctx.beginPath();
+              ctx.ellipse(aXpos, aYpos, 3, 2, Math.PI / 4, 0, Math.PI * 2);
+              ctx.fill();
+            }
+            ctx.restore();
+          }
+        }
+
+        // Ground shadow
         const shadowGrad = ctx.createRadialGradient(0, 8, 2, 0, 8, 16);
         shadowGrad.addColorStop(0, "rgba(0, 0, 0, 0.5)");
         shadowGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
@@ -770,7 +808,7 @@ export default function EchoSpacesWorld({
         ctx.ellipse(0, 8, 16, 8, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Speaking Ripple Aura
+        // Speaking Aura
         if (av.isSpeaking) {
           const speakPulse = Math.sin(performance.now() * 0.01) * 4 + 18;
           ctx.strokeStyle = "#22c55e";
@@ -780,10 +818,9 @@ export default function EchoSpacesWorld({
           ctx.stroke();
         }
 
-        // Idle breathing bob
         const breathe = !isMoving ? Math.sin(performance.now() * 0.003) * 1 : 0;
 
-        // Torso & Outfit
+        // Torso
         ctx.fillStyle = outfitColor;
         if (isSit) {
           ctx.beginPath();
@@ -794,14 +831,13 @@ export default function EchoSpacesWorld({
           ctx.roundRect(-11, -22 + breathe, 22, 22, 6);
           ctx.fill();
 
-          // Walking legs
           const stride = isSelf && isMoving ? Math.sin(performance.now() * 0.016) * 4 : 0;
           ctx.fillStyle = outfit === "suit" ? "#0f172a" : "#1e293b";
           ctx.fillRect(-8, 0, 6, 8 + stride);
           ctx.fillRect(2, 0, 6, 8 - stride);
         }
 
-        // Outfit Accents
+        // Outfit accents
         if (outfit === "suit") {
           ctx.fillStyle = "#ffffff";
           ctx.fillRect(-2, -22 + breathe, 4, 6);
@@ -820,7 +856,7 @@ export default function EchoSpacesWorld({
           ctx.fill();
         }
 
-        // Face Skin Tone
+        // Face
         ctx.fillStyle = skinTone;
         ctx.beginPath();
         ctx.arc(0, -24 + breathe, 7.5, 0, Math.PI * 2);
@@ -862,15 +898,75 @@ export default function EchoSpacesWorld({
           else ctx.fillRect(-8, -28 + breathe, 16, 3);
         }
 
-        // Directional eye pupils
+        // Blinking eyes
+        const blink = Math.sin(performance.now() * 0.002 + aX) > 0.98;
         ctx.fillStyle = "#0f172a";
-        if (dir === "down") {
-          ctx.fillRect(-3, -24 + breathe, 2, 2);
-          ctx.fillRect(2, -24 + breathe, 2, 2);
-        } else if (dir === "left") {
-          ctx.fillRect(-5, -24 + breathe, 2, 2);
-        } else if (dir === "right") {
-          ctx.fillRect(3, -24 + breathe, 2, 2);
+        if (!blink) {
+          if (dir === "down") {
+            ctx.fillRect(-3, -24 + breathe, 2, 2);
+            ctx.fillRect(2, -24 + breathe, 2, 2);
+          } else if (dir === "left") {
+            ctx.fillRect(-5, -24 + breathe, 2, 2);
+          } else if (dir === "right") {
+            ctx.fillRect(3, -24 + breathe, 2, 2);
+          }
+        } else {
+          ctx.fillRect(-4, -23 + breathe, 3, 1);
+          ctx.fillRect(2, -23 + breathe, 3, 1);
+        }
+
+        // Speaking animated mouth
+        if (av.isSpeaking) {
+          ctx.fillStyle = "#dc2626";
+          const openMouth = Math.sin(performance.now() * 0.015) > 0;
+          if (openMouth) {
+            ctx.beginPath();
+            ctx.arc(0, -20 + breathe, 1.8, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+        // Headwear
+        if (headwear && headwear !== "none") {
+          ctx.save();
+          if (headwear === "crown") {
+            ctx.fillStyle = "#eab308";
+            ctx.beginPath();
+            ctx.moveTo(-8, -36 + breathe);
+            ctx.lineTo(-8, -42 + breathe);
+            ctx.lineTo(-4, -38 + breathe);
+            ctx.lineTo(0, -44 + breathe);
+            ctx.lineTo(4, -38 + breathe);
+            ctx.lineTo(8, -42 + breathe);
+            ctx.lineTo(8, -36 + breathe);
+            ctx.closePath();
+            ctx.fill();
+          } else if (headwear === "beret") {
+            ctx.fillStyle = "#1e1b4b";
+            ctx.beginPath();
+            ctx.ellipse(2, -36 + breathe, 12, 5, -Math.PI / 10, 0, Math.PI * 2);
+            ctx.fill();
+          } else if (headwear === "cowboy") {
+            ctx.fillStyle = "#78350f";
+            ctx.beginPath();
+            ctx.ellipse(0, -35 + breathe, 16, 4, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.roundRect(-7, -42 + breathe, 14, 8, 2);
+            ctx.fill();
+          } else if (headwear === "wizard") {
+            ctx.fillStyle = "#4c1d95";
+            ctx.beginPath();
+            ctx.moveTo(-10, -35 + breathe);
+            ctx.lineTo(0, -50 + breathe);
+            ctx.lineTo(10, -35 + breathe);
+            ctx.closePath();
+            ctx.fill();
+          } else if (headwear === "cyber_visor") {
+            ctx.fillStyle = "#06b6d4";
+            ctx.fillRect(-8, -26 + breathe, 16, 4);
+          }
+          ctx.restore();
         }
 
         // Accessories
@@ -893,7 +989,7 @@ export default function EchoSpacesWorld({
           ctx.fillRect(8, -28 + breathe, 3, 8);
         }
 
-        // Companion Pet
+        // Pet
         if (pet !== "none") {
           const petBob = isMoving ? Math.sin(performance.now() * 0.02) * 2 : 0;
           const pX = dir === "left" ? 18 : -18;
@@ -919,9 +1015,6 @@ export default function EchoSpacesWorld({
             ctx.beginPath();
             ctx.roundRect(-5, -5, 10, 7, 3);
             ctx.fill();
-            ctx.fillStyle = "#a1a1aa";
-            ctx.fillRect(-4, -10, 2, 4);
-            ctx.fillRect(2, -10, 2, 4);
           } else if (pet === "drone") {
             ctx.fillStyle = "#38bdf8";
             ctx.beginPath();
@@ -991,42 +1084,35 @@ export default function EchoSpacesWorld({
         ctx.restore();
       });
 
-      // ── 10. DYNAMIC LIGHTING & SHADING PASS (Ray-traced Style Compositing) ──
+      // ── RENDER FLOATING PHYSICS EMOTES ──
+      floatingEmotesRef.current.forEach((em, idx) => {
+        em.y += em.vy;
+        em.alpha -= 0.015;
+        ctx.save();
+        ctx.font = "20px sans-serif";
+        ctx.textAlign = "center";
+        ctx.globalAlpha = Math.max(0, em.alpha);
+        ctx.fillText(em.text, em.x, em.y);
+        ctx.restore();
+      });
+      floatingEmotesRef.current = floatingEmotesRef.current.filter((em) => em.alpha > 0);
+
+      // ── DYNAMIC LIGHTING PASS ──
       ctx.save();
-      // Player Lantern Aura
       const playerLight = ctx.createRadialGradient(posX, posY, 10, posX, posY, 140);
       playerLight.addColorStop(0, "rgba(56, 189, 248, 0.12)");
       playerLight.addColorStop(1, "rgba(56, 189, 248, 0)");
       ctx.fillStyle = playerLight;
       ctx.fillRect(posX - 140, posY - 140, 280, 280);
 
-      // Courtyard Fountain Cyan Glow
       const fountainLight = ctx.createRadialGradient(fX, fY, 20, fX, fY, 180);
       fountainLight.addColorStop(0, "rgba(2, 132, 199, 0.16)");
       fountainLight.addColorStop(1, "rgba(2, 132, 199, 0)");
       ctx.fillStyle = fountainLight;
       ctx.fillRect(fX - 180, fY - 180, 360, 360);
-
-      // Concert Stage Moving Twin Spotlights
-      const spotAngle = Math.sin(performance.now() * 0.001) * 0.4;
-      ctx.save();
-      ctx.translate(800, 690);
-      ctx.rotate(spotAngle);
-      const spotGrad1 = ctx.createRadialGradient(0, 0, 10, 0, 100, 160);
-      spotGrad1.addColorStop(0, "rgba(234, 179, 8, 0.18)");
-      spotGrad1.addColorStop(1, "rgba(234, 179, 8, 0)");
-      ctx.fillStyle = spotGrad1;
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(-70, 180);
-      ctx.lineTo(70, 180);
-      ctx.closePath();
-      ctx.fill();
       ctx.restore();
 
-      ctx.restore();
-
-      // ── 11. ATMOSPHERIC PARTICLES OVERLAY ──
+      // Atmospheric Particles
       particlesRef.current.forEach((p) => {
         ctx.save();
         if (vibe === "COZY_RAINY") {
@@ -1064,7 +1150,7 @@ export default function EchoSpacesWorld({
         ctx.restore();
       });
 
-      ctx.restore(); // End camera transform
+      ctx.restore();
       ctx.restore();
 
       animId = requestAnimationFrame(render);
@@ -1072,9 +1158,23 @@ export default function EchoSpacesWorld({
 
     animId = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animId);
-  }, [localAvatar, remoteAvatars, vibe, onMove, onZoneChange, onRugChange, isJoystickActive, activeSpeech, viewportDim]);
+  }, [
+    localAvatar,
+    remoteAvatars,
+    vibe,
+    localDecorations,
+    isDecorateMode,
+    selectedDeco,
+    isEraserMode,
+    onMove,
+    onZoneChange,
+    onRugChange,
+    isJoystickActive,
+    activeSpeech,
+    viewportDim,
+  ]);
 
-  // ── Touch Virtual Joystick Handlers ──
+  // Touch Virtual Joystick
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     const touch = e.touches[0];
     touchStartPos.current = { x: touch.clientX, y: touch.clientY };
@@ -1112,16 +1212,17 @@ export default function EchoSpacesWorld({
         isFullscreen ? "fixed inset-0 z-50 rounded-none h-screen w-screen border-none" : "h-[680px]"
       }`}
     >
-      {/* 60 FPS High-DPI HTML5 Canvas */}
+      {/* 60 FPS HTML5 Canvas */}
       <canvas
         ref={canvasRef}
         width={viewportDim.w}
         height={viewportDim.h}
         onClick={handleCanvasClick}
+        onMouseMove={handleCanvasMouseMove}
         className="w-full h-full cursor-crosshair touch-none"
       />
 
-      {/* Top Floating Prompt Banner */}
+      {/* Nearby Interaction Prompt Banner */}
       {nearbyPrompt && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/90 backdrop-blur-md px-4 py-2 rounded-2xl border border-amber-400 text-amber-300 font-mono text-xs font-bold shadow-2xl animate-in fade-in zoom-in-95 flex items-center gap-2 z-30">
           <Sparkles className="w-4 h-4 text-amber-400 animate-spin" />
@@ -1129,7 +1230,7 @@ export default function EchoSpacesWorld({
         </div>
       )}
 
-      {/* Floating Private Rug Banner */}
+      {/* Private Rug Alert Banner */}
       {activeRugPrompt && (
         <div className="absolute top-14 left-1/2 -translate-x-1/2 bg-cyan-950/90 backdrop-blur-md px-4 py-1.5 rounded-2xl border border-cyan-400 text-cyan-200 font-mono text-[11px] font-bold shadow-2xl animate-in fade-in flex items-center gap-2 z-30">
           <Lock className="w-3.5 h-3.5 text-cyan-400" />
@@ -1137,89 +1238,102 @@ export default function EchoSpacesWorld({
         </div>
       )}
 
-      {/* Top Left: Ghost Mode HUD & Fullscreen Toggle */}
+      {/* TOP LEFT: Minimalist Icon Dock */}
       <div className="absolute top-3 left-3 z-30 flex items-center gap-2">
+        {/* Avatar Studio Icon */}
         <button
-          onClick={onToggleGhost}
-          className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
-            isGhost
-              ? "bg-indigo-950/80 border-indigo-400 text-indigo-300 shadow-[0_0_12px_rgba(99,102,241,0.3)]"
-              : "bg-neutral-900/80 border-neutral-800 text-neutral-400 hover:text-white"
-          }`}
-          title="Toggle Ghost Mode (Walk through walls)"
+          onClick={onOpenAvatarStudio}
+          className="p-2.5 rounded-2xl border border-neutral-800 bg-neutral-900/80 hover:bg-neutral-800 text-amber-400 hover:scale-105 transition-all cursor-pointer shadow-lg"
+          title="Open Avatar Studio"
         >
-          <Ghost className={`w-3.5 h-3.5 ${isGhost ? "animate-pulse text-indigo-400" : ""}`} />
-          <span>{isGhost ? "GHOST: ON" : "GHOST [G]"}</span>
+          <Palette className="w-4 h-4" />
         </button>
 
+        {/* Space Decoration / Build Mode Icon */}
+        <button
+          onClick={() => {
+            setIsDecorateMode(!isDecorateMode);
+            spacesSfx.playKeyNote(2);
+          }}
+          className={`p-2.5 rounded-2xl border transition-all cursor-pointer shadow-lg flex items-center gap-1.5 ${
+            isDecorateMode
+              ? "border-cyan-400 bg-cyan-950/90 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.4)]"
+              : "border-neutral-800 bg-neutral-900/80 text-neutral-400 hover:text-white"
+          }`}
+          title={isDecorateMode ? "Exit Decorate Mode" : "Decorate Space (Add Furniture)"}
+        >
+          <Wrench className="w-4 h-4" />
+          {isDecorateMode && <span className="text-[10px] font-mono font-bold">BUILD MODE</span>}
+        </button>
+
+        {/* Ghost Mode Toggle */}
+        <button
+          onClick={onToggleGhost}
+          className={`p-2.5 rounded-2xl border transition-all cursor-pointer shadow-lg ${
+            isGhost
+              ? "border-indigo-400 bg-indigo-950/80 text-indigo-300 shadow-[0_0_12px_rgba(99,102,241,0.4)]"
+              : "border-neutral-800 bg-neutral-900/80 text-neutral-400 hover:text-white"
+          }`}
+          title="Ghost Mode [G] (Walk through walls)"
+        >
+          <Ghost className="w-4 h-4" />
+        </button>
+
+        {/* Fullscreen Toggle */}
         <button
           onClick={() => setIsFullscreen(!isFullscreen)}
-          className="p-1.5 rounded-xl border border-neutral-800 bg-neutral-900/80 text-neutral-400 hover:text-white transition-all cursor-pointer"
-          title={isFullscreen ? "Exit Fullscreen" : "Fullscreen View"}
+          className="p-2.5 rounded-2xl border border-neutral-800 bg-neutral-900/80 text-neutral-400 hover:text-white hover:scale-105 transition-all cursor-pointer shadow-lg"
+          title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
         >
           {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
         </button>
       </div>
 
-      {/* Top Right: Interactive Fast-Travel Minimap Radar */}
-      <div className="hidden sm:block absolute top-3 right-3 z-30 bg-neutral-950/90 backdrop-blur-md p-2.5 rounded-2xl border border-neutral-800 shadow-2xl">
-        <div className="flex items-center justify-between text-[10px] font-mono text-neutral-400 mb-1.5 pb-1 border-b border-neutral-800">
-          <span className="flex items-center gap-1">
-            <Compass className="w-3 h-3 text-cyan-400" />
-            <span>CAMPUS RADAR</span>
-          </span>
-          <span className="text-cyan-400">FAST TRAVEL</span>
-        </div>
-
-        {/* Scaled Mini-World View (150x112) */}
-        <div className="relative w-[150px] h-[112px] bg-neutral-900 rounded-lg overflow-hidden border border-neutral-800">
-          {/* Mini-rooms */}
+      {/* TOP RIGHT: Minimalist Fast-Travel Minimap Radar */}
+      <div className="hidden sm:block absolute top-3 right-3 z-30 bg-neutral-950/90 backdrop-blur-md p-2 rounded-2xl border border-neutral-800 shadow-2xl">
+        <div className="relative w-[140px] h-[100px] bg-neutral-900 rounded-lg overflow-hidden border border-neutral-800">
           <button
             onClick={() => onTeleport?.(400, 260)}
-            title="Teleport into Office"
-            className="absolute top-[4.6%] left-[3.1%] w-[42.5%] h-[40%] bg-cyan-950/50 hover:bg-cyan-900/80 border border-cyan-500/40 rounded text-[7px] font-mono text-cyan-300 flex items-center justify-center cursor-pointer transition-colors"
+            title="Office"
+            className="absolute top-[5%] left-[3%] w-[42%] h-[40%] bg-cyan-950/60 hover:bg-cyan-900 border border-cyan-500/40 rounded text-[7px] font-mono text-cyan-300 flex items-center justify-center cursor-pointer"
           >
-            OFFICE
+            🏢
           </button>
           <button
             onClick={() => onTeleport?.(1200, 260)}
-            title="Teleport into Library"
-            className="absolute top-[4.6%] left-[54.3%] w-[42.5%] h-[40%] bg-purple-950/50 hover:bg-purple-900/80 border border-purple-500/40 rounded text-[7px] font-mono text-purple-300 flex items-center justify-center cursor-pointer transition-colors"
+            title="Library"
+            className="absolute top-[5%] left-[55%] w-[42%] h-[40%] bg-purple-950/60 hover:bg-purple-900 border border-purple-500/40 rounded text-[7px] font-mono text-purple-300 flex items-center justify-center cursor-pointer"
           >
-            LIBRARY
+            📚
           </button>
           <button
             onClick={() => onTeleport?.(260, 860)}
-            title="Teleport into Music Studio"
-            className="absolute top-[54.1%] left-[3.1%] w-[28.7%] h-[41.6%] bg-rose-950/50 hover:bg-rose-900/80 border border-rose-500/40 rounded text-[7px] font-mono text-rose-300 flex items-center justify-center cursor-pointer transition-colors"
+            title="Music"
+            className="absolute top-[54%] left-[3%] w-[28%] h-[42%] bg-rose-950/60 hover:bg-rose-900 border border-rose-500/40 rounded text-[7px] font-mono text-rose-300 flex items-center justify-center cursor-pointer"
           >
-            MUSIC
+            🎵
           </button>
           <button
             onClick={() => onTeleport?.(800, 860)}
-            title="Teleport into Concert Hall"
-            className="absolute top-[54.1%] left-[34.3%] w-[31.2%] h-[41.6%] bg-amber-950/50 hover:bg-amber-900/80 border border-amber-500/40 rounded text-[7px] font-mono text-amber-300 flex items-center justify-center cursor-pointer transition-colors"
+            title="Concert"
+            className="absolute top-[54%] left-[35%] w-[30%] h-[42%] bg-amber-950/60 hover:bg-amber-900 border border-amber-500/40 rounded text-[7px] font-mono text-amber-300 flex items-center justify-center cursor-pointer"
           >
-            STAGE
+            🎤
           </button>
           <button
             onClick={() => onTeleport?.(1320, 860)}
-            title="Teleport into Debate Arena"
-            className="absolute top-[54.1%] left-[68.1%] w-[28.7%] h-[41.6%] bg-emerald-950/50 hover:bg-emerald-900/80 border border-emerald-500/40 rounded text-[7px] font-mono text-emerald-300 flex items-center justify-center cursor-pointer transition-colors"
+            title="Debate"
+            className="absolute top-[54%] left-[69%] w-[28%] h-[42%] bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-500/40 rounded text-[7px] font-mono text-emerald-300 flex items-center justify-center cursor-pointer"
           >
-            DEBATE
+            ⚖️
           </button>
-
-          {/* Central Fountain button */}
           <button
             onClick={() => onTeleport?.(800, 590)}
-            title="Teleport into Courtyard Fountain"
-            className="absolute top-[45%] left-[46%] w-3 h-3 bg-cyan-400 rounded-full cursor-pointer hover:scale-125 transition-transform"
+            title="Courtyard Fountain"
+            className="absolute top-[45%] left-[46%] w-2.5 h-2.5 bg-cyan-400 rounded-full cursor-pointer hover:scale-150 transition-transform"
           />
-
-          {/* Player Blip */}
           <div
-            className="absolute w-2.5 h-2.5 rounded-full bg-white border border-cyan-400 shadow-[0_0_8px_#38bdf8] -translate-x-1/2 -translate-y-1/2 pointer-events-none transition-all duration-75"
+            className="absolute w-2 h-2 rounded-full bg-white border border-cyan-400 shadow-[0_0_8px_#38bdf8] -translate-x-1/2 -translate-y-1/2 pointer-events-none"
             style={{
               left: `${(localAvatar.x / WORLD_WIDTH) * 100}%`,
               top: `${(localAvatar.y / WORLD_HEIGHT) * 100}%`,
@@ -1228,18 +1342,143 @@ export default function EchoSpacesWorld({
         </div>
       </div>
 
-      {/* Floating Chat Bubble Form */}
-      <div className="absolute bottom-4 left-4 right-4 max-w-sm z-30">
+      {/* BOTTOM DRAWER: SPACE DECORATION PALETTE (Build Mode) */}
+      {isDecorateMode && (
+        <div className="absolute bottom-16 left-4 right-4 max-w-2xl mx-auto z-40 bg-neutral-950/95 backdrop-blur-md p-3 rounded-3xl border border-cyan-500/40 shadow-2xl animate-in slide-in-from-bottom">
+          <div className="flex items-center justify-between pb-2 border-b border-neutral-800 text-xs font-mono">
+            <div className="flex items-center gap-2">
+              <span className="text-cyan-400 font-bold flex items-center gap-1">
+                <Wrench className="w-3.5 h-3.5" />
+                <span>BUILD PALETTE:</span>
+              </span>
+              <div className="flex items-center gap-1">
+                {[
+                  { id: "seating", icon: "🪑" },
+                  { id: "plants", icon: "🪴" },
+                  { id: "tech", icon: "💻" },
+                  { id: "amenities", icon: "☕" },
+                  { id: "lighting", icon: "💡" },
+                ].map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => {
+                      setActiveDecoCategory(cat.id);
+                      setIsEraserMode(false);
+                      spacesSfx.playKeyNote(1);
+                    }}
+                    className={`px-2.5 py-1 rounded-xl text-xs transition-all cursor-pointer ${
+                      activeDecoCategory === cat.id && !isEraserMode
+                        ? "bg-cyan-500 text-black font-bold"
+                        : "text-neutral-400 hover:text-white bg-neutral-900"
+                    }`}
+                  >
+                    {cat.icon}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              {/* Eraser Tool */}
+              <button
+                onClick={() => {
+                  setIsEraserMode(!isEraserMode);
+                  setSelectedDeco(null);
+                  spacesSfx.playKeyNote(5);
+                }}
+                className={`p-1.5 rounded-xl border text-xs font-mono transition-all cursor-pointer flex items-center gap-1 ${
+                  isEraserMode
+                    ? "border-rose-400 bg-rose-950/80 text-rose-300 font-bold"
+                    : "border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white"
+                }`}
+                title="Eraser: Click any placed item to remove"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                <span className="text-[10px]">ERASER</span>
+              </button>
+
+              <button
+                onClick={() => setIsDecorateMode(false)}
+                className="p-1 rounded-lg text-neutral-400 hover:text-white cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Placeable Items Swatches */}
+          <div className="flex items-center gap-2 overflow-x-auto py-2 scrollbar-none">
+            {isEraserMode ? (
+              <div className="text-xs font-mono text-rose-300 py-1 flex items-center gap-2">
+                <Trash2 className="w-4 h-4 text-rose-400 animate-pulse" />
+                <span>Eraser active: click any placed furniture item on the floor to remove it.</span>
+              </div>
+            ) : (
+              DECORATION_CATALOG.filter((d) => d.category === activeDecoCategory).map((item) => {
+                const isSelected = selectedDeco?.id === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setSelectedDeco(item);
+                      setIsEraserMode(false);
+                      spacesSfx.playKeyNote(2);
+                    }}
+                    className={`px-3 py-1.5 rounded-2xl border text-xs font-mono flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
+                      isSelected
+                        ? "border-cyan-400 bg-cyan-950/80 text-cyan-300 font-bold scale-105 shadow-md"
+                        : "border-neutral-800 bg-neutral-900 text-neutral-300 hover:text-white"
+                    }`}
+                  >
+                    <span className="text-base">{item.icon}</span>
+                    <span className="text-[11px]">{item.name}</span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* FLOATING ACTION & CHAT BAR */}
+      <div className="absolute bottom-4 left-4 right-4 max-w-md mx-auto z-30 flex items-center gap-2">
+        {/* Quick Reaction Emote Wheel Trigger */}
+        <div className="relative">
+          <button
+            onClick={() => setEmotePickerOpen(!emotePickerOpen)}
+            className="p-2.5 rounded-2xl border border-neutral-800 bg-neutral-950/90 text-neutral-300 hover:text-white hover:scale-105 transition-all shadow-xl cursor-pointer"
+            title="Reaction Emotes"
+          >
+            <Smile className="w-4 h-4 text-amber-400" />
+          </button>
+
+          {/* Floating Emote Picker Popup */}
+          {emotePickerOpen && (
+            <div className="absolute bottom-12 left-0 bg-neutral-950/95 backdrop-blur-md p-2 rounded-2xl border border-neutral-800 shadow-2xl flex items-center gap-1.5 animate-in zoom-in-95">
+              {EMOTE_REACTIONS.map((em) => (
+                <button
+                  key={em}
+                  onClick={() => triggerEmote(em)}
+                  className="p-1.5 rounded-xl hover:bg-neutral-800 hover:scale-125 transition-all text-lg cursor-pointer"
+                >
+                  {em}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Chat input */}
         <form
           onSubmit={handleSendChat}
-          className="flex items-center gap-2 bg-neutral-950/90 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-neutral-800 shadow-2xl"
+          className="flex-1 flex items-center gap-2 bg-neutral-950/90 backdrop-blur-md px-3.5 py-1.5 rounded-2xl border border-neutral-800 shadow-2xl"
         >
           <MessageSquare className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
           <input
             type="text"
             value={chatInput}
             onChange={(e) => setChatInput(e.target.value)}
-            placeholder="Say something or click floor to walk..."
+            placeholder="Type message or click floor to walk..."
             maxLength={60}
             className="w-full bg-transparent text-xs font-mono text-white placeholder-neutral-500 outline-none"
           />
@@ -1253,7 +1492,7 @@ export default function EchoSpacesWorld({
         </form>
       </div>
 
-      {/* Mobile Touch Virtual Joystick Zone */}
+      {/* Mobile Touch Virtual Joystick */}
       <div
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -1272,13 +1511,6 @@ export default function EchoSpacesWorld({
             />
           </div>
         )}
-      </div>
-
-      {/* Bottom Right Controls Guide */}
-      <div className="hidden lg:flex absolute bottom-4 right-4 bg-neutral-950/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-neutral-800 text-[10px] font-mono text-neutral-400 gap-3 items-center">
-        <span>CLICK FLOOR OR [W,A,S,D] TO WALK</span>
-        <span>[E] INTERACT</span>
-        <span>[G] GHOST MODE</span>
       </div>
     </div>
   );

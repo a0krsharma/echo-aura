@@ -24,6 +24,7 @@ import {
   SpatialAvatar,
   AvatarConfig,
   InteractiveObject,
+  CustomDecoration,
   DEFAULT_SPACES,
   DEFAULT_AMBIENT_BOTS,
   SPACES_ZONES,
@@ -307,66 +308,67 @@ export default function DynamicSpaceWorldPage() {
     setTimeout(() => setCopiedLink(false), 2500);
   };
 
+  // Handle Custom Decorations Update & Firestore persistence
+  const handleUpdateDecorations = async (decos: CustomDecoration[]) => {
+    setSpace((prev) => ({ ...prev, decorations: decos }));
+    try {
+      await updateSpaceDoc(space.id, { decorations: decos });
+    } catch (err) {
+      console.warn("Failed syncing decorations:", err);
+    }
+  };
+
   const isHost = user?.uid === space.hostUid || space.hostUid === "guest_host" || space.hostUid === "echo_system";
   const activeZoneDef = SPACES_ZONES[localAvatar.activeZone];
 
   const SPAWN_PRESETS = [
-    { name: "Central Courtyard Fountain", icon: "⛲", x: 800, y: 540 },
-    { name: "Virtual Office (Desk Alpha)", icon: "🏢", x: 400, y: 260 },
-    { name: "Silent Library (Focus Alcove)", icon: "📚", x: 1200, y: 260 },
-    { name: "Music Studio (Jam Piano)", icon: "🎵", x: 260, y: 860 },
-    { name: "Concert Stage (Spotlight)", icon: "🎤", x: 800, y: 860 },
-    { name: "Debate Arena (Caucus Table)", icon: "⚖️", x: 1320, y: 860 },
+    { name: "Courtyard Fountain", icon: "⛲", x: 800, y: 540 },
+    { name: "Office", icon: "🏢", x: 400, y: 260 },
+    { name: "Library", icon: "📚", x: 1200, y: 260 },
+    { name: "Music", icon: "🎵", x: 260, y: 860 },
+    { name: "Concert", icon: "🎤", x: 800, y: 860 },
+    { name: "Debate", icon: "⚖️", x: 1320, y: 860 },
   ];
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col justify-between selection:bg-cyan-500 selection:text-black">
       {/* 1. Global Announcement Ticker */}
       {space.announcement && space.announcement.expiresAt > Date.now() && (
-        <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-black px-4 py-2 font-mono text-xs font-bold text-center flex items-center justify-center gap-2 shadow-lg animate-in slide-in-from-top">
+        <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-black px-4 py-1.5 font-mono text-xs font-bold text-center flex items-center justify-center gap-2 shadow-lg animate-in slide-in-from-top">
           <Megaphone className="w-4 h-4 animate-bounce" />
-          <span>BROADCAST: {space.announcement.text}</span>
+          <span>{space.announcement.text}</span>
         </div>
       )}
 
-      {/* 2. Top World Navigation & Command Header */}
-      <header className="border-b border-neutral-800 bg-neutral-950/90 backdrop-blur-md px-4 sm:px-6 py-3 flex items-center justify-between z-30">
-        {/* Left: Back to lobby & Space details */}
+      {/* 2. Top World Navigation & Command Header (Clean & Icon-Driven) */}
+      <header className="border-b border-neutral-800 bg-neutral-950/90 backdrop-blur-md px-4 sm:px-6 py-2.5 flex items-center justify-between z-30">
+        {/* Left: Back, Space Name, Zone */}
         <div className="flex items-center gap-3">
           <Link
             href="/spaces"
             className="p-2 rounded-xl border border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-900 transition-colors cursor-pointer"
-            title="Return to Spaces Lobby"
+            title="Lobby"
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
-          <div className="h-4 w-px bg-neutral-800 hidden sm:block" />
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-sm font-bold font-mono text-white tracking-tight">
-                {space.name}
-              </h1>
-              <span className="px-2 py-0.5 rounded-md bg-cyan-950/50 border border-cyan-800/40 text-[10px] font-mono text-cyan-300">
-                {space.category}
+          <div className="flex items-center gap-2">
+            <h1 className="text-sm font-bold font-mono text-white tracking-tight">
+              {space.name}
+            </h1>
+            <span className="px-2 py-0.5 rounded-md bg-cyan-950/50 border border-cyan-800/40 text-[10px] font-mono text-cyan-300">
+              {space.category}
+            </span>
+            {localAvatar.activeRugId && (
+              <span className="text-cyan-400 font-bold flex items-center gap-1 text-[10px] font-mono bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-800/40">
+                <Lock className="w-2.5 h-2.5" />
+                <span>RUG</span>
               </span>
-              <span className="hidden md:inline-block px-2 py-0.5 rounded-md bg-neutral-900 border border-neutral-800 text-[10px] font-mono text-neutral-400">
-                {space.vibe.replace("_", " ")}
-              </span>
-            </div>
-            <div className="text-[10px] font-mono text-neutral-400 flex items-center gap-2 mt-0.5">
-              <span>ZONE: {activeZoneDef?.name || "Courtyard"}</span>
-              {localAvatar.activeRugId && (
-                <span className="text-cyan-400 font-bold flex items-center gap-1">
-                  <Lock className="w-2.5 h-2.5" />
-                  <span>ON PRIVATE RUG</span>
-                </span>
-              )}
-            </div>
+            )}
           </div>
         </div>
 
-        {/* Center: WebRTC Proximity Spatial Audio Manager */}
-        <div className="hidden lg:block">
+        {/* Center: Spatial Voice Proximity */}
+        <div className="hidden md:block">
           <SpatialVoiceManager
             spaceId={space.id}
             localAvatar={localAvatar}
@@ -375,28 +377,40 @@ export default function DynamicSpaceWorldPage() {
         </div>
 
         {/* Right: Actions Suite */}
-        <div className="flex items-center gap-2">
-          {/* Share Room Link */}
+        <div className="flex items-center gap-1.5">
+          {/* Fast Doorway Jump Pills */}
+          <div className="hidden lg:flex items-center gap-1 mr-2 bg-neutral-900/60 p-1 rounded-2xl border border-neutral-800">
+            {SPAWN_PRESETS.map((preset) => (
+              <button
+                key={preset.name}
+                onClick={() => handleTeleport(preset.x, preset.y)}
+                className="p-1.5 rounded-xl hover:bg-neutral-800 text-neutral-300 hover:text-white transition-all cursor-pointer text-xs"
+                title={`Jump to ${preset.name}`}
+              >
+                <span>{preset.icon}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Share Link */}
           <button
             onClick={handleCopyLink}
-            className="p-2 rounded-xl border border-neutral-800 bg-neutral-900/60 hover:bg-neutral-800 text-neutral-300 text-xs font-mono flex items-center gap-1.5 transition-all cursor-pointer"
+            className="p-2 rounded-xl border border-neutral-800 bg-neutral-900/60 hover:bg-neutral-800 text-neutral-300 text-xs font-mono transition-all cursor-pointer"
             title="Copy Invite Link"
           >
             <Share2 className="w-4 h-4" />
-            <span className="hidden sm:inline">{copiedLink ? "COPIED!" : "INVITE"}</span>
           </button>
 
-          {/* Whiteboard Modal Trigger */}
+          {/* Whiteboard */}
           <button
             onClick={() => {
               spacesSfx.playKeyNote(3);
               setWhiteboardModalOpen(true);
             }}
-            className="p-2 rounded-xl border border-neutral-800 bg-neutral-900/60 hover:bg-neutral-800 text-neutral-300 text-xs font-mono flex items-center gap-1.5 transition-all cursor-pointer"
+            className="p-2 rounded-xl border border-neutral-800 bg-neutral-900/60 hover:bg-neutral-800 text-neutral-300 text-xs font-mono transition-all cursor-pointer"
             title="Open Team Whiteboard"
           >
             <Edit3 className="w-4 h-4 text-cyan-400" />
-            <span className="hidden sm:inline">BOARD</span>
           </button>
 
           {/* Avatar Studio */}
@@ -405,11 +419,10 @@ export default function DynamicSpaceWorldPage() {
               spacesSfx.playKeyNote(2);
               setAvatarModalOpen(true);
             }}
-            className="p-2 rounded-xl border border-neutral-800 bg-neutral-900/60 hover:bg-neutral-800 text-neutral-300 text-xs font-mono flex items-center gap-1.5 transition-all cursor-pointer"
+            className="p-2 rounded-xl border border-neutral-800 bg-neutral-900/60 hover:bg-neutral-800 text-amber-400 text-xs font-mono transition-all cursor-pointer"
             title="Edit Avatar & Pet"
           >
-            <Palette className="w-4 h-4 text-amber-400" />
-            <span className="hidden sm:inline">AVATAR</span>
+            <Palette className="w-4 h-4" />
           </button>
 
           {/* Host Settings */}
@@ -419,40 +432,22 @@ export default function DynamicSpaceWorldPage() {
                 spacesSfx.playKeyNote(4);
                 setHostModalOpen(true);
               }}
-              className="p-2 rounded-xl border border-amber-800/40 bg-amber-950/20 hover:bg-amber-950/40 text-amber-300 text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer"
-              title="Host Suite (Atmosphere, Lifespan, Delete)"
+              className="p-2 rounded-xl border border-amber-800/40 bg-amber-950/20 hover:bg-amber-950/40 text-amber-300 text-xs font-mono font-bold transition-all cursor-pointer"
+              title="Host Suite"
             >
-              <Settings className="w-4 h-4 text-amber-400" />
-              <span className="hidden sm:inline">HOST</span>
+              <Settings className="w-4 h-4" />
             </button>
           )}
         </div>
       </header>
 
-      {/* 3. Doorway Fast-Travel Quick Jump Ribbon */}
-      <div className="flex items-center gap-2 overflow-x-auto py-2 px-4 sm:px-6 border-b border-neutral-900 bg-neutral-950/70 backdrop-blur-xs scrollbar-none text-xs font-mono">
-        <span className="text-neutral-500 shrink-0 flex items-center gap-1">
-          <Compass className="w-3.5 h-3.5 text-cyan-400" />
-          <span>DOORWAYS:</span>
-        </span>
-        {SPAWN_PRESETS.map((preset) => (
-          <button
-            key={preset.name}
-            onClick={() => handleTeleport(preset.x, preset.y)}
-            className="px-2.5 py-1 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-cyan-500/50 text-neutral-300 hover:text-white transition-all shrink-0 flex items-center gap-1.5 cursor-pointer text-[11px]"
-          >
-            <span>{preset.icon}</span>
-            <span>{preset.name.split(" ")[0]}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* 4. Main 2D Spatial Canvas Viewport */}
+      {/* 3. Main 2D Spatial Canvas Viewport */}
       <main className="flex-1 flex flex-col items-center justify-center p-2 sm:p-4 max-w-7xl mx-auto w-full">
         <EchoSpacesWorld
           localAvatar={localAvatar}
           remoteAvatars={remoteAvatars}
           vibe={space.vibe}
+          decorations={space.decorations || []}
           onMove={handleMove}
           onSit={handleSit}
           onSendSpeech={handleSendSpeech}
@@ -462,6 +457,8 @@ export default function DynamicSpaceWorldPage() {
           onInteractObject={handleInteractObject}
           onToggleGhost={handleToggleGhost}
           onTeleport={handleTeleport}
+          onOpenAvatarStudio={() => setAvatarModalOpen(true)}
+          onUpdateDecorations={handleUpdateDecorations}
         />
       </main>
 
