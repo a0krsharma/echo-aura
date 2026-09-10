@@ -482,7 +482,78 @@ export const INTERACTIVE_OBJECTS: InteractiveObject[] = [
   },
 ];
 
-// ── COLLISION WALLS & ROOM PERIMETERS ──
+// ── ROOM DOORWAYS (Grand Archway Portals for Seamless Walk-In) ──
+export interface SpaceDoorway {
+  zoneId: SpaceZoneId;
+  name: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  orientation: "horizontal" | "vertical";
+  spawnInside: { x: number; y: number };
+  spawnOutside: { x: number; y: number };
+}
+
+export const SPACE_DOORWAYS: SpaceDoorway[] = [
+  {
+    zoneId: "office",
+    name: "Office Entrance",
+    x: 710,
+    y: 230,
+    w: 24,
+    h: 160,
+    orientation: "vertical",
+    spawnInside: { x: 650, y: 310 },
+    spawnOutside: { x: 760, y: 310 },
+  },
+  {
+    zoneId: "library",
+    name: "Library Sanctuary Entrance",
+    x: 866,
+    y: 230,
+    w: 24,
+    h: 160,
+    orientation: "vertical",
+    spawnInside: { x: 930, y: 310 },
+    spawnOutside: { x: 820, y: 310 },
+  },
+  {
+    zoneId: "music",
+    name: "Music Studio Entrance",
+    x: 200,
+    y: 646,
+    w: 160,
+    h: 24,
+    orientation: "horizontal",
+    spawnInside: { x: 280, y: 720 },
+    spawnOutside: { x: 280, y: 600 },
+  },
+  {
+    zoneId: "concert",
+    name: "Concert Hall Grand Portal",
+    x: 720,
+    y: 646,
+    w: 160,
+    h: 24,
+    orientation: "horizontal",
+    spawnInside: { x: 800, y: 720 },
+    spawnOutside: { x: 800, y: 600 },
+  },
+  {
+    zoneId: "debate",
+    name: "Debate Arena Main Gate",
+    x: 1240,
+    y: 646,
+    w: 160,
+    h: 24,
+    orientation: "horizontal",
+    spawnInside: { x: 1320, y: 720 },
+    spawnOutside: { x: 1320, y: 600 },
+  },
+];
+
+// ── COLLISION WALLS & ROOM PERIMETERS (With Wide 160px Doorway Gaps) ──
 export const COLLISION_BOXES: CollisionBox[] = [
   // Outer map boundary walls
   { x: 0, y: 0, w: WORLD_WIDTH, h: 40 },
@@ -490,37 +561,37 @@ export const COLLISION_BOXES: CollisionBox[] = [
   { x: 0, y: 0, w: 40, h: WORLD_HEIGHT },
   { x: WORLD_WIDTH - 40, y: 0, w: 40, h: WORLD_HEIGHT },
 
-  // Office Room Walls (Doorway at x: 714, y: 270-350)
+  // Office Room Walls (Wide 160px Doorway at x: 714, y: 230-390)
   { x: 50, y: 50, w: 680, h: 16 },
   { x: 50, y: 50, w: 16, h: 480 },
   { x: 50, y: 514, w: 680, h: 16 },
-  { x: 714, y: 50, w: 16, h: 220 },
-  { x: 714, y: 350, w: 16, h: 180 },
+  { x: 714, y: 50, w: 16, h: 180 },
+  { x: 714, y: 390, w: 16, h: 140 },
 
-  // Library Room Walls (Doorway at x: 870, y: 270-350)
+  // Library Room Walls (Wide 160px Doorway at x: 870, y: 230-390)
   { x: 870, y: 50, w: 680, h: 16 },
   { x: 1534, y: 50, w: 16, h: 480 },
   { x: 870, y: 514, w: 680, h: 16 },
-  { x: 870, y: 50, w: 16, h: 220 },
-  { x: 870, y: 350, w: 16, h: 180 },
+  { x: 870, y: 50, w: 16, h: 180 },
+  { x: 870, y: 390, w: 16, h: 140 },
 
-  // Music Room Walls (Doorway at Top y: 650, x: 240-320)
-  { x: 50, y: 650, w: 190, h: 16 },
-  { x: 320, y: 650, w: 190, h: 16 },
+  // Music Room Walls (Wide 160px Doorway at Top y: 650, x: 200-360)
+  { x: 50, y: 650, w: 150, h: 16 },
+  { x: 360, y: 650, w: 150, h: 16 },
   { x: 50, y: 650, w: 16, h: 500 },
   { x: 494, y: 650, w: 16, h: 500 },
   { x: 50, y: 1134, w: 460, h: 16 },
 
-  // Concert Hall Walls (Doorway at Top y: 650, x: 760-840)
-  { x: 550, y: 650, w: 210, h: 16 },
-  { x: 840, y: 650, w: 210, h: 16 },
+  // Concert Hall Walls (Wide 160px Doorway at Top y: 650, x: 720-880)
+  { x: 550, y: 650, w: 170, h: 16 },
+  { x: 880, y: 650, w: 170, h: 16 },
   { x: 550, y: 650, w: 16, h: 500 },
   { x: 1034, y: 650, w: 16, h: 500 },
   { x: 550, y: 1134, w: 500, h: 16 },
 
-  // Debate Arena Walls (Doorway at Top y: 650, x: 1280-1360)
-  { x: 1090, y: 650, w: 190, h: 16 },
-  { x: 1360, y: 650, w: 190, h: 16 },
+  // Debate Arena Walls (Wide 160px Doorway at Top y: 650, x: 1240-1400)
+  { x: 1090, y: 650, w: 150, h: 16 },
+  { x: 1400, y: 650, w: 150, h: 16 },
   { x: 1090, y: 650, w: 16, h: 500 },
   { x: 1534, y: 650, w: 16, h: 500 },
   { x: 1090, y: 1134, w: 460, h: 16 },
@@ -550,7 +621,7 @@ export function getPrivateRugAtCoordinates(x: number, y: number): PrivateRug | n
   return null;
 }
 
-export function checkCollision(x: number, y: number, radius = 14): boolean {
+export function checkCollision(x: number, y: number, radius = 10): boolean {
   for (const box of COLLISION_BOXES) {
     if (
       x + radius > box.x &&

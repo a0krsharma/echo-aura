@@ -8,7 +8,7 @@
  * proximity voice, private rugs, whiteboard, and host controls.
  */
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/app/components/AuthProvider";
@@ -29,6 +29,8 @@ import {
   SPACES_ZONES,
   getSpaceDoc,
   updateSpaceDoc,
+  getZoneAtCoordinates,
+  getPrivateRugAtCoordinates,
 } from "@/lib/spaces";
 import { spacesSfx } from "@/lib/spacesSfx";
 import {
@@ -38,10 +40,13 @@ import {
   Palette,
   Edit3,
   Megaphone,
-  Radio,
   Share2,
   Sparkles,
   Lock,
+  Compass,
+  ArrowRight,
+  MapPin,
+  Check,
 } from "lucide-react";
 
 export default function DynamicSpaceWorldPage() {
@@ -56,6 +61,14 @@ export default function DynamicSpaceWorldPage() {
     return DEFAULT_SPACES.find((s) => s.id === spaceId) || DEFAULT_SPACES[0];
   });
   const [loading, setLoading] = useState(true);
+
+  // Check-In / Welcome Entry Modal State
+  const [hasEntered, setHasEntered] = useState(false);
+  const [chosenSpawn, setChosenSpawn] = useState<{ name: string; x: number; y: number }>({
+    name: "Central Courtyard Fountain",
+    x: 800,
+    y: 540,
+  });
 
   // Modals
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
@@ -79,7 +92,7 @@ export default function DynamicSpaceWorldPage() {
     uid: user?.uid || "guest_player",
     handle: user?.handle || "@EXPLORER",
     avatarUrl: user?.photoUrl || user?.photoURL,
-    x: 800, // Central spawn near fountain
+    x: 800,
     y: 540,
     direction: "down",
     isMoving: false,
@@ -166,6 +179,29 @@ export default function DynamicSpaceWorldPage() {
         avatarConfig: nextCfg,
       };
     });
+  };
+
+  // Fast Travel Teleport
+  const handleTeleport = (x: number, y: number) => {
+    spacesSfx.playZoneChime();
+    const nextZone = getZoneAtCoordinates(x, y);
+    const nextRug = getPrivateRugAtCoordinates(x, y);
+    setLocalAvatar((prev) => ({
+      ...prev,
+      x,
+      y,
+      activeZone: nextZone,
+      activeRugId: nextRug ? nextRug.id : null,
+      isMoving: false,
+      lastUpdated: Date.now(),
+    }));
+  };
+
+  // Confirm Enter Space from Check-In Gate
+  const handleEnterSpaceNow = () => {
+    spacesSfx.playZoneChime();
+    setHasEntered(true);
+    handleTeleport(chosenSpawn.x, chosenSpawn.y);
   };
 
   // Handle Movement
@@ -273,6 +309,15 @@ export default function DynamicSpaceWorldPage() {
 
   const isHost = user?.uid === space.hostUid || space.hostUid === "guest_host" || space.hostUid === "echo_system";
   const activeZoneDef = SPACES_ZONES[localAvatar.activeZone];
+
+  const SPAWN_PRESETS = [
+    { name: "Central Courtyard Fountain", icon: "⛲", x: 800, y: 540 },
+    { name: "Virtual Office (Desk Alpha)", icon: "🏢", x: 400, y: 260 },
+    { name: "Silent Library (Focus Alcove)", icon: "📚", x: 1200, y: 260 },
+    { name: "Music Studio (Jam Piano)", icon: "🎵", x: 260, y: 860 },
+    { name: "Concert Stage (Spotlight)", icon: "🎤", x: 800, y: 860 },
+    { name: "Debate Arena (Caucus Table)", icon: "⚖️", x: 1320, y: 860 },
+  ];
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col justify-between selection:bg-cyan-500 selection:text-black">
@@ -384,7 +429,25 @@ export default function DynamicSpaceWorldPage() {
         </div>
       </header>
 
-      {/* 3. Main 2D Spatial Canvas Viewport */}
+      {/* 3. Doorway Fast-Travel Quick Jump Ribbon */}
+      <div className="flex items-center gap-2 overflow-x-auto py-2 px-4 sm:px-6 border-b border-neutral-900 bg-neutral-950/70 backdrop-blur-xs scrollbar-none text-xs font-mono">
+        <span className="text-neutral-500 shrink-0 flex items-center gap-1">
+          <Compass className="w-3.5 h-3.5 text-cyan-400" />
+          <span>DOORWAYS:</span>
+        </span>
+        {SPAWN_PRESETS.map((preset) => (
+          <button
+            key={preset.name}
+            onClick={() => handleTeleport(preset.x, preset.y)}
+            className="px-2.5 py-1 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-cyan-500/50 text-neutral-300 hover:text-white transition-all shrink-0 flex items-center gap-1.5 cursor-pointer text-[11px]"
+          >
+            <span>{preset.icon}</span>
+            <span>{preset.name.split(" ")[0]}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* 4. Main 2D Spatial Canvas Viewport */}
       <main className="flex-1 flex flex-col items-center justify-center p-2 sm:p-4 max-w-7xl mx-auto w-full">
         <EchoSpacesWorld
           localAvatar={localAvatar}
@@ -398,10 +461,11 @@ export default function DynamicSpaceWorldPage() {
           onRugChange={handleRugChange}
           onInteractObject={handleInteractObject}
           onToggleGhost={handleToggleGhost}
+          onTeleport={handleTeleport}
         />
       </main>
 
-      {/* 4. Bottom Context Dock (Zone tools: Piano, Pomodoro, Whiteboard, Emotes, Gavel) */}
+      {/* 5. Bottom Context Dock */}
       <footer className="w-full max-w-7xl mx-auto px-4 pb-4">
         <ZoneContextDock
           currentZone={localAvatar.activeZone}
@@ -413,6 +477,70 @@ export default function DynamicSpaceWorldPage() {
           }}
         />
       </footer>
+
+      {/* Check-In Welcome Gate Modal (Makes entering seamless & transparent) */}
+      {!hasEntered && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md bg-neutral-950 border border-neutral-800 rounded-3xl shadow-2xl overflow-hidden p-6 space-y-6">
+            <div className="text-center space-y-2">
+              <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center mx-auto text-cyan-400">
+                <Sparkles className="w-6 h-6 animate-pulse" />
+              </div>
+              <h2 className="text-xl font-bold font-mono text-white tracking-tight">
+                ENTER {space.name.toUpperCase()}
+              </h2>
+              <p className="text-xs text-neutral-400 font-mono">
+                {space.description || "2D spatial living space with proximity voice & rugs."}
+              </p>
+            </div>
+
+            {/* Spawn Point Choice */}
+            <div className="space-y-2.5">
+              <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-neutral-400 block">
+                Choose Where To Spawn:
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {SPAWN_PRESETS.map((preset) => {
+                  const isSelected = chosenSpawn.name === preset.name;
+                  return (
+                    <button
+                      key={preset.name}
+                      type="button"
+                      onClick={() => {
+                        setChosenSpawn(preset);
+                        spacesSfx.playKeyNote(1);
+                      }}
+                      className={`p-2.5 rounded-xl border text-left text-xs font-mono transition-all cursor-pointer flex items-center gap-2 ${
+                        isSelected
+                          ? "border-cyan-400 bg-cyan-950/40 text-cyan-300 font-bold"
+                          : "border-neutral-800 bg-neutral-900/60 text-neutral-400 hover:text-white"
+                      }`}
+                    >
+                      <span className="text-base">{preset.icon}</span>
+                      <span className="truncate">{preset.name.split(" ")[0]}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Enter Button */}
+            <button
+              onClick={handleEnterSpaceNow}
+              className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-black font-mono font-black text-sm flex items-center justify-center gap-2 shadow-xl shadow-cyan-500/20 active:scale-95 transition-all cursor-pointer"
+            >
+              <span>STEP INTO SPACE</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+
+            {/* Quick tips */}
+            <div className="text-[10px] font-mono text-neutral-500 text-center space-y-1">
+              <div>💡 Tip: Click anywhere on floor or use [W,A,S,D] to walk.</div>
+              <div>Press [G] to activate Ghost Mode and walk through walls!</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modals */}
       <AvatarStudioModal
