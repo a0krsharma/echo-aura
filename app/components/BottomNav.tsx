@@ -19,11 +19,12 @@ import { Radio, Waves, Users, Swords, Mic2 } from "lucide-react";
 export default function BottomNav() {
   const pathname = usePathname();
 
-  // Hide BottomNav on active chat / wire screens, stage clash arena, and live rooms
+  // Hide BottomNav on active chat / wire screens, stage clash arena, live rooms, and 2D spaces
   if (
     pathname.startsWith("/room/") ||
     pathname.startsWith("/stage/") ||
-    pathname.startsWith("/wire")
+    pathname.startsWith("/wire") ||
+    pathname.startsWith("/spaces")
   ) {
     return null;
   }

@@ -409,6 +409,32 @@ function RoomsPageContent() {
           </button>
         </div>
 
+        {/* 🌐 Echo Spaces 2D Living Metaverse Banner */}
+        <Link
+          href="/spaces"
+          className="block border-2 border-cyan-400/80 bg-gradient-to-r from-cyan-950/40 via-purple-950/30 to-black p-4 rounded-xl relative overflow-hidden group hover:border-white transition-all shadow-[0_0_30px_rgba(56,189,248,0.15)] cursor-pointer"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🌐</span>
+                <span className="text-xs font-black uppercase tracking-widest text-cyan-300">
+                  // ECHO SPACES // LIVE 2D METAVERSE
+                </span>
+                <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 text-[9px] font-mono font-bold animate-pulse">
+                  WALK-IN LIVE
+                </span>
+              </div>
+              <p className="text-xs text-neutral-300 font-sans">
+                Walk your avatar into <strong>Virtual Office</strong>, <strong>Quiet Library</strong>, <strong>Music Studio</strong>, <strong>Concert Hall</strong> & <strong>Debate Arena</strong> with 360° spatial proximity voice.
+              </p>
+            </div>
+            <div className="px-3 py-2 bg-white text-black font-black text-xs uppercase tracking-wider rounded-lg shrink-0 group-hover:bg-cyan-300 transition-colors">
+              ENTER WORLD ►
+            </div>
+          </div>
+        </Link>
+
         {/* Category Filter Pills */}
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
           {CATEGORIES.map(cat => (
