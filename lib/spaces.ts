@@ -2,9 +2,42 @@
  * lib/spaces.ts
  * ─────────────────────────────────────────────────────
  * Echo Spaces: 2D Spatial Living Space Metaverse System
- * Defines zones, coordinates, interactive objects, collision boundaries,
- * and avatar presence sync.
+ * Defines spaces, categories, vibes, avatar traits, private rugs,
+ * interactive stations, and Firestore lifecycle persistence.
  */
+
+import {
+  collection,
+  doc,
+  setDoc,
+  getDoc,
+  getDocs,
+  deleteDoc,
+  updateDoc,
+  query,
+  where,
+  orderBy,
+  limit,
+  onSnapshot,
+  serverTimestamp,
+  Timestamp,
+} from "firebase/firestore";
+import { getFirebaseDb } from "@/lib/firebase";
+
+export type SpaceCategory =
+  | "OFFICE"
+  | "LIBRARY"
+  | "MUSIC"
+  | "CONCERT"
+  | "DEBATE"
+  | "CAMPUS"
+  | "CUSTOM";
+
+export type SpaceVibe =
+  | "MIDNIGHT_NEON"
+  | "SUNNY_DAYLIGHT"
+  | "COZY_RAINY"
+  | "SUNSET_LOFI";
 
 export type SpaceZoneId = "office" | "library" | "music" | "concert" | "debate" | "courtyard";
 
@@ -17,7 +50,19 @@ export interface SpaceZoneDef {
   bounds: { x: number; y: number; w: number; h: number };
   description: string;
   ambientSound?: string;
-  broadcastPoint?: { x: number; y: number }; // E.g. Stage or Podium
+  broadcastPoint?: { x: number; y: number };
+}
+
+export interface PrivateRug {
+  id: string;
+  name: string;
+  zoneId: SpaceZoneId;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  color: string;
+  capacity: number;
 }
 
 export interface InteractiveObject {
@@ -41,6 +86,17 @@ export interface CollisionBox {
   h: number;
 }
 
+export interface AvatarConfig {
+  skinTone: string; // Hex color
+  hairStyle: "short" | "spiky" | "waves" | "ponytail" | "afro" | "beanie" | "cap" | "bald";
+  hairColor: string; // Hex color
+  outfit: "hoodie" | "suit" | "bomber" | "tshirt" | "robe";
+  outfitColor: string; // Hex color
+  accessory: "none" | "glasses" | "headphones" | "shades";
+  pet: "none" | "dog" | "cat" | "drone" | "duck";
+  isGhost: boolean;
+}
+
 export interface SpatialAvatar {
   uid: string;
   handle: string;
@@ -56,11 +112,32 @@ export interface SpatialAvatar {
   isDancing?: boolean;
   danceType?: string;
   activeZone: SpaceZoneId;
+  activeRugId?: string | null;
   statusText?: string;
   hoodieColor: string;
+  avatarConfig?: AvatarConfig;
   isSpeaking: boolean;
   speechBubble?: { text: string; expiresAt: number };
   lastUpdated: number;
+}
+
+export interface SpaceDoc {
+  id: string;
+  name: string;
+  description: string;
+  category: SpaceCategory;
+  vibe: SpaceVibe;
+  hostUid: string;
+  hostHandle: string;
+  hostAvatar?: string;
+  participantCount: number;
+  maxParticipants: number;
+  isPublic: boolean;
+  createdAt: number;
+  expiresAt: number | null; // Timestamp ms, null for persistent
+  whiteboardNotes?: string;
+  whiteboardDrawings?: string; // Serialized drawing JSON
+  announcement?: { text: string; expiresAt: number } | null;
 }
 
 // ── WORLD MAP DIMENSIONS ──
@@ -74,16 +151,16 @@ export const SPACES_ZONES: Record<SpaceZoneId, SpaceZoneDef> = {
     name: "Virtual Coworking Office",
     category: "PRODUCTIVITY",
     icon: "🏢",
-    color: "#38bdf8", // Sky Blue
+    color: "#38bdf8",
     bounds: { x: 50, y: 50, w: 680, h: 480 },
-    description: "Desks, conference table, whiteboard & watercooler for casual team syncs.",
+    description: "Desks, conference table, whiteboard & private meeting rugs.",
   },
   library: {
     id: "library",
     name: "Silent Sanctuary Library",
     category: "FOCUS & STUDY",
     icon: "📚",
-    color: "#a78bfa", // Purple
+    color: "#a78bfa",
     bounds: { x: 870, y: 50, w: 680, h: 480 },
     description: "Whisper sanctuary with 25/5 Pomodoro timer, lofi rain & cozy armchairs.",
   },
@@ -92,7 +169,7 @@ export const SPACES_ZONES: Record<SpaceZoneId, SpaceZoneDef> = {
     name: "Music Academy & Jam Studio",
     category: "CREATIVE & AUDIO",
     icon: "🎵",
-    color: "#f43f5e", // Rose
+    color: "#f43f5e",
     bounds: { x: 50, y: 650, w: 460, h: 500 },
     description: "Live 8-key piano synthesizer, 4-pad drum machine & acoustic jam floor.",
   },
@@ -101,7 +178,7 @@ export const SPACES_ZONES: Record<SpaceZoneId, SpaceZoneDef> = {
     name: "Concert Hall & Festival Stage",
     category: "ENTERTAINMENT",
     icon: "🎤",
-    color: "#eab308", // Golden Yellow
+    color: "#eab308",
     bounds: { x: 550, y: 650, w: 500, h: 500 },
     description: "Raised performance stage, stage broadcaster mic & audience dance floor.",
     broadcastPoint: { x: 800, y: 730 },
@@ -111,7 +188,7 @@ export const SPACES_ZONES: Record<SpaceZoneId, SpaceZoneDef> = {
     name: "Town Hall Debate Arena",
     category: "SPEECH & POLITICS",
     icon: "⚖️",
-    color: "#10b981", // Emerald Green
+    color: "#10b981",
     bounds: { x: 1090, y: 650, w: 460, h: 500 },
     description: "Proposition & Opposition podiums, Judge gavel & real-time audience voting.",
     broadcastPoint: { x: 1320, y: 730 },
@@ -121,11 +198,70 @@ export const SPACES_ZONES: Record<SpaceZoneId, SpaceZoneDef> = {
     name: "Central Courtyard & Garden",
     category: "COMMUNITY LOUNGE",
     icon: "⛲",
-    color: "#14b8a6", // Teal
+    color: "#14b8a6",
     bounds: { x: 700, y: 480, w: 200, h: 220 },
     description: "Open air atrium connecting all 5 wings with marble fountain and park benches.",
   },
 };
+
+// ── PRIVATE CONVERSATION RUGS (Gather.town Style) ──
+export const PRIVATE_RUGS: PrivateRug[] = [
+  {
+    id: "rug_office_meeting_1",
+    name: "Office Sync Pod Alpha",
+    zoneId: "office",
+    x: 460,
+    y: 200,
+    w: 160,
+    h: 120,
+    color: "#0284c7",
+    capacity: 4,
+  },
+  {
+    id: "rug_office_lounge",
+    name: "Watercooler Coffee Circle",
+    zoneId: "office",
+    x: 180,
+    y: 350,
+    w: 180,
+    h: 110,
+    color: "#0369a1",
+    capacity: 6,
+  },
+  {
+    id: "rug_library_nook",
+    name: "Private Study Alcove",
+    zoneId: "library",
+    x: 950,
+    y: 340,
+    w: 150,
+    h: 110,
+    color: "#7e22ce",
+    capacity: 3,
+  },
+  {
+    id: "rug_music_greenroom",
+    name: "Backstage Band Lounge",
+    zoneId: "music",
+    x: 100,
+    y: 900,
+    w: 140,
+    h: 110,
+    color: "#be123c",
+    capacity: 4,
+  },
+  {
+    id: "rug_debate_caucus",
+    name: "Jury Caucus Table",
+    zoneId: "debate",
+    x: 1150,
+    y: 900,
+    w: 160,
+    h: 110,
+    color: "#047857",
+    capacity: 5,
+  },
+];
 
 // ── INTERACTIVE OBJECTS ACROSS ROOMS ──
 export const INTERACTIVE_OBJECTS: InteractiveObject[] = [
@@ -349,48 +485,47 @@ export const INTERACTIVE_OBJECTS: InteractiveObject[] = [
 // ── COLLISION WALLS & ROOM PERIMETERS ──
 export const COLLISION_BOXES: CollisionBox[] = [
   // Outer map boundary walls
-  { x: 0, y: 0, w: WORLD_WIDTH, h: 40 }, // Top
-  { x: 0, y: WORLD_HEIGHT - 40, w: WORLD_WIDTH, h: 40 }, // Bottom
-  { x: 0, y: 0, w: 40, h: WORLD_HEIGHT }, // Left
-  { x: WORLD_WIDTH - 40, y: 0, w: 40, h: WORLD_HEIGHT }, // Right
+  { x: 0, y: 0, w: WORLD_WIDTH, h: 40 },
+  { x: 0, y: WORLD_HEIGHT - 40, w: WORLD_WIDTH, h: 40 },
+  { x: 0, y: 0, w: 40, h: WORLD_HEIGHT },
+  { x: WORLD_WIDTH - 40, y: 0, w: 40, h: WORLD_HEIGHT },
 
-  // Office Room Walls (Doorway at x: 670, y: 280-360)
-  { x: 50, y: 50, w: 680, h: 16 }, // Office Top
-  { x: 50, y: 50, w: 16, h: 480 }, // Office Left
-  { x: 50, y: 514, w: 680, h: 16 }, // Office Bottom
-  { x: 714, y: 50, w: 16, h: 220 }, // Office Right (Top part)
-  { x: 714, y: 350, w: 16, h: 180 }, // Office Right (Bottom part - leaves doorway at 270-350)
+  // Office Room Walls (Doorway at x: 714, y: 270-350)
+  { x: 50, y: 50, w: 680, h: 16 },
+  { x: 50, y: 50, w: 16, h: 480 },
+  { x: 50, y: 514, w: 680, h: 16 },
+  { x: 714, y: 50, w: 16, h: 220 },
+  { x: 714, y: 350, w: 16, h: 180 },
 
-  // Library Room Walls (Doorway at x: 870, y: 280-360)
-  { x: 870, y: 50, w: 680, h: 16 }, // Library Top
-  { x: 1534, y: 50, w: 16, h: 480 }, // Library Right
-  { x: 870, y: 514, w: 680, h: 16 }, // Library Bottom
-  { x: 870, y: 50, w: 16, h: 220 }, // Library Left (Top part)
-  { x: 870, y: 350, w: 16, h: 180 }, // Library Left (Bottom part - leaves doorway at 270-350)
+  // Library Room Walls (Doorway at x: 870, y: 270-350)
+  { x: 870, y: 50, w: 680, h: 16 },
+  { x: 1534, y: 50, w: 16, h: 480 },
+  { x: 870, y: 514, w: 680, h: 16 },
+  { x: 870, y: 50, w: 16, h: 220 },
+  { x: 870, y: 350, w: 16, h: 180 },
 
   // Music Room Walls (Doorway at Top y: 650, x: 240-320)
-  { x: 50, y: 650, w: 190, h: 16 }, // Music Top Left
-  { x: 320, y: 650, w: 190, h: 16 }, // Music Top Right (Doorway at 240-320)
-  { x: 50, y: 650, w: 16, h: 500 }, // Music Left
-  { x: 494, y: 650, w: 16, h: 500 }, // Music Right
-  { x: 50, y: 1134, w: 460, h: 16 }, // Music Bottom
+  { x: 50, y: 650, w: 190, h: 16 },
+  { x: 320, y: 650, w: 190, h: 16 },
+  { x: 50, y: 650, w: 16, h: 500 },
+  { x: 494, y: 650, w: 16, h: 500 },
+  { x: 50, y: 1134, w: 460, h: 16 },
 
   // Concert Hall Walls (Doorway at Top y: 650, x: 760-840)
-  { x: 550, y: 650, w: 210, h: 16 }, // Concert Top Left
-  { x: 840, y: 650, w: 210, h: 16 }, // Concert Top Right (Doorway at 760-840)
-  { x: 550, y: 650, w: 16, h: 500 }, // Concert Left
-  { x: 1034, y: 650, w: 16, h: 500 }, // Concert Right
-  { x: 550, y: 1134, w: 500, h: 16 }, // Concert Bottom
+  { x: 550, y: 650, w: 210, h: 16 },
+  { x: 840, y: 650, w: 210, h: 16 },
+  { x: 550, y: 650, w: 16, h: 500 },
+  { x: 1034, y: 650, w: 16, h: 500 },
+  { x: 550, y: 1134, w: 500, h: 16 },
 
   // Debate Arena Walls (Doorway at Top y: 650, x: 1280-1360)
-  { x: 1090, y: 650, w: 190, h: 16 }, // Debate Top Left
-  { x: 1360, y: 650, w: 190, h: 16 }, // Debate Top Right (Doorway at 1280-1360)
-  { x: 1090, y: 650, w: 16, h: 500 }, // Debate Left
-  { x: 1534, y: 650, w: 16, h: 500 }, // Debate Right
-  { x: 1090, y: 1134, w: 460, h: 16 }, // Debate Bottom
+  { x: 1090, y: 650, w: 190, h: 16 },
+  { x: 1360, y: 650, w: 190, h: 16 },
+  { x: 1090, y: 650, w: 16, h: 500 },
+  { x: 1534, y: 650, w: 16, h: 500 },
+  { x: 1090, y: 1134, w: 460, h: 16 },
 ];
 
-// Helper to determine active zone from spatial coordinates
 export function getZoneAtCoordinates(x: number, y: number): SpaceZoneId {
   for (const [id, zone] of Object.entries(SPACES_ZONES)) {
     const { bounds } = zone;
@@ -406,7 +541,15 @@ export function getZoneAtCoordinates(x: number, y: number): SpaceZoneId {
   return "courtyard";
 }
 
-// Check if moving to (x, y) with radius collides with walls
+export function getPrivateRugAtCoordinates(x: number, y: number): PrivateRug | null {
+  for (const rug of PRIVATE_RUGS) {
+    if (x >= rug.x && x <= rug.x + rug.w && y >= rug.y && y <= rug.y + rug.h) {
+      return rug;
+    }
+  }
+  return null;
+}
+
 export function checkCollision(x: number, y: number, radius = 14): boolean {
   for (const box of COLLISION_BOXES) {
     if (
@@ -415,13 +558,12 @@ export function checkCollision(x: number, y: number, radius = 14): boolean {
       y + radius > box.y &&
       y - radius < box.y + box.h
     ) {
-      return true; // Collision!
+      return true;
     }
   }
   return false;
 }
 
-// Check if player is near an interactive object
 export function getNearbyInteractiveObject(
   x: number,
   y: number,
@@ -438,7 +580,81 @@ export function getNearbyInteractiveObject(
   return null;
 }
 
-// Sample Ambient Bots when solo
+// ── DEFAULT SEED SPACES ──
+export const DEFAULT_SPACES: SpaceDoc[] = [
+  {
+    id: "genesis_campus",
+    name: "Echo Genesis Campus",
+    description: "The official master 5-zone interactive metaverse with office, library, music, concert & debate.",
+    category: "CAMPUS",
+    vibe: "MIDNIGHT_NEON",
+    hostUid: "echo_system",
+    hostHandle: "@ECHO_SYSTEM",
+    participantCount: 8,
+    maxParticipants: 100,
+    isPublic: true,
+    createdAt: Date.now() - 3600000,
+    expiresAt: null, // Persistent
+  },
+  {
+    id: "virtual_office_hq",
+    name: "HyperLoop Engineering Office",
+    description: "Daily standups, sprint roadmaps, desks & whiteboards for remote builders.",
+    category: "OFFICE",
+    vibe: "SUNNY_DAYLIGHT",
+    hostUid: "maya_dev",
+    hostHandle: "@MAYA_LEAD",
+    participantCount: 5,
+    maxParticipants: 30,
+    isPublic: true,
+    createdAt: Date.now() - 1800000,
+    expiresAt: Date.now() + 7200000, // 2 hours remaining
+  },
+  {
+    id: "lofi_study_sanctuary",
+    name: "Midnight Lofi Study Sanctuary",
+    description: "25m Pomodoro focus intervals, ambient rain audio, and quiet book carrels.",
+    category: "LIBRARY",
+    vibe: "COZY_RAINY",
+    hostUid: "ezra_books",
+    hostHandle: "@ARCHIVIST_EZRA",
+    participantCount: 12,
+    maxParticipants: 50,
+    isPublic: true,
+    createdAt: Date.now() - 900000,
+    expiresAt: Date.now() + 10800000,
+  },
+  {
+    id: "synthwave_jam_room",
+    name: "Analog Jam & Synth Academy",
+    description: "Live 8-key synthesizer piano, 4-pad drum machine, and acoustic jam sessions.",
+    category: "MUSIC",
+    vibe: "SUNSET_LOFI",
+    hostUid: "leo_composer",
+    hostHandle: "@LEO_AUDIO",
+    participantCount: 6,
+    maxParticipants: 25,
+    isPublic: true,
+    createdAt: Date.now() - 600000,
+    expiresAt: Date.now() + 14400000,
+  },
+  {
+    id: "town_hall_clash",
+    name: "Oxford Union Debate Arena",
+    category: "DEBATE",
+    vibe: "MIDNIGHT_NEON",
+    description: "Proposition vs Opposition with Judge Gavel, 60s speech clocks, and live audience voting.",
+    hostUid: "senator_vance",
+    hostHandle: "@VANCE_SENATE",
+    participantCount: 9,
+    maxParticipants: 60,
+    isPublic: true,
+    createdAt: Date.now() - 1200000,
+    expiresAt: Date.now() + 3600000,
+  },
+];
+
+// ── SAMPLE AMBIENT BOTS WHEN SOLO ──
 export const DEFAULT_AMBIENT_BOTS: SpatialAvatar[] = [
   {
     uid: "bot_colleague_1",
@@ -449,8 +665,18 @@ export const DEFAULT_AMBIENT_BOTS: SpatialAvatar[] = [
     isMoving: false,
     isSitting: true,
     activeZone: "office",
-    statusText: "💻 Ship sprint v2.4",
+    statusText: "💻 Shipping v2.5",
     hoodieColor: "#38bdf8",
+    avatarConfig: {
+      skinTone: "#fed7aa",
+      hairStyle: "ponytail",
+      hairColor: "#1e293b",
+      outfit: "hoodie",
+      outfitColor: "#38bdf8",
+      accessory: "glasses",
+      pet: "drone",
+      isGhost: false,
+    },
     isSpeaking: false,
     lastUpdated: Date.now(),
   },
@@ -465,6 +691,16 @@ export const DEFAULT_AMBIENT_BOTS: SpatialAvatar[] = [
     activeZone: "library",
     statusText: "📖 Researching AI ethics",
     hoodieColor: "#a78bfa",
+    avatarConfig: {
+      skinTone: "#fcd34d",
+      hairStyle: "waves",
+      hairColor: "#78350f",
+      outfit: "robe",
+      outfitColor: "#7e22ce",
+      accessory: "glasses",
+      pet: "cat",
+      isGhost: false,
+    },
     isSpeaking: false,
     lastUpdated: Date.now(),
   },
@@ -477,8 +713,18 @@ export const DEFAULT_AMBIENT_BOTS: SpatialAvatar[] = [
     isMoving: false,
     isSitting: false,
     activeZone: "music",
-    statusText: "🎹 Improvising in D-Minor",
+    statusText: "🎹 Jamming in D-Minor",
     hoodieColor: "#f43f5e",
+    avatarConfig: {
+      skinTone: "#fdba74",
+      hairStyle: "spiky",
+      hairColor: "#0284c7",
+      outfit: "bomber",
+      outfitColor: "#f43f5e",
+      accessory: "headphones",
+      pet: "dog",
+      isGhost: false,
+    },
     isSpeaking: false,
     lastUpdated: Date.now(),
   },
@@ -491,10 +737,105 @@ export const DEFAULT_AMBIENT_BOTS: SpatialAvatar[] = [
     isMoving: false,
     isSitting: false,
     activeZone: "debate",
-    statusText: "⚖️ Proposition: Web3 is the Future",
+    statusText: "⚖️ Proposition: Web3 Living Spaces",
     hoodieColor: "#10b981",
+    avatarConfig: {
+      skinTone: "#fed7aa",
+      hairStyle: "short",
+      hairColor: "#475569",
+      outfit: "suit",
+      outfitColor: "#0f172a",
+      accessory: "none",
+      pet: "none",
+      isGhost: false,
+    },
     isSpeaking: true,
     speechBubble: { text: "The motion stands supported by empirical evidence!", expiresAt: Date.now() + 60000 },
     lastUpdated: Date.now(),
   },
 ];
+
+// ── FIRESTORE PERSISTENCE METHODS ──
+const SPACES_COLLECTION = "spaces";
+
+export async function createSpaceDoc(space: Omit<SpaceDoc, "id">): Promise<string> {
+  const db = getFirebaseDb();
+  const docRef = doc(collection(db, SPACES_COLLECTION));
+  const newSpace: SpaceDoc = {
+    ...space,
+    id: docRef.id,
+  };
+  await setDoc(docRef, newSpace);
+  return docRef.id;
+}
+
+export function subscribeToPublicSpaces(callback: (spaces: SpaceDoc[]) => void): () => void {
+  const db = getFirebaseDb();
+  const q = query(collection(db, SPACES_COLLECTION), limit(60));
+
+  const unsub = onSnapshot(
+    q,
+    (snap) => {
+      const now = Date.now();
+      const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as SpaceDoc[];
+
+      // Filter expired spaces client-side
+      const valid = docs.filter((s) => {
+        if (!s.name) return false;
+        if (s.expiresAt && s.expiresAt < now) {
+          // Clean up expired space asynchronously
+          deleteDoc(doc(db, SPACES_COLLECTION, s.id)).catch(() => {});
+          return false;
+        }
+        return true;
+      });
+
+      if (valid.length === 0) {
+        callback(DEFAULT_SPACES);
+      } else {
+        callback(valid);
+      }
+    },
+    (err) => {
+      console.warn("[subscribeToPublicSpaces] Error, using defaults:", err);
+      callback(DEFAULT_SPACES);
+    }
+  );
+
+  return unsub;
+}
+
+export async function getSpaceDoc(spaceId: string): Promise<SpaceDoc | null> {
+  // Check default seed spaces first
+  const defaultFound = DEFAULT_SPACES.find((s) => s.id === spaceId);
+  if (defaultFound) return defaultFound;
+
+  try {
+    const db = getFirebaseDb();
+    const snap = await getDoc(doc(db, SPACES_COLLECTION, spaceId));
+    if (snap.exists()) {
+      return { id: snap.id, ...snap.data() } as SpaceDoc;
+    }
+  } catch (err) {
+    console.warn("[getSpaceDoc] Failed fetching doc:", err);
+  }
+  return null;
+}
+
+export async function updateSpaceDoc(spaceId: string, updates: Partial<SpaceDoc>): Promise<void> {
+  try {
+    const db = getFirebaseDb();
+    await updateDoc(doc(db, SPACES_COLLECTION, spaceId), updates);
+  } catch (err) {
+    console.warn("[updateSpaceDoc] Error updating space:", err);
+  }
+}
+
+export async function deleteSpaceDoc(spaceId: string): Promise<void> {
+  try {
+    const db = getFirebaseDb();
+    await deleteDoc(doc(db, SPACES_COLLECTION, spaceId));
+  } catch (err) {
+    console.warn("[deleteSpaceDoc] Error deleting space:", err);
+  }
+}

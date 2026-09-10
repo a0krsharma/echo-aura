@@ -16,7 +16,7 @@ interface SpatialVoiceManagerProps {
   spaceId: string;
   localAvatar: SpatialAvatar;
   remoteAvatars: SpatialAvatar[];
-  onSpeakingChange: (isSpeaking: boolean) => void;
+  onSpeakingChange?: (isSpeaking: boolean) => void;
 }
 
 export default function SpatialVoiceManager({
@@ -62,7 +62,7 @@ export default function SpatialVoiceManager({
         });
 
         setSpeakingUids(speaking);
-        onSpeakingChange(localIsSpeaking);
+        onSpeakingChange?.(localIsSpeaking);
       });
     } catch (e) {
       console.warn("[SpatialVoice] Volume indicator error:", e);

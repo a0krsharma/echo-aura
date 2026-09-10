@@ -128,6 +128,11 @@ class SpacesSoundEngine {
     } catch {}
   }
 
+  // Alias for playPianoNote
+  playKeyNote(keyIndex: number) {
+    this.playPianoNote(keyIndex);
+  }
+
   // 5. 4-Pad Drum Machine (Kick, Snare, HiHat, 808 Sub)
   playDrum(padType: "kick" | "snare" | "hihat" | "sub808") {
     const ctx = this.getContext();
@@ -186,6 +191,11 @@ class SpacesSoundEngine {
         osc.stop(ctx.currentTime + 0.55);
       }
     } catch {}
+  }
+
+  // Alias for playDrum
+  playDrumPad(padType: "kick" | "snare" | "hihat" | "sub808") {
+    this.playDrum(padType);
   }
 
   // 6. Debate Judge Gavel Strike (*BANG BANG* ORDER IN COURT!)
@@ -249,6 +259,11 @@ class SpacesSoundEngine {
         osc.stop(ctx.currentTime + idx * 0.08 + 0.35);
       });
     } catch {}
+  }
+
+  // Alias for playCheerFanfare
+  playConcertFanfare() {
+    this.playCheerFanfare();
   }
 
   // 9. Fountain Coin Splash
