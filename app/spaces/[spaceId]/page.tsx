@@ -18,6 +18,8 @@ import SpatialVoiceManager from "@/app/components/spaces/SpatialVoiceManager";
 import AvatarStudioModal from "@/app/components/spaces/AvatarStudioModal";
 import HostSettingsModal from "@/app/components/spaces/HostSettingsModal";
 import WhiteboardCanvasModal from "@/app/components/spaces/WhiteboardCanvasModal";
+import ArcadeMiniGameModal from "@/app/components/spaces/ArcadeMiniGameModal";
+import JukeboxModal from "@/app/components/spaces/JukeboxModal";
 import {
   SpaceDoc,
   SpaceZoneId,
@@ -75,6 +77,9 @@ export default function DynamicSpaceWorldPage() {
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
   const [hostModalOpen, setHostModalOpen] = useState(false);
   const [whiteboardModalOpen, setWhiteboardModalOpen] = useState(false);
+  const [arcadeModalOpen, setArcadeModalOpen] = useState(false);
+  const [jukeboxModalOpen, setJukeboxModalOpen] = useState(false);
+  const [speakingUids, setSpeakingUids] = useState<Set<string>>(new Set());
 
   // Avatar Config
   const [avatarConfig, setAvatarConfig] = useState<AvatarConfig>({
@@ -271,16 +276,53 @@ export default function DynamicSpaceWorldPage() {
     }));
   };
 
+  // Toggle Hand Raise [H]
+  const handleToggleHandRaise = () => {
+    const nextHand = !localAvatar.isHandRaised;
+    spacesSfx.playHandRaise();
+    setLocalAvatar((prev) => ({
+      ...prev,
+      isHandRaised: nextHand,
+      lastUpdated: Date.now(),
+    }));
+    if (nextHand) {
+      handleSendSpeech("✋ Hand raised");
+    }
+  };
+
+  // Toggle Holding Fresh Coffee Mug
+  const handleToggleCoffee = () => {
+    const nextCoffee = !localAvatar.hasCoffee;
+    spacesSfx.playCoffeeBrew();
+    setLocalAvatar((prev) => ({
+      ...prev,
+      hasCoffee: nextCoffee,
+      lastUpdated: Date.now(),
+    }));
+    if (nextCoffee) {
+      handleSendSpeech("☕ Brewing fresh barista espresso!");
+    }
+  };
+
   // Handle Object Interaction
   const handleInteractObject = (obj: InteractiveObject) => {
     if (obj.type === "whiteboard") {
       setWhiteboardModalOpen(true);
       spacesSfx.playSitPop();
+    } else if (obj.type === "arcade" || obj.id === "office_arcade_cabinet") {
+      setArcadeModalOpen(true);
+      spacesSfx.playKeyNote(4);
+    } else if (obj.type === "jukebox" || obj.id === "music_jukebox") {
+      setJukeboxModalOpen(true);
+      spacesSfx.playKeyNote(3);
+    } else if (obj.type === "coffee" || obj.id === "office_coffee_bar") {
+      handleToggleCoffee();
     } else if (obj.type === "fountain") {
       spacesSfx.playFountainSplash();
       handleSendSpeech("🪙 Tossed a coin into the Echo Fountain!");
     } else if (obj.type === "gavel") {
       spacesSfx.playGavelStrike();
+      handleSendSpeech("🔨 Order in the court!");
     } else if (obj.type === "pomodoro") {
       spacesSfx.playFocusBell();
     } else if (obj.type === "piano") {
@@ -373,6 +415,7 @@ export default function DynamicSpaceWorldPage() {
             spaceId={space.id}
             localAvatar={localAvatar}
             remoteAvatars={remoteAvatars}
+            onSpeakingUidsChange={setSpeakingUids}
           />
         </div>
 
@@ -448,6 +491,7 @@ export default function DynamicSpaceWorldPage() {
           remoteAvatars={remoteAvatars}
           vibe={space.vibe}
           decorations={space.decorations || []}
+          speakingUids={speakingUids}
           onMove={handleMove}
           onSit={handleSit}
           onSendSpeech={handleSendSpeech}
@@ -456,6 +500,11 @@ export default function DynamicSpaceWorldPage() {
           onRugChange={handleRugChange}
           onInteractObject={handleInteractObject}
           onToggleGhost={handleToggleGhost}
+          onToggleHandRaise={handleToggleHandRaise}
+          onToggleCoffee={handleToggleCoffee}
+          onOpenArcade={() => setArcadeModalOpen(true)}
+          onOpenJukebox={() => setJukeboxModalOpen(true)}
+          onOpenWhiteboard={() => setWhiteboardModalOpen(true)}
           onTeleport={handleTeleport}
           onOpenAvatarStudio={() => setAvatarModalOpen(true)}
           onUpdateDecorations={handleUpdateDecorations}
@@ -559,6 +608,16 @@ export default function DynamicSpaceWorldPage() {
         onClose={() => setWhiteboardModalOpen(false)}
         initialDrawings={space.whiteboardDrawings}
         onSave={handleSaveWhiteboard}
+      />
+
+      <ArcadeMiniGameModal
+        isOpen={arcadeModalOpen}
+        onClose={() => setArcadeModalOpen(false)}
+      />
+
+      <JukeboxModal
+        isOpen={jukeboxModalOpen}
+        onClose={() => setJukeboxModalOpen(false)}
       />
     </div>
   );

@@ -24,6 +24,7 @@ import {
 } from "@/lib/spaces";
 import { spacesSfx } from "@/lib/spacesSfx";
 import { useAuth } from "@/app/components/AuthProvider";
+import ProximityAttendeesBar from "@/app/components/spaces/ProximityAttendeesBar";
 import {
   Sparkles,
   Send,
@@ -40,6 +41,11 @@ import {
   X,
   Check,
   Plus,
+  Hand,
+  Coffee,
+  Gamepad2,
+  Disc3,
+  Edit3,
 } from "lucide-react";
 
 interface EchoSpacesWorldProps {
@@ -47,6 +53,7 @@ interface EchoSpacesWorldProps {
   remoteAvatars: SpatialAvatar[];
   vibe?: SpaceVibe;
   decorations?: CustomDecoration[];
+  speakingUids?: Set<string>;
   onMove: (x: number, y: number, dir: "down" | "up" | "left" | "right", isMoving: boolean) => void;
   onSit: (isSitting: boolean, objectId?: string) => void;
   onSendSpeech: (text: string) => void;
@@ -55,6 +62,11 @@ interface EchoSpacesWorldProps {
   onRugChange?: (rugId: string | null) => void;
   onInteractObject: (obj: InteractiveObject) => void;
   onToggleGhost?: () => void;
+  onToggleHandRaise?: () => void;
+  onToggleCoffee?: () => void;
+  onOpenArcade?: () => void;
+  onOpenJukebox?: () => void;
+  onOpenWhiteboard?: () => void;
   onTeleport?: (x: number, y: number) => void;
   onOpenAvatarStudio?: () => void;
   onUpdateDecorations?: (decorations: CustomDecoration[]) => void;
@@ -67,6 +79,7 @@ export default function EchoSpacesWorld({
   remoteAvatars,
   vibe = "MIDNIGHT_NEON",
   decorations: externalDecorations = [],
+  speakingUids = new Set(),
   onMove,
   onSit,
   onSendSpeech,
@@ -75,6 +88,11 @@ export default function EchoSpacesWorld({
   onRugChange,
   onInteractObject,
   onToggleGhost,
+  onToggleHandRaise,
+  onToggleCoffee,
+  onOpenArcade,
+  onOpenJukebox,
+  onOpenWhiteboard,
   onTeleport,
   onOpenAvatarStudio,
   onUpdateDecorations,
@@ -207,6 +225,11 @@ export default function EchoSpacesWorld({
         onToggleGhost?.();
         spacesSfx.playKeyNote(6);
       }
+
+      if (key === "h") {
+        e.preventDefault();
+        onToggleHandRaise?.();
+      }
     };
 
     const onKeyUp = (e: KeyboardEvent) => {
@@ -219,7 +242,7 @@ export default function EchoSpacesWorld({
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
     };
-  }, [onToggleGhost]);
+  }, [onToggleGhost, onToggleHandRaise]);
 
   // Handle Object Interaction
   const handleInteract = useCallback(
@@ -228,11 +251,23 @@ export default function EchoSpacesWorld({
       if (obj.type === "chair") {
         const nextSitting = !localAvatar.isSitting;
         onSit(nextSitting, nextSitting ? obj.id : undefined);
+      } else if (obj.type === "arcade" || obj.id === "office_arcade_cabinet") {
+        if (onOpenArcade) onOpenArcade();
+        else onInteractObject(obj);
+      } else if (obj.type === "jukebox" || obj.id === "music_jukebox") {
+        if (onOpenJukebox) onOpenJukebox();
+        else onInteractObject(obj);
+      } else if (obj.type === "whiteboard") {
+        if (onOpenWhiteboard) onOpenWhiteboard();
+        else onInteractObject(obj);
+      } else if (obj.type === "coffee" || obj.id === "office_coffee_bar") {
+        if (onToggleCoffee) onToggleCoffee();
+        else onInteractObject(obj);
       } else {
         onInteractObject(obj);
       }
     },
-    [localAvatar.isSitting, onSit, onInteractObject]
+    [localAvatar.isSitting, onSit, onInteractObject, onOpenArcade, onOpenJukebox, onOpenWhiteboard, onToggleCoffee]
   );
 
   // 2. Chat Bubble Send
@@ -333,6 +368,36 @@ export default function EchoSpacesWorld({
     }
 
     // Normal Click-to-Walk:
+    // Check if clicked directly on an interactive object (walk to & interact)
+    for (const obj of INTERACTIVE_OBJECTS) {
+      if (
+        worldClickX >= obj.x - 14 &&
+        worldClickX <= obj.x + obj.w + 14 &&
+        worldClickY >= obj.y - 14 &&
+        worldClickY <= obj.y + obj.h + 14
+      ) {
+        clickTargetRef.current = { x: obj.x + obj.w / 2, y: obj.y + obj.h + 10, time: Date.now() };
+        handleInteract(obj);
+        return;
+      }
+    }
+
+    // Check if clicked directly on placed custom seating
+    for (const d of localDecorations) {
+      if (
+        d.canSit &&
+        worldClickX >= d.x - 10 &&
+        worldClickX <= d.x + d.w + 10 &&
+        worldClickY >= d.y - 10 &&
+        worldClickY <= d.y + d.h + 10
+      ) {
+        clickTargetRef.current = { x: d.x + d.w / 2, y: d.y + d.h / 2, time: Date.now() };
+        onSit(true, d.id);
+        spacesSfx.playSitPop();
+        return;
+      }
+    }
+
     // Check if clicked directly on a doorway
     for (const d of SPACE_DOORWAYS) {
       if (
@@ -652,6 +717,100 @@ export default function EchoSpacesWorld({
           ctx.strokeStyle = "#f43f5e";
           ctx.lineWidth = 2;
           ctx.strokeRect(x, y, w, h);
+        } else if (type === "arcade") {
+          // Retro arcade cabinet
+          ctx.fillStyle = "#1e1b4b";
+          ctx.beginPath();
+          ctx.roundRect(x, y, w, h, 6);
+          ctx.fill();
+          ctx.strokeStyle = "#818cf8";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          // Glowing Marquee
+          ctx.fillStyle = "#06b6d4";
+          ctx.fillRect(x + 4, y + 4, w - 8, 8);
+          ctx.fillStyle = "#000000";
+          ctx.font = "bold 6px monospace";
+          ctx.textAlign = "center";
+          ctx.fillText("ARCADE", x + w / 2, y + 10);
+
+          // CRT Screen (animated scanline glow)
+          const screenGlow = Math.sin(performance.now() * 0.005) * 0.2 + 0.8;
+          ctx.fillStyle = `rgba(6, 182, 212, ${screenGlow})`;
+          ctx.fillRect(x + 5, y + 14, w - 10, 16);
+
+          // Controls & Joystick
+          ctx.fillStyle = "#0f172a";
+          ctx.fillRect(x + 4, y + 32, w - 8, 10);
+          ctx.fillStyle = "#ef4444";
+          ctx.beginPath();
+          ctx.arc(x + 12, y + 36, 2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#eab308";
+          ctx.beginPath();
+          ctx.arc(x + 22, y + 36, 1.5, 0, Math.PI * 2);
+          ctx.arc(x + 28, y + 36, 1.5, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (type === "coffee") {
+          // Barista Espresso Counter
+          ctx.fillStyle = "#451a03";
+          ctx.beginPath();
+          ctx.roundRect(x, y + 12, w, h - 12, 4);
+          ctx.fill();
+          ctx.strokeStyle = "#78350f";
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+
+          // Espresso Machine & Chrome Steam Tower
+          ctx.fillStyle = "#94a3b8";
+          ctx.beginPath();
+          ctx.roundRect(x + 6, y + 2, w - 12, 16, 3);
+          ctx.fill();
+          ctx.fillStyle = "#334155";
+          ctx.fillRect(x + 10, y + 8, w - 20, 6);
+
+          // Rising steam curls
+          const sT = performance.now() * 0.004;
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(x + 14, y);
+          ctx.quadraticCurveTo(x + 12, y - 4, x + 14 + Math.sin(sT) * 2, y - 8);
+          ctx.stroke();
+        } else if (type === "jukebox") {
+          // Vintage Wurlitzer Arch Jukebox
+          ctx.fillStyle = "#7f1d1d";
+          ctx.beginPath();
+          ctx.roundRect(x, y, w, h, [16, 16, 4, 4]);
+          ctx.fill();
+          ctx.strokeStyle = "#e11d48";
+          ctx.lineWidth = 2.5;
+          ctx.stroke();
+
+          // Inner grill
+          ctx.fillStyle = "#18181b";
+          ctx.beginPath();
+          ctx.arc(x + w / 2, y + 20, 14, Math.PI, 0);
+          ctx.fill();
+
+          // Center vinyl record
+          ctx.fillStyle = "#000000";
+          ctx.beginPath();
+          ctx.arc(x + w / 2, y + 24, 8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#e11d48";
+          ctx.beginPath();
+          ctx.arc(x + w / 2, y + 24, 3, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (type === "podium") {
+          ctx.fillStyle = "#78350f";
+          ctx.beginPath();
+          ctx.roundRect(x + 4, y + 8, w - 8, h - 8, 4);
+          ctx.fill();
+          ctx.strokeStyle = "#b45309";
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
         }
         ctx.font = "15px sans-serif";
         ctx.fillText(icon, x + w / 2 - 8, y - 8);
@@ -1034,6 +1193,52 @@ export default function EchoSpacesWorld({
           ctx.restore();
         }
 
+        // Raised Hand Badge (Gather Style)
+        const isHandUp = isSelf ? !!localAvatar.isHandRaised : !!av.isHandRaised;
+        if (isHandUp) {
+          ctx.save();
+          const handBob = Math.sin(performance.now() * 0.008) * 3;
+          ctx.fillStyle = "#f59e0b";
+          ctx.shadowBlur = 10;
+          ctx.shadowColor = "#f59e0b";
+          ctx.beginPath();
+          ctx.arc(14, -38 + handBob, 9, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#ffffff";
+          ctx.font = "11px sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("✋", 14, -38 + handBob);
+          ctx.restore();
+        }
+
+        // Steaming Coffee Mug in Hand (Gather Barista Amenity)
+        const isHoldingCoffee = isSelf ? !!localAvatar.hasCoffee : !!av.hasCoffee;
+        if (isHoldingCoffee) {
+          ctx.save();
+          const cX = dir === "left" ? -14 : 14;
+          const cY = -12;
+          ctx.fillStyle = "#78350f";
+          ctx.beginPath();
+          ctx.roundRect(cX - 4, cY - 4, 8, 8, 2);
+          ctx.fill();
+          ctx.strokeStyle = "#92400e";
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.arc(cX + (dir === "left" ? -4 : 4), cY, 3, 0, Math.PI);
+          ctx.stroke();
+
+          // Steam wisps
+          const sTime = performance.now() * 0.005;
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(cX - 1, cY - 5);
+          ctx.quadraticCurveTo(cX - 3, cY - 9, cX - 1 + Math.sin(sTime) * 2, cY - 13);
+          ctx.stroke();
+          ctx.restore();
+        }
+
         // Self Indicator Pointer
         if (isSelf) {
           ctx.fillStyle = isGhost ? "#818cf8" : "#38bdf8";
@@ -1222,17 +1427,33 @@ export default function EchoSpacesWorld({
         className="w-full h-full cursor-crosshair touch-none"
       />
 
+      {/* TOP CENTER: Gather Proximity Attendees Floating Bar */}
+      <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 max-w-md w-full px-2 pointer-events-none flex justify-center">
+        <ProximityAttendeesBar
+          localAvatar={localAvatar}
+          remoteAvatars={remoteAvatars}
+          speakingUids={speakingUids}
+          onWalkTo={(wx, wy) => {
+            clickTargetRef.current = { x: wx, y: wy, time: Date.now() };
+            spacesSfx.playFootstep();
+          }}
+          onSendWave={(targetHandle) => {
+            triggerEmote("👋");
+          }}
+        />
+      </div>
+
       {/* Nearby Interaction Prompt Banner */}
       {nearbyPrompt && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/90 backdrop-blur-md px-4 py-2 rounded-2xl border border-amber-400 text-amber-300 font-mono text-xs font-bold shadow-2xl animate-in fade-in zoom-in-95 flex items-center gap-2 z-30">
-          <Sparkles className="w-4 h-4 text-amber-400 animate-spin" />
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 bg-black/90 backdrop-blur-md px-4 py-1.5 rounded-2xl border border-amber-400 text-amber-300 font-mono text-xs font-bold shadow-2xl animate-in fade-in zoom-in-95 flex items-center gap-2 z-30 pointer-events-auto">
+          <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-spin" />
           <span>{nearbyPrompt}</span>
         </div>
       )}
 
       {/* Private Rug Alert Banner */}
       {activeRugPrompt && (
-        <div className="absolute top-14 left-1/2 -translate-x-1/2 bg-cyan-950/90 backdrop-blur-md px-4 py-1.5 rounded-2xl border border-cyan-400 text-cyan-200 font-mono text-[11px] font-bold shadow-2xl animate-in fade-in flex items-center gap-2 z-30">
+        <div className="absolute top-24 left-1/2 -translate-x-1/2 bg-cyan-950/90 backdrop-blur-md px-4 py-1.5 rounded-2xl border border-cyan-400 text-cyan-200 font-mono text-[11px] font-bold shadow-2xl animate-in fade-in flex items-center gap-2 z-30 pointer-events-auto">
           <Lock className="w-3.5 h-3.5 text-cyan-400" />
           <span>{activeRugPrompt}</span>
         </div>
@@ -1440,8 +1661,8 @@ export default function EchoSpacesWorld({
         </div>
       )}
 
-      {/* FLOATING ACTION & CHAT BAR */}
-      <div className="absolute bottom-4 left-4 right-4 max-w-md mx-auto z-30 flex items-center gap-2">
+      {/* FLOATING ACTION & CHAT BAR (Icon-First Gather Dock) */}
+      <div className="absolute bottom-4 left-4 right-4 max-w-xl mx-auto z-30 flex items-center gap-1.5 pointer-events-auto">
         {/* Quick Reaction Emote Wheel Trigger */}
         <div className="relative">
           <button
@@ -1468,17 +1689,75 @@ export default function EchoSpacesWorld({
           )}
         </div>
 
+        {/* Hand Raise Toggle [H] */}
+        <button
+          type="button"
+          onClick={onToggleHandRaise}
+          className={`p-2.5 rounded-2xl border transition-all shadow-xl cursor-pointer ${
+            localAvatar.isHandRaised
+              ? "border-amber-400 bg-amber-950/90 text-amber-300 shadow-[0_0_12px_#f59e0b] scale-105"
+              : "border-neutral-800 bg-neutral-950/90 text-neutral-400 hover:text-amber-300"
+          }`}
+          title="Raise / Lower Hand [H]"
+        >
+          <Hand className="w-4 h-4" />
+        </button>
+
+        {/* Coffee Mug Toggle */}
+        <button
+          type="button"
+          onClick={onToggleCoffee}
+          className={`p-2.5 rounded-2xl border transition-all shadow-xl cursor-pointer ${
+            localAvatar.hasCoffee
+              ? "border-amber-600 bg-amber-950/90 text-amber-200 shadow-[0_0_12px_#b45309] scale-105"
+              : "border-neutral-800 bg-neutral-950/90 text-neutral-400 hover:text-amber-500"
+          }`}
+          title="Hold Warm Coffee"
+        >
+          <Coffee className="w-4 h-4" />
+        </button>
+
+        {/* Retro Space Arcade Launcher */}
+        <button
+          type="button"
+          onClick={onOpenArcade}
+          className="p-2.5 rounded-2xl border border-neutral-800 bg-neutral-950/90 text-neutral-400 hover:text-cyan-400 hover:scale-105 transition-all shadow-xl cursor-pointer"
+          title="Play Retro Space Arcade"
+        >
+          <Gamepad2 className="w-4 h-4" />
+        </button>
+
+        {/* Vinyl Jukebox Launcher */}
+        <button
+          type="button"
+          onClick={onOpenJukebox}
+          className="p-2.5 rounded-2xl border border-neutral-800 bg-neutral-950/90 text-neutral-400 hover:text-rose-400 hover:scale-105 transition-all shadow-xl cursor-pointer"
+          title="Spin Vinyl Jukebox"
+        >
+          <Disc3 className="w-4 h-4" />
+        </button>
+
+        {/* Whiteboard Launcher */}
+        <button
+          type="button"
+          onClick={onOpenWhiteboard}
+          className="p-2.5 rounded-2xl border border-neutral-800 bg-neutral-950/90 text-neutral-400 hover:text-sky-400 hover:scale-105 transition-all shadow-xl cursor-pointer"
+          title="Open Whiteboard"
+        >
+          <Edit3 className="w-4 h-4" />
+        </button>
+
         {/* Chat input */}
         <form
           onSubmit={handleSendChat}
-          className="flex-1 flex items-center gap-2 bg-neutral-950/90 backdrop-blur-md px-3.5 py-1.5 rounded-2xl border border-neutral-800 shadow-2xl"
+          className="flex-1 flex items-center gap-2 bg-neutral-950/90 backdrop-blur-md px-3 py-1.5 rounded-2xl border border-neutral-800 shadow-2xl min-w-[120px]"
         >
           <MessageSquare className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
           <input
             type="text"
             value={chatInput}
             onChange={(e) => setChatInput(e.target.value)}
-            placeholder="Type message or click floor to walk..."
+            placeholder="Type message or click floor..."
             maxLength={60}
             className="w-full bg-transparent text-xs font-mono text-white placeholder-neutral-500 outline-none"
           />

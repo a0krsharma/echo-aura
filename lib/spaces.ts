@@ -70,7 +70,7 @@ export interface InteractiveObject {
   zoneId: SpaceZoneId;
   name: string;
   icon: string;
-  type: "chair" | "whiteboard" | "piano" | "drums" | "gavel" | "pomodoro" | "podium" | "jukebox" | "fountain";
+  type: "chair" | "whiteboard" | "piano" | "drums" | "gavel" | "pomodoro" | "podium" | "jukebox" | "fountain" | "coffee" | "arcade";
   x: number;
   y: number;
   w: number;
@@ -178,6 +178,8 @@ export interface SpatialAvatar {
   hoodieColor: string;
   avatarConfig?: AvatarConfig;
   isSpeaking: boolean;
+  isHandRaised?: boolean;
+  hasCoffee?: boolean;
   speechBubble?: { text: string; expiresAt: number };
   lastUpdated: number;
 }
@@ -387,6 +389,30 @@ export const INTERACTIVE_OBJECTS: InteractiveObject[] = [
     w: 100,
     h: 40,
     prompt: "Press [E] to Relax on Couch",
+  },
+  {
+    id: "office_coffee_bar",
+    zoneId: "office",
+    name: "Barista Espresso Machine",
+    icon: "☕",
+    type: "coffee",
+    x: 100,
+    y: 380,
+    w: 48,
+    h: 40,
+    prompt: "Press [E] to Brew Fresh Espresso (+Coffee Mug)",
+  },
+  {
+    id: "office_arcade_cabinet",
+    zoneId: "office",
+    name: "Retro Space Arcade",
+    icon: "🕹️",
+    type: "arcade",
+    x: 340,
+    y: 380,
+    w: 42,
+    h: 46,
+    prompt: "Press [E] to Play Space Arcade",
   },
 
   // 📚 Quiet Sanctuary Library
