@@ -266,31 +266,79 @@ export default function HostEventModal({
                 </p>
               </button>
 
-              {/* Preset 3: Spooky Horror Night */}
+              {/* Preset 3: Ghost Dating & Mystery Blind Meetup */}
               <button
                 type="button"
                 onClick={() =>
                   handleHostPreset(
-                    "Spooky Horror Night",
+                    "Ghost Dating & Mystery Blind Meetup",
                     "HORROR_NIGHT",
-                    "🎃 Beware: Horror Night has fallen! Press [G] to turn on Ghost Mode.",
+                    "👻 Ghost Dating & Blind Mystery Meetup is LIVE! Cloak on, step onto private rugs & discover connections.",
                     { x: 430, y: 140 }
                   )
                 }
                 className="p-3 rounded-2xl border border-purple-500/30 bg-purple-950/20 hover:bg-purple-950/40 text-left transition-all cursor-pointer group"
               >
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xl">🎃</span>
+                  <span className="text-xl">👻</span>
                   <span className="text-xs font-mono font-bold text-purple-300 group-hover:text-white">
-                    Host Horror Night
+                    Ghost Dating / Mystery
                   </span>
                 </div>
                 <p className="text-[10px] font-mono text-neutral-400 leading-tight">
-                  Haunted fog, glowing jack-o'-lanterns & phantom wisps.
+                  Ghost cloaking mode, private isolation rugs & candlelight icebreakers.
                 </p>
               </button>
 
-              {/* Preset 4: Sukoon Zen Sanctuary */}
+              {/* Preset 4: Co-Work & Strategy Sprint */}
+              <button
+                type="button"
+                onClick={() =>
+                  handleHostPreset(
+                    "Co-Work & Strategy Sprint",
+                    "SUNNY_DAYLIGHT",
+                    "💼 Co-Work Sprint in progress! Grab your desk, share screens & collaborate.",
+                    { x: 270, y: 280 }
+                  )
+                }
+                className="p-3 rounded-2xl border border-cyan-500/30 bg-cyan-950/20 hover:bg-cyan-950/40 text-left transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xl">💼</span>
+                  <span className="text-xs font-mono font-bold text-cyan-300 group-hover:text-white">
+                    Co-Work & Strategy
+                  </span>
+                </div>
+                <p className="text-[10px] font-mono text-neutral-400 leading-tight">
+                  Sunny daylight atrium, designated desks, live screen share & whiteboard.
+                </p>
+              </button>
+
+              {/* Preset 5: Focus Study Session */}
+              <button
+                type="button"
+                onClick={() =>
+                  handleHostPreset(
+                    "Deep Focus Study",
+                    "COZY_RAINY",
+                    "📚 25/5 Pomodoro study sprint active in the Silent Sanctuary.",
+                    { x: 1200, y: 260 }
+                  )
+                }
+                className="p-3 rounded-2xl border border-sky-500/30 bg-sky-950/20 hover:bg-sky-950/40 text-left transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xl">📚</span>
+                  <span className="text-xs font-mono font-bold text-sky-300 group-hover:text-white">
+                    Host Study Session
+                  </span>
+                </div>
+                <p className="text-[10px] font-mono text-neutral-400 leading-tight">
+                  25-min Pomodoro timer, ambient lofi rain & whiteboard collaboration.
+                </p>
+              </button>
+
+              {/* Preset 6: Sukoon Zen Sanctuary */}
               <button
                 type="button"
                 onClick={() =>
@@ -314,14 +362,14 @@ export default function HostEventModal({
                 </p>
               </button>
 
-              {/* Preset 5: Arcade Tournament */}
+              {/* Preset 7: Arcade & Table Games Championship */}
               <button
                 type="button"
                 onClick={() =>
                   handleHostPreset(
-                    "Arcade Championship",
+                    "Arcade & Games Championship",
                     "MIDNIGHT_NEON",
-                    "🕹️ Super Mario & Guitar Hero Tournament starting now at Arcade!",
+                    "🕹️ Super Mario, Ludo & Uno Championship starting now at the Arcade!",
                     { x: 410, y: 420 }
                   )
                 }
@@ -330,35 +378,11 @@ export default function HostEventModal({
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-xl">🕹️</span>
                   <span className="text-xs font-mono font-bold text-indigo-300 group-hover:text-white">
-                    Host Arcade Tournament
+                    Arcade & Table Games
                   </span>
                 </div>
                 <p className="text-[10px] font-mono text-neutral-400 leading-tight">
-                  20+ retro arcade games, Super Mario 2-player & rhythm battles.
-                </p>
-              </button>
-
-              {/* Preset 6: Focus Study Session */}
-              <button
-                type="button"
-                onClick={() =>
-                  handleHostPreset(
-                    "Deep Focus Study",
-                    "COZY_RAINY",
-                    "📚 25/5 Pomodoro study sprint active in the Silent Sanctuary.",
-                    { x: 1200, y: 260 }
-                  )
-                }
-                className="p-3 rounded-2xl border border-sky-500/30 bg-sky-950/20 hover:bg-sky-950/40 text-left transition-all cursor-pointer group"
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xl">📚</span>
-                  <span className="text-xs font-mono font-bold text-sky-300 group-hover:text-white">
-                    Host Study Session
-                  </span>
-                </div>
-                <p className="text-[10px] font-mono text-neutral-400 leading-tight">
-                  25-min Pomodoro timer, ambient lofi rain & whiteboard collaboration.
+                  Ludo, UNO, Spin the Bottle, RPS, Mario & rhythm battles.
                 </p>
               </button>
             </div>

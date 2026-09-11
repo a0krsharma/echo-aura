@@ -32,7 +32,6 @@ import GatherDirectDock from "@/app/components/spaces/GatherDirectDock";
 import InviteFriendsModal from "@/app/components/spaces/InviteFriendsModal";
 import HostEventModal from "@/app/components/spaces/HostEventModal";
 import MiniMapRadar from "@/app/components/spaces/MiniMapRadar";
-import HostQuickControlBar from "@/app/components/spaces/HostQuickControlBar";
 import PartyToolsModal from "@/app/components/spaces/PartyToolsModal";
 import AutoSeatingModal from "@/app/components/spaces/AutoSeatingModal";
 import SpaceCateringModal from "@/app/components/spaces/SpaceCateringModal";
@@ -41,6 +40,7 @@ import { UnoGameModal } from "@/app/components/spaces/UnoGameModal";
 import BirthdayCakeModal from "@/app/components/spaces/BirthdayCakeModal";
 import { PartyTableGamesModal, PartyGameTab } from "@/app/components/spaces/PartyTableGamesModal";
 import { PartyMusicBar } from "@/app/components/spaces/PartyMusicBar";
+import { GuestAuthModal } from "@/app/components/spaces/GuestAuthModal";
 import {
   getWalletState,
   canClaimDailyReward,
@@ -91,6 +91,8 @@ import {
   Armchair,
   Dices,
   Coins,
+  Crown,
+  Bell,
 } from "lucide-react";
 
 export default function DynamicSpaceWorldPage() {
@@ -106,8 +108,19 @@ export default function DynamicSpaceWorldPage() {
   });
   const [loading, setLoading] = useState(true);
 
-  // Check-In / Welcome Entry Modal State
-  const [hasEntered, setHasEntered] = useState(false);
+  // Direct frictionless entry into space (No blocking gate)
+  const [hasEntered, setHasEntered] = useState(true);
+  const [welcomeToast, setWelcomeToast] = useState<string | null>(null);
+  const [guestAuthModalOpen, setGuestAuthModalOpen] = useState(false);
+  const [guestAuthAction, setGuestAuthAction] = useState<{
+    title: string;
+    description: string;
+    icon?: React.ReactNode;
+  }>({
+    title: "Host Your Own Party Table",
+    description: "Sign in with Google to host banquet events, customize space themes, and save persistent friend invites.",
+  });
+  const [gatherDropdownOpen, setGatherDropdownOpen] = useState(false);
   const [chosenSpawn, setChosenSpawn] = useState<{ name: string; x: number; y: number }>({
     name: "Fountain Room",
     x: 800,
@@ -452,6 +465,51 @@ export default function DynamicSpaceWorldPage() {
     }
   }, [user]);
 
+  // Direct Invite & Event Link Auto-Join Handler (e.g. ?party=bday or ?event=birthday)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const search = new URLSearchParams(window.location.search);
+    const partyParam = search.get("party") || search.get("event");
+    const guestParam = search.get("guest");
+    const tabParam = search.get("tab") as PartyGameTab | null;
+
+    if (guestParam) {
+      setLocalAvatar((prev) => ({
+        ...prev,
+        handle: guestParam,
+      }));
+    }
+
+    if (partyParam === "bday" || partyParam === "birthday") {
+      setBirthdayStar({
+        isBirthdayMode: true,
+        name: space.name.includes("'s") ? space.name.split("'s")[0].replace("@", "") : "Birthday Star",
+        gender: "boy",
+      });
+      // Direct spawn at the Banquet Party Table
+      handleTeleport(1200, 440);
+      handleTriggerConfetti();
+      setWelcomeToast("🎂 You're at the Birthday Party! Grab a chair or join the party games!");
+      setTimeout(() => setWelcomeToast(null), 5000);
+    } else if (partyParam === "dinner" || partyParam === "feast") {
+      handleTeleport(1200, 440);
+      setWelcomeToast("🫓 Welcome to the Dinner Feast! Grab a chair at the banquet table.");
+      setTimeout(() => setWelcomeToast(null), 5000);
+    } else if (partyParam === "study") {
+      handleTeleport(1200, 260);
+      setWelcomeToast("📚 Welcome to the Silent Library! 25/5 Pomodoro focus active.");
+      setTimeout(() => setWelcomeToast(null), 5000);
+    } else {
+      setWelcomeToast(`👋 Welcome to ${space.name}! Walk with WASD or click anywhere.`);
+      setTimeout(() => setWelcomeToast(null), 4000);
+    }
+
+    if (tabParam) {
+      setPartyTableGameTab(tabParam);
+      setPartyTableGamesOpen(true);
+    }
+  }, [space.name]);
+
   // Save Avatar updates
   const handleSaveAvatar = (cfg: AvatarConfig) => {
     setAvatarConfig(cfg);
@@ -495,6 +553,21 @@ export default function DynamicSpaceWorldPage() {
       lastUpdated: Date.now(),
     }));
     setRoomDropdownOpen(false);
+  };
+
+  // High-Intent Action Auth Gate (Sign-up prompt when hosting, ordering, or gifting)
+  const handleProtectedAction = (
+    title: string,
+    description: string,
+    icon: React.ReactNode,
+    action: () => void
+  ) => {
+    if (!user) {
+      setGuestAuthAction({ title, description, icon });
+      setGuestAuthModalOpen(true);
+    } else {
+      action();
+    }
   };
 
   // Walk to Desk Shortcut (Authentic Gather button from photo!)
@@ -918,6 +991,29 @@ export default function DynamicSpaceWorldPage() {
                     <span>{rm.name}</span>
                   </button>
                 ))}
+
+                {/* Elevator Floors inside Room Dropdown */}
+                <div className="pt-2 mt-1 border-t border-neutral-800 px-2">
+                  <div className="text-[10px] font-mono font-bold uppercase text-neutral-500 mb-1">
+                    Elevator Floors
+                  </div>
+                  <div className="grid grid-cols-4 gap-1">
+                    {["1st", "3rd", "4th", "ROOF"].map((fl) => (
+                      <button
+                        key={fl}
+                        type="button"
+                        onClick={() => handleElevatorFloor(fl)}
+                        className={`py-1 rounded text-[10px] font-mono font-bold text-center transition cursor-pointer ${
+                          currentFloor === fl
+                            ? "bg-cyan-500 text-black"
+                            : "bg-neutral-900 text-neutral-400 hover:text-white"
+                        }`}
+                      >
+                        {fl}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -931,51 +1027,95 @@ export default function DynamicSpaceWorldPage() {
           )}
         </div>
 
-        {/* Center: Host Event, Gather "Walk to desk" Button & Floor Elevators */}
-        <div className="flex items-center gap-2">
-          {/* Host Event / Vibe Trigger */}
+        {/* Center: Curated Hangout & Banquet Experience Bar */}
+        <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar py-0.5 max-w-full">
+          {/* Party Games Suite (Ludo, Bottle, RPS, Antakshari, Raja Mantri, UNO) */}
+          <button
+            onClick={() => {
+              spacesSfx.playKeyNote(5);
+              setPartyTableGameTab("ludo");
+              setPartyTableGamesOpen(true);
+            }}
+            className="px-2.5 sm:px-3 py-1.5 rounded-xl border border-amber-500/40 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 hover:from-amber-500/30 hover:to-yellow-500/30 text-amber-300 hover:text-amber-200 text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
+            title="Banquet Games: Ludo, Bottle, RPS, Antakshari, Raja Mantri, UNO"
+          >
+            <Dices className="w-3.5 h-3.5 text-amber-400" />
+            <span>Party Games</span>
+          </button>
+
+          {/* Catering Feasts (Butter Naan, Pasta, Cake, Champagne) */}
+          <button
+            onClick={() => {
+              spacesSfx.playKeyNote(1);
+              setCateringModalOpen(true);
+            }}
+            className="px-2.5 py-1.5 rounded-xl border border-amber-500/30 bg-neutral-900/80 hover:bg-neutral-800 text-amber-300 hover:text-white text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
+            title="Order Gourmet Feast: Butter Naan, Pasta, Hakka, Champagne"
+          >
+            <UtensilsCrossed className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden md:inline">Feast</span>
+          </button>
+
+          {/* Smart Auto-Seating */}
+          <button
+            onClick={() => {
+              spacesSfx.playKeyNote(3);
+              setSeatingModalOpen(true);
+            }}
+            className="px-2.5 py-1.5 rounded-xl border border-sky-500/30 bg-neutral-900/80 hover:bg-neutral-800 text-sky-300 hover:text-white text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
+            title="Auto-Assign Banquet Table Chairs (2 to 16 guests)"
+          >
+            <Armchair className="w-3.5 h-3.5 text-sky-400" />
+            <span className="hidden md:inline">Seating</span>
+          </button>
+
+          {/* Boutique Outfits & Friend Gifting */}
+          <button
+            onClick={() => {
+              spacesSfx.playKeyNote(2);
+              setGiftingModalOpen(true);
+            }}
+            className="px-2.5 py-1.5 rounded-xl border border-pink-500/30 bg-neutral-900/80 hover:bg-neutral-800 text-pink-300 hover:text-white text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
+            title="Boutique Outfits & Friend Gifting"
+          >
+            <Gift className="w-3.5 h-3.5 text-pink-400" />
+            <span className="hidden lg:inline">Gifts</span>
+          </button>
+
+          {/* Host Event / Vibe Trigger (Protected if Guest) */}
           <button
             type="button"
             onClick={() => {
-              spacesSfx.playKeyNote(4);
-              setHostEventModalOpen(true);
+              handleProtectedAction(
+                "Host Your Own Event & Theme",
+                "Sign in with Google to host birthday parties, dinner feasts, ghost dating, or customize space vibes permanently.",
+                <Crown className="w-7 h-7" />,
+                () => {
+                  spacesSfx.playKeyNote(4);
+                  setHostEventModalOpen(true);
+                }
+              );
             }}
-            className="px-3 py-1.5 rounded-xl border border-amber-500/40 bg-gradient-to-r from-amber-500/15 via-rose-500/15 to-purple-500/15 hover:from-amber-500/30 hover:to-purple-500/30 text-amber-300 hover:text-white text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-            title="Host Dinner, Party, Horror Night, Sukoon or Customize Theme"
+            className="px-2.5 py-1.5 rounded-xl border border-purple-500/40 bg-purple-950/30 hover:bg-purple-900/40 text-purple-300 hover:text-white text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
+            title="Host Birthday, Dinner, Ghost Dating, Study, or Party Club"
           >
-            <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-            <span className="hidden lg:inline">Host Event / Vibe</span>
+            <Sparkles className="w-3.5 h-3.5 text-purple-400 animate-pulse" />
+            <span className="hidden lg:inline">Host Event</span>
           </button>
 
-          {/* Authentic Gather "Walk to desk" Button from reference photo */}
+          {/* Walk to desk */}
           <button
             onClick={handleWalkToDesk}
-            className="px-3 py-1.5 rounded-xl bg-neutral-900 border border-neutral-700 hover:border-cyan-400 hover:bg-cyan-950/40 text-neutral-200 hover:text-cyan-300 text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-            title="Automatically walk to your assigned workstation desk"
+            className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-cyan-400 text-neutral-300 hover:text-cyan-300 text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
+            title="Automatically walk to your workstation desk"
           >
             <Laptop className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="hidden sm:inline">Walk to desk</span>
+            <span className="hidden xl:inline">Desk</span>
           </button>
+        </div>
 
-          {/* Floor Elevator Jump Buttons (1st, 3rd, 4th, ROOF) */}
-          <div className="hidden md:flex items-center gap-1 bg-neutral-900/60 p-1 rounded-xl border border-neutral-800 text-[11px] font-mono">
-            <span className="text-neutral-500 text-[9px] px-1 font-bold">FLOOR:</span>
-            {["1st", "3rd", "4th", "ROOF"].map((floor) => (
-              <button
-                key={floor}
-                onClick={() => handleElevatorFloor(floor)}
-                className={`px-2 py-0.5 rounded-lg transition-colors cursor-pointer font-bold ${
-                  currentFloor === floor
-                    ? "bg-cyan-500 text-black shadow-xs"
-                    : "text-neutral-400 hover:text-white"
-                }`}
-                title={`Take elevator to ${floor} floor`}
-              >
-                {floor}
-              </button>
-            ))}
-          </div>
-
+        {/* Right: Cash, Invite, Audio, Studio, Host Gather & Settings */}
+        <div className="flex items-center gap-1.5 shrink-0">
           {/* Virtual Paper Money (Echo Cash) Wallet */}
           <button
             onClick={handleClaimDailyAllowance}
@@ -989,77 +1129,8 @@ export default function DynamicSpaceWorldPage() {
             )}
           </button>
 
-          {/* Catering Feasts (Butter Naan, Pasta, Cake, Champagne, Chinese, Chills) */}
-          <button
-            onClick={() => {
-              spacesSfx.playKeyNote(1);
-              setCateringModalOpen(true);
-            }}
-            className="px-2.5 py-1.5 rounded-xl border border-amber-500/30 bg-neutral-900/80 hover:bg-neutral-800 text-amber-300 hover:text-amber-200 text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-            title="Order Catering: Butter Naan, Pasta, Cake, Champagne, Chinese, Chills"
-          >
-            <UtensilsCrossed className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden xl:inline">Catering</span>
-          </button>
-
-          {/* Boutique Wardrobe & Gifting */}
-          <button
-            onClick={() => {
-              spacesSfx.playKeyNote(2);
-              setGiftingModalOpen(true);
-            }}
-            className="px-2.5 py-1.5 rounded-xl border border-pink-500/30 bg-neutral-900/80 hover:bg-neutral-800 text-pink-300 hover:text-pink-200 text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-            title="Boutique Wardrobe & Friend Gifting"
-          >
-            <Gift className="w-3.5 h-3.5 text-pink-400" />
-            <span className="hidden xl:inline">Gifts & Fits</span>
-          </button>
-
-          {/* Smart Auto-Seating */}
-          <button
-            onClick={() => {
-              spacesSfx.playKeyNote(3);
-              setSeatingModalOpen(true);
-            }}
-            className="px-2.5 py-1.5 rounded-xl border border-sky-500/30 bg-neutral-900/80 hover:bg-neutral-800 text-sky-300 hover:text-sky-200 text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-            title="Auto-Assign Banquet Table Chairs (2 to 16 guests)"
-          >
-            <Armchair className="w-3.5 h-3.5 text-sky-400" />
-            <span className="hidden xl:inline">Seating</span>
-          </button>
-
-          {/* Party Games Suite (Ludo, Bottle, RPS, Antakshari, Raja Mantri) */}
-          <button
-            onClick={() => {
-              spacesSfx.playKeyNote(5);
-              setPartyTableGameTab("ludo");
-              setPartyTableGamesOpen(true);
-            }}
-            className="px-2.5 py-1.5 rounded-xl border border-amber-500/40 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 hover:from-amber-500/30 hover:to-yellow-500/30 text-amber-300 hover:text-amber-200 text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-            title="Play Banquet Table Games (Ludo, Spin Bottle, Antakshari, Raja Mantri, RPS)"
-          >
-            <Dices className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden sm:inline">Party Games</span>
-          </button>
-
-          {/* Multiplayer Uno Card Table */}
-          <button
-            onClick={() => {
-              spacesSfx.playKeyNote(4);
-              setUnoModalOpen(true);
-            }}
-            className="px-2.5 py-1.5 rounded-xl border border-rose-500/40 bg-gradient-to-r from-rose-500/20 to-amber-500/20 hover:from-rose-500/30 hover:to-amber-500/30 text-rose-300 hover:text-rose-200 text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-            title="Play Multiplayer Uno Card Game (Prize: $50)"
-          >
-            <span className="text-xs">🃏</span>
-            <span className="hidden sm:inline">Uno Table</span>
-          </button>
-        </div>
-
-        {/* Right: Jukebox, Whiteboard, Studio, Share, Settings */}
-        <div className="flex items-center gap-1.5">
           {/* Spatial Voice Proximity Audio Manager */}
-          <div className="hidden xl:block mr-2">
+          <div className="hidden xl:block">
             <SpatialVoiceManager
               spaceId={space.id}
               localAvatar={localAvatar}
@@ -1068,27 +1139,56 @@ export default function DynamicSpaceWorldPage() {
             />
           </div>
 
-          {/* Vinyl Jukebox */}
-          <button
-            onClick={() => setJukeboxModalOpen(true)}
-            className="p-2 rounded-xl border border-neutral-800 bg-neutral-900/60 hover:bg-neutral-800 text-neutral-300 hover:text-rose-400 transition-colors cursor-pointer"
-            title="Vinyl Jukebox"
-          >
-            <Volume2 className="w-4 h-4" />
-          </button>
-
           {/* Invite Friends Modal Trigger */}
           <button
             onClick={() => {
               spacesSfx.playKeyNote(5);
               setInviteModalOpen(true);
             }}
-            className="px-3 py-1.5 rounded-xl border border-neutral-800 bg-neutral-900/60 hover:bg-neutral-800 text-cyan-400 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm"
-            title="Invite Friends (Play, Sing, Study, Ghost Mode)"
+            className="px-3 py-1.5 rounded-xl border border-cyan-500/40 bg-cyan-950/30 hover:bg-cyan-900/40 text-cyan-300 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm"
+            title="Invite Friends (WhatsApp, Telegram, Link)"
           >
-            <Share2 className="w-4 h-4" />
+            <Share2 className="w-3.5 h-3.5 text-cyan-400" />
             <span className="hidden sm:inline text-xs font-mono font-bold">Invite</span>
           </button>
+
+          {/* Host "Gather All" Bell (Integrated into host controls, not overlapping floating bar!) */}
+          {isHost && (
+            <div className="relative">
+              <button
+                onClick={() => setGatherDropdownOpen(!gatherDropdownOpen)}
+                className="p-2 rounded-xl border border-amber-500/30 bg-amber-950/20 hover:bg-amber-950/40 text-amber-300 transition-colors cursor-pointer"
+                title="Gather all attendees to one spot"
+              >
+                <Bell className="w-4 h-4 text-amber-400" />
+              </button>
+              {gatherDropdownOpen && (
+                <div className="absolute top-11 right-0 w-52 bg-neutral-950 border border-neutral-800 rounded-2xl shadow-2xl p-1.5 space-y-1 z-50 animate-in zoom-in-95">
+                  <div className="text-[10px] font-mono font-bold uppercase text-neutral-400 px-2.5 py-1">
+                    Summon Everyone To:
+                  </div>
+                  {[
+                    { name: "Banquet Feast Table", x: 1200, y: 350, icon: "🫓" },
+                    { name: "Campfire Patio", x: 800, y: 150, icon: "🪵" },
+                    { name: "Retro Pixel Arcade", x: 410, y: 420, icon: "🕹️" },
+                    { name: "Concert Amphitheater", x: 800, y: 860, icon: "🎤" },
+                  ].map((pt) => (
+                    <button
+                      key={pt.name}
+                      onClick={() => {
+                        handleGatherFriends(pt.name, pt.x, pt.y);
+                        setGatherDropdownOpen(false);
+                      }}
+                      className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                    >
+                      <span className="text-base">{pt.icon}</span>
+                      <span className="truncate">{pt.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Avatar Studio */}
           <button
@@ -1097,7 +1197,7 @@ export default function DynamicSpaceWorldPage() {
               setAvatarModalOpen(true);
             }}
             className="p-2 rounded-xl border border-neutral-800 bg-neutral-900/60 hover:bg-neutral-800 text-amber-400 transition-colors cursor-pointer"
-            title="Edit Avatar & Companion Pet"
+            title="Edit Avatar & Outfit"
           >
             <Palette className="w-4 h-4" />
           </button>
@@ -1110,7 +1210,7 @@ export default function DynamicSpaceWorldPage() {
                 setHostModalOpen(true);
               }}
               className="p-2 rounded-xl border border-amber-800/40 bg-amber-950/20 hover:bg-amber-950/40 text-amber-300 transition-colors cursor-pointer"
-              title="Host Suite"
+              title="Host Suite Settings"
             >
               <Settings className="w-4 h-4" />
             </button>
@@ -1202,67 +1302,11 @@ export default function DynamicSpaceWorldPage() {
         onDirectMessageAvatar={handleDirectMessage}
       />
 
-      {/* Check-In Welcome Gate Modal (Makes entering seamless & transparent) */}
-      {!hasEntered && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative w-full max-w-md bg-neutral-950 border border-neutral-800 rounded-3xl shadow-2xl overflow-hidden p-6 space-y-6">
-            <div className="text-center space-y-2">
-              <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center mx-auto text-cyan-400">
-                <Sparkles className="w-6 h-6 animate-pulse" />
-              </div>
-              <h2 className="text-xl font-bold font-mono text-white tracking-tight">
-                ENTER {space.name.toUpperCase()}
-              </h2>
-              <p className="text-xs text-neutral-400 font-mono">
-                {space.description || "2D spatial living space with proximity voice, rugs & arcades."}
-              </p>
-            </div>
-
-            {/* Spawn Point Choice */}
-            <div className="space-y-2.5">
-              <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-neutral-400 block">
-                Choose Where To Spawn:
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {ROOM_PRESETS.slice(0, 6).map((preset) => {
-                  const isSelected = chosenSpawn.name === preset.name;
-                  return (
-                    <button
-                      key={preset.name}
-                      type="button"
-                      onClick={() => {
-                        setChosenSpawn(preset);
-                        spacesSfx.playKeyNote(1);
-                      }}
-                      className={`p-2.5 rounded-xl border text-left text-xs font-mono transition-all cursor-pointer flex items-center gap-2 ${
-                        isSelected
-                          ? "border-cyan-400 bg-cyan-950/40 text-cyan-300 font-bold"
-                          : "border-neutral-800 bg-neutral-900/60 text-neutral-400 hover:text-white"
-                      }`}
-                    >
-                      <span className="text-base">{preset.icon}</span>
-                      <span className="truncate">{preset.name.split(" ")[0]}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Enter Button */}
-            <button
-              onClick={handleEnterSpaceNow}
-              className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-black font-mono font-black text-sm flex items-center justify-center gap-2 shadow-xl shadow-cyan-500/20 active:scale-95 transition-all cursor-pointer"
-            >
-              <span>STEP INTO SPACE</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-
-            {/* Quick tips */}
-            <div className="text-[10px] font-mono text-neutral-500 text-center space-y-1">
-              <div>💡 Tip: Click anywhere on floor or use [W,A,S,D] to walk.</div>
-              <div>Press [X] near any desk or arcade to interact!</div>
-            </div>
-          </div>
+      {/* Floating Welcome Toast for Instant Guest Access */}
+      {welcomeToast && (
+        <div className="fixed top-16 left-1/2 transform -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-neutral-900/95 border border-amber-500/50 text-white font-mono text-xs font-bold shadow-2xl flex items-center gap-2 backdrop-blur-xl animate-in slide-in-from-top duration-300">
+          <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
+          <span>{welcomeToast}</span>
         </div>
       )}
 
@@ -1377,16 +1421,6 @@ export default function DynamicSpaceWorldPage() {
         onTeleport={handleTeleport}
       />
 
-      {/* Floating Host Quick-Action Hub */}
-      <HostQuickControlBar
-        space={space}
-        isHost={isHost}
-        onOpenPartyTools={() => setPartyModalOpen(true)}
-        onOpenHostSettings={() => setHostEventModalOpen(true)}
-        onOpenInvite={() => setInviteModalOpen(true)}
-        onGatherFriends={handleGatherFriends}
-        onQuickSnapPhoto={() => setPartyModalOpen(true)}
-      />
 
       {/* Gather Bell Alert Toast */}
       {gatherToast && (
@@ -1505,8 +1539,15 @@ export default function DynamicSpaceWorldPage() {
         userHandle={localAvatar.handle}
         activeDishes={tableDishes}
         onOrderDish={(dish) => {
-          setTableDishes((prev) => [...prev, dish]);
-          refreshWalletCash();
+          handleProtectedAction(
+            "Order Banquet Food & Drinks",
+            "Sign in with Google to order catering feasts, customize party dishes, and charge your table tab.",
+            <UtensilsCrossed className="w-7 h-7" />,
+            () => {
+              setTableDishes((prev) => [...prev, dish]);
+              refreshWalletCash();
+            }
+          );
         }}
         onEatBite={handleBiteDish}
         onBroadcastSpeech={handleSendSpeech}
@@ -1522,8 +1563,15 @@ export default function DynamicSpaceWorldPage() {
         localAvatar={localAvatar}
         remoteAvatars={remoteAvatars}
         onSendGift={(targetHandle, gift, note) => {
-          handleSendGift(targetHandle, gift.name, gift.icon);
-          refreshWalletCash();
+          handleProtectedAction(
+            "Send Special Gift",
+            "Sign in with Google to send boutique outfits, champagnes, and gifts to your friends in the space.",
+            <Gift className="w-7 h-7" />,
+            () => {
+              handleSendGift(targetHandle, gift.name, gift.icon);
+              refreshWalletCash();
+            }
+          );
         }}
         onEquipOutfit={(newConfig) => {
           const updated = {
@@ -1593,6 +1641,15 @@ export default function DynamicSpaceWorldPage() {
           setPartyTableGamesOpen(false);
           setUnoModalOpen(true);
         }}
+      />
+
+      {/* Frictionless Guest Auth Gate Modal */}
+      <GuestAuthModal
+        isOpen={guestAuthModalOpen}
+        onClose={() => setGuestAuthModalOpen(false)}
+        actionTitle={guestAuthAction.title}
+        actionDescription={guestAuthAction.description}
+        actionIcon={guestAuthAction.icon}
       />
 
       {/* Floating Synced Spotify Party DJ Music Dock (Bottom-Left) */}
