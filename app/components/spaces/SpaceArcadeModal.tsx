@@ -16,6 +16,7 @@ import {
 import SubwaySurferGame from "@/app/components/arcade/SubwaySurferGame";
 import HillClimbRacingGame from "@/app/components/arcade/HillClimbRacingGame";
 import SuperMarioGame from "@/app/components/arcade/SuperMarioGame";
+import MiniComposerGame from "@/app/components/arcade/MiniComposerGame";
 import FruitNinjaGame from "@/app/components/arcade/FruitNinjaGame";
 import Connect4Game from "@/app/components/arcade/Connect4Game";
 import ChessGame from "@/app/components/arcade/ChessGame";
@@ -95,6 +96,16 @@ export const SPACE_ARCADE_GAMES: SpaceArcadeGameDef[] = [
     description: "Classic 2D retro plumber platformer with Goombas, question blocks, mushrooms & fireballs.",
     players: "1-4 Players",
     color: "#ef4444",
+    badge: "NEW",
+  },
+  {
+    id: "mini_composer",
+    name: "Mini Composer & Piano",
+    category: "PUZZLE",
+    icon: "🎼",
+    description: "Interactive 2-octave piano & sheet music composer with song tutor, ear trainer & polyphonic synth.",
+    players: "1-4 Players",
+    color: "#3b82f6",
     badge: "NEW",
   },
   {
@@ -741,6 +752,18 @@ export default function SpaceArcadeModal({
               {activeGame.id === "super_mario" && activeMatch && (
                 <div className="w-full max-w-4xl">
                   <SuperMarioGame
+                    match={activeMatch}
+                    currentUid={user?.uid || ""}
+                    isHost={activeMatch.hostUid === user?.uid}
+                    onBack={() => setActiveGame(null)}
+                  />
+                </div>
+              )}
+
+              {/* 🎼 Mini Composer */}
+              {activeGame.id === "mini_composer" && activeMatch && (
+                <div className="w-full max-w-4xl">
+                  <MiniComposerGame
                     match={activeMatch}
                     currentUid={user?.uid || ""}
                     isHost={activeMatch.hostUid === user?.uid}

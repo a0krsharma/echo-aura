@@ -120,7 +120,8 @@ export type ArcadeGameType =
   | "bottle_shooter"
   | "subway_surfer"
   | "hill_climb"
-  | "super_mario";
+  | "super_mario"
+  | "mini_composer";
 
 export type ArcadeMatchMode = "MULTIPLAYER" | "VS_COMPUTER";
 
