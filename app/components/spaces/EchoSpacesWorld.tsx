@@ -41,6 +41,7 @@ import {
   X,
   Check,
   Plus,
+  Minus,
   Hand,
   Coffee,
   Gamepad2,
@@ -104,6 +105,7 @@ export default function EchoSpacesWorld({
   // Viewport dimensions & fullscreen
   const [viewportDim, setViewportDim] = useState({ w: 1024, h: 680 });
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [zoom, setZoom] = useState(1.0);
 
   // Camera tracking
   const cameraRef = useRef<{ x: number; y: number }>({ x: localAvatar.x, y: localAvatar.y });
@@ -303,11 +305,13 @@ export default function EchoSpacesWorld({
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const camX = Math.max(0, Math.min(WORLD_WIDTH - viewportDim.w, cameraRef.current.x));
-    const camY = Math.max(0, Math.min(WORLD_HEIGHT - viewportDim.h, cameraRef.current.y));
+    const clickScreenX = e.clientX - rect.left;
+    const clickScreenY = e.clientY - rect.top;
+    const camX = cameraRef.current.x;
+    const camY = cameraRef.current.y;
     mouseWorldPosRef.current = {
-      x: e.clientX - rect.left + camX,
-      y: e.clientY - rect.top + camY,
+      x: (clickScreenX - viewportDim.w / 2) / zoom + camX,
+      y: (clickScreenY - viewportDim.h / 2) / zoom + camY,
     };
   };
 
@@ -319,10 +323,10 @@ export default function EchoSpacesWorld({
     const clickScreenX = e.clientX - rect.left;
     const clickScreenY = e.clientY - rect.top;
 
-    const camX = Math.max(0, Math.min(WORLD_WIDTH - viewportDim.w, cameraRef.current.x));
-    const camY = Math.max(0, Math.min(WORLD_HEIGHT - viewportDim.h, cameraRef.current.y));
-    const worldClickX = Math.max(40, Math.min(WORLD_WIDTH - 40, clickScreenX + camX));
-    const worldClickY = Math.max(40, Math.min(WORLD_HEIGHT - 40, clickScreenY + camY));
+    const camX = cameraRef.current.x;
+    const camY = cameraRef.current.y;
+    const worldClickX = Math.max(40, Math.min(WORLD_WIDTH - 40, (clickScreenX - viewportDim.w / 2) / zoom + camX));
+    const worldClickY = Math.max(40, Math.min(WORLD_HEIGHT - 40, (clickScreenY - viewportDim.h / 2) / zoom + camY));
 
     // If in Decoration Build Mode:
     if (isDecorateMode) {
@@ -517,14 +521,9 @@ export default function EchoSpacesWorld({
       nearbyObjectRef.current = nearby;
       setNearbyPrompt(nearby ? nearby.prompt.replace("[E]", "[X]") : null);
 
-      // Smooth camera lerp
-      const targetCamX = posX - canvasW / 2;
-      const targetCamY = posY - canvasH / 2;
-      cameraRef.current.x += (targetCamX - cameraRef.current.x) * 0.12;
-      cameraRef.current.y += (targetCamY - cameraRef.current.y) * 0.12;
-
-      const camX = Math.max(0, Math.min(WORLD_WIDTH - canvasW, cameraRef.current.x));
-      const camY = Math.max(0, Math.min(WORLD_HEIGHT - canvasH, cameraRef.current.y));
+      // Smooth camera tracking
+      cameraRef.current.x += (posX - cameraRef.current.x) * 0.12;
+      cameraRef.current.y += (posY - cameraRef.current.y) * 0.12;
 
       // ── RENDERING ──
       ctx.save();
@@ -532,7 +531,9 @@ export default function EchoSpacesWorld({
       ctx.fillRect(0, 0, canvasW, canvasH);
 
       ctx.save();
-      ctx.translate(-camX, -camY);
+      ctx.translate(canvasW / 2, canvasH / 2);
+      ctx.scale(zoom, zoom);
+      ctx.translate(-cameraRef.current.x, -cameraRef.current.y);
 
       // Floor cobblestones
       ctx.fillStyle = "#18181b";
@@ -645,126 +646,538 @@ export default function EchoSpacesWorld({
         ctx.restore();
       });
 
-      // ── GATHER-STYLE OFFICE ZONE LABELS (From User Reference Photos) ──
+      // ═════════════════════════════════════════════════════════════════════
+      // ── AUTHENTIC GATHER.TOWN MAP GRAPHICS (Matching reference photos) ──
+      // ═════════════════════════════════════════════════════════════════════
+      const timeMs = performance.now();
+
+      // ── 1. TOP OUTDOOR PARK (x: 50 to 865, y: 35 to 220) ──
       ctx.save();
-      // 1. Strategy&Ops floor banner
-      ctx.fillStyle = "rgba(16, 185, 129, 0.15)";
+      // Lush Green Lawn Grass
+      ctx.fillStyle = "#225324";
+      ctx.fillRect(50, 35, 815, 185);
+
+      // Subtle grass blade flecks
+      ctx.fillStyle = "rgba(74, 222, 128, 0.12)";
+      for (let gx = 65; gx < 850; gx += 28) {
+        for (let gy = 45; gy < 210; gy += 24) {
+          ctx.fillRect(gx + ((gy * 7) % 15), gy, 2, 4);
+        }
+      }
+
+      // Wooden Post-and-Rail Fence along North, West, East edges
+      ctx.strokeStyle = "#854d0e";
+      ctx.lineWidth = 3;
+      // North rails
       ctx.beginPath();
-      ctx.roundRect(160, 240, 220, 85, 10);
+      ctx.moveTo(50, 38);
+      ctx.lineTo(865, 38);
+      ctx.moveTo(50, 44);
+      ctx.lineTo(865, 44);
+      // West rails
+      ctx.moveTo(52, 35);
+      ctx.lineTo(52, 220);
+      // East rails
+      ctx.moveTo(863, 35);
+      ctx.lineTo(863, 220);
+      ctx.stroke();
+
+      // Fence wooden posts every 48px
+      ctx.fillStyle = "#713f12";
+      for (let fx = 50; fx <= 865; fx += 48) {
+        ctx.fillRect(fx - 3, 34, 6, 14);
+      }
+
+      // ── Tiki Bar on Sand Patch (x: 160, y: 125) ──
+      // Sand circle patch
+      ctx.fillStyle = "#fef08a";
+      ctx.beginPath();
+      ctx.arc(160, 125, 44, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = "rgba(16, 185, 129, 0.4)";
+      ctx.strokeStyle = "#fde047";
       ctx.lineWidth = 1.5;
       ctx.stroke();
-      ctx.fillStyle = "#10b981";
-      ctx.font = "900 12px monospace";
-      ctx.textAlign = "center";
-      ctx.fillText("Strategy & Ops", 270, 260);
 
-      // 2. CW Balance floor banner
-      ctx.fillStyle = "rgba(56, 189, 248, 0.15)";
+      // Bamboo round bar counter
+      ctx.fillStyle = "#b45309";
       ctx.beginPath();
-      ctx.roundRect(430, 240, 220, 85, 10);
+      ctx.arc(160, 125, 22, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = "rgba(56, 189, 248, 0.4)";
+      ctx.strokeStyle = "#78350f";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Drinks on bar
+      ctx.fillStyle = "#f43f5e";
+      ctx.fillRect(152, 118, 4, 6);
+      ctx.fillStyle = "#06b6d4";
+      ctx.fillRect(164, 118, 4, 6);
+
+      // Thatch Umbrella Cone Canopy
+      ctx.fillStyle = "#d97706";
+      ctx.beginPath();
+      ctx.arc(160, 125, 36, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#92400e";
       ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Radiating thatch spokes & center pole top
+      ctx.strokeStyle = "rgba(254, 240, 138, 0.4)";
+      for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
+        ctx.beginPath();
+        ctx.moveTo(160, 125);
+        ctx.lineTo(160 + Math.cos(a) * 36, 125 + Math.sin(a) * 36);
+        ctx.stroke();
+      }
+      ctx.fillStyle = "#78350f";
+      ctx.beginPath();
+      ctx.arc(160, 125, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 3 Wooden Tiki Stools
+      const stoolPositions = [
+        { x: 132, y: 142 },
+        { x: 160, y: 160 },
+        { x: 188, y: 142 },
+      ];
+      stoolPositions.forEach((st) => {
+        ctx.fillStyle = "#78350f";
+        ctx.beginPath();
+        ctx.arc(st.x, st.y, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#fde68a";
+        ctx.beginPath();
+        ctx.arc(st.x, st.y, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // ── Yellow/Black Hazard Utility Box (x: 270, y: 70) ──
+      ctx.save();
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(270, 70, 28, 22);
+      ctx.strokeStyle = "#475569";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(270, 70, 28, 22);
+
+      // 45° Diagonal Zebra Hazard Stripes
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(271, 71, 26, 20);
+      ctx.clip();
+      ctx.strokeStyle = "#eab308";
+      ctx.lineWidth = 3;
+      for (let zx = 250; zx < 310; zx += 7) {
+        ctx.beginPath();
+        ctx.moveTo(zx, 70);
+        ctx.lineTo(zx + 20, 92);
+        ctx.stroke();
+      }
+      ctx.restore();
+      ctx.fillStyle = "#000000";
+      ctx.font = "bold 8px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("⚡", 284, 84);
+      ctx.restore();
+
+      // ── Campfire Firepit with 4 Benches (x: 430, y: 130) ──
+      // Cobblestone stone ring
+      for (let s = 0; s < 10; s++) {
+        const stoneAngle = (s * Math.PI * 2) / 10;
+        const stX = 430 + Math.cos(stoneAngle) * 22;
+        const stY = 130 + Math.sin(stoneAngle) * 22;
+        ctx.fillStyle = s % 2 === 0 ? "#64748b" : "#94a3b8";
+        ctx.beginPath();
+        ctx.arc(stX, stY, 5.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // Charcoal ash bed
+      ctx.fillStyle = "#1e293b";
+      ctx.beginPath();
+      ctx.arc(430, 130, 16, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Glowing hot embers
+      const emberPulse = Math.sin(timeMs * 0.005) * 0.2 + 0.8;
+      ctx.fillStyle = `rgba(220, 38, 38, ${emberPulse})`;
+      ctx.beginPath();
+      ctx.arc(430, 130, 11, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Leaping animated flame particles
+      const flameColors = ["#facc15", "#f97316", "#ef4444", "#fbbf24"];
+      for (let f = 0; f < 5; f++) {
+        const fAngle = (f * Math.PI * 2) / 5 + timeMs * 0.003;
+        const fDist = Math.sin(timeMs * 0.008 + f) * 5 + 3;
+        const flameY = 130 - 3 - Math.sin(timeMs * 0.01 + f) * 8;
+        ctx.fillStyle = flameColors[f % flameColors.length];
+        ctx.beginPath();
+        ctx.arc(430 + Math.cos(fAngle) * fDist, flameY, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 4 Rustic Wooden Bench Logs (North, South, West, East)
+      // North Bench
+      ctx.fillStyle = "#92400e";
+      ctx.beginPath();
+      ctx.roundRect(405, 88, 50, 14, 4);
+      ctx.fill();
+      ctx.strokeStyle = "#78350f";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // South Bench
+      ctx.fillStyle = "#92400e";
+      ctx.beginPath();
+      ctx.roundRect(405, 158, 50, 14, 4);
+      ctx.fill();
+      ctx.strokeStyle = "#78350f";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // West Bench
+      ctx.fillStyle = "#92400e";
+      ctx.beginPath();
+      ctx.roundRect(382, 105, 14, 50, 4);
+      ctx.fill();
+      ctx.strokeStyle = "#78350f";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // East Bench
+      ctx.fillStyle = "#92400e";
+      ctx.beginPath();
+      ctx.roundRect(464, 105, 14, 50, 4);
+      ctx.fill();
+      ctx.strokeStyle = "#78350f";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // ── Circular Pink Cushion Lounge (x: 610, y: 130) ──
+      // Center round oak coffee table
+      ctx.fillStyle = "#b45309";
+      ctx.beginPath();
+      ctx.arc(610, 130, 15, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#78350f";
+      ctx.lineWidth = 2;
       ctx.stroke();
       ctx.fillStyle = "#38bdf8";
-      ctx.font = "900 12px monospace";
-      ctx.textAlign = "center";
-      ctx.fillText("CW Balance", 540, 260);
+      ctx.fillRect(607, 126, 3, 5);
+      ctx.fillRect(612, 128, 3, 5);
 
-      // 3. Retro Arcade Lounge banner
-      ctx.fillStyle = "rgba(244, 63, 94, 0.15)";
-      ctx.beginPath();
-      ctx.roundRect(320, 360, 180, 100, 10);
-      ctx.fill();
-      ctx.strokeStyle = "rgba(244, 63, 94, 0.4)";
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-      ctx.fillStyle = "#f43f5e";
-      ctx.font = "900 11px monospace";
-      ctx.fillText("🕹️ Retro Arcade Lounge", 410, 450);
-
-      // ── TOP ELEVATOR BAY (1st, 3rd, 4th, ROOF from Gather photo) ──
-      const elevX = 640;
-      const elevY = 12;
-      ctx.fillStyle = "#1e293b";
-      ctx.fillRect(elevX, elevY, 320, 34);
-      ctx.strokeStyle = "#475569";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(elevX, elevY, 320, 34);
-
-      const ELEV_FLOORS = ["1st", "3rd", "4th", "ROOF"];
-      ELEV_FLOORS.forEach((floor, i) => {
-        const doorX = elevX + 16 + i * 74;
-        ctx.fillStyle = "#0f172a";
-        ctx.fillRect(doorX, elevY + 4, 64, 26);
-        ctx.strokeStyle = "#94a3b8";
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(doorX, elevY + 4, 64, 26);
-
-        // Center split line
-        ctx.strokeStyle = "#334155";
+      // 4 Curved Plush Hot Pink Cushions
+      const cushionArcs = [
+        { start: -Math.PI * 0.75, end: -Math.PI * 0.25 }, // Top
+        { start: Math.PI * 0.25, end: Math.PI * 0.75 },   // Bottom
+        { start: Math.PI * 0.75, end: Math.PI * 1.25 },   // Left
+        { start: -Math.PI * 0.25, end: Math.PI * 0.25 },  // Right
+      ];
+      cushionArcs.forEach((cArc) => {
+        ctx.strokeStyle = "#be185d";
+        ctx.lineWidth = 14;
+        ctx.lineCap = "round";
         ctx.beginPath();
-        ctx.moveTo(doorX + 32, elevY + 4);
-        ctx.lineTo(doorX + 32, elevY + 30);
+        ctx.arc(610, 130, 29, cArc.start + 0.15, cArc.end - 0.15);
         ctx.stroke();
 
-        // Floor sign
-        ctx.fillStyle = floor === "ROOF" ? "#f59e0b" : "#38bdf8";
-        ctx.font = "bold 9px monospace";
-        ctx.textAlign = "center";
-        ctx.fillText(`▲ ${floor}`, doorX + 32, elevY + 18);
+        ctx.strokeStyle = "#ec4899";
+        ctx.lineWidth = 10;
+        ctx.beginPath();
+        ctx.arc(610, 130, 29, cArc.start + 0.15, cArc.end - 0.15);
+        ctx.stroke();
+      });
+
+      // ── DJ Sound Station & Acoustic Wave Speakers (x: 760, y: 130) ──
+      // Left speaker tower
+      ctx.fillStyle = "#18181b";
+      ctx.fillRect(706, 106, 22, 46);
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(706, 106, 22, 46);
+      // Woofers
+      ctx.fillStyle = "#334155";
+      ctx.beginPath();
+      ctx.arc(717, 120, 6, 0, Math.PI * 2);
+      ctx.arc(717, 138, 7, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Right speaker tower
+      ctx.fillStyle = "#18181b";
+      ctx.fillRect(792, 106, 22, 46);
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(792, 106, 22, 46);
+      ctx.fillStyle = "#334155";
+      ctx.beginPath();
+      ctx.arc(803, 120, 6, 0, Math.PI * 2);
+      ctx.arc(803, 138, 7, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Pulsing cyan acoustic sound rings radiating out
+      const soundPulse = (timeMs * 0.006) % 3;
+      ctx.strokeStyle = `rgba(6, 182, 212, ${0.8 - soundPulse * 0.25})`;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(717, 129, 14 + soundPulse * 10, -Math.PI * 0.6, Math.PI * 0.6);
+      ctx.arc(803, 129, 14 + soundPulse * 10, Math.PI * 0.4, Math.PI * 1.6);
+      ctx.stroke();
+
+      // DJ Console Table
+      ctx.fillStyle = "#09090b";
+      ctx.fillRect(734, 116, 52, 28);
+      ctx.strokeStyle = "#475569";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(734, 116, 52, 28);
+
+      // Twin Vinyl Platters
+      ctx.fillStyle = "#1e293b";
+      ctx.beginPath();
+      ctx.arc(746, 130, 8, 0, Math.PI * 2);
+      ctx.arc(774, 130, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#f43f5e";
+      ctx.beginPath();
+      ctx.arc(746, 130, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#06b6d4";
+      ctx.beginPath();
+      ctx.arc(774, 130, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // LED Mixer meters
+      ctx.fillStyle = "#22c55e";
+      ctx.fillRect(758, 122, 4, 3);
+      ctx.fillStyle = "#eab308";
+      ctx.fillRect(758, 127, 4, 3);
+      ctx.fillStyle = "#ef4444";
+      ctx.fillRect(758, 132, 4, 3);
+
+      // ── Victorian Streetlamps with Warm Glow ──
+      const streetlamps = [
+        { x: 95, y: 65 },
+        { x: 520, y: 65 },
+        { x: 830, y: 65 },
+      ];
+      streetlamps.forEach((lamp) => {
+        // Soft yellow halo
+        const haloGrad = ctx.createRadialGradient(lamp.x, lamp.y, 2, lamp.x, lamp.y, 28);
+        haloGrad.addColorStop(0, "rgba(254, 240, 138, 0.35)");
+        haloGrad.addColorStop(1, "rgba(254, 240, 138, 0)");
+        ctx.fillStyle = haloGrad;
+        ctx.beginPath();
+        ctx.arc(lamp.x, lamp.y, 28, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Cast iron post & lantern
+        ctx.fillStyle = "#1e293b";
+        ctx.fillRect(lamp.x - 2, lamp.y - 2, 4, 16);
+        ctx.fillRect(lamp.x - 5, lamp.y + 12, 10, 3);
+        // Lantern head
+        ctx.fillStyle = "#fef08a";
+        ctx.beginPath();
+        ctx.arc(lamp.x, lamp.y - 4, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#0f172a";
+        ctx.beginPath();
+        ctx.arc(lamp.x, lamp.y - 7, 6, Math.PI, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Potted Tropical Palms along park boundary
+      [ { x: 75, y: 195 }, { x: 840, y: 195 } ].forEach((plm) => {
+        ctx.font = "24px sans-serif";
+        ctx.fillText("🌴", plm.x - 12, plm.y);
       });
       ctx.restore();
 
-      // ── FOUNTAIN ROOM (Triple Fountain cluster from Gather screenshot) ──
+      // ── 2. ELEVATOR CORRIDOR WALL (x: 50 to 865, y: 220 to 268) ──
       ctx.save();
-      ctx.fillStyle = "rgba(6, 182, 212, 0.08)";
-      ctx.beginPath();
-      ctx.roundRect(700, 500, 200, 180, 16);
-      ctx.fill();
-      ctx.strokeStyle = "rgba(6, 182, 212, 0.3)";
+      // Dark oak corridor floor & wall divider
+      ctx.fillStyle = "#1c1917";
+      ctx.fillRect(50, 220, 815, 48);
+      ctx.strokeStyle = "#44403c";
       ctx.lineWidth = 2;
+      ctx.strokeRect(50, 220, 815, 48);
+
+      // 4 Elevators in recessed black bay (1st, 3rd, 4th, ROOF)
+      const elevBayX = 95;
+      const elevBayY = 226;
+      ctx.fillStyle = "#09090b";
+      ctx.fillRect(elevBayX, elevBayY, 300, 36);
+      ctx.strokeStyle = "#71717a";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(elevBayX, elevBayY, 300, 36);
+
+      const ELEV_FLOORS = ["1st", "3rd", "4th", "ROOF"];
+      ELEV_FLOORS.forEach((floor, idx) => {
+        const doorX = elevBayX + 8 + idx * 72;
+        ctx.fillStyle = "#18181b";
+        ctx.fillRect(doorX, elevBayY + 4, 64, 28);
+        ctx.strokeStyle = "#a1a1aa";
+        ctx.lineWidth = 1.2;
+        ctx.strokeRect(doorX, elevBayY + 4, 64, 28);
+
+        // Center split door line
+        ctx.strokeStyle = "#3f3f46";
+        ctx.beginPath();
+        ctx.moveTo(doorX + 32, elevBayY + 4);
+        ctx.lineTo(doorX + 32, elevBayY + 32);
+        ctx.stroke();
+
+        // Floor label tag
+        ctx.fillStyle = floor === "ROOF" ? "#f59e0b" : "#38bdf8";
+        ctx.font = "bold 9px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(`▲ ${floor}`, doorX + 32, elevBayY + 18);
+      });
+
+      // Barista Espresso Machine Counter (x: 430, y: 228)
+      ctx.fillStyle = "#78350f";
+      ctx.fillRect(430, 228, 64, 32);
+      ctx.strokeStyle = "#92400e";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(430, 228, 64, 32);
+
+      // Chrome Espresso Machine & Steam
+      ctx.fillStyle = "#cbd5e1";
+      ctx.fillRect(436, 230, 28, 16);
+      ctx.fillStyle = "#334155";
+      ctx.fillRect(440, 234, 20, 6);
+      // Ceramic white cups
+      ctx.fillStyle = "#f8fafc";
+      ctx.fillRect(470, 234, 6, 6);
+      ctx.fillRect(480, 234, 6, 6);
+      // Rising steam curls
+      const steamPhase = timeMs * 0.005;
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(444, 230);
+      ctx.quadraticCurveTo(442, 224, 444 + Math.sin(steamPhase) * 3, 218);
       ctx.stroke();
 
+      // Japanese Folding Shoji Screen (x: 535, y: 226)
+      for (let p = 0; p < 3; p++) {
+        const pX = 535 + p * 24;
+        const pSkew = p % 2 === 0 ? 0 : 3;
+        ctx.fillStyle = "#fafaf9";
+        ctx.fillRect(pX, 226 + pSkew, 22, 34);
+        ctx.strokeStyle = "#1c1917";
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(pX, 226 + pSkew, 22, 34);
+        // Shoji wooden lattice
+        ctx.strokeStyle = "#78716c";
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(pX + 11, 226 + pSkew);
+        ctx.lineTo(pX + 11, 260 + pSkew);
+        ctx.moveTo(pX, 237 + pSkew);
+        ctx.lineTo(pX + 22, 237 + pSkew);
+        ctx.moveTo(pX, 248 + pSkew);
+        ctx.lineTo(pX + 22, 248 + pSkew);
+        ctx.stroke();
+      }
+
+      // Cork Bulletin Board (x: 645, y: 226)
+      ctx.fillStyle = "#b45309";
+      ctx.fillRect(645, 226, 70, 34);
+      ctx.strokeStyle = "#78350f";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(645, 226, 70, 34);
+      // Sticky notes
+      ctx.fillStyle = "#fde047";
+      ctx.fillRect(652, 232, 10, 10);
+      ctx.fillStyle = "#f472b6";
+      ctx.fillRect(668, 234, 10, 10);
+      ctx.fillStyle = "#38bdf8";
+      ctx.fillRect(684, 231, 10, 10);
+      ctx.fillStyle = "#4ade80";
+      ctx.fillRect(698, 236, 9, 9);
+
+      // Walkway Doorway connecting into Fountain Room (x: 825, y: 222)
+      ctx.fillStyle = "#ca8a04";
+      ctx.fillRect(825, 222, 40, 44);
+      ctx.strokeStyle = "#eab308";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(825, 222, 40, 44);
+      ctx.fillStyle = "#000000";
+      ctx.font = "900 10px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("FOUNTAIN ➔", 845, 246);
+      ctx.restore();
+
+      // ── 3. FOUNTAIN ROOM (RIGHT WING, x: 875 to 1545, y: 50 to 520) ──
+      ctx.save();
+      // Checkered Sand / Beige Tile Floor
+      for (let tx = 875; tx < 1545; tx += 40) {
+        for (let ty = 50; ty < 520; ty += 40) {
+          const isAlt = ((tx - 875) / 40 + (ty - 50) / 40) % 2 === 0;
+          ctx.fillStyle = isAlt ? "#ded0b3" : "#ece2cc";
+          ctx.fillRect(tx, ty, 40, 40);
+          ctx.strokeStyle = "rgba(180, 160, 130, 0.3)";
+          ctx.lineWidth = 0.5;
+          ctx.strokeRect(tx, ty, 40, 40);
+        }
+      }
+
+      // Room Header Tag
+      ctx.fillStyle = "#0f172a";
+      ctx.beginPath();
+      ctx.roundRect(1110, 60, 200, 26, 8);
+      ctx.fill();
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
       ctx.fillStyle = "#38bdf8";
       ctx.font = "900 12px monospace";
       ctx.textAlign = "center";
-      ctx.fillText("📍 Fountain Room", 800, 524);
+      ctx.fillText("📍 Fountain Room", 1210, 77);
 
-      // Render 3 fountains side-by-side (from user Gather image)
-      const fountainCenters = [750, 800, 850];
-      const fY = 590;
-      const rippleTime = performance.now() * 0.004;
+      // 3 Bubbling Water Fountains (in a row at x: 1060, 1200, 1340, y: 170)
+      const fountainXs = [1060, 1200, 1340];
+      const fountainY = 170;
+      const rippleT = timeMs * 0.004;
 
-      fountainCenters.forEach((fX, idx) => {
-        ctx.fillStyle = "#334155";
+      fountainXs.forEach((fX, idx) => {
+        // Outer carved marble ring
+        ctx.fillStyle = "#94a3b8";
         ctx.beginPath();
-        ctx.arc(fX, fY, 22, 0, Math.PI * 2);
+        ctx.arc(fX, fountainY, 30, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = "#94a3b8";
+        ctx.strokeStyle = "#cbd5e1";
         ctx.lineWidth = 2.5;
         ctx.stroke();
 
+        // Azure water pool
         ctx.fillStyle = "#0284c7";
         ctx.beginPath();
-        ctx.arc(fX, fY, 18 + Math.sin(rippleTime + idx) * 2, 0, Math.PI * 2);
+        ctx.arc(fX, fountainY, 24, 0, Math.PI * 2);
         ctx.fill();
 
+        // Concentric undulating water ripples
+        ctx.strokeStyle = "rgba(186, 230, 253, 0.8)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(fX, fountainY, 15 + Math.sin(rippleT + idx) * 4, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Center marble spout
         ctx.fillStyle = "#f8fafc";
         ctx.beginPath();
-        ctx.arc(fX, fY, 5, 0, Math.PI * 2);
+        ctx.arc(fX, fountainY, 5, 0, Math.PI * 2);
         ctx.fill();
       });
 
+      // Water spray motes for 3 fountains
       waterSprayRef.current.forEach((sp) => {
         sp.x += sp.vx;
         sp.y += sp.vy;
         sp.life += 1;
         if (sp.life > sp.maxLife) {
-          sp.x = 800 + (Math.random() - 0.5) * 80;
-          sp.y = fY;
+          const chosenF = fountainXs[Math.floor(Math.random() * fountainXs.length)];
+          sp.x = chosenF + (Math.random() - 0.5) * 30;
+          sp.y = fountainY;
           sp.vx = (Math.random() - 0.5) * 2;
           sp.vy = -Math.random() * 2.8 - 1.2;
           sp.life = 0;
@@ -774,6 +1187,265 @@ export default function EchoSpacesWorld({
         ctx.arc(sp.x, sp.y, 2, 0, Math.PI * 2);
         ctx.fill();
       });
+
+      // Long Executive Banquet Conference Table (x: 1040, y: 320, w: 330, h: 66)
+      ctx.fillStyle = "#78350f";
+      ctx.beginPath();
+      ctx.roundRect(1040, 320, 330, 66, 12);
+      ctx.fill();
+      ctx.strokeStyle = "#451a03";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // Table finish inlay
+      ctx.fillStyle = "#92400e";
+      ctx.beginPath();
+      ctx.roundRect(1048, 328, 314, 50, 8);
+      ctx.fill();
+
+      // Notepads & Laptops on table
+      for (let n = 1065; n <= 1345; n += 44) {
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(n, 334, 12, 10);
+        ctx.fillStyle = "#0f172a";
+        ctx.fillRect(n, 356, 14, 10);
+        ctx.fillStyle = "#38bdf8";
+        ctx.fillRect(n + 1, 357, 12, 5);
+      }
+
+      // 16 Executive Leather Office Chairs (7 along top, 7 along bottom, 1 left, 1 right)
+      // Top row chairs (y: 298)
+      for (let c = 1060; c <= 1340; c += 44) {
+        ctx.fillStyle = "#1e293b";
+        ctx.beginPath();
+        ctx.roundRect(c, 298, 22, 18, 5);
+        ctx.fill();
+        ctx.strokeStyle = "#64748b";
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      }
+      // Bottom row chairs (y: 392)
+      for (let c = 1060; c <= 1340; c += 44) {
+        ctx.fillStyle = "#1e293b";
+        ctx.beginPath();
+        ctx.roundRect(c, 392, 22, 18, 5);
+        ctx.fill();
+        ctx.strokeStyle = "#64748b";
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      }
+      // Left head chair
+      ctx.fillStyle = "#1e293b";
+      ctx.beginPath();
+      ctx.roundRect(1016, 344, 18, 22, 5);
+      ctx.fill();
+      // Right head chair
+      ctx.fillStyle = "#1e293b";
+      ctx.beginPath();
+      ctx.roundRect(1376, 344, 18, 22, 5);
+      ctx.fill();
+
+      // Decorated Christmas Holiday Tree in bottom-right corner (x: 1460, y: 435)
+      // Layered pine boughs
+      const treeLayers = [
+        { y: 480, w: 50, h: 26 },
+        { y: 456, w: 42, h: 24 },
+        { y: 434, w: 32, h: 22 },
+        { y: 414, w: 22, h: 20 },
+      ];
+      ctx.fillStyle = "#15803d";
+      treeLayers.forEach((l) => {
+        ctx.beginPath();
+        ctx.moveTo(1460, l.y - l.h);
+        ctx.lineTo(1460 - l.w / 2, l.y);
+        ctx.lineTo(1460 + l.w / 2, l.y);
+        ctx.closePath();
+        ctx.fill();
+      });
+
+      // Animated multi-colored baubles
+      const baubleColors = ["#ef4444", "#3b82f6", "#eab308", "#ec4899", "#a855f7"];
+      for (let b = 0; b < 10; b++) {
+        const bX = 1460 + Math.sin(b * 1.7) * (14 - (b * 1.1));
+        const bY = 422 + b * 6.5;
+        const bGlow = Math.sin(timeMs * 0.007 + b) > 0;
+        ctx.fillStyle = bGlow ? baubleColors[b % baubleColors.length] : "#ffffff";
+        ctx.beginPath();
+        ctx.arc(bX, bY, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Golden Star Topper on Tree
+      ctx.fillStyle = "#eab308";
+      ctx.font = "bold 18px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("⭐", 1460, 404);
+
+      // Green planter boxes along top wall
+      for (let px = 900; px < 1520; px += 75) {
+        ctx.fillStyle = "#334155";
+        ctx.fillRect(px, 52, 60, 10);
+        ctx.font = "12px sans-serif";
+        ctx.fillText("🌿", px + 16, 58);
+      }
+      ctx.restore();
+
+      // ── 4. FOUR LOWER OFFICE WORKSTATION PODS (x: 50 to 865, y: 275 to 520) ──
+      ctx.save();
+      // Floor base for lower office pods
+      ctx.fillStyle = vibe === "SUNNY_DAYLIGHT" ? "#3f3c39" : "#1f1d1b";
+      ctx.fillRect(50, 275, 815, 245);
+
+      // Pod 1 (x: 70 to 240): World Map Rug & Battlestations
+      ctx.fillStyle = "rgba(30, 58, 138, 0.4)";
+      ctx.beginPath();
+      ctx.ellipse(155, 395, 75, 55, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#1d4ed8";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = "#38bdf8";
+      ctx.font = "bold 10px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("🌍 Pod Alpha", 155, 398);
+
+      // 4 Desks for Pod 1
+      [ { x: 95, y: 340 }, { x: 175, y: 340 }, { x: 95, y: 440 }, { x: 175, y: 440 } ].forEach((d) => {
+        ctx.fillStyle = "#334155";
+        ctx.fillRect(d.x, d.y, 44, 24);
+        ctx.fillStyle = "#06b6d4";
+        ctx.fillRect(d.x + 8, d.y + 4, 14, 6);
+        ctx.fillRect(d.x + 24, d.y + 4, 14, 6);
+      });
+
+      // Pod 2 (x: 260 to 455): Strategy & Ops Pod
+      ctx.fillStyle = "rgba(16, 185, 129, 0.15)";
+      ctx.beginPath();
+      ctx.roundRect(260, 290, 195, 215, 12);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(16, 185, 129, 0.5)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Dark Green Wrap-Around Couch / Privacy Hedge
+      ctx.strokeStyle = "#047857";
+      ctx.lineWidth = 8;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(270, 310);
+      ctx.lineTo(445, 310);
+      ctx.lineTo(445, 495);
+      ctx.stroke();
+
+      // Strategy & Ops Floor Label
+      ctx.fillStyle = "#10b981";
+      ctx.font = "900 13px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("Strategy & Ops", 355, 332);
+
+      // 6 Dual-monitor battlestations with swivel chairs
+      const stratDesks = [
+        { x: 280, y: 360 },
+        { x: 345, y: 360 },
+        { x: 280, y: 420 },
+        { x: 345, y: 420 },
+      ];
+      stratDesks.forEach((sd) => {
+        ctx.fillStyle = "#1e293b";
+        ctx.fillRect(sd.x, sd.y, 48, 26);
+        ctx.strokeStyle = "#10b981";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(sd.x, sd.y, 48, 26);
+        // Dual illuminated screens
+        ctx.fillStyle = "#38bdf8";
+        ctx.fillRect(sd.x + 4, sd.y + 3, 18, 7);
+        ctx.fillRect(sd.x + 26, sd.y + 3, 18, 7);
+        // Swivel chair
+        ctx.fillStyle = "#0f172a";
+        ctx.beginPath();
+        ctx.arc(sd.x + 24, sd.y + 38, 8, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Pod 3 (x: 475 to 655): Cherry Blossom Bonsai Pod
+      ctx.fillStyle = "rgba(244, 63, 94, 0.1)";
+      ctx.beginPath();
+      ctx.roundRect(475, 290, 180, 215, 12);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(244, 63, 94, 0.4)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Center Flowering Cherry Blossom Bonsai Tree
+      ctx.fillStyle = "#78350f";
+      ctx.fillRect(560, 395, 10, 16);
+      ctx.font = "28px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("🌸", 565, 395);
+
+      // Desks around sakura bonsai
+      [ { x: 490, y: 330 }, { x: 580, y: 330 }, { x: 490, y: 445 }, { x: 580, y: 445 } ].forEach((bd) => {
+        ctx.fillStyle = "#334155";
+        ctx.fillRect(bd.x, bd.y, 44, 24);
+        ctx.fillStyle = "#f43f5e";
+        ctx.fillRect(bd.x + 6, bd.y + 4, 14, 6);
+        ctx.fillRect(bd.x + 24, bd.y + 4, 14, 6);
+      });
+
+      // Pod 4 (x: 675 to 860): CW Balance Pod
+      ctx.fillStyle = "rgba(56, 189, 248, 0.12)";
+      ctx.beginPath();
+      ctx.roundRect(675, 290, 185, 215, 12);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.4)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // CW Balance Floor Label
+      ctx.fillStyle = "#38bdf8";
+      ctx.font = "900 13px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("CW Balance", 767, 332);
+
+      // Surfboard mounted on wall
+      ctx.save();
+      ctx.translate(830, 310);
+      ctx.rotate(Math.PI / 4);
+      ctx.fillStyle = "#06b6d4";
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 18, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#facc15";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(-18, 0);
+      ctx.lineTo(18, 0);
+      ctx.stroke();
+      ctx.restore();
+
+      // Desks for CW Balance
+      [ { x: 695, y: 360 }, { x: 775, y: 360 }, { x: 695, y: 430 }, { x: 775, y: 430 } ].forEach((cd) => {
+        ctx.fillStyle = "#1e293b";
+        ctx.fillRect(cd.x, cd.y, 48, 26);
+        ctx.fillStyle = "#ec4899";
+        ctx.fillRect(cd.x + 6, cd.y + 4, 16, 7);
+        ctx.fillRect(cd.x + 26, cd.y + 4, 16, 7);
+      });
+      ctx.restore();
+
+      // ── 5. RETRO ARCADE LOUNGE FLOOR TAG (x: 320, y: 360) ──
+      ctx.save();
+      ctx.fillStyle = "rgba(244, 63, 94, 0.15)";
+      ctx.beginPath();
+      ctx.roundRect(310, 360, 200, 110, 10);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(244, 63, 94, 0.5)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = "#f43f5e";
+      ctx.font = "900 11px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("🕹️ Retro Arcade Lounge", 410, 460);
       ctx.restore();
 
       // Interactive Station Objects
@@ -1505,6 +2177,7 @@ export default function EchoSpacesWorld({
     isJoystickActive,
     activeSpeech,
     viewportDim,
+    zoom,
   ]);
 
   // Touch Virtual Joystick
@@ -1897,6 +2570,48 @@ export default function EchoSpacesWorld({
             <Send className="w-3 h-3" />
           </button>
         </form>
+      </div>
+
+      {/* BOTTOM RIGHT: Gather Map Zoom Controls (+, -, Compass/re-center) */}
+      <div className="hidden sm:flex absolute bottom-20 right-4 z-30 flex-col items-center bg-neutral-950/90 backdrop-blur-md p-1.5 rounded-2xl border border-neutral-800 shadow-2xl space-y-1">
+        <button
+          type="button"
+          onClick={() => {
+            setZoom((z) => Math.min(1.35, Number((z + 0.1).toFixed(2))));
+            spacesSfx.playKeyNote(2);
+          }}
+          className="p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition-all cursor-pointer"
+          title="Zoom In"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+        <span className="text-[10px] font-mono text-neutral-400 select-none font-bold">
+          {Math.round(zoom * 100)}%
+        </span>
+        <button
+          type="button"
+          onClick={() => {
+            setZoom((z) => Math.max(0.65, Number((z - 0.1).toFixed(2))));
+            spacesSfx.playKeyNote(1);
+          }}
+          className="p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition-all cursor-pointer"
+          title="Zoom Out"
+        >
+          <Minus className="w-4 h-4" />
+        </button>
+        <div className="h-px w-4 bg-neutral-800 my-0.5" />
+        <button
+          type="button"
+          onClick={() => {
+            setZoom(1.0);
+            cameraRef.current = { x: localAvatar.x, y: localAvatar.y };
+            spacesSfx.playKeyNote(4);
+          }}
+          className="p-2 rounded-xl text-cyan-400 hover:text-cyan-300 hover:bg-neutral-800 transition-all cursor-pointer"
+          title="Reset Zoom & Center on Avatar"
+        >
+          <Compass className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Mobile Touch Virtual Joystick */}

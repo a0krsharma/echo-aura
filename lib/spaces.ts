@@ -263,12 +263,12 @@ export const SPACES_ZONES: Record<SpaceZoneId, SpaceZoneDef> = {
   },
   courtyard: {
     id: "courtyard",
-    name: "Central Courtyard & Garden",
+    name: "Fountain Room & Courtyard",
     category: "COMMUNITY LOUNGE",
     icon: "⛲",
     color: "#14b8a6",
     bounds: { x: 700, y: 480, w: 200, h: 220 },
-    description: "Open air atrium connecting all 5 wings with marble fountain and park benches.",
+    description: "Open air atrium connecting all wings with marble fountains, banquet table and park benches.",
   },
 };
 

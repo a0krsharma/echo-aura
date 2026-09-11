@@ -34,6 +34,7 @@ import {
   Calendar,
   Zap,
   Clock,
+  Share2,
 } from "lucide-react";
 import { SpatialAvatar } from "@/lib/spaces";
 import { spacesSfx } from "@/lib/spacesSfx";
@@ -50,6 +51,7 @@ interface GatherBottomDockProps {
   onOpenWhiteboard: () => void;
   onOpenMeetingModal: () => void;
   onOpenActivityMap: () => void;
+  onOpenInvite?: () => void;
   onSendEmote: (emote: string) => void;
   onToggleHandRaise: () => void;
   onUpdateStatus: (status: string) => void;
@@ -70,6 +72,7 @@ export default function GatherBottomDock({
   onOpenWhiteboard,
   onOpenMeetingModal,
   onOpenActivityMap,
+  onOpenInvite,
   onSendEmote,
   onToggleHandRaise,
   onUpdateStatus,
@@ -482,6 +485,19 @@ export default function GatherBottomDock({
           <Users className="w-4 h-4 text-cyan-400" />
           <span>{participantCount}</span>
         </button>
+
+        {/* Invite Friends Button */}
+        {onOpenInvite && (
+          <button
+            type="button"
+            onClick={onOpenInvite}
+            className="px-3 py-2 rounded-xl text-xs font-mono font-bold text-cyan-300 hover:text-white bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500/40 transition-all cursor-pointer flex items-center gap-1.5 shadow-sm hover:scale-105"
+            title="Invite Friends to Virtual Space (Play, Sing, Study, Ghost Mode)"
+          >
+            <Share2 className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="hidden sm:inline">Invite</span>
+          </button>
+        )}
       </div>
     </>
   );

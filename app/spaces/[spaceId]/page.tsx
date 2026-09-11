@@ -29,6 +29,7 @@ import GatherMeetingGrid from "@/app/components/spaces/GatherMeetingGrid";
 import GatherActivityMapModal from "@/app/components/spaces/GatherActivityMapModal";
 import GatherWaveToast, { WaveInvitation } from "@/app/components/spaces/GatherWaveToast";
 import GatherDirectDock from "@/app/components/spaces/GatherDirectDock";
+import InviteFriendsModal from "@/app/components/spaces/InviteFriendsModal";
 import {
   SpaceDoc,
   SpaceZoneId,
@@ -127,6 +128,7 @@ export default function DynamicSpaceWorldPage() {
   const [activeWave, setActiveWave] = useState<WaveInvitation | null>(null);
   const [directDockTarget, setDirectDockTarget] = useState<SpatialAvatar | null>(null);
   const [speakingUids, setSpeakingUids] = useState<Set<string>>(new Set());
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
 
   // Space Decoration Mode
   const [isDecorateMode, setIsDecorateMode] = useState(false);
@@ -178,6 +180,20 @@ export default function DynamicSpaceWorldPage() {
           avatarConfig: parsed,
           hoodieColor: parsed.outfitColor || prev.hoodieColor,
         }));
+      }
+      // Check URL query parameters for ?mode=ghost (from invite link)
+      if (typeof window !== "undefined") {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get("mode") === "ghost") {
+          setAvatarConfig((prev) => ({ ...prev, isGhost: true }));
+          setLocalAvatar((prev) => ({
+            ...prev,
+            avatarConfig: {
+              ...(prev.avatarConfig || avatarConfig),
+              isGhost: true,
+            },
+          }));
+        }
       }
     } catch (e) {}
   }, []);
@@ -608,13 +624,17 @@ export default function DynamicSpaceWorldPage() {
             <Volume2 className="w-4 h-4" />
           </button>
 
-          {/* Share Link */}
+          {/* Invite Friends Modal Trigger */}
           <button
-            onClick={handleCopyLink}
-            className="p-2 rounded-xl border border-neutral-800 bg-neutral-900/60 hover:bg-neutral-800 text-neutral-300 transition-colors cursor-pointer"
-            title="Copy Invite Link"
+            onClick={() => {
+              spacesSfx.playKeyNote(5);
+              setInviteModalOpen(true);
+            }}
+            className="px-3 py-1.5 rounded-xl border border-neutral-800 bg-neutral-900/60 hover:bg-neutral-800 text-cyan-400 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm"
+            title="Invite Friends (Play, Sing, Study, Ghost Mode)"
           >
             <Share2 className="w-4 h-4" />
+            <span className="hidden sm:inline text-xs font-mono font-bold">Invite</span>
           </button>
 
           {/* Avatar Studio */}
@@ -693,6 +713,7 @@ export default function DynamicSpaceWorldPage() {
         onOpenWhiteboard={() => setWhiteboardModalOpen(true)}
         onOpenMeetingModal={() => setMeetingModalOpen(true)}
         onOpenActivityMap={() => setActivityMapOpen(true)}
+        onOpenInvite={() => setInviteModalOpen(true)}
         onSendEmote={handleSendEmote}
         onToggleHandRaise={handleToggleHandRaise}
         onUpdateStatus={handleUpdateStatus}
@@ -863,6 +884,14 @@ export default function DynamicSpaceWorldPage() {
           setRightDrawerOpen(true);
           setRightDrawerTab("chat");
         }}
+      />
+
+      {/* Invite Friends Modal (Play, Sing, Study, Public or Ghost mode) */}
+      <InviteFriendsModal
+        isOpen={inviteModalOpen}
+        onClose={() => setInviteModalOpen(false)}
+        spaceName={space.name}
+        spaceId={space.id}
       />
     </div>
   );
