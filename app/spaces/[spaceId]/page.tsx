@@ -142,25 +142,13 @@ export default function DynamicSpaceWorldPage() {
   const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
   const [rightDrawerTab, setRightDrawerTab] = useState<"chat" | "participants">("chat");
 
-  // Chat Messages History
-  const [chatMessages, setChatMessages] = useState<SpaceChatMessage[]>([
-    {
-      id: "init_1",
-      senderUid: "bot_breno",
-      senderHandle: "Breno",
-      text: "Hey everyone! Welcome to our Gather space.",
-      timestamp: Date.now() - 1000 * 60 * 12,
-      roomName: "Fountain Room",
-    },
-    {
-      id: "init_2",
-      senderUid: "bot_dalton",
-      senderHandle: "Dalton",
-      text: "Grabbing a coffee before sync! Let's play Super Mario after.",
-      timestamp: Date.now() - 1000 * 60 * 4,
-      roomName: "Fountain Room",
-    },
-  ]);
+  // Chat Messages History (Live, real-time only - zero fake bot messages)
+  const [chatMessages, setChatMessages] = useState<SpaceChatMessage[]>([]);
+
+  // Consolidated Header Hub Dropdowns
+  const [activitiesDropdownOpen, setActivitiesDropdownOpen] = useState(false);
+  const [hospitalityDropdownOpen, setHospitalityDropdownOpen] = useState(false);
+  const [hostHubDropdownOpen, setHostHubDropdownOpen] = useState(false);
 
   // Modals
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
@@ -415,8 +403,8 @@ export default function DynamicSpaceWorldPage() {
     lastUpdated: Date.now(),
   });
 
-  // Remote Avatars (ambient bots + simulated room participants)
-  const [remoteAvatars, setRemoteAvatars] = useState<SpatialAvatar[]>(DEFAULT_AMBIENT_BOTS);
+  // Remote Avatars (Real live users only - zero fake bots)
+  const [remoteAvatars, setRemoteAvatars] = useState<SpatialAvatar[]>([]);
   const [copiedLink, setCopiedLink] = useState(false);
 
   // Load avatar config from localStorage
@@ -1038,148 +1026,366 @@ export default function DynamicSpaceWorldPage() {
           )}
         </div>
 
-        {/* Center: Curated Hangout & Banquet Experience Bar */}
-        <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar py-0.5 max-w-full">
-          {/* Party Games Suite (Ludo, Bottle, RPS, Antakshari, Raja Mantri, UNO) */}
-          <button
-            onClick={() => {
-              spacesSfx.playKeyNote(5);
-              setPartyTableGameTab("ludo");
-              setPartyTableGamesOpen(true);
-            }}
-            className="px-2.5 sm:px-3 py-1.5 rounded-xl border border-amber-500/40 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 hover:from-amber-500/30 hover:to-yellow-500/30 text-amber-300 hover:text-amber-200 text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
-            title="Banquet Games: Ludo, Bottle, RPS, Antakshari, Raja Mantri, UNO"
-          >
-            <Dices className="w-3.5 h-3.5 text-amber-400" />
-            <span>Party Games</span>
-          </button>
+        {/* Center: Curated Hangout & Banquet Experience Hubs */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* 1. Activities Hub Dropdown (Party Games, Uno, Arcade, Whiteboard, Jukebox, Q&A, Polls) */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                spacesSfx.playKeyNote(5);
+                setActivitiesDropdownOpen((v) => !v);
+                setHospitalityDropdownOpen(false);
+                setHostHubDropdownOpen(false);
+                setRoomDropdownOpen(false);
+              }}
+              className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer ${
+                activitiesDropdownOpen
+                  ? "border-amber-400 bg-amber-950/50 text-amber-300"
+                  : "border-amber-500/40 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 hover:from-amber-500/30 text-amber-300"
+              }`}
+              title="Interactive Activities, Games & Canvas"
+            >
+              <Dices className="w-3.5 h-3.5 text-amber-400" />
+              <span>Activities</span>
+              <ChevronDown className={`w-3 h-3 transition-transform ${activitiesDropdownOpen ? "rotate-180" : ""}`} />
+            </button>
 
-          {/* Catering Feasts (Butter Naan, Pasta, Cake, Champagne) */}
-          <button
-            onClick={() => {
-              spacesSfx.playKeyNote(1);
-              setCateringModalOpen(true);
-            }}
-            className="px-2.5 py-1.5 rounded-xl border border-amber-500/30 bg-neutral-900/80 hover:bg-neutral-800 text-amber-300 hover:text-white text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
-            title="Order Gourmet Feast: Butter Naan, Pasta, Hakka, Champagne"
-          >
-            <UtensilsCrossed className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden md:inline">Feast</span>
-          </button>
+            {activitiesDropdownOpen && (
+              <div className="absolute top-10 left-0 w-64 bg-neutral-950 border border-neutral-800 rounded-2xl shadow-2xl p-1.5 space-y-1 z-50 animate-in zoom-in-95">
+                <div className="text-[10px] font-mono font-bold uppercase text-neutral-400 px-2.5 py-1">
+                  Space Activities & Games
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    spacesSfx.playKeyNote(5);
+                    setPartyTableGameTab("ludo");
+                    setPartyTableGamesOpen(true);
+                    setActivitiesDropdownOpen(false);
+                  }}
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                >
+                  <span className="text-base">🎲</span>
+                  <div className="flex flex-col">
+                    <span className="font-bold">Party Games Suite</span>
+                    <span className="text-[10px] text-neutral-400">Ludo, Bottle, RPS, Antakshari</span>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    spacesSfx.playKeyNote(4);
+                    setUnoModalOpen(true);
+                    setActivitiesDropdownOpen(false);
+                  }}
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                >
+                  <span className="text-base">🃏</span>
+                  <div className="flex flex-col">
+                    <span className="font-bold">Uno Table Game</span>
+                    <span className="text-[10px] text-neutral-400">Classic Uno card battle</span>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    spacesSfx.playKeyNote(3);
+                    setArcadeModalOpen(true);
+                    setActivitiesDropdownOpen(false);
+                  }}
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                >
+                  <span className="text-base">🕹️</span>
+                  <div className="flex flex-col">
+                    <span className="font-bold">Retro Arcade Cabinet</span>
+                    <span className="text-[10px] text-neutral-400">Pixel jump & space invaders</span>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    spacesSfx.playSitPop();
+                    setWhiteboardModalOpen(true);
+                    setActivitiesDropdownOpen(false);
+                  }}
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                >
+                  <span className="text-base">🎨</span>
+                  <div className="flex flex-col">
+                    <span className="font-bold">Collaborative Whiteboard</span>
+                    <span className="text-[10px] text-neutral-400">Brainstorm, sketch & draw</span>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    spacesSfx.playKeyNote(2);
+                    setEventSocialPanelTab("qa");
+                    setEventSocialPanelOpen(true);
+                    setActivitiesDropdownOpen(false);
+                  }}
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                >
+                  <span className="text-base">❓</span>
+                  <div className="flex flex-col">
+                    <span className="font-bold">Live Speaker Q&A</span>
+                    <span className="text-[10px] text-neutral-400">Submit & upvote questions</span>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    spacesSfx.playKeyNote(3);
+                    setEventSocialPanelTab("polls");
+                    setEventSocialPanelOpen(true);
+                    setActivitiesDropdownOpen(false);
+                  }}
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                >
+                  <span className="text-base">📊</span>
+                  <div className="flex flex-col">
+                    <span className="font-bold">Interactive Polls</span>
+                    <span className="text-[10px] text-neutral-400">Real-time room polling</span>
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
 
-          {/* Smart Auto-Seating */}
-          <button
-            onClick={() => {
-              spacesSfx.playKeyNote(3);
-              setSeatingModalOpen(true);
-            }}
-            className="px-2.5 py-1.5 rounded-xl border border-sky-500/30 bg-neutral-900/80 hover:bg-neutral-800 text-sky-300 hover:text-white text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
-            title="Auto-Assign Banquet Table Chairs (2 to 16 guests)"
-          >
-            <Armchair className="w-3.5 h-3.5 text-sky-400" />
-            <span className="hidden md:inline">Seating</span>
-          </button>
+          {/* 2. Hospitality Hub Dropdown (Feast, Seating, Gifting, Cake Ceremony) */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                spacesSfx.playKeyNote(1);
+                setHospitalityDropdownOpen((v) => !v);
+                setActivitiesDropdownOpen(false);
+                setHostHubDropdownOpen(false);
+                setRoomDropdownOpen(false);
+              }}
+              className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer ${
+                hospitalityDropdownOpen
+                  ? "border-sky-400 bg-sky-950/50 text-sky-300"
+                  : "border-sky-500/30 bg-neutral-900/90 text-sky-300 hover:bg-neutral-800"
+              }`}
+              title="Hospitality: Feasts, Table Seating, Gifting & Cake"
+            >
+              <UtensilsCrossed className="w-3.5 h-3.5 text-sky-400" />
+              <span>Hospitality</span>
+              <ChevronDown className={`w-3 h-3 transition-transform ${hospitalityDropdownOpen ? "rotate-180" : ""}`} />
+            </button>
 
-          {/* Q&A Side Panel (Image 1 Fidelity) */}
-          <button
-            onClick={() => {
-              spacesSfx.playKeyNote(2);
-              setEventSocialPanelTab("qa");
-              setEventSocialPanelOpen(!eventSocialPanelOpen);
-            }}
-            className={`px-2.5 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0 ${
-              eventSocialPanelOpen && eventSocialPanelTab === "qa"
-                ? "border-cyan-400 bg-cyan-950/40 text-cyan-300"
-                : "border-neutral-800 bg-neutral-900/80 text-neutral-300 hover:text-white"
-            }`}
-            title="Live Speaker Q&A (Upvote questions from Image 1)"
-          >
-            <HelpCircle className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="hidden md:inline">Q&A</span>
-          </button>
+            {hospitalityDropdownOpen && (
+              <div className="absolute top-10 left-0 w-64 bg-neutral-950 border border-neutral-800 rounded-2xl shadow-2xl p-1.5 space-y-1 z-50 animate-in zoom-in-95">
+                <div className="text-[10px] font-mono font-bold uppercase text-neutral-400 px-2.5 py-1">
+                  Banquet Hospitality & Dining
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    spacesSfx.playKeyNote(1);
+                    setCateringModalOpen(true);
+                    setHospitalityDropdownOpen(false);
+                  }}
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                >
+                  <span className="text-base">🫓</span>
+                  <div className="flex flex-col">
+                    <span className="font-bold">Gourmet Catering Feast</span>
+                    <span className="text-[10px] text-neutral-400">Naan, pasta, champagne & dishes</span>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    spacesSfx.playKeyNote(3);
+                    setSeatingModalOpen(true);
+                    setHospitalityDropdownOpen(false);
+                  }}
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                >
+                  <span className="text-base">🪑</span>
+                  <div className="flex flex-col">
+                    <span className="font-bold">Smart Banquet Seating</span>
+                    <span className="text-[10px] text-neutral-400">Auto-assign 2 to 16 chairs</span>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    spacesSfx.playKeyNote(2);
+                    setGiftingModalOpen(true);
+                    setHospitalityDropdownOpen(false);
+                  }}
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                >
+                  <span className="text-base">🎁</span>
+                  <div className="flex flex-col">
+                    <span className="font-bold">Boutique Outfits & Gifts</span>
+                    <span className="text-[10px] text-neutral-400">Send gifts to attendees</span>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleServeCake();
+                    setHospitalityDropdownOpen(false);
+                  }}
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                >
+                  <span className="text-base">🎂</span>
+                  <div className="flex flex-col">
+                    <span className="font-bold">Birthday Cake Ceremony</span>
+                    <span className="text-[10px] text-neutral-400">Serve celebration cake to table</span>
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
 
-          {/* Live Interactive Polls (Image 1 Fidelity) */}
+          {/* 3. Stage Toggle (Webinar/Stage Presenter Dock) */}
           <button
-            onClick={() => {
-              spacesSfx.playKeyNote(3);
-              setEventSocialPanelTab("polls");
-              setEventSocialPanelOpen(!eventSocialPanelOpen);
-            }}
-            className={`px-2.5 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0 ${
-              eventSocialPanelOpen && eventSocialPanelTab === "polls"
-                ? "border-indigo-400 bg-indigo-950/40 text-indigo-300"
-                : "border-neutral-800 bg-neutral-900/80 text-neutral-300 hover:text-white"
-            }`}
-            title="Live Audience Polls (Image 1)"
-          >
-            <BarChart2 className="w-3.5 h-3.5 text-indigo-400" />
-            <span className="hidden md:inline">Polls</span>
-          </button>
-
-          {/* Toggle Stage Presentation Bar */}
-          <button
+            type="button"
             onClick={() => {
               spacesSfx.playKeyNote(4);
               setIsStageActive(!isStageActive);
             }}
-            className={`px-2.5 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0 ${
+            className={`px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer ${
               isStageActive
-                ? "border-rose-500/50 bg-rose-950/30 text-rose-300"
+                ? "border-rose-500/50 bg-rose-950/40 text-rose-300"
                 : "border-neutral-800 bg-neutral-900/80 text-neutral-400 hover:text-white"
             }`}
             title="Toggle Stage Presenters Dock"
           >
             <Radio className="w-3.5 h-3.5 text-rose-400" />
-            <span className="hidden lg:inline">Stage</span>
+            <span className="hidden sm:inline">Stage</span>
           </button>
 
-          {/* Boutique Outfits & Friend Gifting */}
-          <button
-            onClick={() => {
-              spacesSfx.playKeyNote(2);
-              setGiftingModalOpen(true);
-            }}
-            className="px-2.5 py-1.5 rounded-xl border border-pink-500/30 bg-neutral-900/80 hover:bg-neutral-800 text-pink-300 hover:text-white text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
-            title="Boutique Outfits & Friend Gifting"
-          >
-            <Gift className="w-3.5 h-3.5 text-pink-400" />
-            <span className="hidden lg:inline">Gifts</span>
-          </button>
-
-          {/* Host Event / Vibe Trigger (Protected if Guest) */}
+          {/* 4. Walk to Desk Shortcut */}
           <button
             type="button"
-            onClick={() => {
-              handleProtectedAction(
-                "Host Your Own Event & Theme",
-                "Sign in with Google to host birthday parties, dinner feasts, ghost dating, or customize space vibes permanently.",
-                <Crown className="w-7 h-7" />,
-                () => {
-                  spacesSfx.playKeyNote(4);
-                  setHostEventModalOpen(true);
-                }
-              );
-            }}
-            className="px-2.5 py-1.5 rounded-xl border border-purple-500/40 bg-purple-950/30 hover:bg-purple-900/40 text-purple-300 hover:text-white text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
-            title="Host Birthday, Dinner, Ghost Dating, Study, or Party Club"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-purple-400 animate-pulse" />
-            <span className="hidden lg:inline">Host Event</span>
-          </button>
-
-          {/* Walk to desk */}
-          <button
             onClick={handleWalkToDesk}
             className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-cyan-400 text-neutral-300 hover:text-cyan-300 text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
             title="Automatically walk to your workstation desk"
           >
             <Laptop className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="hidden xl:inline">Desk</span>
+            <span className="hidden sm:inline">Desk</span>
           </button>
         </div>
 
-        {/* Right: Cash, Invite, Audio, Studio, Host Gather & Settings */}
+        {/* Right: Host Hub, Invite, Cash Wallet, Voice & Profile */}
         <div className="flex items-center gap-1.5 shrink-0">
+          {/* Host Hub Dropdown (Theme/Vibe, Summon Gather Bell, Space Settings) */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                handleProtectedAction(
+                  "Host Your Own Event & Theme",
+                  "Sign in with Google to host birthday parties, dinner feasts, ghost dating, or customize space vibes permanently.",
+                  <Crown className="w-7 h-7" />,
+                  () => {
+                    spacesSfx.playKeyNote(4);
+                    setHostHubDropdownOpen((v) => !v);
+                    setActivitiesDropdownOpen(false);
+                    setHospitalityDropdownOpen(false);
+                    setRoomDropdownOpen(false);
+                  }
+                );
+              }}
+              className={`px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer ${
+                hostHubDropdownOpen
+                  ? "border-purple-400 bg-purple-950/60 text-purple-300"
+                  : "border-purple-500/40 bg-purple-950/30 hover:bg-purple-900/40 text-purple-300"
+              }`}
+              title="Host Controls, Event Themes & Summon Bell"
+            >
+              <Crown className="w-3.5 h-3.5 text-purple-400" />
+              <span className="hidden sm:inline">Host Hub</span>
+              <ChevronDown className={`w-3 h-3 transition-transform ${hostHubDropdownOpen ? "rotate-180" : ""}`} />
+            </button>
+
+            {hostHubDropdownOpen && (
+              <div className="absolute top-10 right-0 w-64 bg-neutral-950 border border-neutral-800 rounded-2xl shadow-2xl p-1.5 space-y-1 z-50 animate-in zoom-in-95">
+                <div className="text-[10px] font-mono font-bold uppercase text-neutral-400 px-2.5 py-1">
+                  Host Command Center
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    spacesSfx.playKeyNote(4);
+                    setHostEventModalOpen(true);
+                    setHostHubDropdownOpen(false);
+                  }}
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                >
+                  <span className="text-base">✨</span>
+                  <div className="flex flex-col">
+                    <span className="font-bold">Change Event Theme & Vibe</span>
+                    <span className="text-[10px] text-neutral-400">Birthday, Dinner, Ghost Dating, Gala</span>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGatherDropdownOpen(true);
+                    setHostHubDropdownOpen(false);
+                  }}
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                >
+                  <span className="text-base">🔔</span>
+                  <div className="flex flex-col">
+                    <span className="font-bold">Summon Everyone ("Gather All")</span>
+                    <span className="text-[10px] text-neutral-400">Ring the bell to bring guests together</span>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    spacesSfx.playKeyNote(4);
+                    setHostModalOpen(true);
+                    setHostHubDropdownOpen(false);
+                  }}
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                >
+                  <span className="text-base">⚙️</span>
+                  <div className="flex flex-col">
+                    <span className="font-bold">Space Suite Settings</span>
+                    <span className="text-[10px] text-neutral-400">Capacities, announcements & privacy</span>
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Gather All Preset Modal Dropdown */}
+          {gatherDropdownOpen && (
+            <div className="absolute top-14 right-24 w-56 bg-neutral-950 border border-neutral-800 rounded-2xl shadow-2xl p-1.5 space-y-1 z-50 animate-in zoom-in-95">
+              <div className="text-[10px] font-mono font-bold uppercase text-neutral-400 px-2.5 py-1">
+                Summon Everyone To:
+              </div>
+              {[
+                { name: "Banquet Feast Table", x: 1200, y: 350, icon: "🫓" },
+                { name: "Campfire Patio", x: 800, y: 150, icon: "🪵" },
+                { name: "Retro Pixel Arcade", x: 410, y: 420, icon: "🕹️" },
+                { name: "Concert Amphitheater", x: 800, y: 860, icon: "🎤" },
+              ].map((pt) => (
+                <button
+                  key={pt.name}
+                  onClick={() => {
+                    handleGatherFriends(pt.name, pt.x, pt.y);
+                    setGatherDropdownOpen(false);
+                  }}
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                >
+                  <span className="text-base">{pt.icon}</span>
+                  <span className="truncate">{pt.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Virtual Paper Money (Echo Cash) Wallet */}
           <button
             onClick={handleClaimDailyAllowance}
@@ -1216,44 +1422,6 @@ export default function DynamicSpaceWorldPage() {
             <span className="hidden sm:inline text-xs font-mono font-bold">Invite</span>
           </button>
 
-          {/* Host "Gather All" Bell (Integrated into host controls, not overlapping floating bar!) */}
-          {isHost && (
-            <div className="relative">
-              <button
-                onClick={() => setGatherDropdownOpen(!gatherDropdownOpen)}
-                className="p-2 rounded-xl border border-amber-500/30 bg-amber-950/20 hover:bg-amber-950/40 text-amber-300 transition-colors cursor-pointer"
-                title="Gather all attendees to one spot"
-              >
-                <Bell className="w-4 h-4 text-amber-400" />
-              </button>
-              {gatherDropdownOpen && (
-                <div className="absolute top-11 right-0 w-52 bg-neutral-950 border border-neutral-800 rounded-2xl shadow-2xl p-1.5 space-y-1 z-50 animate-in zoom-in-95">
-                  <div className="text-[10px] font-mono font-bold uppercase text-neutral-400 px-2.5 py-1">
-                    Summon Everyone To:
-                  </div>
-                  {[
-                    { name: "Banquet Feast Table", x: 1200, y: 350, icon: "🫓" },
-                    { name: "Campfire Patio", x: 800, y: 150, icon: "🪵" },
-                    { name: "Retro Pixel Arcade", x: 410, y: 420, icon: "🕹️" },
-                    { name: "Concert Amphitheater", x: 800, y: 860, icon: "🎤" },
-                  ].map((pt) => (
-                    <button
-                      key={pt.name}
-                      onClick={() => {
-                        handleGatherFriends(pt.name, pt.x, pt.y);
-                        setGatherDropdownOpen(false);
-                      }}
-                      className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
-                    >
-                      <span className="text-base">{pt.icon}</span>
-                      <span className="truncate">{pt.name}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Avatar Studio */}
           <button
             onClick={() => {
@@ -1265,20 +1433,6 @@ export default function DynamicSpaceWorldPage() {
           >
             <Palette className="w-4 h-4" />
           </button>
-
-          {/* Host Settings */}
-          {isHost && (
-            <button
-              onClick={() => {
-                spacesSfx.playKeyNote(4);
-                setHostModalOpen(true);
-              }}
-              className="p-2 rounded-xl border border-amber-800/40 bg-amber-950/20 hover:bg-amber-950/40 text-amber-300 transition-colors cursor-pointer"
-              title="Host Suite Settings"
-            >
-              <Settings className="w-4 h-4" />
-            </button>
-          )}
         </div>
       </header>
 

@@ -37,6 +37,7 @@ import {
   Sparkles,
   RotateCcw,
   RotateCw,
+  Radio,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -60,8 +61,13 @@ import { createNotification } from "@/lib/notifications";
 import { audioManager } from "@/lib/audioManager";
 import { getPlayableUrl } from "@/lib/cloudinary";
 import { FormattedText } from "@/app/components/FormattedText";
-import { getFirebaseDb } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { getFirebaseDb } from "@/lib/firebase";
+import { subscribeToPublicSpaces, type SpaceDoc } from "@/lib/spaces";
+import { subscribeToPublicRooms, type Room } from "@/lib/rooms";
+import { subscribeToClashes, type ClashItem } from "@/lib/clashes";
+import { LiveSpaceWaveCard, type LiveExperienceItem } from "@/app/components/waves/LiveSpaceWaveCard";
+import { spacesSfx } from "@/lib/spacesSfx";
 
 interface WavePost {
   id: string;
@@ -989,6 +995,9 @@ export default function WavesPage() {
   const [moreMenuPost, setMoreMenuPost] = useState<WavePost | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  const [feedTab, setFeedTab] = useState<"waves" | "live">("waves");
+  const [liveExperiences, setLiveExperiences] = useState<LiveExperienceItem[]>([]);
+
   const containerRef = useRef<HTMLDivElement | null>(null);
   const cardRefs = useRef<Map<number, HTMLElement>>(new Map());
 
@@ -1018,6 +1027,128 @@ export default function WavesPage() {
     });
     return () => unsub();
   }, []);
+
+  // Real-time live discovery: Subscribe to public spaces, public rooms & live stage clashes
+  useEffect(() => {
+    let spacesList: SpaceDoc[] = [];
+    let roomsList: Room[] = [];
+    let clashesList: ClashItem[] = [];
+
+    const rebuildLive = () => {
+      const items: LiveExperienceItem[] = [];
+
+      // 1. Live Public Spaces
+      spacesList
+        .filter((s) => s.isPublic !== false)
+        .forEach((s) => {
+          items.push({
+            id: `space_${s.id}`,
+            type: "space",
+            title: s.name,
+            subtitle: s.vibe ? `Vibe: ${s.vibe.replace(/_/g, " ")}` : "Live 2.5D Hangout",
+            description: s.description || "Join this open spatial audio universe to talk, hang out, explore activities or sit at tables.",
+            vibe: s.vibe,
+            hostName: s.hostHandle || "@host",
+            hostHandle: s.hostHandle || "@host",
+            hostAvatar: s.hostAvatar,
+            participantCount: Math.max(1, s.participantCount || 1),
+            categoryBadge: s.category || "SPATIAL SPACE",
+            categoryIcon: (s.category as string) === "BIRTHDAY" ? "🎂" : (s.category as string) === "PARTY" ? "🎉" : (s.category as string) === "STUDY" ? "📚" : (s.category as string) === "COWORK" ? "💻" : (s.category as string) === "GALA_DINNER" ? "🍷" : (s.category as string) === "MUSIC" || (s.category as string) === "CONCERT" ? "🎵" : "🪐",
+            targetUrl: `/spaces/${s.id}`,
+            activeSpeakers: (s.activeStageSpeakers || []).map((sp) => ({ name: sp.name, avatarUrl: sp.avatarUrl })),
+            themeColor: "#8b5cf6",
+          });
+        });
+
+      // 2. Live Public Stages (Clashes / Debates)
+      clashesList
+        .filter((c) => c.status === "live")
+        .forEach((c) => {
+          items.push({
+            id: `clash_${c.id}`,
+            type: "stage",
+            title: c.title || c.topic || "Live Stage Clash",
+            subtitle: `Round: ${c.roundName || "Live Debate"} • 1v1 Arena`,
+            description: `Side A: ${c.sideA?.position || c.sideA?.handle} vs Side B: ${c.sideB?.position || c.sideB?.handle}`,
+            hostName: c.creatorHandle || "@moderator",
+            hostHandle: c.creatorHandle || "@moderator",
+            participantCount: Math.max(2, (c.listeners || 0) + 2),
+            categoryBadge: "STAGE CLASH",
+            categoryIcon: "🏛️",
+            targetUrl: `/stage`,
+            activeSpeakers: [
+              { name: c.sideA?.handle || "Side A" },
+              { name: c.sideB?.handle || "Side B" },
+            ],
+            themeColor: "#ec4899",
+          });
+        });
+
+      // 3. Live Public Audio Rooms
+      roomsList
+        .filter((r) => r.isPublic !== false && r.isActive !== false)
+        .forEach((r) => {
+          items.push({
+            id: `room_${r.id}`,
+            type: "room",
+            title: r.name,
+            subtitle: r.openMic ? "Open Mic Stage" : "Live Room Broadcast",
+            description: r.description || "Drop in and listen or speak on the live stage mic.",
+            hostName: r.hostHandle || "@host",
+            hostHandle: r.hostHandle || "@host",
+            participantCount: Math.max(1, r.participantCount || 1),
+            categoryBadge: r.category?.toUpperCase() || "AUDIO ROOM",
+            categoryIcon: "🎙️",
+            targetUrl: `/rooms/${r.id}`,
+            themeColor: "#06b6d4",
+          });
+        });
+
+      setLiveExperiences(items);
+    };
+
+    const unsubSpaces = subscribeToPublicSpaces((spaces) => {
+      spacesList = spaces;
+      rebuildLive();
+    });
+
+    const unsubRooms = subscribeToPublicRooms((rooms) => {
+      roomsList = rooms;
+      rebuildLive();
+    });
+
+    const unsubClashes = subscribeToClashes((clashes) => {
+      clashesList = clashes;
+      rebuildLive();
+    });
+
+    return () => {
+      unsubSpaces();
+      unsubRooms();
+      unsubClashes();
+    };
+  }, []);
+
+  const handleSwitchTab = (tab: "waves" | "live") => {
+    spacesSfx.playSitPop();
+    setFeedTab(tab);
+    setActiveIdx(0);
+    cardRefs.current.clear();
+    if (containerRef.current) {
+      containerRef.current.scrollTop = 0;
+    }
+  };
+
+  const handleShareLive = (item: LiveExperienceItem) => {
+    if (typeof window === "undefined") return;
+    const url = `${window.location.origin}${item.targetUrl}`;
+    if (navigator.share) {
+      navigator.share({ title: item.title, text: item.description, url }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(url);
+      showToast("🔗 Link copied to clipboard!");
+    }
+  };
 
   // Subscribe to following list
   useEffect(() => {
@@ -1057,7 +1188,7 @@ export default function WavesPage() {
     );
     cardRefs.current.forEach((el) => obs.observe(el));
     return () => obs.disconnect();
-  }, [posts]);
+  }, [posts, feedTab, liveExperiences]);
 
   const setCardRef = useCallback((i: number, el: HTMLElement | null) => {
     if (el) cardRefs.current.set(i, el);
@@ -1233,22 +1364,7 @@ export default function WavesPage() {
       </div>
     );
 
-  if (posts.length === 0)
-    return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-6 text-center px-8">
-        <Mic2 className="w-10 h-10 text-neutral-700" />
-        <h1 className="font-mono font-bold text-2xl sm:text-3xl text-white uppercase tracking-wider">NO WAVES YET</h1>
-        <p className="font-mono text-[10px] text-neutral-600 tracking-widest uppercase">
-          Drop an echo in studio to start a wave.
-        </p>
-        <Link
-          href="/studio"
-          className="px-6 py-3 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors"
-        >
-          [ 🎙 GO TO STUDIO ]
-        </Link>
-      </div>
-    );
+  const totalItems = feedTab === "waves" ? posts.length : liveExperiences.length;
 
   return (
     <div className="relative w-full h-[calc(100dvh-4.5rem)] md:h-screen overflow-hidden bg-black">
@@ -1265,33 +1381,81 @@ export default function WavesPage() {
         className="w-full h-full overflow-y-scroll no-scrollbar"
         style={{ scrollSnapType: "y mandatory" }}
       >
-        {posts.map((post, i) => (
-          <div key={post.id} ref={(el) => setCardRef(i, el)} data-wave-idx={i} className="w-full h-full snap-start">
-            <WaveCard
-              post={post}
-              index={i}
-              active={activeIdx === i}
-              muted={muted}
-              isPulsed={user ? post.pulsedBy.includes(user.uid) : false}
-              isSaved={savedPostIds.has(post.id)}
-              isOrbiting={followingUids.has(post.authorUid)}
-              isOwner={user?.uid === post.authorUid}
-              isReEchoed={reEchoedIds.has(post.id)}
-              onPulse={() => handlePulse(post)}
-              onOpenComments={() => setCommentsDrawerPost(post)}
-              onReEcho={() => handleReEcho(post)}
-              onShare={() => handleShare(post)}
-              onSaveToggle={() => handleSaveToggle(post)}
-              onOpenMore={() => setMoreMenuPost(post)}
-              onProfile={() => router.push(`/${post.authorHandle.replace(/^@/, "")}`)}
-              onToggleOrbit={() => handleToggleOrbit(post)}
-            />
-          </div>
-        ))}
+        {feedTab === "waves" ? (
+          posts.length === 0 ? (
+            <div className="w-full h-full flex flex-col items-center justify-center gap-6 text-center px-8">
+              <Mic2 className="w-10 h-10 text-neutral-700" />
+              <h1 className="font-mono font-bold text-2xl sm:text-3xl text-white uppercase tracking-wider">NO WAVES YET</h1>
+              <p className="font-mono text-[10px] text-neutral-600 tracking-widest uppercase">
+                Drop an echo in studio to start a wave.
+              </p>
+              <Link
+                href="/studio"
+                className="px-6 py-3 border border-white text-white font-mono text-xs tracking-widest uppercase hover:bg-white hover:text-black transition-colors"
+              >
+                [ 🎙 GO TO STUDIO ]
+              </Link>
+            </div>
+          ) : (
+            posts.map((post, i) => (
+              <div key={post.id} ref={(el) => setCardRef(i, el)} data-wave-idx={i} className="w-full h-full snap-start">
+                <WaveCard
+                  post={post}
+                  index={i}
+                  active={activeIdx === i}
+                  muted={muted}
+                  isPulsed={user ? post.pulsedBy.includes(user.uid) : false}
+                  isSaved={savedPostIds.has(post.id)}
+                  isOrbiting={followingUids.has(post.authorUid)}
+                  isOwner={user?.uid === post.authorUid}
+                  isReEchoed={reEchoedIds.has(post.id)}
+                  onPulse={() => handlePulse(post)}
+                  onOpenComments={() => setCommentsDrawerPost(post)}
+                  onReEcho={() => handleReEcho(post)}
+                  onShare={() => handleShare(post)}
+                  onSaveToggle={() => handleSaveToggle(post)}
+                  onOpenMore={() => setMoreMenuPost(post)}
+                  onProfile={() => router.push(`/${post.authorHandle.replace(/^@/, "")}`)}
+                  onToggleOrbit={() => handleToggleOrbit(post)}
+                />
+              </div>
+            ))
+          )
+        ) : (
+          liveExperiences.length === 0 ? (
+            <div className="w-full h-full flex flex-col items-center justify-center gap-6 text-center px-8">
+              <Radio className="w-12 h-12 text-rose-500 animate-pulse" />
+              <h1 className="font-mono font-bold text-2xl sm:text-3xl text-white uppercase tracking-wider">
+                NO LIVE SPACES RIGHT NOW
+              </h1>
+              <p className="font-mono text-xs text-neutral-400 tracking-widest max-w-sm uppercase">
+                Host the first public birthday party, dinner banquet, stage clash, or audio room for everyone to discover!
+              </p>
+              <Link
+                href="/spaces"
+                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-mono text-xs font-bold tracking-widest uppercase rounded-full shadow-lg hover:brightness-110 transition-all cursor-pointer"
+              >
+                🚀 HOST A LIVE SPACE
+              </Link>
+            </div>
+          ) : (
+            liveExperiences.map((item, i) => (
+              <div key={item.id} ref={(el) => setCardRef(i, el)} data-wave-idx={i} className="w-full h-full snap-start">
+                <LiveSpaceWaveCard
+                  item={item}
+                  isActive={activeIdx === i}
+                  isMuted={muted}
+                  onToggleMute={() => setMuted((m) => !m)}
+                  onShare={handleShareLive}
+                />
+              </div>
+            ))
+          )
+        )}
       </div>
 
       {/* Top Header Bar */}
-      <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 pt-safe pt-3 pb-2 bg-gradient-to-b from-black/80 via-black/40 to-transparent pointer-events-none">
+      <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-3 sm:px-4 pt-safe pt-3 pb-2 bg-gradient-to-b from-black/80 via-black/40 to-transparent pointer-events-none">
         <div className="flex items-center gap-2 pointer-events-auto">
           <Link
             href="/"
@@ -1300,13 +1464,41 @@ export default function WavesPage() {
             ← [ FREQUENCY ]
           </Link>
         </div>
-        <div className="flex items-center gap-2 pointer-events-auto">
-          <span className="font-mono font-bold text-white text-sm sm:text-base tracking-widest uppercase drop-shadow-lg">[ WAVES ]</span>
+
+        {/* Mode Switcher: REELS vs LIVE NOW (30s) */}
+        <div className="flex items-center gap-1 bg-black/70 backdrop-blur-md p-1 rounded-full border border-white/10 pointer-events-auto shadow-xl">
+          <button
+            onClick={() => handleSwitchTab("waves")}
+            className={`px-3 py-1 rounded-full font-mono text-[10px] sm:text-xs font-bold tracking-wider uppercase transition-all cursor-pointer ${
+              feedTab === "waves"
+                ? "bg-white text-black shadow-md"
+                : "text-white/60 hover:text-white"
+            }`}
+          >
+            🎙️ REELS
+          </button>
+          <button
+            onClick={() => handleSwitchTab("live")}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full font-mono text-[10px] sm:text-xs font-bold tracking-wider uppercase transition-all cursor-pointer ${
+              feedTab === "live"
+                ? "bg-gradient-to-r from-red-600 to-rose-500 text-white shadow-md shadow-red-500/20 animate-pulse"
+                : "text-white/60 hover:text-white"
+            }`}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-ping" />
+            <span>LIVE NOW</span>
+            {liveExperiences.length > 0 && (
+              <span className="text-[9px] bg-black/40 px-1.5 py-0.2 rounded-full border border-white/20">
+                {liveExperiences.length}
+              </span>
+            )}
+          </button>
         </div>
+
         {/* Mute toggle */}
         <button
           onClick={() => setMuted((m) => !m)}
-          className="flex items-center gap-1 font-mono text-[10px] text-white/70 tracking-widest uppercase hover:text-white transition-colors pointer-events-auto bg-black/40 backdrop-blur-sm p-2 rounded-full border border-white/10"
+          className="flex items-center gap-1 font-mono text-[10px] text-white/70 tracking-widest uppercase hover:text-white transition-colors pointer-events-auto bg-black/40 backdrop-blur-sm p-2 rounded-full border border-white/10 cursor-pointer"
           title={muted ? "Unmute" : "Mute"}
         >
           {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
@@ -1330,11 +1522,13 @@ export default function WavesPage() {
       </div>
 
       {/* Card Counter */}
-      <div className="absolute bottom-20 left-4 z-30 pointer-events-none">
-        <span className="font-mono text-[9px] text-white/40 tracking-widest bg-black/40 px-2 py-0.5 rounded-full border border-white/5">
-          {activeIdx + 1} / {posts.length}
-        </span>
-      </div>
+      {totalItems > 0 && (
+        <div className="absolute bottom-20 left-4 z-30 pointer-events-none">
+          <span className="font-mono text-[9px] text-white/40 tracking-widest bg-black/40 px-2 py-0.5 rounded-full border border-white/5">
+            {activeIdx + 1} / {totalItems}
+          </span>
+        </div>
+      )}
 
       {/* ── Slide-up Comments Sheet ── */}
       {commentsDrawerPost && (
