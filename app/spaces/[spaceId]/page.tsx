@@ -1562,6 +1562,8 @@ export default function DynamicSpaceWorldPage() {
           tableDishes={tableDishes}
           chairReservations={chairReservations}
           onBiteDish={handleBiteDish}
+          onOpenUno={() => setUnoModalOpen(true)}
+          onOpenPartyGames={() => setPartyTableGamesOpen(true)}
         />
       </main>
 

@@ -93,6 +93,23 @@ function generateDeck(): UnoCard[] {
   return deck;
 }
 
+export function renderPlayerAvatar(avatar?: string, fallback: string = "👑", sizeClass: string = "w-8 h-8 text-sm") {
+  if (avatar && (avatar.startsWith("http://") || avatar.startsWith("https://") || avatar.startsWith("/") || avatar.startsWith("data:"))) {
+    return (
+      <img
+        src={avatar}
+        alt="Player Avatar"
+        className={`${sizeClass} rounded-full object-cover border border-white/20 shadow-sm shrink-0`}
+      />
+    );
+  }
+  return (
+    <div className={`${sizeClass} rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 shadow-sm shrink-0`}>
+      <span className="leading-none">{avatar || fallback}</span>
+    </div>
+  );
+}
+
 export function UnoGameModal({
   isOpen,
   onClose,
@@ -482,9 +499,7 @@ export function UnoGameModal({
                   : "bg-slate-900/60 border border-slate-800"
               }`}>
                 <div className="relative">
-                  <div className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center text-lg border border-slate-700">
-                    {acrossP.avatar}
-                  </div>
+                  {renderPlayerAvatar(acrossP.avatar, "🦊", "w-9 h-9 text-base")}
                   {acrossP.calledUno && (
                     <span className="absolute -top-2 -right-2 px-1.5 py-0.5 rounded-full bg-rose-600 text-white font-black text-[9px] shadow-sm animate-pulse">
                       UNO!
@@ -518,9 +533,7 @@ export function UnoGameModal({
                     : "bg-slate-900/60 border border-slate-800"
                 }`}>
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-base border border-slate-700">
-                      {leftP.avatar}
-                    </div>
+                    {renderPlayerAvatar(leftP.avatar, "🤖", "w-8 h-8 text-sm")}
                     <div>
                       <div className="text-xs font-semibold text-white">{leftP.name}</div>
                       <div className="text-[10px] text-slate-400 uppercase font-mono">Left Chair 👈</div>
@@ -659,9 +672,7 @@ export function UnoGameModal({
                       <div className="text-xs font-semibold text-white">{rightP.name}</div>
                       <div className="text-[10px] text-slate-400 uppercase font-mono">Right Chair 👉</div>
                     </div>
-                    <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-base border border-slate-700">
-                      {rightP.avatar}
-                    </div>
+                    {renderPlayerAvatar(rightP.avatar, "🐯", "w-8 h-8 text-sm")}
                   </div>
                   <div className="flex items-center justify-between w-full mt-1 text-[11px] text-slate-300">
                     {rightP.calledUno && (
@@ -684,8 +695,8 @@ export function UnoGameModal({
             {/* Player Info Bar & Action Buttons */}
             <div className="w-full flex items-center justify-between px-4 mb-2">
               <div className="flex items-center gap-2">
-                <span className="text-lg">{localP?.avatar || "👑"}</span>
-                <span className="text-xs font-bold text-white">{localUserName || "You"} (Bottom)</span>
+                {renderPlayerAvatar(localP?.avatar, "👑", "w-7 h-7 text-xs")}
+                <span className="text-xs font-bold text-white">{localUserName || "You"} (Table Seat)</span>
                 {isLocalTurn && (
                   <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[10px] font-bold animate-pulse">
                     Your Turn! Play a card or draw

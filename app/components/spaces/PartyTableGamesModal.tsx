@@ -107,6 +107,23 @@ const SONG_SUGGESTIONS: Record<string, string[]> = {
   J: ["Jai Jai Shivshankar", "Jaanu Meri Jaan", "Jugnu - Badshah", "Jumma Chumma De De"],
 };
 
+export function renderPlayerAvatar(avatar?: string, fallback: string = "👑", sizeClass: string = "w-8 h-8 text-sm") {
+  if (avatar && (avatar.startsWith("http://") || avatar.startsWith("https://") || avatar.startsWith("/") || avatar.startsWith("data:"))) {
+    return (
+      <img
+        src={avatar}
+        alt="Player Avatar"
+        className={`${sizeClass} rounded-full object-cover border border-white/20 shadow-sm shrink-0`}
+      />
+    );
+  }
+  return (
+    <div className={`${sizeClass} rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 shadow-sm shrink-0`}>
+      <span className="leading-none">{avatar || fallback}</span>
+    </div>
+  );
+}
+
 export function PartyTableGamesModal({
   isOpen,
   onClose,
@@ -643,7 +660,7 @@ export function PartyTableGamesModal({
                         : "bg-neutral-900/80 border-neutral-800 text-neutral-400"
                     }`}
                   >
-                    <span className="text-lg">{seatedPlayers[2].avatar}</span>
+                    {renderPlayerAvatar(seatedPlayers[2].avatar, "🌸", "w-7 h-7 text-sm")}
                     <span className="text-xs font-bold">{seatedPlayers[2].name}</span>
                     <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-yellow-500/30 text-yellow-200">
                       Yellow
@@ -661,7 +678,7 @@ export function PartyTableGamesModal({
                         : "bg-neutral-900/80 border-neutral-800 text-neutral-400"
                     }`}
                   >
-                    <span className="text-lg">{seatedPlayers[1].avatar}</span>
+                    {renderPlayerAvatar(seatedPlayers[1].avatar, "😎", "w-7 h-7 text-sm")}
                     <span className="text-[11px] font-bold">{seatedPlayers[1].name}</span>
                     <span className="text-[9px] font-mono px-1 py-0.5 rounded bg-emerald-500/30 text-emerald-200">
                       Green
@@ -794,7 +811,7 @@ export function PartyTableGamesModal({
                         : "bg-neutral-900/80 border-neutral-800 text-neutral-400"
                     }`}
                   >
-                    <span className="text-lg">{seatedPlayers[3].avatar}</span>
+                    {renderPlayerAvatar(seatedPlayers[3].avatar, "⚡", "w-7 h-7 text-sm")}
                     <span className="text-[11px] font-bold">{seatedPlayers[3].name}</span>
                     <span className="text-[9px] font-mono px-1 py-0.5 rounded bg-sky-500/30 text-sky-200">
                       Blue
@@ -811,10 +828,10 @@ export function PartyTableGamesModal({
                         : "bg-neutral-900/80 border-neutral-800 text-neutral-400"
                     }`}
                   >
-                    <span className="text-xl">{seatedPlayers[0].avatar}</span>
+                    {renderPlayerAvatar(seatedPlayers[0].avatar, "👑", "w-7 h-7 text-sm")}
                     <div>
                       <div className="text-xs font-black text-white">{seatedPlayers[0].name} (You)</div>
-                      <div className="text-[10px] text-rose-300 font-mono">Red Team • Seated Front</div>
+                      <div className="text-[10px] text-rose-300 font-mono">Red Team • Seated at Table</div>
                     </div>
                   </div>
                 </div>
@@ -861,7 +878,7 @@ export function PartyTableGamesModal({
                       : "bg-neutral-900/80 border-neutral-800 text-neutral-400"
                   }`}
                 >
-                  <span className="text-lg">{seatedPlayers[2].avatar}</span>
+                  {renderPlayerAvatar(seatedPlayers[2].avatar, "🌸", "w-7 h-7 text-sm")}
                   <span className="text-xs font-bold">{seatedPlayers[2].name}</span>
                 </div>
 
@@ -875,7 +892,7 @@ export function PartyTableGamesModal({
                         : "bg-neutral-900/80 border-neutral-800 text-neutral-400"
                     }`}
                   >
-                    <span className="text-lg">{seatedPlayers[1].avatar}</span>
+                    {renderPlayerAvatar(seatedPlayers[1].avatar, "😎", "w-7 h-7 text-sm")}
                     <span className="text-[11px] font-bold">{seatedPlayers[1].name}</span>
                   </div>
 
@@ -906,7 +923,7 @@ export function PartyTableGamesModal({
                         : "bg-neutral-900/80 border-neutral-800 text-neutral-400"
                     }`}
                   >
-                    <span className="text-lg">{seatedPlayers[3].avatar}</span>
+                    {renderPlayerAvatar(seatedPlayers[3].avatar, "⚡", "w-7 h-7 text-sm")}
                     <span className="text-[11px] font-bold">{seatedPlayers[3].name}</span>
                   </div>
                 </div>
@@ -919,7 +936,7 @@ export function PartyTableGamesModal({
                       : "bg-neutral-900/80 border-neutral-800 text-neutral-400"
                   }`}
                 >
-                  <span className="text-xl">{seatedPlayers[0].avatar}</span>
+                  {renderPlayerAvatar(seatedPlayers[0].avatar, "👑", "w-7 h-7 text-sm")}
                   <span className="text-xs font-black">{seatedPlayers[0].name} (You)</span>
                 </div>
               </div>
@@ -1255,7 +1272,7 @@ export function PartyTableGamesModal({
                       key={player.id}
                       className="bg-neutral-900 border border-neutral-800 rounded-2xl p-3 flex flex-col items-center justify-between text-center min-h-[140px]"
                     >
-                      <div className="text-lg">{player.avatar}</div>
+                      {renderPlayerAvatar(player.avatar, "👑", "w-8 h-8 text-sm")}
                       <div className="text-xs font-bold text-neutral-200 truncate w-full">
                         {player.name} {isYou && "(You)"}
                       </div>

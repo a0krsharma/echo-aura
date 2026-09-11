@@ -77,9 +77,94 @@ interface EchoSpacesWorldProps {
   tableDishes?: TableDish[];
   chairReservations?: ChairReservation[];
   onBiteDish?: (dishId: string) => void;
+  onOpenUno?: () => void;
+  onOpenPartyGames?: () => void;
 }
 
 const EMOTE_REACTIONS = ["💖", "🔥", "🎉", "👏", "💡", "☕", "🚀", "👋"];
+
+export interface TableChairDef {
+  id: string;
+  name: string;
+  tableName: string;
+  x: number;
+  y: number;
+  faceDirection: "up" | "down" | "left" | "right";
+}
+
+export const NUMBERED_TABLES = [
+  { id: "tbl_1", num: 1, label: "Party Table 1", x: 670, y: 780, r: 38, cap: 6 },
+  { id: "tbl_2", num: 2, label: "Party Table 2", x: 910, y: 780, r: 38, cap: 6 },
+  { id: "tbl_3", num: 3, label: "Party Table 3", x: 670, y: 920, r: 38, cap: 6 },
+  { id: "tbl_4", num: 4, label: "Party Table 4", x: 910, y: 920, r: 38, cap: 6 },
+  { id: "tbl_5", num: 5, label: "Party Table 5", x: 670, y: 1060, r: 38, cap: 6 },
+  { id: "tbl_6", num: 6, label: "Party Table 6", x: 910, y: 1060, r: 38, cap: 6 },
+];
+
+export const BANQUET_CHAIRS: TableChairDef[] = [
+  // 7 Top chairs (y: 307, face down towards table)
+  ...[0, 1, 2, 3, 4, 5, 6].map((i) => ({
+    id: `banquet_chair_top_${i + 1}`,
+    name: `Banquet Chair #${i + 1}`,
+    tableName: "Grand Banquet Dinner Table",
+    x: 1060 + i * 44 + 11,
+    y: 307,
+    faceDirection: "down" as const,
+  })),
+  // 7 Bottom chairs (y: 401, face up towards table)
+  ...[0, 1, 2, 3, 4, 5, 6].map((i) => ({
+    id: `banquet_chair_bottom_${i + 8}`,
+    name: `Banquet Chair #${i + 8}`,
+    tableName: "Grand Banquet Dinner Table",
+    x: 1060 + i * 44 + 11,
+    y: 401,
+    faceDirection: "up" as const,
+  })),
+  // Left head chair (x: 1025, y: 355, face right towards table)
+  {
+    id: "banquet_chair_head_left",
+    name: "Banquet Host Chair (Left)",
+    tableName: "Grand Banquet Dinner Table",
+    x: 1025,
+    y: 355,
+    faceDirection: "right" as const,
+  },
+  // Right head chair (x: 1385, y: 355, face left towards table)
+  {
+    id: "banquet_chair_head_right",
+    name: "Banquet Head Chair (Right)",
+    tableName: "Grand Banquet Dinner Table",
+    x: 1385,
+    y: 355,
+    faceDirection: "left" as const,
+  },
+];
+
+export const ROUND_TABLE_CHAIRS: TableChairDef[] = NUMBERED_TABLES.flatMap((tbl) =>
+  [0, 1, 2, 3, 4, 5].map((j) => {
+    const angle = (j * Math.PI * 2) / tbl.cap;
+    const cx = tbl.x + Math.cos(angle) * (tbl.r + 14);
+    const cy = tbl.y + Math.sin(angle) * (tbl.r + 14);
+    const dx = tbl.x - cx;
+    const dy = tbl.y - cy;
+    let face: "up" | "down" | "left" | "right" = "down";
+    if (Math.abs(dx) > Math.abs(dy)) {
+      face = dx > 0 ? "right" : "left";
+    } else {
+      face = dy > 0 ? "down" : "up";
+    }
+    return {
+      id: `${tbl.id}_chair_${j + 1}`,
+      name: `${tbl.label} Chair #${j + 1}`,
+      tableName: tbl.label,
+      x: Math.round(cx),
+      y: Math.round(cy),
+      faceDirection: face,
+    };
+  })
+);
+
+export const ALL_TABLE_CHAIRS: TableChairDef[] = [...BANQUET_CHAIRS, ...ROUND_TABLE_CHAIRS];
 
 export default function EchoSpacesWorld({
   localAvatar,
@@ -108,6 +193,8 @@ export default function EchoSpacesWorld({
   tableDishes = [],
   chairReservations = [],
   onBiteDish,
+  onOpenUno,
+  onOpenPartyGames,
 }: EchoSpacesWorldProps) {
   const { user } = useAuth();
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -133,6 +220,7 @@ export default function EchoSpacesWorld({
   // Input states
   const keysPressed = useRef<Record<string, boolean>>({});
   const nearbyObjectRef = useRef<InteractiveObject | null>(null);
+  const nearbyTableChairRef = useRef<TableChairDef | null>(null);
   const [nearbyPrompt, setNearbyPrompt] = useState<string | null>(null);
   const [activeRugPrompt, setActiveRugPrompt] = useState<string | null>(null);
 
@@ -292,6 +380,19 @@ export default function EchoSpacesWorld({
         e.preventDefault();
         if (nearbyObjectRef.current) {
           handleInteract(nearbyObjectRef.current);
+        } else if (nearbyTableChairRef.current) {
+          const chair = nearbyTableChairRef.current;
+          if (localAvatar.isSitting) {
+            // If already seated, pressing E opens Party Table Games
+            if (onOpenPartyGames) onOpenPartyGames();
+          } else {
+            // Sit down at this table chair
+            clickTargetRef.current = { x: chair.x, y: chair.y, time: Date.now() };
+            onMove(chair.x, chair.y, chair.faceDirection, false);
+            onSit(true, chair.id);
+            spacesSfx.playSitPop();
+            onSendSpeech(`🪑 Seated at ${chair.name}!`);
+          }
         }
       }
 
@@ -478,6 +579,47 @@ export default function EchoSpacesWorld({
       }
     }
 
+    // Check if clicked directly on any Banquet or Round Table chair
+    for (const chair of ALL_TABLE_CHAIRS) {
+      if (Math.hypot(worldClickX - chair.x, worldClickY - chair.y) <= 24) {
+        clickTargetRef.current = { x: chair.x, y: chair.y, time: Date.now() };
+        onMove(chair.x, chair.y, chair.faceDirection, false);
+        onSit(true, chair.id);
+        spacesSfx.playSitPop();
+        onSendSpeech(`🪑 Seated at ${chair.name}!`);
+        return;
+      }
+    }
+
+    // Check if clicked on Banquet Table body (x: 1040..1370, y: 320..386)
+    if (worldClickX >= 1040 && worldClickX <= 1370 && worldClickY >= 320 && worldClickY <= 386) {
+      const closestChair = BANQUET_CHAIRS.reduce((prev, curr) =>
+        Math.hypot(worldClickX - curr.x, worldClickY - curr.y) < Math.hypot(worldClickX - prev.x, worldClickY - prev.y) ? curr : prev
+      );
+      clickTargetRef.current = { x: closestChair.x, y: closestChair.y, time: Date.now() };
+      onMove(closestChair.x, closestChair.y, closestChair.faceDirection, false);
+      onSit(true, closestChair.id);
+      spacesSfx.playSitPop();
+      onSendSpeech(`🪑 Seated at ${closestChair.name}!`);
+      return;
+    }
+
+    // Check if clicked on any of the 6 Round Tables (Courtyard/Party)
+    for (const tbl of NUMBERED_TABLES) {
+      if (Math.hypot(worldClickX - tbl.x, worldClickY - tbl.y) <= tbl.r + 8) {
+        const tableChairs = ROUND_TABLE_CHAIRS.filter((c) => c.id.startsWith(tbl.id));
+        const closestChair = tableChairs.reduce((prev, curr) =>
+          Math.hypot(worldClickX - curr.x, worldClickY - curr.y) < Math.hypot(worldClickX - prev.x, worldClickY - prev.y) ? curr : prev
+        );
+        clickTargetRef.current = { x: closestChair.x, y: closestChair.y, time: Date.now() };
+        onMove(closestChair.x, closestChair.y, closestChair.faceDirection, false);
+        onSit(true, closestChair.id);
+        spacesSfx.playSitPop();
+        onSendSpeech(`🪑 Seated at ${closestChair.name}!`);
+        return;
+      }
+    }
+
     // Check if clicked directly on a catering table dish
     if (tableDishesRef.current && onBiteDish) {
       for (const dish of tableDishesRef.current) {
@@ -602,7 +744,23 @@ export default function EchoSpacesWorld({
 
       const nearby = getNearbyInteractiveObject(posX, posY);
       nearbyObjectRef.current = nearby;
-      setNearbyPrompt(nearby ? nearby.prompt.replace("[E]", "[X]") : null);
+
+      const nearbyTableChair = ALL_TABLE_CHAIRS.find(
+        (c) => Math.hypot(posX - c.x, posY - c.y) <= 38
+      );
+      nearbyTableChairRef.current = nearbyTableChair || null;
+
+      if (nearby) {
+        setNearbyPrompt(nearby.prompt.replace("[E]", "[X]"));
+      } else if (nearbyTableChair) {
+        if (localAvatar.isSitting) {
+          setNearbyPrompt(`🪑 Seated at ${nearbyTableChair.name} • Press [E]/[X] to Play Games or Toast`);
+        } else {
+          setNearbyPrompt(`🪑 Press [E]/[X] or Click to Sit at ${nearbyTableChair.name} & Play Table Games`);
+        }
+      } else {
+        setNearbyPrompt(null);
+      }
 
       // Smooth camera tracking
       cameraRef.current.x += (posX - cameraRef.current.x) * 0.12;
@@ -1299,34 +1457,49 @@ export default function EchoSpacesWorld({
       // 16 Executive Leather Office Chairs (7 along top, 7 along bottom, 1 left, 1 right)
       // Top row chairs (y: 298)
       for (let c = 1060; c <= 1340; c += 44) {
-        ctx.fillStyle = "#1e293b";
+        const i = Math.round((c - 1060) / 44);
+        const chairId = `banquet_chair_top_${i + 1}`;
+        const isSeatedHere = localAvatar.isSitting && localAvatar.sittingObjectId === chairId;
+        ctx.fillStyle = isSeatedHere ? "#0f766e" : "#1e293b";
         ctx.beginPath();
         ctx.roundRect(c, 298, 22, 18, 5);
         ctx.fill();
-        ctx.strokeStyle = "#64748b";
-        ctx.lineWidth = 1.2;
+        ctx.strokeStyle = isSeatedHere ? "#f59e0b" : "#64748b";
+        ctx.lineWidth = isSeatedHere ? 2.5 : 1.2;
         ctx.stroke();
       }
       // Bottom row chairs (y: 392)
       for (let c = 1060; c <= 1340; c += 44) {
-        ctx.fillStyle = "#1e293b";
+        const i = Math.round((c - 1060) / 44);
+        const chairId = `banquet_chair_bottom_${i + 8}`;
+        const isSeatedHere = localAvatar.isSitting && localAvatar.sittingObjectId === chairId;
+        ctx.fillStyle = isSeatedHere ? "#0f766e" : "#1e293b";
         ctx.beginPath();
         ctx.roundRect(c, 392, 22, 18, 5);
         ctx.fill();
-        ctx.strokeStyle = "#64748b";
-        ctx.lineWidth = 1.2;
+        ctx.strokeStyle = isSeatedHere ? "#f59e0b" : "#64748b";
+        ctx.lineWidth = isSeatedHere ? 2.5 : 1.2;
         ctx.stroke();
       }
       // Left head chair
-      ctx.fillStyle = "#1e293b";
+      const leftSeated = localAvatar.isSitting && localAvatar.sittingObjectId === "banquet_chair_head_left";
+      ctx.fillStyle = leftSeated ? "#0f766e" : "#1e293b";
       ctx.beginPath();
       ctx.roundRect(1016, 344, 18, 22, 5);
       ctx.fill();
+      ctx.strokeStyle = leftSeated ? "#f59e0b" : "#64748b";
+      ctx.lineWidth = leftSeated ? 2.5 : 1.2;
+      ctx.stroke();
+
       // Right head chair
-      ctx.fillStyle = "#1e293b";
+      const rightSeated = localAvatar.isSitting && localAvatar.sittingObjectId === "banquet_chair_head_right";
+      ctx.fillStyle = rightSeated ? "#0f766e" : "#1e293b";
       ctx.beginPath();
       ctx.roundRect(1376, 344, 18, 22, 5);
       ctx.fill();
+      ctx.strokeStyle = rightSeated ? "#f59e0b" : "#64748b";
+      ctx.lineWidth = rightSeated ? 2.5 : 1.2;
+      ctx.stroke();
 
       // ── Render Active Catering Dishes on Banquet Table ──
       const curDishes = tableDishesRef.current;
@@ -1754,15 +1927,6 @@ export default function EchoSpacesWorld({
       });
 
       // ── RENDER NUMBERED BANQUET & KEYNOTE ROUND TABLES (Image 1, 3, 4, 5 Fidelity) ──
-      const NUMBERED_TABLES = [
-        { id: "tbl_1", num: 1, label: "Table 1", x: 670, y: 780, r: 38, cap: 6 },
-        { id: "tbl_2", num: 2, label: "Table 2", x: 910, y: 780, r: 38, cap: 6 },
-        { id: "tbl_3", num: 3, label: "Table 3", x: 670, y: 920, r: 38, cap: 6 },
-        { id: "tbl_4", num: 4, label: "Table 4", x: 910, y: 920, r: 38, cap: 6 },
-        { id: "tbl_5", num: 5, label: "Table 5", x: 670, y: 1060, r: 38, cap: 6 },
-        { id: "tbl_6", num: 6, label: "Table 6", x: 910, y: 1060, r: 38, cap: 6 },
-      ];
-
       NUMBERED_TABLES.forEach((tbl) => {
         ctx.save();
         // Drop shadow
@@ -1776,18 +1940,20 @@ export default function EchoSpacesWorld({
           const angle = (i * Math.PI * 2) / tbl.cap;
           const chairX = tbl.x + Math.cos(angle) * (tbl.r + 14);
           const chairY = tbl.y + Math.sin(angle) * (tbl.r + 14);
+          const chairId = `${tbl.id}_chair_${i + 1}`;
+          const isSeatedHere = localAvatar.isSitting && localAvatar.sittingObjectId === chairId;
 
           // Chair seat
-          ctx.fillStyle = "#1e293b";
+          ctx.fillStyle = isSeatedHere ? "#0f766e" : "#1e293b";
           ctx.beginPath();
           ctx.arc(chairX, chairY, 9, 0, Math.PI * 2);
           ctx.fill();
-          ctx.strokeStyle = "#475569";
-          ctx.lineWidth = 1.5;
+          ctx.strokeStyle = isSeatedHere ? "#f59e0b" : "#475569";
+          ctx.lineWidth = isSeatedHere ? 2.5 : 1.5;
           ctx.stroke();
 
           // Center cushion dot
-          ctx.fillStyle = "#38bdf8";
+          ctx.fillStyle = isSeatedHere ? "#fef08a" : "#38bdf8";
           ctx.beginPath();
           ctx.arc(chairX, chairY, 3, 0, Math.PI * 2);
           ctx.fill();
@@ -2894,6 +3060,65 @@ export default function EchoSpacesWorld({
               })
             )}
           </div>
+        </div>
+      )}
+
+      {/* SEATED AT DINNER / PARTY TABLE FLOATING ACTION BAR */}
+      {localAvatar.isSitting && (
+        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-40 bg-neutral-950/95 border-2 border-amber-500/60 rounded-3xl px-4 py-2.5 shadow-[0_0_30px_rgba(245,158,11,0.25)] backdrop-blur-md flex items-center gap-3 animate-in fade-in slide-in-from-bottom-3 max-w-[95vw] overflow-x-auto custom-scrollbar pointer-events-auto">
+          <div className="flex items-center gap-2 pr-3 border-r border-neutral-800 shrink-0">
+            <span className="text-xl">🪑</span>
+            <div>
+              <div className="text-[11px] font-black uppercase text-amber-400 font-mono">
+                {ALL_TABLE_CHAIRS.find((c) => c.id === localAvatar.sittingObjectId)?.name || "Seated at Table"}
+              </div>
+              <div className="text-[10px] text-neutral-400 font-mono">
+                {ALL_TABLE_CHAIRS.find((c) => c.id === localAvatar.sittingObjectId)?.tableName || "Party Lounge"}
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onOpenUno?.()}
+            className="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-mono text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-md shadow-red-600/30 shrink-0"
+          >
+            <span>🃏</span>
+            <span>Play UNO</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onOpenPartyGames?.()}
+            className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-mono text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-md shadow-amber-500/30 shrink-0"
+          >
+            <span>🎲</span>
+            <span>Party Table Games</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              spacesSfx.playChampagneCork();
+              onSendSpeech("🥂 Raised a toast to everyone at the banquet table! Cheers! ✨");
+            }}
+            className="px-3 py-1.5 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/40 text-purple-200 font-mono text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-95 shrink-0"
+          >
+            <span>🥂</span>
+            <span>Toast Table</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              spacesSfx.playSitPop();
+              onSit(false);
+            }}
+            className="px-2.5 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white font-mono text-xs font-semibold transition cursor-pointer shrink-0"
+            title="Stand Up"
+          >
+            <span>Stand Up 🚶</span>
+          </button>
         </div>
       )}
 
