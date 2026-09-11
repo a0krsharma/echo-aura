@@ -69,6 +69,7 @@ import FruitNinjaGame from "@/app/components/arcade/FruitNinjaGame";
 import BottleShooterGame from "@/app/components/arcade/BottleShooterGame";
 import SubwaySurferGame from "@/app/components/arcade/SubwaySurferGame";
 import HillClimbRacingGame from "@/app/components/arcade/HillClimbRacingGame";
+import SuperMarioGame from "@/app/components/arcade/SuperMarioGame";
 import ArcadeInviteModal from "@/app/components/arcade/ArcadeInviteModal";
 import ArcadeCreateModal from "@/app/components/arcade/ArcadeCreateModal";
 import ArcadeGameRulesModal from "@/app/components/arcade/ArcadeGameRulesModal";
@@ -171,6 +172,7 @@ const CLEAN_GAMES: MasterRankedGame[] = [
   { id: "bottle_shooter", name: "Saloon Bottle Shooter", category: "PHYSICS", icon: "🍾", description: "6-shot revolver precision target gunner with glass shrapnel physics & TNT chain blasts" },
   { id: "subway_surfer", name: "Subway Surf Rush", category: "PHYSICS", icon: "🏃‍♂️", description: "3D perspective 3-track subway runner with oncoming trains, hoverboards, jetpacks & inspector chase" },
   { id: "hill_climb", name: "Hill Climb Legends", category: "PHYSICS", icon: "🚗", description: "2-pedal terrain physics racer with suspension, air flips, fuel canisters & 3 vehicles" },
+  { id: "super_mario", name: "Super Mario Adventure", category: "PHYSICS", icon: "🍄", description: "Classic 2D retro plumber platformer with Goombas, question blocks, mushrooms & fireballs" },
 ];
 
 function ArcadeContent() {
@@ -1168,6 +1170,22 @@ function ArcadeContent() {
             )}
             {activeMatch.gameType === "hill_climb" && (
               <HillClimbRacingGame
+                match={activeMatch}
+                currentUid={user?.uid || ""}
+                isHost={activeMatch.hostUid === user?.uid}
+                onBack={handleExitActiveMatch}
+                onInviteFriend={() => {
+                  if (activeMatch.mode === "VS_COMPUTER") {
+                    handleOpenCreate(activeMatch.gameType);
+                  } else {
+                    setInviteModalMatch(activeMatch);
+                  }
+                }}
+                onRandomMatch={() => handleStartRandomMatch(activeMatch.gameType)}
+              />
+            )}
+            {activeMatch.gameType === "super_mario" && (
+              <SuperMarioGame
                 match={activeMatch}
                 currentUid={user?.uid || ""}
                 isHost={activeMatch.hostUid === user?.uid}

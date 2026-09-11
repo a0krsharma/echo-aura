@@ -15,6 +15,7 @@ import {
 // Game Components
 import SubwaySurferGame from "@/app/components/arcade/SubwaySurferGame";
 import HillClimbRacingGame from "@/app/components/arcade/HillClimbRacingGame";
+import SuperMarioGame from "@/app/components/arcade/SuperMarioGame";
 import FruitNinjaGame from "@/app/components/arcade/FruitNinjaGame";
 import Connect4Game from "@/app/components/arcade/Connect4Game";
 import ChessGame from "@/app/components/arcade/ChessGame";
@@ -85,6 +86,16 @@ export const SPACE_ARCADE_GAMES: SpaceArcadeGameDef[] = [
     players: "1-4 Players",
     color: "#eab308",
     badge: "HOT",
+  },
+  {
+    id: "super_mario",
+    name: "Super Mario Adventure",
+    category: "ACTION",
+    icon: "🍄",
+    description: "Classic 2D retro plumber platformer with Goombas, question blocks, mushrooms & fireballs.",
+    players: "1-4 Players",
+    color: "#ef4444",
+    badge: "NEW",
   },
   {
     id: "fruit_ninja",
@@ -718,6 +729,18 @@ export default function SpaceArcadeModal({
               {activeGame.id === "hill_climb" && activeMatch && (
                 <div className="w-full max-w-4xl">
                   <HillClimbRacingGame
+                    match={activeMatch}
+                    currentUid={user?.uid || ""}
+                    isHost={activeMatch.hostUid === user?.uid}
+                    onBack={() => setActiveGame(null)}
+                  />
+                </div>
+              )}
+
+              {/* 🍄 Super Mario Bros */}
+              {activeGame.id === "super_mario" && activeMatch && (
+                <div className="w-full max-w-4xl">
+                  <SuperMarioGame
                     match={activeMatch}
                     currentUid={user?.uid || ""}
                     isHost={activeMatch.hostUid === user?.uid}

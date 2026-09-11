@@ -856,6 +856,165 @@ class ArcadeSoundEngine {
       osc.stop(ctx.currentTime + 0.4);
     } catch {}
   }
+
+  // ── SUPER MARIO PROCEDURAL SFX ──
+  playMarioJump() {
+    this.haptic(15);
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "square";
+      osc.frequency.setValueAtTime(150, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.16);
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.16);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.16);
+    } catch {}
+  }
+
+  playMarioCoin() {
+    this.haptic(20);
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(987.77, ctx.currentTime); // B5
+      osc.frequency.setValueAtTime(1318.51, ctx.currentTime + 0.08); // E6
+      gain.gain.setValueAtTime(0.25, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.35);
+    } catch {}
+  }
+
+  playMarioPowerup() {
+    this.haptic(35);
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      const notes = [330, 392, 659, 523, 587, 784];
+      notes.forEach((f, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(f, ctx.currentTime + i * 0.05);
+        gain.gain.setValueAtTime(0.25, ctx.currentTime + i * 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.05 + 0.15);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + i * 0.05);
+        osc.stop(ctx.currentTime + i * 0.05 + 0.15);
+      });
+    } catch {}
+  }
+
+  playMarioStomp() {
+    this.haptic(25);
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(220, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(70, ctx.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.35, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.12);
+    } catch {}
+  }
+
+  playMarioBump() {
+    this.haptic(20);
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(180, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(60, ctx.currentTime + 0.08);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.08);
+    } catch {}
+  }
+
+  playMarioFireball() {
+    this.haptic(15);
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(400, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.09);
+      gain.gain.setValueAtTime(0.25, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.09);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.09);
+    } catch {}
+  }
+
+  playMarioDie() {
+    this.haptic(60);
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      const notes = [500, 450, 400, 350, 300, 250, 200];
+      notes.forEach((f, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "square";
+        osc.frequency.setValueAtTime(f, ctx.currentTime + i * 0.07);
+        gain.gain.setValueAtTime(0.2, ctx.currentTime + i * 0.07);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.07 + 0.1);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + i * 0.07);
+        osc.stop(ctx.currentTime + i * 0.07 + 0.1);
+      });
+    } catch {}
+  }
+
+  playMarioStageClear() {
+    this.haptic(80);
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      const fanfare = [392, 523, 659, 784, 1046];
+      fanfare.forEach((f, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(f, ctx.currentTime + i * 0.1);
+        gain.gain.setValueAtTime(0.3, ctx.currentTime + i * 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.1 + 0.4);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + i * 0.1);
+        osc.stop(ctx.currentTime + i * 0.1 + 0.4);
+      });
+    } catch {}
+  }
 }
 
 export const arcadeSfx = new ArcadeSoundEngine();

@@ -119,7 +119,8 @@ export type ArcadeGameType =
   | "fruit_ninja"
   | "bottle_shooter"
   | "subway_surfer"
-  | "hill_climb";
+  | "hill_climb"
+  | "super_mario";
 
 export type ArcadeMatchMode = "MULTIPLAYER" | "VS_COMPUTER";
 
