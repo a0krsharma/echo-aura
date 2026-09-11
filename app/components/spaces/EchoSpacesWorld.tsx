@@ -71,6 +71,8 @@ interface EchoSpacesWorldProps {
   onTeleport?: (x: number, y: number) => void;
   onOpenAvatarStudio?: () => void;
   onUpdateDecorations?: (decorations: CustomDecoration[]) => void;
+  confettiTrigger?: number;
+  onGetCanvasRef?: (canvas: HTMLCanvasElement | null) => void;
 }
 
 const EMOTE_REACTIONS = ["💖", "🔥", "🎉", "👏", "💡", "☕", "🚀", "👋"];
@@ -97,6 +99,8 @@ export default function EchoSpacesWorld({
   onTeleport,
   onOpenAvatarStudio,
   onUpdateDecorations,
+  confettiTrigger = 0,
+  onGetCanvasRef,
 }: EchoSpacesWorldProps) {
   const { user } = useAuth();
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -155,6 +159,39 @@ export default function EchoSpacesWorld({
   const waterSprayRef = useRef<
     Array<{ x: number; y: number; vx: number; vy: number; life: number; maxLife: number }>
   >([]);
+  const celebrationConfettiRef = useRef<
+    Array<{ x: number; y: number; vx: number; vy: number; color: string; size: number; rot: number; vRot: number; life: number; maxLife: number }>
+  >([]);
+
+  // Expose Canvas Ref for Photo Booth snapshots
+  useEffect(() => {
+    if (canvasRef.current) {
+      onGetCanvasRef?.(canvasRef.current);
+    }
+  }, [onGetCanvasRef]);
+
+  // Trigger celebration confetti blast
+  useEffect(() => {
+    if (confettiTrigger && confettiTrigger > 0) {
+      const colors = ["#f43f5e", "#ec4899", "#8b5cf6", "#3b82f6", "#06b6d4", "#10b981", "#f59e0b", "#eab308"];
+      const newConfetti = [];
+      for (let i = 0; i < 140; i++) {
+        newConfetti.push({
+          x: localAvatar.x + (Math.random() - 0.5) * 120,
+          y: localAvatar.y - 30 + (Math.random() - 0.5) * 40,
+          vx: (Math.random() - 0.5) * 14,
+          vy: -7 - Math.random() * 9,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          size: 4 + Math.random() * 5,
+          rot: Math.random() * Math.PI * 2,
+          vRot: (Math.random() - 0.5) * 0.25,
+          life: 0,
+          maxLife: 100 + Math.floor(Math.random() * 60),
+        });
+      }
+      celebrationConfettiRef.current.push(...newConfetti);
+    }
+  }, [confettiTrigger]);
 
   // Resize listener
   useEffect(() => {
@@ -2307,6 +2344,67 @@ export default function EchoSpacesWorld({
         [1060, 1200, 1340].forEach((fx) => {
           ctx.font = "16px sans-serif";
           ctx.fillText("🪷", fx - 8, 172);
+        });
+        ctx.restore();
+      }
+
+      // ── UNIVERSAL DYNAMIC LIGHTING & WATER SHIMMER ──
+      ctx.save();
+      // Campfire firelight radial glow
+      const campGlow = ctx.createRadialGradient(800, 150, 6, 800, 150, 140);
+      const campFlicker = Math.sin(timeMs * 0.007) * 0.04 + 0.16;
+      campGlow.addColorStop(0, `rgba(249, 115, 22, ${campFlicker})`);
+      campGlow.addColorStop(0.4, `rgba(234, 179, 8, ${campFlicker * 0.5})`);
+      campGlow.addColorStop(1, "rgba(249, 115, 22, 0)");
+      ctx.fillStyle = campGlow;
+      ctx.beginPath();
+      ctx.arc(800, 150, 140, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Victorian streetlamp warm halos
+      [{ x: 100, y: 120 }, { x: 820, y: 120 }].forEach((lamp) => {
+        const lampGlow = ctx.createRadialGradient(lamp.x, lamp.y, 4, lamp.x, lamp.y, 75);
+        lampGlow.addColorStop(0, "rgba(254, 240, 138, 0.22)");
+        lampGlow.addColorStop(1, "rgba(254, 240, 138, 0)");
+        ctx.fillStyle = lampGlow;
+        ctx.beginPath();
+        ctx.arc(lamp.x, lamp.y, 75, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Water ripples in 3 fountain basins
+      [1060, 1200, 1340].forEach((fx, fIdx) => {
+        const rippleR = ((timeMs * 0.02 + fIdx * 10) % 25) + 5;
+        const rippleAlpha = Math.max(0, 1 - rippleR / 30) * 0.35;
+        ctx.strokeStyle = `rgba(186, 230, 253, ${rippleAlpha})`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.ellipse(fx, 170, rippleR, rippleR * 0.6, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      });
+      ctx.restore();
+
+      // ── CELEBRATION CONFETTI SHOWER ──
+      if (celebrationConfettiRef.current.length > 0) {
+        ctx.save();
+        celebrationConfettiRef.current = celebrationConfettiRef.current.filter((c) => {
+          c.x += c.vx;
+          c.y += c.vy;
+          c.vy += 0.25; // gravity
+          c.rot += c.vRot;
+          c.life++;
+          const progress = c.life / c.maxLife;
+          const alpha = Math.max(0, 1 - progress);
+
+          ctx.save();
+          ctx.translate(c.x, c.y);
+          ctx.rotate(c.rot);
+          ctx.fillStyle = c.color;
+          ctx.globalAlpha = alpha;
+          ctx.fillRect(-c.size / 2, -c.size / 2, c.size, c.size * 0.6);
+          ctx.restore();
+
+          return c.life < c.maxLife && c.y < WORLD_HEIGHT + 50;
         });
         ctx.restore();
       }

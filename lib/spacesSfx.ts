@@ -474,6 +474,264 @@ class SpacesSoundEngine {
       osc.stop(ctx.currentTime + 0.2);
     } catch {}
   }
+
+  // 18. Party & Friends Dice Roll (3D clatter & roll sound)
+  playDiceRoll() {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      const count = 5 + Math.floor(Math.random() * 3);
+      for (let i = 0; i < count; i++) {
+        const time = ctx.currentTime + i * 0.05 + Math.random() * 0.02;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(240 + Math.random() * 180, time);
+        gain.gain.setValueAtTime(0.25 - i * 0.03, time);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(time);
+        osc.stop(time + 0.04);
+      }
+    } catch {}
+  }
+
+  // 19. Spin the Bottle Wheel (Click-click-click deceleration)
+  playBottleSpin() {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      const clicks = 8;
+      let delay = 0;
+      for (let i = 0; i < clicks; i++) {
+        const t = ctx.currentTime + delay;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(520 + Math.random() * 80, t);
+        gain.gain.setValueAtTime(0.18, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.03);
+
+        delay += 0.04 + i * 0.025; // decelerate
+      }
+    } catch {}
+  }
+
+  // 20. Birthday & Celebration Horn Fanfare (🎉 Happy celebration chord)
+  playPartyFanfare() {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      const chord = [523.25, 659.25, 783.99, 1046.5]; // C Major triumph
+      chord.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.06);
+        gain.gain.setValueAtTime(0.3, ctx.currentTime + idx * 0.06);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.06 + 0.7);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + idx * 0.06);
+        osc.stop(ctx.currentTime + idx * 0.06 + 0.7);
+      });
+    } catch {}
+  }
+
+  // 21. Resonant Brass Gather Bell (🔔 Calls all friends to gather)
+  playGatherBell() {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      const harmonics = [329.63, 659.25, 987.77];
+      harmonics.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        gain.gain.setValueAtTime(0.4 / (idx + 1), ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 2.8);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 2.8);
+      });
+    } catch {}
+  }
+
+  // 22. Polaroid Photo Booth Camera Shutter (📸 Snap & Clack)
+  playCameraShutter() {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      // 1st click (Mirror up)
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = "square";
+      osc1.frequency.setValueAtTime(1200, ctx.currentTime);
+      gain1.gain.setValueAtTime(0.35, ctx.currentTime);
+      gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.start(ctx.currentTime);
+      osc1.stop(ctx.currentTime + 0.04);
+
+      // 2nd click (Curtain close)
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = "sawtooth";
+      osc2.frequency.setValueAtTime(480, ctx.currentTime + 0.08);
+      gain2.gain.setValueAtTime(0.3, ctx.currentTime + 0.08);
+      gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.16);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(ctx.currentTime + 0.08);
+      osc2.stop(ctx.currentTime + 0.16);
+    } catch {}
+  }
+
+  // ── PROCEDURAL AMBIENT MUSIC ENGINE ──
+  private ambianceInterval: any = null;
+  private currentAmbiance: string | null = null;
+  private ambianceVolume: number = 0.35;
+
+  setAmbianceVolume(volume: number) {
+    this.ambianceVolume = Math.max(0, Math.min(1, volume));
+  }
+
+  getCurrentAmbiance(): string | null {
+    return this.currentAmbiance;
+  }
+
+  startAmbiance(type: "lofi" | "rain" | "campfire" | "sukoon" | "party") {
+    this.stopAmbiance();
+    this.currentAmbiance = type;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    if (type === "lofi") {
+      // Warm Rhodes chord progressions (ii - V - I)
+      const chords = [
+        [261.63, 329.63, 392.0, 493.88], // Cmaj7
+        [220.0, 261.63, 329.63, 392.0],  // Am7
+        [293.66, 349.23, 440.0, 523.25], // Dm7
+        [196.0, 246.94, 293.66, 349.23], // G7
+      ];
+      let step = 0;
+      const playStep = () => {
+        if (!this.currentAmbiance) return;
+        const chord = chords[step % chords.length];
+        step++;
+        chord.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.04);
+          gain.gain.setValueAtTime(0.12 * this.ambianceVolume, ctx.currentTime + idx * 0.04);
+          gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + idx * 0.04 + 3.2);
+
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(ctx.currentTime + idx * 0.04);
+          osc.stop(ctx.currentTime + idx * 0.04 + 3.2);
+        });
+      };
+      playStep();
+      this.ambianceInterval = setInterval(playStep, 3500);
+    } else if (type === "rain") {
+      this.toggleRainAmbience(true);
+      // Add gentle jazz piano notes on top of rain
+      const pentatonic = [392.0, 440.0, 523.25, 587.33, 659.25, 783.99];
+      this.ambianceInterval = setInterval(() => {
+        if (!this.currentAmbiance) return;
+        const freq = pentatonic[Math.floor(Math.random() * pentatonic.length)];
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        gain.gain.setValueAtTime(0.15 * this.ambianceVolume, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.8);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 1.8);
+      }, 1600);
+    } else if (type === "campfire") {
+      // Crackle pops and acoustic guitar warmth
+      const notes = [164.81, 196.0, 220.0, 246.94, 329.63];
+      this.ambianceInterval = setInterval(() => {
+        if (!this.currentAmbiance) return;
+        // Ember pop
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "triangle";
+        const freq = notes[Math.floor(Math.random() * notes.length)];
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        gain.gain.setValueAtTime(0.16 * this.ambianceVolume, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.2);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 1.2);
+      }, 1200);
+    } else if (type === "sukoon") {
+      // Calming Tibetan bowls & high wind chimes
+      const bowls = [528.0, 639.0, 741.0, 852.0];
+      this.ambianceInterval = setInterval(() => {
+        if (!this.currentAmbiance) return;
+        const freq = bowls[Math.floor(Math.random() * bowls.length)];
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        gain.gain.setValueAtTime(0.18 * this.ambianceVolume, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 4.0);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 4.0);
+      }, 2800);
+    } else if (type === "party") {
+      // 4/4 synthetic pump bassline
+      let beat = 0;
+      this.ambianceInterval = setInterval(() => {
+        if (!this.currentAmbiance) return;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sawtooth";
+        const bassFreq = beat % 4 === 0 ? 65.41 : beat % 4 === 2 ? 82.41 : 73.42;
+        osc.frequency.setValueAtTime(bassFreq, ctx.currentTime);
+        gain.gain.setValueAtTime(0.22 * this.ambianceVolume, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.28);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.28);
+        beat++;
+      }, 500); // 120 BPM
+    }
+  }
+
+  stopAmbiance() {
+    if (this.ambianceInterval) {
+      clearInterval(this.ambianceInterval);
+      this.ambianceInterval = null;
+    }
+    if (this.currentAmbiance === "rain") {
+      this.toggleRainAmbience(false);
+    }
+    this.currentAmbiance = null;
+  }
 }
 
 export const spacesSfx = new SpacesSoundEngine();
+

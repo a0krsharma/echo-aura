@@ -31,6 +31,9 @@ import GatherWaveToast, { WaveInvitation } from "@/app/components/spaces/GatherW
 import GatherDirectDock from "@/app/components/spaces/GatherDirectDock";
 import InviteFriendsModal from "@/app/components/spaces/InviteFriendsModal";
 import HostEventModal from "@/app/components/spaces/HostEventModal";
+import MiniMapRadar from "@/app/components/spaces/MiniMapRadar";
+import HostQuickControlBar from "@/app/components/spaces/HostQuickControlBar";
+import PartyToolsModal from "@/app/components/spaces/PartyToolsModal";
 import {
   SpaceDoc,
   SpaceZoneId,
@@ -133,6 +136,11 @@ export default function DynamicSpaceWorldPage() {
   const [speakingUids, setSpeakingUids] = useState<Set<string>>(new Set());
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [hostEventModalOpen, setHostEventModalOpen] = useState(false);
+  const [partyModalOpen, setPartyModalOpen] = useState(false);
+  const [confettiBlastCount, setConfettiBlastCount] = useState(0);
+  const [gatherToast, setGatherToast] = useState<{ text: string; x: number; y: number } | null>(null);
+  const [activeScreenStream, setActiveScreenStream] = useState<MediaStream | null>(null);
+  const canvasElementRef = React.useRef<HTMLCanvasElement | null>(null);
 
   // Space Decoration Mode
   const [isDecorateMode, setIsDecorateMode] = useState(false);
@@ -497,6 +505,54 @@ export default function DynamicSpaceWorldPage() {
     }
   };
 
+  // Handle Gathering Friends to a location
+  const handleGatherFriends = (destinationName: string, x: number, y: number) => {
+    handleTeleport(x, y);
+    setGatherToast({ text: `Gather at ${destinationName}!`, x, y });
+    handleSendSpeech(`🔔 GATHERING BELL: Please join me at ${destinationName}!`);
+    setTimeout(() => setGatherToast(null), 12000);
+  };
+
+  // Handle Confetti Blast
+  const handleTriggerConfetti = () => {
+    setConfettiBlastCount((prev) => prev + 1);
+  };
+
+  // Capture Photo Booth image
+  const handleCapturePhoto = async (): Promise<string | null> => {
+    if (!canvasElementRef.current) return null;
+    try {
+      return canvasElementRef.current.toDataURL("image/png");
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
+  };
+
+  // Screen Share Handler
+  const handleStartScreenShare = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: true,
+      });
+      setActiveScreenStream(stream);
+      stream.getVideoTracks()[0].onended = () => {
+        setActiveScreenStream(null);
+      };
+      handleSendSpeech("📺 Started sharing screen in space!");
+    } catch (err) {
+      console.warn("Screen share cancelled or failed:", err);
+    }
+  };
+
+  const handleStopScreenShare = () => {
+    if (activeScreenStream) {
+      activeScreenStream.getTracks().forEach((t) => t.stop());
+      setActiveScreenStream(null);
+    }
+  };
+
   const isHost = user?.uid === space.hostUid || space.hostUid === "guest_host" || space.hostUid === "echo_system";
   const activeZoneDef = SPACES_ZONES[localAvatar.activeZone];
 
@@ -723,6 +779,10 @@ export default function DynamicSpaceWorldPage() {
           onTeleport={handleTeleport}
           onOpenAvatarStudio={() => setAvatarModalOpen(true)}
           onUpdateDecorations={handleUpdateDecorations}
+          confettiTrigger={confettiBlastCount}
+          onGetCanvasRef={(canvas) => {
+            canvasElementRef.current = canvas;
+          }}
         />
       </main>
 
@@ -942,6 +1002,84 @@ export default function DynamicSpaceWorldPage() {
           }
         }}
         onTeleportTo={(x, y) => handleTeleport(x, y)}
+      />
+
+      {/* Birds-Eye Radar Mini-Map Widget */}
+      <MiniMapRadar
+        localAvatar={localAvatar}
+        remoteAvatars={remoteAvatars}
+        onTeleport={handleTeleport}
+      />
+
+      {/* Floating Host Quick-Action Hub */}
+      <HostQuickControlBar
+        space={space}
+        isHost={isHost}
+        onOpenPartyTools={() => setPartyModalOpen(true)}
+        onOpenHostSettings={() => setHostEventModalOpen(true)}
+        onOpenInvite={() => setInviteModalOpen(true)}
+        onGatherFriends={handleGatherFriends}
+        onQuickSnapPhoto={() => setPartyModalOpen(true)}
+      />
+
+      {/* Gather Bell Alert Toast */}
+      {gatherToast && (
+        <div className="fixed top-24 left-1/2 transform -translate-x-1/2 z-40 bg-amber-950/95 border-2 border-amber-500 text-amber-100 px-4 py-2.5 rounded-2xl shadow-2xl flex items-center gap-3 backdrop-blur-md animate-in slide-in-from-top">
+          <span className="text-xl">🔔</span>
+          <span className="font-mono text-xs font-bold">{gatherToast.text}</span>
+          <button
+            onClick={() => {
+              handleTeleport(gatherToast.x, gatherToast.y);
+              setGatherToast(null);
+            }}
+            className="px-3 py-1 rounded-xl bg-amber-400 text-black font-mono text-xs font-black hover:bg-amber-300 transition-colors cursor-pointer"
+          >
+            Teleport Now
+          </button>
+        </div>
+      )}
+
+      {/* Floating Picture-in-Picture Screen Share Stream */}
+      {activeScreenStream && (
+        <div className="fixed bottom-24 left-4 z-40 w-72 sm:w-96 bg-neutral-950 border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95">
+          <div className="px-3 py-1.5 bg-neutral-900 flex items-center justify-between">
+            <span className="font-mono text-[11px] font-bold text-white flex items-center gap-1.5">
+              <Tv className="w-3.5 h-3.5 text-purple-400" />
+              <span>Live Screen Share</span>
+            </span>
+            <button
+              onClick={handleStopScreenShare}
+              className="text-[10px] font-mono font-bold text-rose-400 hover:text-rose-300 cursor-pointer"
+            >
+              Stop
+            </button>
+          </div>
+          <video
+            ref={(node) => {
+              if (node && activeScreenStream && node.srcObject !== activeScreenStream) {
+                node.srcObject = activeScreenStream;
+                node.play().catch(() => {});
+              }
+            }}
+            autoPlay
+            playsInline
+            muted
+            className="w-full aspect-video bg-black object-contain"
+          />
+        </div>
+      )}
+
+      {/* Virtual Friend Hosting & Party Suite Modal */}
+      <PartyToolsModal
+        isOpen={partyModalOpen}
+        onClose={() => setPartyModalOpen(false)}
+        spaceName={space.name}
+        localAvatar={localAvatar}
+        remoteAvatars={remoteAvatars}
+        onTriggerConfetti={handleTriggerConfetti}
+        onSendSpeech={handleSendSpeech}
+        onCapturePhoto={handleCapturePhoto}
+        onStartScreenShare={handleStartScreenShare}
       />
     </div>
   );

@@ -18,6 +18,8 @@ import {
   SpaceDoc,
   AvatarConfig,
   subscribeToPublicSpaces,
+  createSpaceDoc,
+  SPACE_VIBES,
 } from "@/lib/spaces";
 import { spacesSfx } from "@/lib/spacesSfx";
 import CreateSpaceModal from "@/app/components/spaces/CreateSpaceModal";
@@ -37,6 +39,17 @@ import {
   CloudRain,
   Moon,
   Zap,
+  Coffee,
+  Cake,
+  Gamepad2,
+  BookOpen,
+  Wine,
+  Ghost,
+  PartyPopper,
+  Leaf,
+  Tv,
+  Share2,
+  Check,
 } from "lucide-react";
 
 const CATEGORIES: { id: string; label: string; icon: string }[] = [
@@ -54,10 +67,14 @@ const CATEGORIES: { id: string; label: string; icon: string }[] = [
 
 const VIBE_FILTERS: { id: string; label: string; icon: React.ReactNode }[] = [
   { id: "ALL", label: "All Vibes", icon: <Sparkles className="w-3.5 h-3.5" /> },
+  { id: "PARTY_CLUB", label: "Party Club", icon: <PartyPopper className="w-3.5 h-3.5 text-pink-400" /> },
+  { id: "DINNER_GALA", label: "Dinner Gala", icon: <Wine className="w-3.5 h-3.5 text-amber-400" /> },
+  { id: "SUKOON_ZEN", label: "Sukoon Zen", icon: <Leaf className="w-3.5 h-3.5 text-emerald-400" /> },
+  { id: "HORROR_NIGHT", label: "Horror Night", icon: <Ghost className="w-3.5 h-3.5 text-purple-400" /> },
   { id: "MIDNIGHT_NEON", label: "Midnight Neon", icon: <Moon className="w-3.5 h-3.5 text-cyan-400" /> },
-  { id: "SUNNY_DAYLIGHT", label: "Sunny Daylight", icon: <Sun className="w-3.5 h-3.5 text-amber-400" /> },
   { id: "COZY_RAINY", label: "Cozy Rainy", icon: <CloudRain className="w-3.5 h-3.5 text-indigo-400" /> },
   { id: "SUNSET_LOFI", label: "Sunset Lo-Fi", icon: <Flame className="w-3.5 h-3.5 text-rose-400" /> },
+  { id: "SUNNY_DAYLIGHT", label: "Sunny Daylight", icon: <Sun className="w-3.5 h-3.5 text-yellow-400" /> },
 ];
 
 export default function SpacesLobbyPage() {
@@ -71,6 +88,47 @@ export default function SpacesLobbyPage() {
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
+  const [quickHosting, setQuickHosting] = useState<string | null>(null);
+
+  // 1-Click Instant Host for Friends
+  const handle1ClickQuickHost = async (preset: {
+    id: string;
+    name: string;
+    category: SpaceCategory;
+    vibe: SpaceVibe;
+    desc: string;
+    spawnZone: string;
+  }) => {
+    try {
+      setQuickHosting(preset.id);
+      spacesSfx.playKeyNote(4);
+      const hostHandle = user?.handle || "@HOST";
+      const hostUid = user?.uid || "guest_host";
+      const spaceName = `${hostHandle}'s ${preset.name}`;
+
+      const createdId = await createSpaceDoc({
+        name: spaceName,
+        category: preset.category,
+        vibe: preset.vibe,
+        hostUid,
+        hostHandle,
+        description: preset.desc,
+        participantCount: 1,
+        maxParticipants: 25,
+        isPublic: true,
+        expiresAt: Date.now() + 1000 * 60 * 60 * 24, // 24 hours
+        decorations: [],
+        createdAt: Date.now(),
+      });
+
+      spacesSfx.playZoneChime();
+      router.push(`/spaces/${createdId}`);
+    } catch (e) {
+      console.error("Failed to quick host space:", e);
+    } finally {
+      setQuickHosting(null);
+    }
+  };
 
   // Avatar Config stored in localStorage
   const [avatarConfig, setAvatarConfig] = useState<AvatarConfig>({
@@ -224,6 +282,147 @@ export default function SpacesLobbyPage() {
               <Zap className="w-3.5 h-3.5" />
               <span>QUICK JOIN CAMPUS</span>
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 1-Click Quick Host Section: Instant Hangout with Friends */}
+      <div className="border-b border-neutral-900 bg-neutral-950/40 py-8 px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5">
+              <span className="p-1.5 rounded-xl bg-pink-500/10 border border-pink-500/30 text-pink-400">
+                <PartyPopper className="w-4 h-4" />
+              </span>
+              <div>
+                <h2 className="text-sm font-mono font-black tracking-wide text-white uppercase flex items-center gap-2">
+                  <span>Host Your Friends Virtually</span>
+                  <span className="px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800 text-[10px] font-bold">
+                    1-CLICK INSTANT LAUNCH
+                  </span>
+                </h2>
+                <p className="text-xs text-neutral-400 font-mono">
+                  Pick an occasion to launch a ready-to-hang room and invite friends via link, WhatsApp or Telegram
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+            {[
+              {
+                id: "chai_date",
+                name: "Virtual Chai Date",
+                icon: "☕",
+                category: "CAFE" as SpaceCategory,
+                vibe: "SUNSET_LOFI" as SpaceVibe,
+                spawnZone: "courtyard",
+                desc: "Intimate 2-person cozy lounge with steaming chai & conversation icebreakers.",
+                badge: "Date & Catchup",
+                border: "hover:border-amber-500/60",
+                btnBg: "bg-amber-500 text-black hover:bg-amber-400",
+              },
+              {
+                id: "birthday_bash",
+                name: "Birthday Party Bash",
+                icon: "🎂",
+                category: "CAFE" as SpaceCategory,
+                vibe: "PARTY_CLUB" as SpaceVibe,
+                spawnZone: "courtyard",
+                desc: "Campfire patio, party hats, celebratory confetti blaster, and fanfare chimes.",
+                badge: "Celebration",
+                border: "hover:border-pink-500/60",
+                btnBg: "bg-pink-500 text-black hover:bg-pink-400",
+              },
+              {
+                id: "arcade_night",
+                name: "Retro Game Night",
+                icon: "🎮",
+                category: "ARCADE" as SpaceCategory,
+                vibe: "MIDNIGHT_NEON" as SpaceVibe,
+                spawnZone: "office",
+                desc: "Super Mario co-op, Guitar Hero, 3D dice roller, and Truth or Dare bottle.",
+                badge: "Games & Laughs",
+                border: "hover:border-rose-500/60",
+                btnBg: "bg-rose-500 text-white hover:bg-rose-400",
+              },
+              {
+                id: "lofi_study",
+                name: "Lofi Study Sanctuary",
+                icon: "🎧",
+                category: "LIBRARY" as SpaceCategory,
+                vibe: "COZY_RAINY" as SpaceVibe,
+                spawnZone: "library",
+                desc: "Pomodoro focus timer, silent library carrels, and soothing rain ambiance.",
+                badge: "Deep Work",
+                border: "hover:border-indigo-500/60",
+                btnBg: "bg-indigo-500 text-white hover:bg-indigo-400",
+              },
+              {
+                id: "watch_party",
+                name: "Watch Party Lounge",
+                icon: "🍿",
+                category: "CONCERT" as SpaceCategory,
+                vibe: "DINNER_GALA" as SpaceVibe,
+                spawnZone: "concert",
+                desc: "Screen-share projector theater, proximity audio, and popcorn amphitheater.",
+                badge: "Movies & YouTube",
+                border: "hover:border-purple-500/60",
+                btnBg: "bg-purple-500 text-white hover:bg-purple-400",
+              },
+              {
+                id: "sukoon_zen",
+                name: "Sukoon Zen Sanctuary",
+                icon: "🍃",
+                category: "CAFE" as SpaceCategory,
+                vibe: "SUKOON_ZEN" as SpaceVibe,
+                spawnZone: "courtyard",
+                desc: "Calming lotus water fountains, fireflies, and Tibetan singing bowl chimes.",
+                badge: "Relaxation",
+                border: "hover:border-emerald-500/60",
+                btnBg: "bg-emerald-500 text-black hover:bg-emerald-400",
+              },
+            ].map((preset) => {
+              const isLaunching = quickHosting === preset.id;
+              return (
+                <div
+                  key={preset.id}
+                  className={`p-3.5 rounded-2xl bg-neutral-950 border border-neutral-800/80 ${preset.border} transition-all flex flex-col justify-between group shadow-lg hover:shadow-cyan-500/5`}
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-2xl">{preset.icon}</span>
+                      <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded-md bg-neutral-900 text-neutral-400 border border-neutral-800">
+                        {preset.badge}
+                      </span>
+                    </div>
+                    <div>
+                      <div className="font-mono text-xs font-bold text-white group-hover:text-cyan-300 transition-colors">
+                        {preset.name}
+                      </div>
+                      <p className="text-[11px] font-mono text-neutral-400 leading-snug mt-1 line-clamp-2">
+                        {preset.desc}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => handle1ClickQuickHost(preset)}
+                    disabled={!!quickHosting}
+                    className={`mt-3 w-full py-2 rounded-xl font-mono text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md active:scale-95 disabled:opacity-50 ${preset.btnBg}`}
+                  >
+                    {isLaunching ? (
+                      <span className="animate-spin text-xs">⏳ Launching...</span>
+                    ) : (
+                      <>
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>Launch & Invite</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
