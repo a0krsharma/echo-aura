@@ -31,6 +31,8 @@ export type SpaceCategory =
   | "CONCERT"
   | "DEBATE"
   | "CAMPUS"
+  | "ARCADE"
+  | "CAFE"
   | "CUSTOM";
 
 export type SpaceVibe =
@@ -202,6 +204,8 @@ export interface SpaceDoc {
   whiteboardDrawings?: string; // Serialized drawing JSON
   announcement?: { text: string; expiresAt: number } | null;
   decorations?: CustomDecoration[];
+  addons?: string[];
+  purposeTags?: string[];
 }
 
 // ── WORLD MAP DIMENSIONS ──

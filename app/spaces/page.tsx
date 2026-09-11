@@ -41,9 +41,11 @@ import {
 
 const CATEGORIES: { id: string; label: string; icon: string }[] = [
   { id: "ALL", label: "All Spaces", icon: "🌐" },
-  { id: "CAMPUS", label: "Campuses", icon: "🎓" },
   { id: "OFFICE", label: "Offices", icon: "🏢" },
+  { id: "ARCADE", label: "Retro Arcades", icon: "🕹️" },
+  { id: "CAFE", label: "Chill Lounges", icon: "☕" },
   { id: "LIBRARY", label: "Libraries", icon: "📚" },
+  { id: "CAMPUS", label: "Campuses", icon: "🎓" },
   { id: "MUSIC", label: "Music Studios", icon: "🎵" },
   { id: "CONCERT", label: "Concert Halls", icon: "🎤" },
   { id: "DEBATE", label: "Debate Arenas", icon: "⚖️" },

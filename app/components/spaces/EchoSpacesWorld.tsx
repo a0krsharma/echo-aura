@@ -213,7 +213,7 @@ export default function EchoSpacesWorld({
         clickTargetRef.current = null;
       }
 
-      if (key === "e") {
+      if (key === "x" || key === "e") {
         e.preventDefault();
         if (nearbyObjectRef.current) {
           handleInteract(nearbyObjectRef.current);
@@ -515,7 +515,7 @@ export default function EchoSpacesWorld({
 
       const nearby = getNearbyInteractiveObject(posX, posY);
       nearbyObjectRef.current = nearby;
-      setNearbyPrompt(nearby ? nearby.prompt : null);
+      setNearbyPrompt(nearby ? nearby.prompt.replace("[E]", "[X]") : null);
 
       // Smooth camera lerp
       const targetCamX = posX - canvasW / 2;
@@ -645,35 +645,125 @@ export default function EchoSpacesWorld({
         ctx.restore();
       });
 
-      // Fountain
-      const fX = 800;
-      const fY = 590;
+      // ── GATHER-STYLE OFFICE ZONE LABELS (From User Reference Photos) ──
       ctx.save();
-      ctx.fillStyle = "#334155";
+      // 1. Strategy&Ops floor banner
+      ctx.fillStyle = "rgba(16, 185, 129, 0.15)";
       ctx.beginPath();
-      ctx.arc(fX, fY, 48, 0, Math.PI * 2);
+      ctx.roundRect(160, 240, 220, 85, 10);
       ctx.fill();
-      ctx.strokeStyle = "#94a3b8";
-      ctx.lineWidth = 3.5;
+      ctx.strokeStyle = "rgba(16, 185, 129, 0.4)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = "#10b981";
+      ctx.font = "900 12px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("Strategy & Ops", 270, 260);
+
+      // 2. CW Balance floor banner
+      ctx.fillStyle = "rgba(56, 189, 248, 0.15)";
+      ctx.beginPath();
+      ctx.roundRect(430, 240, 220, 85, 10);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.4)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = "#38bdf8";
+      ctx.font = "900 12px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("CW Balance", 540, 260);
+
+      // 3. Retro Arcade Lounge banner
+      ctx.fillStyle = "rgba(244, 63, 94, 0.15)";
+      ctx.beginPath();
+      ctx.roundRect(320, 360, 180, 100, 10);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(244, 63, 94, 0.4)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = "#f43f5e";
+      ctx.font = "900 11px monospace";
+      ctx.fillText("🕹️ Retro Arcade Lounge", 410, 450);
+
+      // ── TOP ELEVATOR BAY (1st, 3rd, 4th, ROOF from Gather photo) ──
+      const elevX = 640;
+      const elevY = 12;
+      ctx.fillStyle = "#1e293b";
+      ctx.fillRect(elevX, elevY, 320, 34);
+      ctx.strokeStyle = "#475569";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(elevX, elevY, 320, 34);
+
+      const ELEV_FLOORS = ["1st", "3rd", "4th", "ROOF"];
+      ELEV_FLOORS.forEach((floor, i) => {
+        const doorX = elevX + 16 + i * 74;
+        ctx.fillStyle = "#0f172a";
+        ctx.fillRect(doorX, elevY + 4, 64, 26);
+        ctx.strokeStyle = "#94a3b8";
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(doorX, elevY + 4, 64, 26);
+
+        // Center split line
+        ctx.strokeStyle = "#334155";
+        ctx.beginPath();
+        ctx.moveTo(doorX + 32, elevY + 4);
+        ctx.lineTo(doorX + 32, elevY + 30);
+        ctx.stroke();
+
+        // Floor sign
+        ctx.fillStyle = floor === "ROOF" ? "#f59e0b" : "#38bdf8";
+        ctx.font = "bold 9px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(`▲ ${floor}`, doorX + 32, elevY + 18);
+      });
+      ctx.restore();
+
+      // ── FOUNTAIN ROOM (Triple Fountain cluster from Gather screenshot) ──
+      ctx.save();
+      ctx.fillStyle = "rgba(6, 182, 212, 0.08)";
+      ctx.beginPath();
+      ctx.roundRect(700, 500, 200, 180, 16);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(6, 182, 212, 0.3)";
+      ctx.lineWidth = 2;
       ctx.stroke();
 
-      const rippleTime = performance.now() * 0.004;
-      ctx.fillStyle = "#0284c7";
-      ctx.beginPath();
-      ctx.arc(fX, fY, 38 + Math.sin(rippleTime) * 4, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.fillStyle = "#38bdf8";
+      ctx.font = "900 12px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("📍 Fountain Room", 800, 524);
 
-      ctx.fillStyle = "#f8fafc";
-      ctx.beginPath();
-      ctx.arc(fX, fY, 9, 0, Math.PI * 2);
-      ctx.fill();
+      // Render 3 fountains side-by-side (from user Gather image)
+      const fountainCenters = [750, 800, 850];
+      const fY = 590;
+      const rippleTime = performance.now() * 0.004;
+
+      fountainCenters.forEach((fX, idx) => {
+        ctx.fillStyle = "#334155";
+        ctx.beginPath();
+        ctx.arc(fX, fY, 22, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#94a3b8";
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        ctx.fillStyle = "#0284c7";
+        ctx.beginPath();
+        ctx.arc(fX, fY, 18 + Math.sin(rippleTime + idx) * 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#f8fafc";
+        ctx.beginPath();
+        ctx.arc(fX, fY, 5, 0, Math.PI * 2);
+        ctx.fill();
+      });
 
       waterSprayRef.current.forEach((sp) => {
         sp.x += sp.vx;
         sp.y += sp.vy;
         sp.life += 1;
         if (sp.life > sp.maxLife) {
-          sp.x = fX;
+          sp.x = 800 + (Math.random() - 0.5) * 80;
           sp.y = fY;
           sp.vx = (Math.random() - 0.5) * 2;
           sp.vy = -Math.random() * 2.8 - 1.2;
@@ -1339,11 +1429,11 @@ export default function EchoSpacesWorld({
       ctx.fillStyle = playerLight;
       ctx.fillRect(posX - 140, posY - 140, 280, 280);
 
-      const fountainLight = ctx.createRadialGradient(fX, fY, 20, fX, fY, 180);
+      const fountainLight = ctx.createRadialGradient(800, 590, 20, 800, 590, 180);
       fountainLight.addColorStop(0, "rgba(2, 132, 199, 0.16)");
       fountainLight.addColorStop(1, "rgba(2, 132, 199, 0)");
       ctx.fillStyle = fountainLight;
-      ctx.fillRect(fX - 180, fY - 180, 360, 360);
+      ctx.fillRect(800 - 180, 590 - 180, 360, 360);
       ctx.restore();
 
       // Atmospheric Particles
