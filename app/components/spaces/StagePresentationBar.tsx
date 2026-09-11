@@ -41,48 +41,7 @@ export function StagePresentationBar({
   isHost,
   currentFloor,
   onSelectFloor,
-  speakers = [
-    {
-      uid: "samuel_lee",
-      name: "Samuel Lee",
-      roleTitle: "Head of Product",
-      avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
-      isSpeaking: true,
-      isPresenting: true,
-    },
-    {
-      uid: "sophia_gilbert",
-      name: "Sophia Gilbert",
-      roleTitle: "Creative Director",
-      avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150",
-      isSpeaking: false,
-      isPresenting: true,
-    },
-    {
-      uid: "mary_gilbert",
-      name: "Mary Gilbert",
-      roleTitle: "Visual Strategist",
-      avatarUrl: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150",
-      isSpeaking: false,
-      isPresenting: true,
-    },
-    {
-      uid: "william_jones",
-      name: "William Jones",
-      roleTitle: "Keynote Speaker",
-      avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150",
-      isSpeaking: false,
-      isPresenting: true,
-    },
-    {
-      uid: "matt_jordan",
-      name: "Matt Jordan",
-      roleTitle: "Panelist",
-      avatarUrl: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150",
-      isSpeaking: false,
-      isPresenting: true,
-    },
-  ],
+  speakers = [],
   isPresenting = false,
   onTogglePresenting,
   activeScreenStream,
@@ -181,84 +140,88 @@ export function StagePresentationBar({
         </div>
       </div>
 
-      {/* Presenter Video Tiles Row (Image 1 Fidelity) */}
+      {/* Presenter Video Tiles Row */}
       {!collapsed && (
-        <div className="px-3 sm:px-6 py-2.5 flex items-center gap-3 overflow-x-auto no-scrollbar">
-          {speakers.map((spk) => (
-            <div
-              key={spk.uid}
-              className={`relative flex-shrink-0 w-36 sm:w-44 h-24 sm:h-28 rounded-2xl overflow-hidden border transition-all ${
-                spk.isSpeaking
-                  ? "border-emerald-400 ring-2 ring-emerald-500/40 shadow-lg shadow-emerald-500/10"
-                  : "border-neutral-800 bg-neutral-900/60"
-              }`}
-            >
-              {/* Speaker Video / Portrait */}
-              {spk.avatarUrl ? (
-                <img
-                  src={spk.avatarUrl}
-                  alt={spk.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-950 to-neutral-900 text-xl font-bold font-mono text-cyan-300">
-                  {spk.name.slice(0, 2).toUpperCase()}
-                </div>
-              )}
+        speakers.length > 0 || activeScreenStream ? (
+          <div className="px-3 sm:px-6 py-2.5 flex items-center gap-3 overflow-x-auto no-scrollbar">
+            {speakers.map((spk) => (
+              <div
+                key={spk.uid}
+                className={`relative flex-shrink-0 w-36 sm:w-44 h-24 sm:h-28 rounded-2xl overflow-hidden border transition-all ${
+                  spk.isSpeaking
+                    ? "border-emerald-400 ring-2 ring-emerald-500/40 shadow-lg shadow-emerald-500/10"
+                    : "border-neutral-800 bg-neutral-900/60"
+                }`}
+              >
+                {/* Speaker Video / Portrait */}
+                {spk.avatarUrl ? (
+                  <img
+                    src={spk.avatarUrl}
+                    alt={spk.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-950 to-neutral-900 text-xl font-bold font-mono text-cyan-300">
+                    {spk.name.slice(0, 2).toUpperCase()}
+                  </div>
+                )}
 
-              {/* Dim gradient overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent pointer-events-none" />
+                {/* Dim gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent pointer-events-none" />
 
-              {/* Speaking audio wave indicator */}
-              {spk.isSpeaking && (
-                <div className="absolute top-2 right-2 flex items-center gap-0.5 bg-emerald-950/80 border border-emerald-500/60 px-1.5 py-0.5 rounded-md text-[10px] text-emerald-300 font-mono">
-                  <span className="w-1 h-2 bg-emerald-400 animate-pulse" />
-                  <span className="w-1 h-3.5 bg-emerald-400 animate-pulse delay-75" />
-                  <span className="w-1 h-1.5 bg-emerald-400 animate-pulse delay-150" />
-                </div>
-              )}
+                {/* Speaking audio wave indicator */}
+                {spk.isSpeaking && (
+                  <div className="absolute top-2 right-2 flex items-center gap-0.5 bg-emerald-950/80 border border-emerald-500/60 px-1.5 py-0.5 rounded-md text-[10px] text-emerald-300 font-mono">
+                    <span className="w-1 h-2 bg-emerald-400 animate-pulse" />
+                    <span className="w-1 h-3.5 bg-emerald-400 animate-pulse delay-75" />
+                    <span className="w-1 h-1.5 bg-emerald-400 animate-pulse delay-150" />
+                  </div>
+                )}
 
-              {/* Presenter Name Tagplate */}
-              <div className="absolute bottom-1.5 left-2 right-2 flex items-center justify-between">
-                <div className="truncate">
-                  <div className="text-[11px] font-mono font-bold text-white truncate leading-tight">
+                {/* Presenter Name Tagplate */}
+                <div className="absolute bottom-1.5 left-2 right-2 pointer-events-none">
+                  <div className="text-white text-xs font-mono font-bold truncate drop-shadow-md">
                     {spk.name}
                   </div>
                   {spk.roleTitle && (
-                    <div className="text-[9px] font-mono text-neutral-400 truncate leading-tight">
+                    <div className="text-neutral-400 text-[9px] font-mono truncate">
                       {spk.roleTitle}
                     </div>
                   )}
                 </div>
-                <div className="w-4 h-4 rounded-full bg-black/60 flex items-center justify-center text-[9px] text-emerald-400 shrink-0">
-                  <Mic className="w-2.5 h-2.5" />
+              </div>
+            ))}
+
+            {/* Screen Share Tile if Active */}
+            {activeScreenStream && (
+              <div className="relative flex-shrink-0 w-44 sm:w-56 h-24 sm:h-28 rounded-2xl overflow-hidden border border-purple-500/60 bg-black shadow-lg shadow-purple-500/20">
+                <video
+                  ref={(node) => {
+                    if (node && activeScreenStream && node.srcObject !== activeScreenStream) {
+                      node.srcObject = activeScreenStream;
+                      node.play().catch(() => {});
+                    }
+                  }}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-contain"
+                />
+                <div className="absolute top-1.5 left-2 px-1.5 py-0.5 rounded bg-purple-950/90 border border-purple-500/60 text-purple-300 text-[9px] font-mono font-bold flex items-center gap-1">
+                  <Tv className="w-2.5 h-2.5" />
+                  <span>Screen Stream</span>
                 </div>
               </div>
+            )}
+          </div>
+        ) : (
+          <div className="px-4 py-2 flex items-center justify-between text-xs font-mono text-neutral-400 bg-neutral-950/60 border-t border-neutral-900">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+              <span>Stage microphone is open. Click &quot;Start Presenting&quot; to step up or share screen.</span>
             </div>
-          ))}
-
-          {/* Screen Share Tile if Active */}
-          {activeScreenStream && (
-            <div className="relative flex-shrink-0 w-44 sm:w-56 h-24 sm:h-28 rounded-2xl overflow-hidden border border-purple-500/60 bg-black shadow-lg shadow-purple-500/20">
-              <video
-                ref={(node) => {
-                  if (node && activeScreenStream && node.srcObject !== activeScreenStream) {
-                    node.srcObject = activeScreenStream;
-                    node.play().catch(() => {});
-                  }
-                }}
-                autoPlay
-                playsInline
-                muted
-                className="w-full h-full object-contain"
-              />
-              <div className="absolute top-1.5 left-2 px-1.5 py-0.5 rounded bg-purple-950/90 border border-purple-500/60 text-purple-300 text-[9px] font-mono font-bold flex items-center gap-1">
-                <Tv className="w-2.5 h-2.5" />
-                <span>Screen Stream</span>
-              </div>
-            </div>
-          )}
-        </div>
+          </div>
+        )
       )}
     </div>
   );

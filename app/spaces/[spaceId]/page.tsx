@@ -39,10 +39,11 @@ import SpaceGiftingModal from "@/app/components/spaces/SpaceGiftingModal";
 import { UnoGameModal } from "@/app/components/spaces/UnoGameModal";
 import BirthdayCakeModal from "@/app/components/spaces/BirthdayCakeModal";
 import { PartyTableGamesModal, PartyGameTab } from "@/app/components/spaces/PartyTableGamesModal";
-import { PartyMusicBar } from "@/app/components/spaces/PartyMusicBar";
 import { GuestAuthModal } from "@/app/components/spaces/GuestAuthModal";
 import { StagePresentationBar } from "@/app/components/spaces/StagePresentationBar";
 import { EventSocialPanel, EventPanelTab } from "@/app/components/spaces/EventSocialPanel";
+import TelepartyWatchModal, { TelepartySyncState } from "@/app/components/spaces/TelepartyWatchModal";
+import HostRoomControlsModal from "@/app/components/spaces/HostRoomControlsModal";
 import {
   getWalletState,
   canClaimDailyReward,
@@ -182,7 +183,6 @@ export default function DynamicSpaceWorldPage() {
   const [unoModalOpen, setUnoModalOpen] = useState(false);
   const [partyTableGamesOpen, setPartyTableGamesOpen] = useState(false);
   const [partyTableGameTab, setPartyTableGameTab] = useState<PartyGameTab>("ludo");
-  const [partyMusicDockExpanded, setPartyMusicDockExpanded] = useState(false);
   const [birthdayCakeModalOpen, setBirthdayCakeModalOpen] = useState(false);
   const [birthdayStar, setBirthdayStar] = useState<{ isBirthdayMode: boolean; name: string; gender: "boy" | "girl" }>({
     isBirthdayMode: false,
@@ -192,11 +192,16 @@ export default function DynamicSpaceWorldPage() {
   const [screenConfettiActive, setScreenConfettiActive] = useState(false);
   const [giftReceivedToast, setGiftReceivedToast] = useState<{ from: string; giftName: string; icon: string } | null>(null);
 
-  // Stage Presentation & Event Social Panel (Images 1 & 3 Fidelity)
-  const [isStageActive, setIsStageActive] = useState(() => space.category === "WEBINAR" || space.floorPlanType === "keynote_hall");
+  // Stage Presentation & Event Social Panel (Only auto-active on Webinars)
+  const [isStageActive, setIsStageActive] = useState(() => space.category === "WEBINAR");
   const [isPresentingOnStage, setIsPresentingOnStage] = useState(false);
   const [eventSocialPanelOpen, setEventSocialPanelOpen] = useState(false);
   const [eventSocialPanelTab, setEventSocialPanelTab] = useState<EventPanelTab>("qa");
+
+  // Teleparty YouTube Co-Watch & Host Room Controls Modal States
+  const [telepartyModalOpen, setTelepartyModalOpen] = useState(false);
+  const [telepartySyncState, setTelepartySyncState] = useState<TelepartySyncState | undefined>(undefined);
+  const [hostRoomControlsOpen, setHostRoomControlsOpen] = useState(false);
 
   // Table dishes placed on Banquet Table
   const [tableDishes, setTableDishes] = useState<TableDish[]>([
@@ -1136,6 +1141,21 @@ export default function DynamicSpaceWorldPage() {
                 <button
                   type="button"
                   onClick={() => {
+                    spacesSfx.playKeyNote(4);
+                    setTelepartyModalOpen(true);
+                    setActivitiesDropdownOpen(false);
+                  }}
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                >
+                  <span className="text-base">📺</span>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-red-400">Teleparty YouTube Co-Watch</span>
+                    <span className="text-[10px] text-neutral-400">Synced video & music watch party</span>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
                     spacesSfx.playKeyNote(3);
                     setEventSocialPanelTab("polls");
                     setEventSocialPanelOpen(true);
@@ -1238,6 +1258,21 @@ export default function DynamicSpaceWorldPage() {
                   <div className="flex flex-col">
                     <span className="font-bold">Birthday Cake Ceremony</span>
                     <span className="text-[10px] text-neutral-400">Serve celebration cake to table</span>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    spacesSfx.playKeyNote(4);
+                    setHostRoomControlsOpen(true);
+                    setHospitalityDropdownOpen(false);
+                  }}
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                >
+                  <span className="text-base">🎛️</span>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-amber-300">Room Chair & Cake Designer</span>
+                    <span className="text-[10px] text-neutral-400">Manage 16 chairs & table decor</span>
                   </div>
                 </button>
               </div>
@@ -1353,6 +1388,36 @@ export default function DynamicSpaceWorldPage() {
                   <div className="flex flex-col">
                     <span className="font-bold">Space Suite Settings</span>
                     <span className="text-[10px] text-neutral-400">Capacities, announcements & privacy</span>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    spacesSfx.playKeyNote(5);
+                    setHostRoomControlsOpen(true);
+                    setHostHubDropdownOpen(false);
+                  }}
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                >
+                  <span className="text-base">🎛️</span>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-amber-300">Room Chair, Cake & Decor Suite</span>
+                    <span className="text-[10px] text-neutral-400">Manage 16 chairs, design cakes & table decor</span>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    spacesSfx.playKeyNote(4);
+                    setTelepartyModalOpen(true);
+                    setHostHubDropdownOpen(false);
+                  }}
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                >
+                  <span className="text-base">📺</span>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-red-400">Teleparty YouTube Co-Watch</span>
+                    <span className="text-[10px] text-neutral-400">Synchronized video & music party</span>
                   </div>
                 </button>
               </div>
@@ -1900,55 +1965,45 @@ export default function DynamicSpaceWorldPage() {
         actionIcon={guestAuthAction.icon}
       />
 
-      {/* Floating Synced Spotify Party DJ Music Dock (Bottom-Left) */}
-      <div className="fixed bottom-20 left-4 z-40 max-w-sm sm:max-w-md w-full pointer-events-auto transition-all">
-        {partyMusicDockExpanded ? (
-          <div className="relative">
-            <button
-              onClick={() => setPartyMusicDockExpanded(false)}
-              className="absolute -top-3 -right-2 z-50 p-1 rounded-full bg-neutral-800 text-neutral-400 hover:text-white border border-neutral-700 shadow-md cursor-pointer"
-              title="Minimize Party Music Dock"
-            >
-              <ChevronDown className="w-3.5 h-3.5" />
-            </button>
-            <PartyMusicBar
-              userHandle={localAvatar.handle}
-              compact={false}
-              onSongChanged={(newTrack) => {
-                handleSendSpeech(`⏭️ Switched party track to "${newTrack.title}" 🎵`);
-              }}
-            />
-          </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setPartyMusicDockExpanded(true)}
-              className="px-3.5 py-2 rounded-full bg-neutral-950/95 hover:bg-neutral-900 border border-emerald-500/50 text-emerald-300 text-xs font-bold flex items-center gap-2 shadow-2xl backdrop-blur-xl transition-all cursor-pointer group hover:scale-105"
-              title="Expand Synced Party DJ Player & Song Controls"
-            >
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-base">🎵</span>
-              <span className="font-mono text-[11px] max-w-[140px] truncate text-white">Party Music DJ</span>
-              <span className="text-[10px] text-emerald-400 font-mono bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-800">
-                LIVE
-              </span>
-            </button>
+      {/* Synchronized Teleparty & YouTube Co-Watch Modal */}
+      <TelepartyWatchModal
+        isOpen={telepartyModalOpen}
+        onClose={() => setTelepartyModalOpen(false)}
+        userHandle={localAvatar.handle}
+        isHost={isHost}
+        syncState={telepartySyncState}
+        onUpdateSyncState={(next) => setTelepartySyncState(next)}
+        onBroadcastSpeech={(msg) => handleSendSpeech(msg)}
+      />
 
-            <button
-              onClick={() => {
-                spacesSfx.playKeyNote(5);
-                setPartyTableGameTab("ludo");
-                setPartyTableGamesOpen(true);
-              }}
-              className="px-3.5 py-2 rounded-full bg-neutral-950/95 hover:bg-neutral-900 border border-amber-500/50 text-amber-300 text-xs font-bold flex items-center gap-1.5 shadow-2xl backdrop-blur-xl transition-all cursor-pointer hover:scale-105"
-              title="Play Party Table Games (Ludo, Spin Bottle, RPS, Antakshari, Raja Mantri)"
-            >
-              <span>🎲</span>
-              <span className="font-mono text-[11px]">Table Games</span>
-            </button>
-          </div>
-        )}
-      </div>
+      {/* Full Host Room Controls Modal (16-Seat Chairs, Cake Designer & Table Decor) */}
+      <HostRoomControlsModal
+        isOpen={hostRoomControlsOpen}
+        onClose={() => setHostRoomControlsOpen(false)}
+        space={space}
+        onUpdateSpace={async (updates) => {
+          setSpace((prev) => ({ ...prev, ...updates }));
+          try {
+            await updateSpaceDoc(space.id, updates);
+          } catch (e) {
+            console.error("Failed to update space doc:", e);
+          }
+        }}
+        localAvatar={localAvatar}
+        remoteAvatars={remoteAvatars}
+        chairReservations={chairReservations}
+        onUpdateChairReservations={(res) => setChairReservations(res)}
+        tableDishes={tableDishes}
+        onPlaceCakeOnTable={(cakeDish) => {
+          setTableDishes((prev) => {
+            const filtered = prev.filter((d) => !d.itemId.includes("cake"));
+            return [...filtered, cakeDish];
+          });
+        }}
+        onTeleportToSeat={(x, y) => handleTeleport(x, y)}
+        onBroadcastSpeech={(text) => handleSendSpeech(text)}
+        onTriggerConfetti={handleTriggerConfetti}
+      />
 
       {/* Floating Gift Received Toast */}
       {giftReceivedToast && (
