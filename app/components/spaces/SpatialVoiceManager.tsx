@@ -101,21 +101,50 @@ export default function SpatialVoiceManager({
     const initAgora = async () => {
       try {
         const channelName = `echo_spaces_${spaceId}`;
-        await client.join(AGORA_APP_ID, channelName, null, user.uid);
+        
+        // Derive clean 32-bit positive integer UID for Agora
+        let hash = 0;
+        for (let i = 0; i < user.uid.length; i++) {
+          hash = (hash << 5) - hash + user.uid.charCodeAt(i);
+          hash |= 0;
+        }
+        const numericUid = Math.abs(hash) % 100000000 + 1;
 
-        // Create & publish local mic track
-        const micTrack = await AgoraRTC.createMicrophoneAudioTrack({
-          encoderConfig: "high_quality_stereo",
-          AEC: true,
-          ANS: true,
-          AGC: true,
-        });
+        // Fetch valid dynamic AccessToken2 from backend
+        let token: string | null = null;
+        try {
+          const res = await fetch(
+            `/api/agora/token?channel=${encodeURIComponent(channelName)}&uid=${numericUid}`
+          );
+          if (res.ok) {
+            const data = await res.json();
+            token = data.token || null;
+          }
+        } catch (tokErr) {
+          console.warn("[SpatialVoice] Token fetch error, falling back to static:", tokErr);
+        }
 
-        localTrackRef.current = micTrack;
-        await client.publish([micTrack]);
-        if (isMounted) setIsConnected(true);
-      } catch (err) {
-        console.warn("[SpatialVoice] Failed joining Agora room:", err);
+        await client.join(AGORA_APP_ID, channelName, token, numericUid);
+
+        // Create & publish local mic track if permissions granted
+        try {
+          const micTrack = await AgoraRTC.createMicrophoneAudioTrack({
+            encoderConfig: "high_quality_stereo",
+            AEC: true,
+            ANS: true,
+            AGC: true,
+          });
+
+          localTrackRef.current = micTrack;
+          await client.publish([micTrack]);
+          if (isMounted) setIsConnected(true);
+        } catch (micErr) {
+          console.warn("[SpatialVoice] Microphone permission or publish error:", micErr);
+          if (isMounted) setIsConnected(true); // Connected as listener
+        }
+      } catch (err: any) {
+        console.warn("[SpatialVoice] Agora server unavailable, running in proximity mode:", err?.message || err);
+        if (isMounted) setIsConnected(false);
       }
     };
 

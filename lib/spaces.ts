@@ -39,7 +39,87 @@ export type SpaceVibe =
   | "MIDNIGHT_NEON"
   | "SUNNY_DAYLIGHT"
   | "COZY_RAINY"
-  | "SUNSET_LOFI";
+  | "SUNSET_LOFI"
+  | "HORROR_NIGHT"
+  | "PARTY_CLUB"
+  | "SUKOON_ZEN"
+  | "DINNER_GALA";
+
+export interface SpaceVibeDef {
+  id: SpaceVibe;
+  name: string;
+  icon: string;
+  description: string;
+  accentColor: string;
+  lightingOverlay: string;
+}
+
+export const SPACE_VIBES: Record<SpaceVibe, SpaceVibeDef> = {
+  HORROR_NIGHT: {
+    id: "HORROR_NIGHT",
+    name: "Horror Night",
+    icon: "🎃",
+    description: "Eerie haunted fog, glowing jack-o'-lanterns & phantom wisps.",
+    accentColor: "#a855f7",
+    lightingOverlay: "rgba(30, 10, 45, 0.45)",
+  },
+  PARTY_CLUB: {
+    id: "PARTY_CLUB",
+    name: "Party Club & Rave",
+    icon: "🪩",
+    description: "Sweeping disco laser beams, neon strobe floor & bass party vibes.",
+    accentColor: "#ec4899",
+    lightingOverlay: "rgba(236, 72, 153, 0.15)",
+  },
+  DINNER_GALA: {
+    id: "DINNER_GALA",
+    name: "Candlelight Dinner Gala",
+    icon: "🍷",
+    description: "Warm candlelit banquet tables, fine dining ambiance & soft golden jazz.",
+    accentColor: "#f59e0b",
+    lightingOverlay: "rgba(245, 158, 11, 0.15)",
+  },
+  SUKOON_ZEN: {
+    id: "SUKOON_ZEN",
+    name: "Sukoon Zen Sanctuary",
+    icon: "🍃",
+    description: "Peaceful koi pond, floating lotus petals & calming meditation aura.",
+    accentColor: "#10b981",
+    lightingOverlay: "rgba(16, 185, 129, 0.12)",
+  },
+  MIDNIGHT_NEON: {
+    id: "MIDNIGHT_NEON",
+    name: "Midnight Cyberpunk",
+    icon: "⚡",
+    description: "Glowing cyan neon grid lines & midnight electric motes.",
+    accentColor: "#06b6d4",
+    lightingOverlay: "rgba(6, 182, 212, 0.08)",
+  },
+  SUNNY_DAYLIGHT: {
+    id: "SUNNY_DAYLIGHT",
+    name: "Sunny Daylight Atrium",
+    icon: "☀️",
+    description: "Crisp bright sunshine, sunbeams & lively coworking energy.",
+    accentColor: "#facc15",
+    lightingOverlay: "rgba(254, 240, 138, 0.08)",
+  },
+  COZY_RAINY: {
+    id: "COZY_RAINY",
+    name: "Cozy Lofi Rain",
+    icon: "🌧️",
+    description: "Gentle falling rain droplets, cozy indoor warmth & whisper sanctuary.",
+    accentColor: "#38bdf8",
+    lightingOverlay: "rgba(56, 189, 248, 0.1)",
+  },
+  SUNSET_LOFI: {
+    id: "SUNSET_LOFI",
+    name: "Golden Hour Sunset",
+    icon: "🌅",
+    description: "Warm amber dusk glow, floating dust particles & relaxed beats.",
+    accentColor: "#f97316",
+    lightingOverlay: "rgba(249, 115, 22, 0.12)",
+  },
+};
 
 export type SpaceZoneId = "office" | "library" | "music" | "concert" | "debate" | "courtyard";
 

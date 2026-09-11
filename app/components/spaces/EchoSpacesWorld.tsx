@@ -174,13 +174,36 @@ export default function EchoSpacesWorld({
   // Initialize atmospheric particles
   useEffect(() => {
     const pts: Array<{ x: number; y: number; speed: number; size: number; alpha: number; angle?: number }> = [];
-    const count = vibe === "COZY_RAINY" ? 180 : vibe === "SUNSET_LOFI" ? 60 : 40;
+    const count =
+      vibe === "COZY_RAINY"
+        ? 180
+        : vibe === "HORROR_NIGHT"
+        ? 80
+        : vibe === "PARTY_CLUB"
+        ? 85
+        : vibe === "SUKOON_ZEN"
+        ? 70
+        : vibe === "DINNER_GALA"
+        ? 55
+        : vibe === "SUNSET_LOFI"
+        ? 60
+        : 40;
     for (let i = 0; i < count; i++) {
       pts.push({
         x: Math.random() * WORLD_WIDTH,
         y: Math.random() * WORLD_HEIGHT,
-        speed: vibe === "COZY_RAINY" ? 12 + Math.random() * 8 : 1 + Math.random() * 2,
-        size: vibe === "COZY_RAINY" ? 16 + Math.random() * 12 : 3 + Math.random() * 4,
+        speed:
+          vibe === "COZY_RAINY"
+            ? 12 + Math.random() * 8
+            : vibe === "PARTY_CLUB"
+            ? 2.5 + Math.random() * 4
+            : 1 + Math.random() * 2,
+        size:
+          vibe === "COZY_RAINY"
+            ? 16 + Math.random() * 12
+            : vibe === "HORROR_NIGHT"
+            ? 12 + Math.random() * 16
+            : 3 + Math.random() * 4,
         alpha: 0.25 + Math.random() * 0.5,
         angle: Math.random() * Math.PI * 2,
       });
@@ -2117,7 +2140,7 @@ export default function EchoSpacesWorld({
       ctx.fillRect(800 - 180, 590 - 180, 360, 360);
       ctx.restore();
 
-      // Atmospheric Particles
+      // ── Atmospheric Particles for All 8 Vibes ──
       particlesRef.current.forEach((p) => {
         ctx.save();
         if (vibe === "COZY_RAINY") {
@@ -2133,9 +2156,56 @@ export default function EchoSpacesWorld({
           ctx.moveTo(p.x, p.y);
           ctx.lineTo(p.x + 3, p.y + p.size);
           ctx.stroke();
+        } else if (vibe === "HORROR_NIGHT") {
+          // Floating purple/green phantom fog wisps
+          p.y -= p.speed * 0.4;
+          p.x += Math.sin(timeMs * 0.002 + p.y * 0.015) * 2;
+          if (p.y < 0) {
+            p.y = WORLD_HEIGHT;
+            p.x = Math.random() * WORLD_WIDTH;
+          }
+          ctx.fillStyle = `rgba(192, 132, 252, ${p.alpha * 0.45})`;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size * 1.4, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (vibe === "PARTY_CLUB") {
+          // Falling colorful confetti flakes
+          p.y += p.speed * 0.8;
+          p.x += Math.sin(timeMs * 0.004 + p.y) * 2.5;
+          if (p.y > WORLD_HEIGHT) {
+            p.y = 0;
+            p.x = Math.random() * WORLD_WIDTH;
+          }
+          const confettiColors = ["#f43f5e", "#eab308", "#06b6d4", "#a855f7", "#22c55e"];
+          ctx.fillStyle = confettiColors[Math.floor(p.size) % confettiColors.length];
+          ctx.fillRect(p.x, p.y, p.size * 0.9, p.size * 0.5);
+        } else if (vibe === "DINNER_GALA") {
+          // Warm golden candlelight embers & motes
+          p.y -= p.speed * 0.3;
+          p.x += Math.sin(timeMs * 0.002 + p.x) * 1.2;
+          if (p.y < 0) {
+            p.y = WORLD_HEIGHT;
+            p.x = Math.random() * WORLD_WIDTH;
+          }
+          ctx.fillStyle = `rgba(251, 191, 36, ${p.alpha * 0.6})`;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size * 0.6, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (vibe === "SUKOON_ZEN") {
+          // Floating sakura petals & fireflies
+          p.y += p.speed * 0.4;
+          p.x += Math.cos(timeMs * 0.003 + p.y * 0.02) * 2;
+          if (p.y > WORLD_HEIGHT) {
+            p.y = 0;
+            p.x = Math.random() * WORLD_WIDTH;
+          }
+          ctx.fillStyle = `rgba(244, 114, 182, ${p.alpha * 0.7})`;
+          ctx.beginPath();
+          ctx.ellipse(p.x, p.y, p.size * 0.7, p.size * 0.4, Math.PI / 3, 0, Math.PI * 2);
+          ctx.fill();
         } else if (vibe === "SUNSET_LOFI") {
           p.y += p.speed * 0.5;
-          p.x += Math.sin(performance.now() * 0.002 + p.y * 0.01) * 1.5;
+          p.x += Math.sin(timeMs * 0.002 + p.y * 0.01) * 1.5;
           if (p.y > WORLD_HEIGHT) {
             p.y = 0;
             p.x = Math.random() * WORLD_WIDTH;
@@ -2154,6 +2224,92 @@ export default function EchoSpacesWorld({
         }
         ctx.restore();
       });
+
+      // ── Dynamic Atmosphere Lighting & Decorative Overlays ──
+      if (vibe === "HORROR_NIGHT") {
+        ctx.save();
+        // Eerie purple fog tint
+        ctx.fillStyle = "rgba(45, 10, 60, 0.22)";
+        ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+
+        // Jack-o'-Lantern pumpkins with flickering yellow eyes
+        const pumpkins = [
+          { x: 260, y: 155 },
+          { x: 640, y: 155 },
+          { x: 1040, y: 310 },
+          { x: 1360, y: 310 },
+        ];
+        pumpkins.forEach((pk) => {
+          ctx.font = "20px sans-serif";
+          ctx.fillText("🎃", pk.x, pk.y);
+          // Glowing eye halo
+          const eyePulse = Math.sin(timeMs * 0.01 + pk.x) * 0.2 + 0.3;
+          ctx.fillStyle = `rgba(234, 179, 8, ${eyePulse})`;
+          ctx.beginPath();
+          ctx.arc(pk.x + 10, pk.y - 6, 8, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.restore();
+      } else if (vibe === "PARTY_CLUB") {
+        ctx.save();
+        // Sweeping Disco Lasers
+        const laserTime = timeMs * 0.001;
+        ctx.lineWidth = 2.5;
+        // Pink laser
+        ctx.strokeStyle = "rgba(236, 72, 153, 0.4)";
+        ctx.beginPath();
+        ctx.moveTo(800, 720);
+        ctx.lineTo(800 + Math.cos(laserTime) * 600, 720 + Math.sin(laserTime) * 600);
+        ctx.stroke();
+        // Cyan laser
+        ctx.strokeStyle = "rgba(6, 182, 212, 0.4)";
+        ctx.beginPath();
+        ctx.moveTo(800, 720);
+        ctx.lineTo(800 + Math.cos(-laserTime * 1.3) * 600, 720 + Math.sin(-laserTime * 1.3) * 600);
+        ctx.stroke();
+
+        // Strobe Floor Pulse
+        const strobe = Math.sin(timeMs * 0.008) > 0.85;
+        if (strobe) {
+          ctx.fillStyle = "rgba(236, 72, 153, 0.08)";
+          ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+        }
+        ctx.restore();
+      } else if (vibe === "DINNER_GALA") {
+        ctx.save();
+        // Warm chandelier candlelight glow over banquet table
+        const candleGlow = ctx.createRadialGradient(1205, 350, 10, 1205, 350, 240);
+        candleGlow.addColorStop(0, "rgba(245, 158, 11, 0.28)");
+        candleGlow.addColorStop(1, "rgba(245, 158, 11, 0)");
+        ctx.fillStyle = candleGlow;
+        ctx.beginPath();
+        ctx.arc(1205, 350, 240, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Candles with flickering flames along table
+        [1080, 1150, 1220, 1290, 1360].forEach((cx) => {
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(cx, 346, 4, 8);
+          const fPulse = Math.sin(timeMs * 0.012 + cx) * 1.2;
+          ctx.fillStyle = "#f59e0b";
+          ctx.beginPath();
+          ctx.arc(cx + 2, 342, 3 + fPulse, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.restore();
+      } else if (vibe === "SUKOON_ZEN") {
+        ctx.save();
+        // Soft tranquil teal/emerald ambiance
+        ctx.fillStyle = "rgba(16, 185, 129, 0.06)";
+        ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+
+        // Lotus pads floating in the 3 fountains
+        [1060, 1200, 1340].forEach((fx) => {
+          ctx.font = "16px sans-serif";
+          ctx.fillText("🪷", fx - 8, 172);
+        });
+        ctx.restore();
+      }
 
       ctx.restore();
       ctx.restore();
