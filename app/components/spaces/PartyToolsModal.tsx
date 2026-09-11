@@ -57,6 +57,7 @@ interface PartyToolsModalProps {
   onOpenSeating?: () => void;
   onOpenUno?: () => void;
   onOpenGifting?: () => void;
+  onOpenPartyTableGames?: (tab?: "ludo" | "bottle" | "rps" | "antakshari" | "raja_mantri" | "uno") => void;
 }
 
 type PartyTab = "ambiance" | "dice" | "bottle" | "birthday" | "icebreakers" | "photobooth";
@@ -101,6 +102,7 @@ export default function PartyToolsModal({
   onOpenSeating,
   onOpenUno,
   onOpenGifting,
+  onOpenPartyTableGames,
 }: PartyToolsModalProps) {
   const [activeTab, setActiveTab] = useState<PartyTab>("birthday");
   const [currentTrack, setCurrentTrack] = useState<string | null>(null);
@@ -728,6 +730,66 @@ export default function PartyToolsModal({
                       <div className="text-[10px] font-mono text-neutral-400">d6 and d20 dice</div>
                     </div>
                   </button>
+
+                  {onOpenPartyTableGames && (
+                    <>
+                      <button
+                        onClick={() => {
+                          onClose();
+                          onOpenPartyTableGames("ludo");
+                        }}
+                        className="p-3 rounded-xl bg-amber-950/30 border border-amber-500/40 hover:border-amber-400 text-left transition cursor-pointer flex flex-col justify-between"
+                      >
+                        <span className="text-2xl">🎲</span>
+                        <div className="mt-2">
+                          <div className="text-xs font-mono font-bold text-amber-300">Ludo Table Match</div>
+                          <div className="text-[10px] font-mono text-neutral-400">4-Player Board + $30 Cash</div>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          onClose();
+                          onOpenPartyTableGames("antakshari");
+                        }}
+                        className="p-3 rounded-xl bg-emerald-950/30 border border-emerald-500/40 hover:border-emerald-400 text-left transition cursor-pointer flex flex-col justify-between"
+                      >
+                        <span className="text-2xl">🎤</span>
+                        <div className="mt-2">
+                          <div className="text-xs font-mono font-bold text-emerald-300">Antakshari Chain</div>
+                          <div className="text-[10px] font-mono text-neutral-400">Bollywood sing-along</div>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          onClose();
+                          onOpenPartyTableGames("raja_mantri");
+                        }}
+                        className="p-3 rounded-xl bg-purple-950/30 border border-purple-500/40 hover:border-purple-400 text-left transition cursor-pointer flex flex-col justify-between"
+                      >
+                        <span className="text-2xl">👑</span>
+                        <div className="mt-2">
+                          <div className="text-xs font-mono font-bold text-purple-300">Raja Mantri Chor</div>
+                          <div className="text-[10px] font-mono text-neutral-400">Royal Indian chits</div>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          onClose();
+                          onOpenPartyTableGames("rps");
+                        }}
+                        className="p-3 rounded-xl bg-sky-950/30 border border-sky-500/40 hover:border-sky-400 text-left transition cursor-pointer flex flex-col justify-between"
+                      >
+                        <span className="text-2xl">✂️</span>
+                        <div className="mt-2">
+                          <div className="text-xs font-mono font-bold text-sky-300">RPS Clash (1v1)</div>
+                          <div className="text-[10px] font-mono text-neutral-400">Rock Paper Scissors</div>
+                        </div>
+                      </button>
+                    </>
+                  )}
 
                   {onOpenUno && (
                     <button

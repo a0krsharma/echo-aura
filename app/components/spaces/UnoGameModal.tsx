@@ -20,6 +20,7 @@ import {
   playUnoShout,
   playGameVictory
 } from "@/lib/spacesSfx";
+import { PartyMusicBar } from "./PartyMusicBar";
 
 export type CardColor = "red" | "blue" | "green" | "yellow" | "wild";
 export type CardValue =
@@ -452,6 +453,11 @@ export function UnoGameModal({
               <X className="w-4 h-4" />
             </button>
           </div>
+        </div>
+
+        {/* Synchronized Host Party Music Bar (Seamless Spotify Player) */}
+        <div className="px-4 py-2 bg-slate-900/40 border-b border-slate-800/80">
+          <PartyMusicBar userHandle={localUserName} compact={true} />
         </div>
 
         {/* Game Arena / Table Canvas */}

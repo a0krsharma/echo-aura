@@ -39,6 +39,8 @@ import SpaceCateringModal from "@/app/components/spaces/SpaceCateringModal";
 import SpaceGiftingModal from "@/app/components/spaces/SpaceGiftingModal";
 import { UnoGameModal } from "@/app/components/spaces/UnoGameModal";
 import BirthdayCakeModal from "@/app/components/spaces/BirthdayCakeModal";
+import { PartyTableGamesModal, PartyGameTab } from "@/app/components/spaces/PartyTableGamesModal";
+import { PartyMusicBar } from "@/app/components/spaces/PartyMusicBar";
 import {
   getWalletState,
   canClaimDailyReward,
@@ -172,6 +174,9 @@ export default function DynamicSpaceWorldPage() {
   const [giftingModalOpen, setGiftingModalOpen] = useState(false);
   const [seatingModalOpen, setSeatingModalOpen] = useState(false);
   const [unoModalOpen, setUnoModalOpen] = useState(false);
+  const [partyTableGamesOpen, setPartyTableGamesOpen] = useState(false);
+  const [partyTableGameTab, setPartyTableGameTab] = useState<PartyGameTab>("ludo");
+  const [partyMusicDockExpanded, setPartyMusicDockExpanded] = useState(false);
   const [birthdayCakeModalOpen, setBirthdayCakeModalOpen] = useState(false);
   const [birthdayStar, setBirthdayStar] = useState<{ isBirthdayMode: boolean; name: string; gender: "boy" | "girl" }>({
     isBirthdayMode: false,
@@ -1023,6 +1028,20 @@ export default function DynamicSpaceWorldPage() {
             <span className="hidden xl:inline">Seating</span>
           </button>
 
+          {/* Party Games Suite (Ludo, Bottle, RPS, Antakshari, Raja Mantri) */}
+          <button
+            onClick={() => {
+              spacesSfx.playKeyNote(5);
+              setPartyTableGameTab("ludo");
+              setPartyTableGamesOpen(true);
+            }}
+            className="px-2.5 py-1.5 rounded-xl border border-amber-500/40 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 hover:from-amber-500/30 hover:to-yellow-500/30 text-amber-300 hover:text-amber-200 text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+            title="Play Banquet Table Games (Ludo, Spin Bottle, Antakshari, Raja Mantri, RPS)"
+          >
+            <Dices className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">Party Games</span>
+          </button>
+
           {/* Multiplayer Uno Card Table */}
           <button
             onClick={() => {
@@ -1032,7 +1051,7 @@ export default function DynamicSpaceWorldPage() {
             className="px-2.5 py-1.5 rounded-xl border border-rose-500/40 bg-gradient-to-r from-rose-500/20 to-amber-500/20 hover:from-rose-500/30 hover:to-amber-500/30 text-rose-300 hover:text-rose-200 text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
             title="Play Multiplayer Uno Card Game (Prize: $50)"
           >
-            <Dices className="w-3.5 h-3.5 text-rose-400" />
+            <span className="text-xs">🃏</span>
             <span className="hidden sm:inline">Uno Table</span>
           </button>
         </div>
@@ -1445,6 +1464,11 @@ export default function DynamicSpaceWorldPage() {
           setPartyModalOpen(false);
           setGiftingModalOpen(true);
         }}
+        onOpenPartyTableGames={(tab) => {
+          setPartyModalOpen(false);
+          if (tab) setPartyTableGameTab(tab);
+          setPartyTableGamesOpen(true);
+        }}
       />
 
       {/* Interactive Birthday Cake Ceremony Modal (Blow Candles, Cut Cake, Pop Champagne, Hand Out Slices) */}
@@ -1464,7 +1488,7 @@ export default function DynamicSpaceWorldPage() {
         }}
         onOpenGames={() => {
           setBirthdayCakeModalOpen(false);
-          setPartyModalOpen(true);
+          setPartyTableGamesOpen(true);
         }}
         onCakeCutSuccess={() => {
           refreshWalletCash();
@@ -1548,6 +1572,78 @@ export default function DynamicSpaceWorldPage() {
           photoURL: r.avatarUrl,
         }))}
       />
+
+      {/* Banquet Table Games Lounge (Ludo, Spin the Bottle, RPS, Antakshari, Raja Mantri, UNO) */}
+      <PartyTableGamesModal
+        isOpen={partyTableGamesOpen}
+        onClose={() => {
+          setPartyTableGamesOpen(false);
+          refreshWalletCash();
+        }}
+        spaceTitle={space.name}
+        localUserName={localAvatar.handle}
+        localUserAvatar={localAvatar.avatarUrl || "👑"}
+        onlineParticipants={remoteAvatars.map((r) => ({
+          uid: r.uid,
+          displayName: r.handle,
+          photoURL: r.avatarUrl,
+        }))}
+        initialTab={partyTableGameTab}
+        onOpenUno={() => {
+          setPartyTableGamesOpen(false);
+          setUnoModalOpen(true);
+        }}
+      />
+
+      {/* Floating Synced Spotify Party DJ Music Dock (Bottom-Left) */}
+      <div className="fixed bottom-20 left-4 z-40 max-w-sm sm:max-w-md w-full pointer-events-auto transition-all">
+        {partyMusicDockExpanded ? (
+          <div className="relative">
+            <button
+              onClick={() => setPartyMusicDockExpanded(false)}
+              className="absolute -top-3 -right-2 z-50 p-1 rounded-full bg-neutral-800 text-neutral-400 hover:text-white border border-neutral-700 shadow-md cursor-pointer"
+              title="Minimize Party Music Dock"
+            >
+              <ChevronDown className="w-3.5 h-3.5" />
+            </button>
+            <PartyMusicBar
+              userHandle={localAvatar.handle}
+              compact={false}
+              onSongChanged={(newTrack) => {
+                handleSendSpeech(`⏭️ Switched party track to "${newTrack.title}" 🎵`);
+              }}
+            />
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPartyMusicDockExpanded(true)}
+              className="px-3.5 py-2 rounded-full bg-neutral-950/95 hover:bg-neutral-900 border border-emerald-500/50 text-emerald-300 text-xs font-bold flex items-center gap-2 shadow-2xl backdrop-blur-xl transition-all cursor-pointer group hover:scale-105"
+              title="Expand Synced Party DJ Player & Song Controls"
+            >
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-base">🎵</span>
+              <span className="font-mono text-[11px] max-w-[140px] truncate text-white">Party Music DJ</span>
+              <span className="text-[10px] text-emerald-400 font-mono bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-800">
+                LIVE
+              </span>
+            </button>
+
+            <button
+              onClick={() => {
+                spacesSfx.playKeyNote(5);
+                setPartyTableGameTab("ludo");
+                setPartyTableGamesOpen(true);
+              }}
+              className="px-3.5 py-2 rounded-full bg-neutral-950/95 hover:bg-neutral-900 border border-amber-500/50 text-amber-300 text-xs font-bold flex items-center gap-1.5 shadow-2xl backdrop-blur-xl transition-all cursor-pointer hover:scale-105"
+              title="Play Party Table Games (Ludo, Spin Bottle, RPS, Antakshari, Raja Mantri)"
+            >
+              <span>🎲</span>
+              <span className="font-mono text-[11px]">Table Games</span>
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Floating Gift Received Toast */}
       {giftReceivedToast && (
