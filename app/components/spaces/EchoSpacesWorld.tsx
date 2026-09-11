@@ -1350,17 +1350,26 @@ export default function EchoSpacesWorld({
           ctx.fill();
         }
 
-        // Nameplate Tag
+        // Status dot and Nameplate Tag
+        const status = isSelf ? localAvatar.statusText : av.statusText;
+        const isBusy = status?.includes("Busy");
+        const isAway = status?.includes("Away");
+
+        // Online Status Dot
+        ctx.fillStyle = isBusy ? "#f59e0b" : isAway ? "#ef4444" : "#22c55e";
+        ctx.beginPath();
+        ctx.arc(-22, -47, 3, 0, Math.PI * 2);
+        ctx.fill();
+
         ctx.font = "bold 9px sans-serif";
         ctx.textAlign = "center";
         ctx.fillStyle = isSelf ? (isGhost ? "#a5b4fc" : "#38bdf8") : "#ffffff";
         ctx.fillText(isSelf ? `YOU (${av.handle})` : av.handle, 0, -44);
 
-        const status = isSelf ? localAvatar.statusText : av.statusText;
         if (status) {
           const isPlayingGame = status.includes("🎮");
           ctx.font = "bold 8px monospace";
-          ctx.fillStyle = isPlayingGame ? "#38bdf8" : "#a1a1aa";
+          ctx.fillStyle = isPlayingGame ? "#38bdf8" : isBusy ? "#f59e0b" : "#a1a1aa";
           ctx.fillText(status, 0, -54);
 
           // If avatar is actively playing an arcade game, render floating controller badge!

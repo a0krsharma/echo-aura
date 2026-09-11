@@ -25,6 +25,10 @@ import SpaceArcadeModal from "@/app/components/spaces/SpaceArcadeModal";
 import JukeboxModal from "@/app/components/spaces/JukeboxModal";
 import GatherBottomDock from "@/app/components/spaces/GatherBottomDock";
 import GatherRightDrawer, { SpaceChatMessage } from "@/app/components/spaces/GatherRightDrawer";
+import GatherMeetingGrid from "@/app/components/spaces/GatherMeetingGrid";
+import GatherActivityMapModal from "@/app/components/spaces/GatherActivityMapModal";
+import GatherWaveToast, { WaveInvitation } from "@/app/components/spaces/GatherWaveToast";
+import GatherDirectDock from "@/app/components/spaces/GatherDirectDock";
 import {
   SpaceDoc,
   SpaceZoneId,
@@ -118,6 +122,10 @@ export default function DynamicSpaceWorldPage() {
   const [whiteboardModalOpen, setWhiteboardModalOpen] = useState(false);
   const [arcadeModalOpen, setArcadeModalOpen] = useState(false);
   const [jukeboxModalOpen, setJukeboxModalOpen] = useState(false);
+  const [meetingModalOpen, setMeetingModalOpen] = useState(false);
+  const [activityMapOpen, setActivityMapOpen] = useState(false);
+  const [activeWave, setActiveWave] = useState<WaveInvitation | null>(null);
+  const [directDockTarget, setDirectDockTarget] = useState<SpatialAvatar | null>(null);
   const [speakingUids, setSpeakingUids] = useState<Set<string>>(new Set());
 
   // Space Decoration Mode
@@ -354,6 +362,35 @@ export default function DynamicSpaceWorldPage() {
       handle: newHandle,
       lastUpdated: Date.now(),
     }));
+  };
+
+  // Wave Them Over [Image 4]
+  const handleWaveAvatar = (target: SpatialAvatar) => {
+    spacesSfx.playHandRaise();
+    handleSendSpeech(`👋 Waved at ${target.handle}!`);
+    setTimeout(() => {
+      setActiveWave({
+        id: Math.random().toString(),
+        senderHandle: target.handle,
+        targetX: target.x,
+        targetY: target.y,
+        roomName: SPACES_ZONES[target.activeZone]?.name || "Virtual Pod",
+        timestamp: Date.now(),
+      });
+      spacesSfx.playKeyNote(5);
+    }, 1000);
+  };
+
+  // Direct 1-on-1 Chat & Video [Image 3]
+  const handleDirectMessage = (target: SpatialAvatar) => {
+    setDirectDockTarget(target);
+    spacesSfx.playKeyNote(2);
+  };
+
+  // Join Pod in 1-Click [Image 2 & 4]
+  const handleTeleportToPod = (x: number, y: number, podName: string) => {
+    handleTeleport(x, y);
+    handleSendSpeech(`🚀 Joined ${podName}!`);
   };
 
   // Toggle Hand Raise [H]
@@ -654,6 +691,8 @@ export default function DynamicSpaceWorldPage() {
         }}
         onOpenArcade={() => setArcadeModalOpen(true)}
         onOpenWhiteboard={() => setWhiteboardModalOpen(true)}
+        onOpenMeetingModal={() => setMeetingModalOpen(true)}
+        onOpenActivityMap={() => setActivityMapOpen(true)}
         onSendEmote={handleSendEmote}
         onToggleHandRaise={handleToggleHandRaise}
         onUpdateStatus={handleUpdateStatus}
@@ -678,6 +717,8 @@ export default function DynamicSpaceWorldPage() {
         onLocateAvatar={(target) => {
           handleTeleport(target.x, target.y);
         }}
+        onWaveAvatar={handleWaveAvatar}
+        onDirectMessageAvatar={handleDirectMessage}
       />
 
       {/* Check-In Welcome Gate Modal (Makes entering seamless & transparent) */}
@@ -779,6 +820,49 @@ export default function DynamicSpaceWorldPage() {
       <JukeboxModal
         isOpen={jukeboxModalOpen}
         onClose={() => setJukeboxModalOpen(false)}
+      />
+
+      {/* Image 1: Video Meeting Grid Overlay */}
+      <GatherMeetingGrid
+        isOpen={meetingModalOpen}
+        onClose={() => setMeetingModalOpen(false)}
+        meetingTitle="Design Review"
+        isPrivate={true}
+        localAvatar={localAvatar}
+        remoteAvatars={remoteAvatars}
+        onSendEmote={handleSendEmote}
+      />
+
+      {/* Image 2: Birds-Eye Activity Map */}
+      <GatherActivityMapModal
+        isOpen={activityMapOpen}
+        onClose={() => setActivityMapOpen(false)}
+        localAvatar={localAvatar}
+        remoteAvatars={remoteAvatars}
+        onTeleportToPod={handleTeleportToPod}
+      />
+
+      {/* Image 4: Wave Them Over Notification Toast */}
+      <GatherWaveToast
+        wave={activeWave}
+        onDismiss={() => setActiveWave(null)}
+        onWalkOver={(x, y) => handleTeleport(x, y)}
+      />
+
+      {/* Image 3: Direct 1-on-1 Mini-Dock */}
+      <GatherDirectDock
+        isOpen={!!directDockTarget}
+        onClose={() => setDirectDockTarget(null)}
+        targetAvatar={directDockTarget}
+        localAvatar={localAvatar}
+        onOpenFullMeeting={() => {
+          setDirectDockTarget(null);
+          setMeetingModalOpen(true);
+        }}
+        onOpenChat={() => {
+          setRightDrawerOpen(true);
+          setRightDrawerTab("chat");
+        }}
       />
     </div>
   );

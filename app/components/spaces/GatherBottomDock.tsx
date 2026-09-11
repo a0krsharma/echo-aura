@@ -5,7 +5,8 @@
  * ─────────────────────────────────────────────────────
  * Authentic Gather.town Bottom Floating Dock & Control Pill
  * Replicating the exact UI from user reference photos:
- * - Bottom-Left Pill: Avatar, Name, Status, Mic, Cam, Screen, Hand, Emotes
+ * - Images 1, 2, 3: "💬 Meetings", "💬 Chat", "⚡ Activity" Tab Bar
+ * - Bottom-Left Pill: Avatar, Name, Availability (Active, Busy, Away), Focus note (Image 5)
  * - Bottom-Right Toolbar: Build Hammer, Whiteboard, Arcade, Chat, Participants
  */
 
@@ -29,6 +30,10 @@ import {
   Edit3,
   Flame,
   Sparkles,
+  Headphones,
+  Calendar,
+  Zap,
+  Clock,
 } from "lucide-react";
 import { SpatialAvatar } from "@/lib/spaces";
 import { spacesSfx } from "@/lib/spacesSfx";
@@ -43,6 +48,8 @@ interface GatherBottomDockProps {
   onToggleRightDrawer: (tab: "chat" | "participants") => void;
   onOpenArcade: () => void;
   onOpenWhiteboard: () => void;
+  onOpenMeetingModal: () => void;
+  onOpenActivityMap: () => void;
   onSendEmote: (emote: string) => void;
   onToggleHandRaise: () => void;
   onUpdateStatus: (status: string) => void;
@@ -50,14 +57,6 @@ interface GatherBottomDockProps {
 }
 
 const GATHER_QUICK_EMOTES = ["👏", "❤️", "🎉", "👍", "😂", "🔥", "☕", "👋"];
-
-const STATUS_PRESETS = [
-  { label: "Available", icon: "🟢", desc: "Open to conversations & syncs" },
-  { label: "In a meeting", icon: "🟡", desc: "Currently in a call or private rug" },
-  { label: "Focusing", icon: "🟣", desc: "Deep work (whisper mode)" },
-  { label: "Do Not Disturb", icon: "🔴", desc: "Please do not interrupt" },
-  { label: "Grabbing Coffee", icon: "☕", desc: "Away from keyboard" },
-];
 
 export default function GatherBottomDock({
   localAvatar,
@@ -69,6 +68,8 @@ export default function GatherBottomDock({
   onToggleRightDrawer,
   onOpenArcade,
   onOpenWhiteboard,
+  onOpenMeetingModal,
+  onOpenActivityMap,
   onSendEmote,
   onToggleHandRaise,
   onUpdateStatus,
@@ -79,8 +80,13 @@ export default function GatherBottomDock({
   const [isVideoOff, setIsVideoOff] = useState(true);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
 
-  // Menus
+  // Availability & Deep Focus (From Image 5: "Set Your Availability")
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
+  const [availability, setAvailability] = useState<"active" | "busy" | "away">("active");
+  const [focusNote, setFocusNote] = useState("Deep focus until 12:30");
+  const [isEditingNote, setIsEditingNote] = useState(false);
+
+  // Edit Name
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(localAvatar.handle);
 
@@ -110,14 +116,63 @@ export default function GatherBottomDock({
     setIsEditingName(false);
   };
 
-  const handleSelectStatus = (status: string) => {
-    onUpdateStatus(status);
-    setStatusMenuOpen(false);
+  const handleSelectAvailability = (mode: "active" | "busy" | "away") => {
+    setAvailability(mode);
+    const label =
+      mode === "busy" ? "🎧 Busy" : mode === "away" ? "🟠 Away" : "🟢 Active";
+    onUpdateStatus(`${label}${mode === "busy" ? ` • ${focusNote}` : ""}`);
+    spacesSfx.playKeyNote(mode === "busy" ? 1 : 3);
+  };
+
+  const handleSaveFocusNote = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsEditingNote(false);
+    onUpdateStatus(`🎧 Busy • ${focusNote}`);
     spacesSfx.playKeyNote(2);
   };
 
   return (
     <>
+      {/* ── TOP-CENTER GATHER APP TABS (Images 1, 2, 3) ── */}
+      <div className="fixed top-14 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 bg-neutral-950/90 backdrop-blur-md p-1.5 rounded-2xl border border-neutral-800 shadow-xl select-none">
+        {/* Meetings Tab (Image 1) */}
+        <button
+          type="button"
+          onClick={onOpenMeetingModal}
+          className="px-3 py-1 rounded-xl text-xs font-mono font-bold text-neutral-300 hover:text-white hover:bg-neutral-900 transition-colors flex items-center gap-1.5 cursor-pointer"
+          title="Open Video Meetings Grid"
+        >
+          <Calendar className="w-3.5 h-3.5 text-emerald-400" />
+          <span>Meetings</span>
+        </button>
+
+        {/* Chat Tab (Image 3) */}
+        <button
+          type="button"
+          onClick={() => onToggleRightDrawer("chat")}
+          className={`px-3 py-1 rounded-xl text-xs font-mono font-bold transition-colors flex items-center gap-1.5 cursor-pointer ${
+            isRightDrawerOpen && rightDrawerTab === "chat"
+              ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
+              : "text-neutral-300 hover:text-white hover:bg-neutral-900"
+          }`}
+          title="Open Space Chat"
+        >
+          <MessageSquare className="w-3.5 h-3.5 text-cyan-400" />
+          <span>Chat</span>
+        </button>
+
+        {/* Activity Tab (Image 2) */}
+        <button
+          type="button"
+          onClick={onOpenActivityMap}
+          className="px-3 py-1 rounded-xl text-xs font-mono font-bold text-neutral-300 hover:text-white hover:bg-neutral-900 transition-colors flex items-center gap-1.5 cursor-pointer"
+          title="Live Birds-Eye Office Map"
+        >
+          <Zap className="w-3.5 h-3.5 text-amber-400" />
+          <span>Activity</span>
+        </button>
+      </div>
+
       {/* ── 1. BOTTOM-LEFT FLOATING GATHER PILL ── */}
       <div className="fixed bottom-4 left-4 z-40 flex items-center bg-neutral-950/95 backdrop-blur-xl border border-neutral-800 rounded-2xl shadow-2xl p-1.5 gap-2 select-none animate-in fade-in slide-in-from-bottom-2">
         {/* Gather Icon Badge */}
@@ -125,9 +180,9 @@ export default function GatherBottomDock({
           🍇
         </div>
 
-        {/* User Identity Section */}
+        {/* User Identity & Availability Section */}
         <div className="relative flex items-center gap-2 pr-2 border-r border-neutral-800">
-          {/* Avatar Circle with Online Dot */}
+          {/* Avatar Circle with Status Indicator */}
           <div className="relative">
             <div
               className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-inner"
@@ -139,16 +194,16 @@ export default function GatherBottomDock({
             </div>
             <span
               className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-neutral-950 ${
-                localAvatar.statusText === "Do Not Disturb"
+                availability === "busy"
+                  ? "bg-amber-500"
+                  : availability === "away"
                   ? "bg-rose-500"
-                  : localAvatar.statusText === "In a meeting"
-                  ? "bg-amber-400"
                   : "bg-emerald-400"
               }`}
             />
           </div>
 
-          {/* Name & Status */}
+          {/* Name & Availability Pill (Image 5: "Set Your Availability") */}
           <div className="flex flex-col">
             {isEditingName ? (
               <form onSubmit={handleSaveName} className="flex items-center gap-1">
@@ -175,41 +230,112 @@ export default function GatherBottomDock({
               </div>
             )}
 
-            {/* Status Dropdown Trigger */}
+            {/* Availability Trigger (Active, Busy, Away) */}
             <button
               onClick={() => setStatusMenuOpen(!statusMenuOpen)}
               className="text-[10px] font-mono text-neutral-400 hover:text-white flex items-center gap-1 text-left cursor-pointer transition-colors"
             >
-              <span className="truncate max-w-[80px]">
-                {localAvatar.statusText || "Available"}
+              <span className="truncate max-w-[90px]">
+                {availability === "busy"
+                  ? "🎧 Busy"
+                  : availability === "away"
+                  ? "🟠 Away"
+                  : "🟢 Active"}
               </span>
               <ChevronUp className="w-2.5 h-2.5 shrink-0" />
             </button>
           </div>
 
-          {/* Status Picker Menu */}
+          {/* Availability & Deep Focus Popup (Image 5 Modal) */}
           {statusMenuOpen && (
-            <div className="absolute bottom-12 left-0 w-52 bg-neutral-950 border border-neutral-800 rounded-2xl shadow-2xl p-1.5 space-y-1 z-50 animate-in zoom-in-95">
-              <div className="text-[10px] font-mono font-bold uppercase text-neutral-400 px-2 py-1">
-                Set Your Status
-              </div>
-              {STATUS_PRESETS.map((st) => (
+            <div className="absolute bottom-12 left-0 w-64 bg-neutral-950 border border-neutral-800 rounded-3xl shadow-2xl p-3 space-y-3 z-50 animate-in zoom-in-95">
+              <div className="flex items-center justify-between pb-1 border-b border-neutral-800">
+                <span className="text-[10px] font-mono font-bold uppercase text-neutral-400 tracking-wider">
+                  Set Your Availability
+                </span>
                 <button
-                  key={st.label}
-                  onClick={() => handleSelectStatus(st.label)}
-                  className={`w-full px-2.5 py-1.5 rounded-xl text-left text-xs font-mono flex items-center gap-2 transition-colors cursor-pointer ${
-                    localAvatar.statusText === st.label
-                      ? "bg-cyan-950/60 text-cyan-300 font-bold"
-                      : "text-neutral-300 hover:bg-neutral-900 hover:text-white"
+                  onClick={() => setStatusMenuOpen(false)}
+                  className="text-neutral-500 hover:text-white text-xs cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* 3 Availability Buttons (From Image 5) */}
+              <div className="grid grid-cols-3 gap-1.5">
+                <button
+                  onClick={() => handleSelectAvailability("active")}
+                  className={`py-1.5 px-2 rounded-xl text-center text-xs font-mono font-bold transition-all cursor-pointer ${
+                    availability === "active"
+                      ? "bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 shadow-sm"
+                      : "bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white"
                   }`}
                 >
-                  <span>{st.icon}</span>
-                  <div>
-                    <div>{st.label}</div>
-                    <div className="text-[9px] text-neutral-500 font-normal">{st.desc}</div>
-                  </div>
+                  🟢 Active
                 </button>
-              ))}
+
+                <button
+                  onClick={() => handleSelectAvailability("busy")}
+                  className={`py-1.5 px-2 rounded-xl text-center text-xs font-mono font-bold transition-all cursor-pointer ${
+                    availability === "busy"
+                      ? "bg-amber-950/80 border border-amber-500/50 text-amber-300 shadow-sm"
+                      : "bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white"
+                  }`}
+                >
+                  🎧 Busy
+                </button>
+
+                <button
+                  onClick={() => handleSelectAvailability("away")}
+                  className={`py-1.5 px-2 rounded-xl text-center text-xs font-mono font-bold transition-all cursor-pointer ${
+                    availability === "away"
+                      ? "bg-rose-950/80 border border-rose-500/50 text-rose-300 shadow-sm"
+                      : "bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white"
+                  }`}
+                >
+                  🟠 Away
+                </button>
+              </div>
+
+              {/* Focus message tooltip (Image 5: "💡 Deep focus until 12:30") */}
+              {availability === "busy" && (
+                <div className="space-y-1.5 pt-1">
+                  <div className="text-[10px] font-mono text-neutral-400 flex items-center justify-between">
+                    <span>Deep Focus Context:</span>
+                    <Headphones className="w-3 h-3 text-amber-400" />
+                  </div>
+
+                  {isEditingNote ? (
+                    <form onSubmit={handleSaveFocusNote} className="flex items-center gap-1">
+                      <input
+                        type="text"
+                        value={focusNote}
+                        onChange={(e) => setFocusNote(e.target.value)}
+                        className="w-full px-2 py-1 rounded-xl bg-neutral-900 text-xs font-mono text-white border border-amber-400 outline-none"
+                        autoFocus
+                      />
+                      <button
+                        type="submit"
+                        className="p-1 rounded bg-amber-400 text-black text-xs font-bold"
+                      >
+                        ✓
+                      </button>
+                    </form>
+                  ) : (
+                    <div
+                      onClick={() => setIsEditingNote(true)}
+                      className="p-2 rounded-xl bg-black/80 border border-amber-500/30 text-amber-200 text-xs font-mono flex items-center justify-between cursor-pointer hover:border-amber-400 transition-colors"
+                      title="Click to edit focus message"
+                    >
+                      <span className="truncate">💡 {focusNote}</span>
+                      <Edit2 className="w-3 h-3 text-amber-400 shrink-0" />
+                    </div>
+                  )}
+                  <p className="text-[9px] text-neutral-500 font-mono">
+                    Colleagues will see you are focused and proximity audio is whispered.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -273,7 +399,7 @@ export default function GatherBottomDock({
           </button>
         </div>
 
-        {/* Quick Reaction Emote Bar (Gather detail from user photo) */}
+        {/* Quick Reaction Emote Bar */}
         <div className="hidden sm:flex items-center gap-0.5">
           {GATHER_QUICK_EMOTES.map((em) => (
             <button
@@ -342,7 +468,7 @@ export default function GatherBottomDock({
           <MessageSquare className="w-4 h-4" />
         </button>
 
-        {/* Participants Drawer Toggle Button (Shows live participant count: e.g. "👥 75") */}
+        {/* Participants Drawer Toggle Button */}
         <button
           type="button"
           onClick={() => onToggleRightDrawer("participants")}

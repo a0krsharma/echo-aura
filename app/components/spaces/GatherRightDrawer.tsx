@@ -51,6 +51,8 @@ interface GatherRightDrawerProps {
   onSendMessage: (text: string) => void;
   onFollowAvatar?: (target: SpatialAvatar) => void;
   onLocateAvatar?: (target: SpatialAvatar) => void;
+  onWaveAvatar?: (target: SpatialAvatar) => void;
+  onDirectMessageAvatar?: (target: SpatialAvatar) => void;
 }
 
 const QUICK_EMOJIS = ["👋", "👍", "❤️", "😂", "🎉", "🔥", "☕", "👏"];
@@ -67,6 +69,8 @@ export default function GatherRightDrawer({
   onSendMessage,
   onFollowAvatar,
   onLocateAvatar,
+  onWaveAvatar,
+  onDirectMessageAvatar,
 }: GatherRightDrawerProps) {
   const [chatInput, setChatInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -386,6 +390,24 @@ export default function GatherRightDrawer({
                       </div>
 
                       <div className="flex items-center gap-1">
+                        {onWaveAvatar && (
+                          <button
+                            onClick={() => onWaveAvatar(avatar)}
+                            className="p-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-400 hover:text-black text-amber-300 text-[10px] font-mono transition-colors cursor-pointer"
+                            title="Wave Them Over [Image 4]"
+                          >
+                            👋
+                          </button>
+                        )}
+                        {onDirectMessageAvatar && (
+                          <button
+                            onClick={() => onDirectMessageAvatar(avatar)}
+                            className="p-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-[10px] font-mono transition-colors cursor-pointer"
+                            title="Start Direct Chat & Video"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5 text-cyan-400" />
+                          </button>
+                        )}
                         {onFollowAvatar && (
                           <button
                             onClick={() => onFollowAvatar(avatar)}
@@ -430,8 +452,9 @@ export default function GatherRightDrawer({
                         {avatar.handle.charAt(1) || "P"}
                       </div>
                       <div>
-                        <div className="text-xs font-mono text-white font-medium">
-                          {avatar.handle}
+                        <div className="text-xs font-mono text-white font-medium flex items-center gap-1.5">
+                          <span>{avatar.handle}</span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                         </div>
                         <div className="text-[10px] font-mono text-neutral-500">
                           {avatar.activeZone}
@@ -440,6 +463,24 @@ export default function GatherRightDrawer({
                     </div>
 
                     <div className="flex items-center gap-1">
+                      {onWaveAvatar && (
+                        <button
+                          onClick={() => onWaveAvatar(avatar)}
+                          className="p-1 text-xs hover:scale-125 transition-transform cursor-pointer"
+                          title="Wave"
+                        >
+                          👋
+                        </button>
+                      )}
+                      {onDirectMessageAvatar && (
+                        <button
+                          onClick={() => onDirectMessageAvatar(avatar)}
+                          className="p-1 text-neutral-400 hover:text-cyan-400 cursor-pointer"
+                          title="Direct Chat"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                       {onLocateAvatar && (
                         <button
                           onClick={() => onLocateAvatar(avatar)}
