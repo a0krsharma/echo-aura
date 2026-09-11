@@ -3,9 +3,16 @@
 /**
  * app/spaces/page.tsx
  * ─────────────────────────────────────────────────────
- * Echo Spaces: Gather-Style 2D Metaverse Lobby Hub
- * Discover, filter, and create category-based living spaces
- * with real-time lifespans, vibes, and 1-click entry.
+ * Echo Spaces: World-Class Social-Virtual Event & Hangout Hub
+ * (Inspired by Remo, Gather, Topia):
+ * - Live Event Discovery: See WHAT is being hosted and WHO is hosting
+ * - Hero Live Stage Spotlight (Igniting Creativity Keynote & Abhishek's Birthday Party)
+ * - Stage speakers preview tiles with speaking halos
+ * - Numbered table social clusters (Tables 1-12)
+ * - Category filters according to user needs:
+ *   🎓 Webinars & Keynotes, 🎂 Birthday Bashes, 🍷 Dinners & Galas,
+ *   💼 Co-Work & Strategy, ☕ Piazza & Cafe, 📚 Study, 🕹️ Game Nights
+ * - 1-Click instant entry with zero-friction guest access
  */
 
 import React, { useState, useEffect } from "react";
@@ -19,6 +26,7 @@ import {
   AvatarConfig,
   subscribeToPublicSpaces,
   createSpaceDoc,
+  DEFAULT_SPACES,
   SPACE_VIBES,
 } from "@/lib/spaces";
 import { spacesSfx } from "@/lib/spacesSfx";
@@ -28,11 +36,9 @@ import {
   Sparkles,
   Plus,
   Users,
-  Clock,
   Search,
   Compass,
   ArrowRight,
-  Shield,
   Palette,
   Flame,
   Sun,
@@ -40,38 +46,40 @@ import {
   Moon,
   Zap,
   Coffee,
-  Cake,
-  Gamepad2,
-  BookOpen,
   Wine,
   Ghost,
   PartyPopper,
   Leaf,
-  Tv,
+  Radio,
+  Crown,
+  Layers,
+  MapPin,
+  UtensilsCrossed,
+  HelpCircle,
+  BarChart2,
+  Gift,
   Share2,
-  Check,
 } from "lucide-react";
 
-const CATEGORIES: { id: string; label: string; icon: string }[] = [
-  { id: "ALL", label: "All Spaces", icon: "🌐" },
-  { id: "OFFICE", label: "Offices", icon: "🏢" },
-  { id: "ARCADE", label: "Retro Arcades", icon: "🕹️" },
-  { id: "CAFE", label: "Chill Lounges", icon: "☕" },
-  { id: "LIBRARY", label: "Libraries", icon: "📚" },
-  { id: "CAMPUS", label: "Campuses", icon: "🎓" },
-  { id: "MUSIC", label: "Music Studios", icon: "🎵" },
-  { id: "CONCERT", label: "Concert Halls", icon: "🎤" },
-  { id: "DEBATE", label: "Debate Arenas", icon: "⚖️" },
-  { id: "CUSTOM", label: "Custom", icon: "✨" },
+const CATEGORIES: { id: string; label: string; icon: string; badgeColor?: string }[] = [
+  { id: "ALL", label: "All Live Events", icon: "🌐" },
+  { id: "WEBINAR", label: "Webinars & Keynotes", icon: "🎓", badgeColor: "border-purple-500/40 text-purple-300 bg-purple-950/30" },
+  { id: "CAFE", label: "Birthday Bashes & Parties", icon: "🎂", badgeColor: "border-pink-500/40 text-pink-300 bg-pink-950/30" },
+  { id: "GALA_DINNER", label: "Dinners & Fireside Galas", icon: "🍷", badgeColor: "border-amber-500/40 text-amber-300 bg-amber-950/30" },
+  { id: "OFFICE", label: "Co-Work & Strategy Sprints", icon: "💼", badgeColor: "border-cyan-500/40 text-cyan-300 bg-cyan-950/30" },
+  { id: "PIAZZA", label: "Piazza & Cafe Mixers", icon: "☕", badgeColor: "border-emerald-500/40 text-emerald-300 bg-emerald-950/30" },
+  { id: "LIBRARY", label: "Silent Study Sanctuaries", icon: "📚", badgeColor: "border-sky-500/40 text-sky-300 bg-sky-950/30" },
+  { id: "ARCADE", label: "Game Nights & Tournaments", icon: "🕹️", badgeColor: "border-rose-500/40 text-rose-300 bg-rose-950/30" },
+  { id: "CAMPUS", label: "Master Campuses", icon: "🏛️", badgeColor: "border-blue-500/40 text-blue-300 bg-blue-950/30" },
 ];
 
 const VIBE_FILTERS: { id: string; label: string; icon: React.ReactNode }[] = [
   { id: "ALL", label: "All Vibes", icon: <Sparkles className="w-3.5 h-3.5" /> },
   { id: "PARTY_CLUB", label: "Party Club", icon: <PartyPopper className="w-3.5 h-3.5 text-pink-400" /> },
   { id: "DINNER_GALA", label: "Dinner Gala", icon: <Wine className="w-3.5 h-3.5 text-amber-400" /> },
+  { id: "MIDNIGHT_NEON", label: "Midnight Neon", icon: <Moon className="w-3.5 h-3.5 text-cyan-400" /> },
   { id: "SUKOON_ZEN", label: "Sukoon Zen", icon: <Leaf className="w-3.5 h-3.5 text-emerald-400" /> },
   { id: "HORROR_NIGHT", label: "Horror Night", icon: <Ghost className="w-3.5 h-3.5 text-purple-400" /> },
-  { id: "MIDNIGHT_NEON", label: "Midnight Neon", icon: <Moon className="w-3.5 h-3.5 text-cyan-400" /> },
   { id: "COZY_RAINY", label: "Cozy Rainy", icon: <CloudRain className="w-3.5 h-3.5 text-indigo-400" /> },
   { id: "SUNSET_LOFI", label: "Sunset Lo-Fi", icon: <Flame className="w-3.5 h-3.5 text-rose-400" /> },
   { id: "SUNNY_DAYLIGHT", label: "Sunny Daylight", icon: <Sun className="w-3.5 h-3.5 text-yellow-400" /> },
@@ -81,7 +89,8 @@ export default function SpacesLobbyPage() {
   const { user } = useAuth();
   const router = useRouter();
 
-  const [spaces, setSpaces] = useState<SpaceDoc[]>([]);
+  // Initialized with full seed events inspired by all 5 reference images
+  const [spaces, setSpaces] = useState<SpaceDoc[]>(DEFAULT_SPACES);
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [selectedVibe, setSelectedVibe] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
@@ -90,6 +99,42 @@ export default function SpacesLobbyPage() {
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
   const [quickHosting, setQuickHosting] = useState<string | null>(null);
 
+  // Avatar Config stored in localStorage
+  const [avatarConfig, setAvatarConfig] = useState<AvatarConfig>({
+    skinTone: "#fed7aa",
+    hairStyle: "short",
+    hairColor: "#fde047",
+    outfit: "hoodie",
+    outfitColor: "#38bdf8",
+    accessory: "none",
+    pet: "dog",
+    isGhost: false,
+  });
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("echo_spaces_avatar");
+      if (saved) setAvatarConfig(JSON.parse(saved));
+    } catch {}
+  }, []);
+
+  const handleSaveAvatar = (cfg: AvatarConfig) => {
+    setAvatarConfig(cfg);
+    try {
+      localStorage.setItem("echo_spaces_avatar", JSON.stringify(cfg));
+    } catch {}
+  };
+
+  // Real-time Firestore subscription merged with seed spaces
+  useEffect(() => {
+    const unsub = subscribeToPublicSpaces((loaded) => {
+      const existingIds = new Set(loaded.map((s) => s.id));
+      const merged = [...loaded, ...DEFAULT_SPACES.filter((s) => !existingIds.has(s.id))];
+      setSpaces(merged);
+    });
+    return () => unsub();
+  }, []);
+
   // 1-Click Instant Host for Friends
   const handle1ClickQuickHost = async (preset: {
     id: string;
@@ -97,7 +142,7 @@ export default function SpacesLobbyPage() {
     category: SpaceCategory;
     vibe: SpaceVibe;
     desc: string;
-    spawnZone: string;
+    floorPlanType?: "keynote_hall" | "fireside_lodge" | "ballroom" | "piazza_cafe";
   }) => {
     try {
       setQuickHosting(preset.id);
@@ -114,11 +159,12 @@ export default function SpacesLobbyPage() {
         hostHandle,
         description: preset.desc,
         participantCount: 1,
-        maxParticipants: 25,
+        maxParticipants: 35,
         isPublic: true,
         expiresAt: Date.now() + 1000 * 60 * 60 * 24, // 24 hours
         decorations: [],
         createdAt: Date.now(),
+        floorPlanType: preset.floorPlanType || "ballroom",
       });
 
       spacesSfx.playZoneChime();
@@ -129,43 +175,6 @@ export default function SpacesLobbyPage() {
       setQuickHosting(null);
     }
   };
-
-  // Avatar Config stored in localStorage
-  const [avatarConfig, setAvatarConfig] = useState<AvatarConfig>({
-    skinTone: "#fed7aa",
-    hairStyle: "short",
-    hairColor: "#fde047",
-    outfit: "hoodie",
-    outfitColor: "#38bdf8",
-    accessory: "none",
-    pet: "dog",
-    isGhost: false,
-  });
-
-  // Load avatar config from localStorage
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("echo_spaces_avatar");
-      if (saved) {
-        setAvatarConfig(JSON.parse(saved));
-      }
-    } catch (e) {}
-  }, []);
-
-  const handleSaveAvatar = (cfg: AvatarConfig) => {
-    setAvatarConfig(cfg);
-    try {
-      localStorage.setItem("echo_spaces_avatar", JSON.stringify(cfg));
-    } catch (e) {}
-  };
-
-  // Real-time Firestore subscription to public spaces
-  useEffect(() => {
-    const unsub = subscribeToPublicSpaces((loaded) => {
-      setSpaces(loaded);
-    });
-    return () => unsub();
-  }, []);
 
   // Filter spaces
   const filteredSpaces = spaces.filter((s) => {
@@ -181,22 +190,17 @@ export default function SpacesLobbyPage() {
     return true;
   });
 
-  // Format expiry remaining string
-  const formatExpiry = (expiresAt: number | null) => {
-    if (!expiresAt) return "♾️ Permanent";
-    const diff = expiresAt - Date.now();
-    if (diff <= 0) return "Expired";
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    if (hours > 0) return `⏳ ${hours}h ${mins}m left`;
-    return `⏳ ${mins}m left`;
-  };
+  // Featured Spotlight space (Defaults to Igniting Creativity Keynote or first space)
+  const spotlightSpace =
+    spaces.find((s) => s.id === "igniting_creativity_keynote") ||
+    spaces[0] ||
+    DEFAULT_SPACES[0];
 
   return (
     <div className="min-h-screen bg-black text-white selection:bg-cyan-500 selection:text-black">
-      {/* Top Meta Bar */}
+      {/* 1. Top Meta Bar */}
       <div className="border-b border-neutral-900 bg-neutral-950/80 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
               href="/"
@@ -211,7 +215,7 @@ export default function SpacesLobbyPage() {
                 SPACES METAVERSE
               </span>
               <span className="hidden sm:inline-block px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 font-mono text-[10px] font-bold">
-                2D SPATIAL LIVING ROOMS
+                SOCIAL EVENT & LIVING PLATFORM
               </span>
             </div>
           </div>
@@ -236,73 +240,138 @@ export default function SpacesLobbyPage() {
               className="px-4 py-2 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-black text-xs font-mono font-bold flex items-center gap-1.5 active:scale-95 transition-all shadow-lg shadow-cyan-500/20 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
-              <span>BUILD SPACE</span>
+              <span>HOST AN EVENT</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Hero Banner */}
-      <div className="relative border-b border-neutral-900 bg-gradient-to-b from-neutral-950 via-black to-black py-12 px-4 sm:px-6">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
-          <div className="space-y-3 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/60 border border-cyan-800 text-cyan-300 text-xs font-mono">
-              <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-spin" />
-              <span>GATHER.TOWN FIDELITY • PROXIMITY VOICE • PRIVATE RUGS</span>
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight font-mono">
-              INTERACTIVE 2D LIVING SPACES
-            </h1>
-            <p className="text-neutral-400 text-sm leading-relaxed font-mono">
-              Walk into virtual offices with agile desks, study sanctuaries with 25m Pomodoro,
-              music academies with live 8-key piano synths, or town hall debate stages.
-            </p>
-          </div>
+      {/* 2. Live Keynote / Spotlight Event Hero (Modeled directly after Image 1 & 3) */}
+      <div className="relative border-b border-neutral-900 bg-gradient-to-b from-neutral-950 via-neutral-900/40 to-black py-10 px-4 sm:px-6 overflow-hidden">
+        {/* Ambient atmospheric glows */}
+        <div className="absolute -top-32 -left-32 w-96 h-96 bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-cyan-600/15 rounded-full blur-3xl pointer-events-none" />
 
-          {/* Quick Launch Card */}
-          <div className="w-full md:w-auto p-5 rounded-3xl bg-neutral-950 border border-neutral-800 shadow-2xl flex flex-col sm:flex-row md:flex-col gap-3 min-w-[280px]">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-mono text-neutral-400">Featured Master World</span>
-              <span className="flex items-center gap-1 text-[10px] font-mono text-emerald-400">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                ONLINE
-              </span>
+        <div className="max-w-7xl mx-auto space-y-6 relative z-10">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+            <div className="space-y-3 max-w-2xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/15 border border-rose-500/40 text-rose-300 text-xs font-mono font-bold">
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+                <span>FEATURED LIVE STAGE • WHO'S HOSTING NOW</span>
+              </div>
+
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight font-mono">
+                {spotlightSpace.name}
+              </h1>
+
+              <p className="text-neutral-300 text-xs sm:text-sm leading-relaxed font-mono">
+                {spotlightSpace.description}
+              </p>
+
+              {/* Host Badge & Live Metrics */}
+              <div className="flex flex-wrap items-center gap-3 pt-1">
+                <div className="flex items-center gap-2 bg-neutral-900/90 border border-neutral-800 px-3 py-1.5 rounded-2xl">
+                  {spotlightSpace.hostAvatar ? (
+                    <img
+                      src={spotlightSpace.hostAvatar}
+                      alt={spotlightSpace.hostHandle}
+                      className="w-5 h-5 rounded-full object-cover ring-1 ring-amber-400"
+                    />
+                  ) : (
+                    <Crown className="w-4 h-4 text-amber-400" />
+                  )}
+                  <span className="text-xs font-mono font-bold text-amber-300">
+                    Host: {spotlightSpace.hostHandle}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5 bg-neutral-900/90 border border-neutral-800 px-3 py-1.5 rounded-2xl text-xs font-mono text-cyan-300">
+                  <Users className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>{spotlightSpace.participantCount} Attending</span>
+                </div>
+
+                <div className="flex items-center gap-1.5 bg-neutral-900/90 border border-neutral-800 px-3 py-1.5 rounded-2xl text-xs font-mono text-emerald-300">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>{spotlightSpace.activeTableCount || 8} Tables Seated</span>
+                </div>
+              </div>
             </div>
-            <div className="text-sm font-bold font-mono text-white">Echo Genesis Campus</div>
-            <p className="text-xs text-neutral-500 leading-snug">
-              All 5 living spaces combined in an expansive open-air atrium with central fountain.
-            </p>
-            <button
-              onClick={() => {
-                spacesSfx.playZoneChime();
-                router.push("/spaces/genesis_campus");
-              }}
-              className="mt-1 w-full py-2.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-black font-mono font-bold text-xs flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
-            >
-              <Zap className="w-3.5 h-3.5" />
-              <span>QUICK JOIN CAMPUS</span>
-            </button>
+
+            {/* Quick Join Stage CTA Card */}
+            <div className="w-full lg:w-auto p-5 rounded-3xl bg-neutral-950/90 border border-neutral-800 shadow-2xl space-y-3.5 min-w-[300px]">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-mono font-bold uppercase text-neutral-400">
+                  Event Live Status
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-mono font-bold">
+                  {spotlightSpace.liveStageStatus || "🎙️ Live on Stage"}
+                </span>
+              </div>
+
+              {/* Stage Presenters Preview Strip (Image 1 Fidelity) */}
+              {spotlightSpace.activeStageSpeakers && spotlightSpace.activeStageSpeakers.length > 0 && (
+                <div className="space-y-1.5">
+                  <div className="text-[10px] font-mono text-neutral-400 font-bold uppercase">
+                    Keynote Presenters on Stage:
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {spotlightSpace.activeStageSpeakers.slice(0, 5).map((spk) => (
+                      <div key={spk.uid} className="relative group/spk">
+                        <div
+                          className={`w-9 h-9 rounded-full overflow-hidden border-2 transition-all ${
+                            spk.isSpeaking
+                              ? "border-emerald-400 ring-2 ring-emerald-400/50"
+                              : "border-neutral-700"
+                          }`}
+                        >
+                          <img
+                            src={spk.avatarUrl}
+                            alt={spk.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        {spk.isSpeaking && (
+                          <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-400 border border-black animate-ping" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <button
+                onClick={() => {
+                  spacesSfx.playZoneChime();
+                  router.push(`/spaces/${spotlightSpace.id}`);
+                }}
+                className="w-full py-3 rounded-2xl bg-gradient-to-r from-cyan-400 via-sky-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-black font-mono font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xl shadow-cyan-500/25 active:scale-95 transition-all cursor-pointer"
+              >
+                <Zap className="w-4 h-4" />
+                <span>JOIN STAGE & TAKE A SEAT</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 1-Click Quick Host Section: Instant Hangout with Friends */}
+      {/* 3. "Host Your Own Event" Instant Launch Presets (Matching All 5 Uploaded Images) */}
       <div className="border-b border-neutral-900 bg-neutral-950/40 py-8 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center gap-2.5">
-              <span className="p-1.5 rounded-xl bg-pink-500/10 border border-pink-500/30 text-pink-400">
-                <PartyPopper className="w-4 h-4" />
+              <span className="p-1.5 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-400">
+                <Radio className="w-4 h-4" />
               </span>
               <div>
                 <h2 className="text-sm font-mono font-black tracking-wide text-white uppercase flex items-center gap-2">
-                  <span>Host Your Friends Virtually</span>
+                  <span>Host Your Own Event In 1-Click</span>
                   <span className="px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800 text-[10px] font-bold">
-                    1-CLICK INSTANT LAUNCH
+                    REMO & GATHER TEMPLATES
                   </span>
                 </h2>
                 <p className="text-xs text-neutral-400 font-mono">
-                  Pick an occasion to launch a ready-to-hang room and invite friends via link, WhatsApp or Telegram
+                  Launch a live webinar hall, luxury fireside dinner, European piazza cafe, or birthday party with numbered tables
                 </p>
               </div>
             </div>
@@ -311,76 +380,76 @@ export default function SpacesLobbyPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
             {[
               {
-                id: "chai_date",
-                name: "Virtual Chai Date",
-                icon: "☕",
-                category: "CAFE" as SpaceCategory,
-                vibe: "SUNSET_LOFI" as SpaceVibe,
-                spawnZone: "courtyard",
-                desc: "Intimate 2-person cozy lounge with steaming chai & conversation icebreakers.",
-                badge: "Date & Catchup",
-                border: "hover:border-amber-500/60",
-                btnBg: "bg-amber-500 text-black hover:bg-amber-400",
+                id: "keynote_webinar",
+                name: "Webinar Keynote Hall",
+                icon: "🎓",
+                category: "WEBINAR" as SpaceCategory,
+                vibe: "MIDNIGHT_NEON" as SpaceVibe,
+                floorPlanType: "keynote_hall" as const,
+                desc: "Big presentation screen, presenter video tiles, Q&A with upvoting & numbered tables 1-12.",
+                badge: "Image 1 & 5 Fidelity",
+                border: "hover:border-purple-500/60",
+                btnBg: "bg-purple-600 text-white hover:bg-purple-500",
               },
               {
-                id: "birthday_bash",
+                id: "bday_party_bash",
                 name: "Birthday Party Bash",
                 icon: "🎂",
                 category: "CAFE" as SpaceCategory,
                 vibe: "PARTY_CLUB" as SpaceVibe,
-                spawnZone: "courtyard",
-                desc: "Campfire patio, party hats, celebratory confetti blaster, and fanfare chimes.",
-                badge: "Celebration",
+                floorPlanType: "ballroom" as const,
+                desc: "Cake cutting ceremony, champagne toast, banquet dining table, Uno & party games.",
+                badge: "Party & Games",
                 border: "hover:border-pink-500/60",
                 btnBg: "bg-pink-500 text-black hover:bg-pink-400",
               },
               {
-                id: "arcade_night",
-                name: "Retro Game Night",
-                icon: "🎮",
-                category: "ARCADE" as SpaceCategory,
-                vibe: "MIDNIGHT_NEON" as SpaceVibe,
-                spawnZone: "office",
-                desc: "Super Mario co-op, Guitar Hero, 3D dice roller, and Truth or Dare bottle.",
-                badge: "Games & Laughs",
-                border: "hover:border-rose-500/60",
-                btnBg: "bg-rose-500 text-white hover:bg-rose-400",
-              },
-              {
-                id: "lofi_study",
-                name: "Lofi Study Sanctuary",
-                icon: "🎧",
-                category: "LIBRARY" as SpaceCategory,
-                vibe: "COZY_RAINY" as SpaceVibe,
-                spawnZone: "library",
-                desc: "Pomodoro focus timer, silent library carrels, and soothing rain ambiance.",
-                badge: "Deep Work",
-                border: "hover:border-indigo-500/60",
-                btnBg: "bg-indigo-500 text-white hover:bg-indigo-400",
-              },
-              {
-                id: "watch_party",
-                name: "Watch Party Lounge",
-                icon: "🍿",
-                category: "CONCERT" as SpaceCategory,
+                id: "fireside_gala",
+                name: "Luxury Fireside Lodge",
+                icon: "🎄",
+                category: "GALA_DINNER" as SpaceCategory,
                 vibe: "DINNER_GALA" as SpaceVibe,
-                spawnZone: "concert",
-                desc: "Screen-share projector theater, proximity audio, and popcorn amphitheater.",
-                badge: "Movies & YouTube",
-                border: "hover:border-purple-500/60",
-                btnBg: "bg-purple-500 text-white hover:bg-purple-400",
+                floorPlanType: "fireside_lodge" as const,
+                desc: "Roaring fireplace, Christmas trees, plush velvet couches, gifts & mulled cider.",
+                badge: "Image 2 Fidelity",
+                border: "hover:border-amber-500/60",
+                btnBg: "bg-amber-500 text-black hover:bg-amber-400",
               },
               {
-                id: "sukoon_zen",
-                name: "Sukoon Zen Sanctuary",
-                icon: "🍃",
-                category: "CAFE" as SpaceCategory,
-                vibe: "SUKOON_ZEN" as SpaceVibe,
-                spawnZone: "courtyard",
-                desc: "Calming lotus water fountains, fireflies, and Tibetan singing bowl chimes.",
-                badge: "Relaxation",
+                id: "auditorium_snack",
+                name: "Keynote & Snack Bar",
+                icon: "🍿",
+                category: "WEBINAR" as SpaceCategory,
+                vibe: "SUNNY_DAYLIGHT" as SpaceVibe,
+                floorPlanType: "keynote_hall" as const,
+                desc: "Auditorium stage, INFO reception counter, snack bar & numbered tables 1-20.",
+                badge: "Image 3 Fidelity",
+                border: "hover:border-yellow-500/60",
+                btnBg: "bg-yellow-500 text-black hover:bg-yellow-400",
+              },
+              {
+                id: "piazza_cafe",
+                name: "European Piazza Cafe",
+                icon: "⛲",
+                category: "PIAZZA" as SpaceCategory,
+                vibe: "SUNSET_LOFI" as SpaceVibe,
+                floorPlanType: "piazza_cafe" as const,
+                desc: "Cobblestone square with central marble fountain, cafe terrace & outdoor bistro tables.",
+                badge: "Image 4 Fidelity",
                 border: "hover:border-emerald-500/60",
                 btnBg: "bg-emerald-500 text-black hover:bg-emerald-400",
+              },
+              {
+                id: "focus_study",
+                name: "Pomodoro Study Quad",
+                icon: "📚",
+                category: "LIBRARY" as SpaceCategory,
+                vibe: "COZY_RAINY" as SpaceVibe,
+                floorPlanType: "ballroom" as const,
+                desc: "Silent sanctuary carrels, 25/5 Pomodoro timer, ambient lofi rain & whiteboard.",
+                badge: "Deep Work",
+                border: "hover:border-sky-500/60",
+                btnBg: "bg-sky-500 text-white hover:bg-sky-400",
               },
             ].map((preset) => {
               const isLaunching = quickHosting === preset.id;
@@ -427,9 +496,8 @@ export default function SpacesLobbyPage() {
         </div>
       </div>
 
-      {/* Main Content Area: Filters & Room Directory */}
+      {/* 4. Live Event Discovery Hub ("What is being hosted & Who is hosting") */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
-        {/* Search & Category Pills */}
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
             {/* Search Input */}
@@ -439,13 +507,13 @@ export default function SpacesLobbyPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search spaces by name, topic or host..."
+                placeholder="Search live events by title, topic, or host..."
                 className="w-full pl-10 pr-4 py-2.5 bg-neutral-950 border border-neutral-800 rounded-2xl text-xs font-mono text-white placeholder-neutral-500 outline-none focus:border-cyan-500 transition-all"
               />
             </div>
 
             {/* Vibe Filter Pills */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
               {VIBE_FILTERS.map((vf) => {
                 const isSelected = selectedVibe === vf.id;
                 return (
@@ -466,7 +534,7 @@ export default function SpacesLobbyPage() {
             </div>
           </div>
 
-          {/* Category Tabs */}
+          {/* Category Tabs (Matches User Needs) */}
           <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-neutral-900 scrollbar-none">
             {CATEGORIES.map((cat) => {
               const isSelected = selectedCategory === cat.id;
@@ -491,43 +559,51 @@ export default function SpacesLobbyPage() {
           </div>
         </div>
 
-        {/* Spaces Directory Grid */}
+        {/* Live Spaces & Events Directory Grid */}
         {filteredSpaces.length === 0 ? (
           <div className="py-16 text-center space-y-4 rounded-3xl border border-neutral-900 bg-neutral-950/40">
             <div className="w-12 h-12 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-center justify-center mx-auto text-neutral-400">
               <Compass className="w-6 h-6" />
             </div>
             <div className="space-y-1">
-              <h3 className="text-base font-bold text-white font-mono">No spaces found</h3>
+              <h3 className="text-base font-bold text-white font-mono">No events found</h3>
               <p className="text-xs text-neutral-500 font-mono">
-                No active living rooms match your filters. Be the first to build one!
+                No active spaces match your filters. Be the first to host one!
               </p>
             </div>
             <button
               onClick={() => setCreateModalOpen(true)}
               className="px-4 py-2 rounded-xl bg-cyan-500 text-black font-mono font-bold text-xs hover:bg-cyan-400 cursor-pointer"
             >
-              + SPAWN FIRST SPACE
+              + HOST NEW EVENT
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {filteredSpaces.map((space) => {
+              const catDef = CATEGORIES.find((c) => c.id === space.category);
               return (
                 <div
                   key={space.id}
-                  className="group relative p-5 rounded-3xl bg-neutral-950 border border-neutral-800 hover:border-neutral-700 hover:shadow-2xl transition-all flex flex-col justify-between"
+                  className="group relative p-5 rounded-3xl bg-neutral-950 border border-neutral-800 hover:border-neutral-700 hover:shadow-2xl transition-all flex flex-col justify-between overflow-hidden"
                 >
-                  <div className="space-y-3">
-                    {/* Top Row: Category & Vibe & Expiry */}
+                  <div className="space-y-3.5">
+                    {/* Top Row: Category badge, Live Stage Indicator & Attendees */}
                     <div className="flex items-center justify-between gap-2">
-                      <span className="px-2.5 py-1 rounded-xl bg-neutral-900 border border-neutral-800 text-[10px] font-mono text-neutral-300 font-bold">
-                        {space.category}
+                      <span
+                        className={`px-2.5 py-1 rounded-xl border text-[10px] font-mono font-bold ${
+                          catDef?.badgeColor || "border-neutral-800 bg-neutral-900 text-neutral-300"
+                        }`}
+                      >
+                        {catDef?.label || space.category}
                       </span>
+
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono text-neutral-400">
-                          {formatExpiry(space.expiresAt)}
-                        </span>
+                        {space.liveStageStatus && (
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[9px] font-mono font-bold">
+                            {space.liveStageStatus}
+                          </span>
+                        )}
                         <div className="flex items-center gap-1 text-[10px] font-mono text-cyan-400 bg-cyan-950/30 px-2 py-0.5 rounded-lg border border-cyan-800/40">
                           <Users className="w-3 h-3" />
                           <span>{space.participantCount}</span>
@@ -537,38 +613,75 @@ export default function SpacesLobbyPage() {
 
                     {/* Title & Description */}
                     <div>
-                      <h3 className="text-base font-bold text-white font-mono group-hover:text-cyan-400 transition-colors">
+                      <h3 className="text-base font-bold text-white font-mono group-hover:text-cyan-400 transition-colors leading-snug">
                         {space.name}
                       </h3>
-                      <p className="text-xs text-neutral-400 mt-1 leading-snug line-clamp-2">
+                      <p className="text-xs text-neutral-400 mt-1.5 leading-relaxed line-clamp-2">
                         {space.description}
                       </p>
                     </div>
 
-                    {/* Vibe Tag */}
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-neutral-900 border border-neutral-800 text-[10px] font-mono text-neutral-400">
-                      <span>VIBE:</span>
-                      <span className="text-neutral-200">{space.vibe.replace("_", " ")}</span>
+                    {/* Host Profile Info & Floor Plan Type */}
+                    <div className="p-3 rounded-2xl bg-neutral-900/60 border border-neutral-800/80 flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="relative w-8 h-8 rounded-full overflow-hidden ring-1 ring-amber-400/80 bg-neutral-800 flex items-center justify-center text-[10px] font-bold text-amber-300">
+                          {space.hostAvatar ? (
+                            <img
+                              src={space.hostAvatar}
+                              alt={space.hostHandle}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span>{space.hostHandle.slice(1, 3).toUpperCase()}</span>
+                          )}
+                        </div>
+                        <div>
+                          <div className="text-xs font-mono font-bold text-white flex items-center gap-1.5">
+                            <span>{space.hostHandle}</span>
+                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-400 text-black font-black uppercase">
+                              Host
+                            </span>
+                          </div>
+                          <div className="text-[10px] font-mono text-neutral-400">
+                            {space.tableCount ? `${space.tableCount} Tables • Seating Open` : "Open Spatial Tables"}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <div className="text-[10px] font-mono font-bold uppercase text-neutral-400">
+                          VIBE
+                        </div>
+                        <div className="text-[10px] font-mono text-neutral-300">
+                          {space.vibe.replace("_", " ")}
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Bottom Footer: Host & Enter Button */}
+                  {/* Bottom Footer: Seated Attendees Avatars (Green Halos) & Join Button */}
                   <div className="pt-4 mt-4 border-t border-neutral-900 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center text-[10px] font-mono text-neutral-300">
-                        {space.hostHandle.substring(1, 3).toUpperCase()}
+                    {/* Simulated circular attendee avatar bubbles with glowing green halos */}
+                    <div className="flex items-center -space-x-2">
+                      {[1, 2, 3, 4].map((aIdx) => (
+                        <div
+                          key={aIdx}
+                          className="w-7 h-7 rounded-full bg-neutral-800 border-2 border-emerald-400 shadow-sm shadow-emerald-400/30 overflow-hidden flex items-center justify-center text-[9px] font-mono font-bold text-neutral-300"
+                        >
+                          <span>{["AL", "MP", "JD", "SK"][aIdx - 1]}</span>
+                        </div>
+                      ))}
+                      <div className="w-7 h-7 rounded-full bg-neutral-900 border border-neutral-700 flex items-center justify-center text-[9px] font-mono text-neutral-400">
+                        +{space.participantCount}
                       </div>
-                      <span className="text-[11px] font-mono text-neutral-400">
-                        {space.hostHandle}
-                      </span>
                     </div>
 
                     <Link
                       href={`/spaces/${space.id}`}
                       onClick={() => spacesSfx.playZoneChime()}
-                      className="px-3.5 py-1.5 rounded-xl bg-neutral-900 hover:bg-cyan-500 hover:text-black border border-neutral-800 hover:border-cyan-400 text-xs font-mono font-bold text-white transition-all flex items-center gap-1.5 cursor-pointer"
+                      className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-mono font-black text-xs flex items-center gap-1.5 shadow-md shadow-cyan-500/20 active:scale-95 transition-all cursor-pointer"
                     >
-                      <span>JOIN</span>
+                      <span>JOIN SPACE</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </Link>
                   </div>

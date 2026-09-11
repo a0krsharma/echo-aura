@@ -33,7 +33,57 @@ export type SpaceCategory =
   | "CAMPUS"
   | "ARCADE"
   | "CAFE"
+  | "WEBINAR"
+  | "GALA_DINNER"
+  | "PIAZZA"
   | "CUSTOM";
+
+export interface StageSpeaker {
+  uid: string;
+  name: string;
+  roleTitle?: string;
+  avatarUrl?: string;
+  isSpeaking?: boolean;
+  isPresenting?: boolean;
+  screenShareActive?: boolean;
+}
+
+export interface EventQAQuestion {
+  id: string;
+  authorName: string;
+  authorAvatar?: string;
+  text: string;
+  upvotes: number;
+  hasUpvoted?: boolean;
+  timestamp: number;
+  isAnswered?: boolean;
+}
+
+export interface EventPollOption {
+  id: string;
+  text: string;
+  votes: number;
+}
+
+export interface EventPoll {
+  id: string;
+  question: string;
+  options: EventPollOption[];
+  totalVotes: number;
+  userVotedId?: string;
+  isClosed?: boolean;
+}
+
+export interface NumberedTable {
+  id: string;
+  number: number;
+  label: string;
+  x: number;
+  y: number;
+  radius: number;
+  capacity: number;
+  seatedHandles: string[];
+}
 
 export type SpaceVibe =
   | "MIDNIGHT_NEON"
@@ -286,6 +336,13 @@ export interface SpaceDoc {
   decorations?: CustomDecoration[];
   addons?: string[];
   purposeTags?: string[];
+  floorPlanType?: "keynote_hall" | "fireside_lodge" | "ballroom" | "piazza_cafe" | "campus" | "rooftop";
+  liveStageStatus?: string;
+  activeStageSpeakers?: StageSpeaker[];
+  featuredBadge?: string;
+  tableCount?: number;
+  activeTableCount?: number;
+  coverImage?: string;
 }
 
 // ── WORLD MAP DIMENSIONS ──
@@ -860,6 +917,113 @@ export function getNearbyInteractiveObject(
 
 // ── DEFAULT SEED SPACES ──
 export const DEFAULT_SPACES: SpaceDoc[] = [
+  {
+    id: "igniting_creativity_keynote",
+    name: "Igniting Creativity: The Spark of Imagination",
+    description: "Live keynote panel on creative burnout, pitching, and AI workflows. Features live stage presenters, numbered round tables, Q&A and audience polls.",
+    category: "WEBINAR",
+    vibe: "MIDNIGHT_NEON",
+    hostUid: "sophia_gilbert",
+    hostHandle: "@SOPHIA_GILBERT",
+    hostAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150",
+    participantCount: 48,
+    maxParticipants: 150,
+    isPublic: true,
+    createdAt: Date.now() - 1800000,
+    expiresAt: Date.now() + 1000 * 60 * 60 * 4,
+    floorPlanType: "keynote_hall",
+    liveStageStatus: "🎙️ Keynote Panel Live on Stage",
+    featuredBadge: "🔥 FEATURED KEYNOTE",
+    tableCount: 12,
+    activeTableCount: 9,
+    activeStageSpeakers: [
+      { uid: "samuel_lee", name: "Samuel Lee", roleTitle: "Head of Product", avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150", isSpeaking: true, isPresenting: true },
+      { uid: "sophia_gilbert", name: "Sophia Gilbert", roleTitle: "Creative Director", avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150", isSpeaking: false, isPresenting: true },
+      { uid: "mary_gilbert", name: "Mary Gilbert", roleTitle: "Visual Strategist", avatarUrl: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150", isSpeaking: false, isPresenting: true },
+      { uid: "william_jones", name: "William Jones", roleTitle: "Keynote Speaker", avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150", isSpeaking: false, isPresenting: true },
+      { uid: "matt_jordan", name: "Matt Jordan", roleTitle: "Panelist", avatarUrl: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150", isSpeaking: false, isPresenting: true },
+    ],
+  },
+  {
+    id: "abhishek_bday_bash",
+    name: "Abhishek's Grand 24th Birthday Bash & Gala",
+    description: "Grand celebratory birthday bash with triple chocolate cake cutting, champagne flutes, banquet feast tables, Uno and Ludo party tables!",
+    category: "CAFE",
+    vibe: "PARTY_CLUB",
+    hostUid: "abhishek",
+    hostHandle: "@ABHISHEK",
+    hostAvatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150",
+    participantCount: 22,
+    maxParticipants: 50,
+    isPublic: true,
+    createdAt: Date.now() - 3600000,
+    expiresAt: Date.now() + 1000 * 60 * 60 * 8,
+    floorPlanType: "ballroom",
+    liveStageStatus: "🎂 Cake Cutting in 5 Mins & Champagne",
+    featuredBadge: "🎉 BIRTHDAY BASH",
+    tableCount: 8,
+    activeTableCount: 6,
+  },
+  {
+    id: "holiday_fireside_lodge",
+    name: "Winter Fireside Lodge & Holiday Dinner Gala",
+    description: "Luxury warm lodge with roaring fireplace, glowing Christmas trees, cozy sofas, mulled cider, and intimate table conversations.",
+    category: "GALA_DINNER",
+    vibe: "DINNER_GALA",
+    hostUid: "elena_rose",
+    hostHandle: "@ELENA_ROSE",
+    hostAvatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150",
+    participantCount: 19,
+    maxParticipants: 40,
+    isPublic: true,
+    createdAt: Date.now() - 2400000,
+    expiresAt: Date.now() + 1000 * 60 * 60 * 6,
+    floorPlanType: "fireside_lodge",
+    liveStageStatus: "🍷 Fireside Dinner & Jazz Live",
+    featuredBadge: "🎄 HOLIDAY GALA",
+    tableCount: 6,
+    activeTableCount: 5,
+  },
+  {
+    id: "championx_townhall",
+    name: "ChampionX Global Townhall & Product Demo",
+    description: "Executive terrace presentation stage with live screen share, 8-seater roundtable discussions, and corporate lounge.",
+    category: "WEBINAR",
+    vibe: "SUNNY_DAYLIGHT",
+    hostUid: "champion_host",
+    hostHandle: "@CHAMPION_HOST",
+    hostAvatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150",
+    participantCount: 34,
+    maxParticipants: 100,
+    isPublic: true,
+    createdAt: Date.now() - 1200000,
+    expiresAt: Date.now() + 1000 * 60 * 60 * 3,
+    floorPlanType: "rooftop",
+    liveStageStatus: "📊 Product v3.0 Live Screen Share",
+    featuredBadge: "💼 ALL-HANDS",
+    tableCount: 10,
+    activeTableCount: 7,
+  },
+  {
+    id: "central_piazza_cafe",
+    name: "Central Piazza European Cafe & Casual Mixer",
+    description: "Outdoor sunlit cobblestone town square with marble fountain, bistro cafe tables with umbrellas, and relaxed catchups.",
+    category: "PIAZZA",
+    vibe: "SUNSET_LOFI",
+    hostUid: "marco_barista",
+    hostHandle: "@MARCO_BARISTA",
+    hostAvatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150",
+    participantCount: 16,
+    maxParticipants: 35,
+    isPublic: true,
+    createdAt: Date.now() - 4000000,
+    expiresAt: null,
+    floorPlanType: "piazza_cafe",
+    liveStageStatus: "☕ Fountain Cafe Tables Open",
+    featuredBadge: "⛲ PIAZZA MIXER",
+    tableCount: 6,
+    activeTableCount: 4,
+  },
   {
     id: "genesis_campus",
     name: "Echo Genesis Campus",

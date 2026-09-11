@@ -1753,6 +1753,81 @@ export default function EchoSpacesWorld({
         ctx.restore();
       });
 
+      // ── RENDER NUMBERED BANQUET & KEYNOTE ROUND TABLES (Image 1, 3, 4, 5 Fidelity) ──
+      const NUMBERED_TABLES = [
+        { id: "tbl_1", num: 1, label: "Table 1", x: 670, y: 780, r: 38, cap: 6 },
+        { id: "tbl_2", num: 2, label: "Table 2", x: 910, y: 780, r: 38, cap: 6 },
+        { id: "tbl_3", num: 3, label: "Table 3", x: 670, y: 920, r: 38, cap: 6 },
+        { id: "tbl_4", num: 4, label: "Table 4", x: 910, y: 920, r: 38, cap: 6 },
+        { id: "tbl_5", num: 5, label: "Table 5", x: 670, y: 1060, r: 38, cap: 6 },
+        { id: "tbl_6", num: 6, label: "Table 6", x: 910, y: 1060, r: 38, cap: 6 },
+      ];
+
+      NUMBERED_TABLES.forEach((tbl) => {
+        ctx.save();
+        // Drop shadow
+        ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
+        ctx.beginPath();
+        ctx.ellipse(tbl.x, tbl.y + 6, tbl.r + 4, tbl.r * 0.7 + 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 6 Surrounding Circular Chairs
+        for (let i = 0; i < tbl.cap; i++) {
+          const angle = (i * Math.PI * 2) / tbl.cap;
+          const chairX = tbl.x + Math.cos(angle) * (tbl.r + 14);
+          const chairY = tbl.y + Math.sin(angle) * (tbl.r + 14);
+
+          // Chair seat
+          ctx.fillStyle = "#1e293b";
+          ctx.beginPath();
+          ctx.arc(chairX, chairY, 9, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "#475569";
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+
+          // Center cushion dot
+          ctx.fillStyle = "#38bdf8";
+          ctx.beginPath();
+          ctx.arc(chairX, chairY, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Table surface (warm golden wood / polished amber)
+        const tableGrad = ctx.createRadialGradient(tbl.x - 8, tbl.y - 8, 4, tbl.x, tbl.y, tbl.r);
+        tableGrad.addColorStop(0, "#fef08a");
+        tableGrad.addColorStop(0.4, "#f59e0b");
+        tableGrad.addColorStop(1, "#b45309");
+        ctx.fillStyle = tableGrad;
+        ctx.beginPath();
+        ctx.arc(tbl.x, tbl.y, tbl.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#78350f";
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        // Center Table Number Badge (Image 3 yellow round table fidelity)
+        ctx.fillStyle = "#0f172a";
+        ctx.beginPath();
+        ctx.arc(tbl.x, tbl.y, 14, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#fef08a";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.fillStyle = "#fef08a";
+        ctx.font = "900 11px monospace";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(String(tbl.num), tbl.x, tbl.y);
+
+        // Center Floral or Snack Centerpiece
+        ctx.font = "11px sans-serif";
+        ctx.fillText("🪻", tbl.x, tbl.y - 20);
+
+        ctx.restore();
+      });
+
       // ── RENDER PLACED CUSTOM DECORATIONS (Build Mode Items) ──
       localDecorations.forEach((d) => {
         ctx.save();
@@ -1903,15 +1978,17 @@ export default function EchoSpacesWorld({
         ctx.ellipse(0, 8, 16, 8, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Speaking Aura
-        if (av.isSpeaking) {
-          const speakPulse = Math.sin(performance.now() * 0.01) * 4 + 18;
-          ctx.strokeStyle = "#22c55e";
-          ctx.lineWidth = 2.5;
-          ctx.beginPath();
-          ctx.arc(0, -12, speakPulse, 0, Math.PI * 2);
-          ctx.stroke();
-        }
+        // Proximity Audio Green Halo Ring (Exact match to Reference Images 1, 2, 3, 4, 5)
+        ctx.save();
+        const haloPulse = av.isSpeaking ? Math.sin(performance.now() * 0.01) * 3 + 22 : (isSit ? 20 : 18);
+        ctx.strokeStyle = av.isSpeaking ? "#22c55e" : (isSit ? "rgba(34, 197, 94, 0.75)" : "rgba(56, 189, 248, 0.35)");
+        ctx.lineWidth = av.isSpeaking ? 3 : 2;
+        ctx.shadowColor = av.isSpeaking ? "#22c55e" : "#38bdf8";
+        ctx.shadowBlur = av.isSpeaking ? 12 : (isSit ? 8 : 0);
+        ctx.beginPath();
+        ctx.arc(0, -14, haloPulse, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
 
         const breathe = !isMoving ? Math.sin(performance.now() * 0.003) * 1 : 0;
 

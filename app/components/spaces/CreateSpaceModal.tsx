@@ -67,6 +67,36 @@ interface ArchetypeOption {
 
 const ARCHETYPES: ArchetypeOption[] = [
   {
+    id: "WEBINAR",
+    name: "Keynote Webinar & Conference Hall",
+    icon: "🎓",
+    tagline: "Live speaker stage with numbered tables & Q&A",
+    desc: "Stage presenter video tiles, screen share, audience Q&A with upvoting, live polls, and numbered round tables (Images 1 & 5).",
+    color: "#a855f7",
+    defaultName: "Igniting Ideas Conference",
+    recommendedAddons: ["stage_mic", "whiteboard", "fountain"],
+  },
+  {
+    id: "GALA_DINNER",
+    name: "Luxury Fireside Lodge & Gala",
+    icon: "🎄",
+    tagline: "Roaring fireplace, Christmas trees & banquet tables",
+    desc: "Plush velvet sofas, Christmas trees, golden candlelit banquet dining, mulled drinks, and jazz atmosphere (Image 2).",
+    color: "#f59e0b",
+    defaultName: "Winter Fireside Lodge",
+    recommendedAddons: ["campfire", "coffee", "jukebox"],
+  },
+  {
+    id: "PIAZZA",
+    name: "European Piazza Fountain & Cafe",
+    icon: "⛲",
+    tagline: "Outdoor cobblestone plaza & bistro tables",
+    desc: "Central water fountain, European cafe terrace, outdoor parasol tables, and relaxing social catchups (Image 4).",
+    color: "#10b981",
+    defaultName: "Central Piazza Cafe",
+    recommendedAddons: ["fountain", "coffee", "jukebox"],
+  },
+  {
     id: "OFFICE",
     name: "Virtual Office & Coworking",
     icon: "🏢",

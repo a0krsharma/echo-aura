@@ -41,6 +41,8 @@ import BirthdayCakeModal from "@/app/components/spaces/BirthdayCakeModal";
 import { PartyTableGamesModal, PartyGameTab } from "@/app/components/spaces/PartyTableGamesModal";
 import { PartyMusicBar } from "@/app/components/spaces/PartyMusicBar";
 import { GuestAuthModal } from "@/app/components/spaces/GuestAuthModal";
+import { StagePresentationBar } from "@/app/components/spaces/StagePresentationBar";
+import { EventSocialPanel, EventPanelTab } from "@/app/components/spaces/EventSocialPanel";
 import {
   getWalletState,
   canClaimDailyReward,
@@ -93,6 +95,9 @@ import {
   Coins,
   Crown,
   Bell,
+  HelpCircle,
+  BarChart2,
+  Radio,
 } from "lucide-react";
 
 export default function DynamicSpaceWorldPage() {
@@ -198,6 +203,12 @@ export default function DynamicSpaceWorldPage() {
   });
   const [screenConfettiActive, setScreenConfettiActive] = useState(false);
   const [giftReceivedToast, setGiftReceivedToast] = useState<{ from: string; giftName: string; icon: string } | null>(null);
+
+  // Stage Presentation & Event Social Panel (Images 1 & 3 Fidelity)
+  const [isStageActive, setIsStageActive] = useState(() => space.category === "WEBINAR" || space.floorPlanType === "keynote_hall");
+  const [isPresentingOnStage, setIsPresentingOnStage] = useState(false);
+  const [eventSocialPanelOpen, setEventSocialPanelOpen] = useState(false);
+  const [eventSocialPanelTab, setEventSocialPanelTab] = useState<EventPanelTab>("qa");
 
   // Table dishes placed on Banquet Table
   const [tableDishes, setTableDishes] = useState<TableDish[]>([
@@ -1069,6 +1080,59 @@ export default function DynamicSpaceWorldPage() {
             <span className="hidden md:inline">Seating</span>
           </button>
 
+          {/* Q&A Side Panel (Image 1 Fidelity) */}
+          <button
+            onClick={() => {
+              spacesSfx.playKeyNote(2);
+              setEventSocialPanelTab("qa");
+              setEventSocialPanelOpen(!eventSocialPanelOpen);
+            }}
+            className={`px-2.5 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0 ${
+              eventSocialPanelOpen && eventSocialPanelTab === "qa"
+                ? "border-cyan-400 bg-cyan-950/40 text-cyan-300"
+                : "border-neutral-800 bg-neutral-900/80 text-neutral-300 hover:text-white"
+            }`}
+            title="Live Speaker Q&A (Upvote questions from Image 1)"
+          >
+            <HelpCircle className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="hidden md:inline">Q&A</span>
+          </button>
+
+          {/* Live Interactive Polls (Image 1 Fidelity) */}
+          <button
+            onClick={() => {
+              spacesSfx.playKeyNote(3);
+              setEventSocialPanelTab("polls");
+              setEventSocialPanelOpen(!eventSocialPanelOpen);
+            }}
+            className={`px-2.5 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0 ${
+              eventSocialPanelOpen && eventSocialPanelTab === "polls"
+                ? "border-indigo-400 bg-indigo-950/40 text-indigo-300"
+                : "border-neutral-800 bg-neutral-900/80 text-neutral-300 hover:text-white"
+            }`}
+            title="Live Audience Polls (Image 1)"
+          >
+            <BarChart2 className="w-3.5 h-3.5 text-indigo-400" />
+            <span className="hidden md:inline">Polls</span>
+          </button>
+
+          {/* Toggle Stage Presentation Bar */}
+          <button
+            onClick={() => {
+              spacesSfx.playKeyNote(4);
+              setIsStageActive(!isStageActive);
+            }}
+            className={`px-2.5 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0 ${
+              isStageActive
+                ? "border-rose-500/50 bg-rose-950/30 text-rose-300"
+                : "border-neutral-800 bg-neutral-900/80 text-neutral-400 hover:text-white"
+            }`}
+            title="Toggle Stage Presenters Dock"
+          >
+            <Radio className="w-3.5 h-3.5 text-rose-400" />
+            <span className="hidden lg:inline">Stage</span>
+          </button>
+
           {/* Boutique Outfits & Friend Gifting */}
           <button
             onClick={() => {
@@ -1217,6 +1281,36 @@ export default function DynamicSpaceWorldPage() {
           )}
         </div>
       </header>
+
+      {/* Live Stage Presentation Bar (Image 1 & 3 Fidelity) */}
+      {(space.category === "WEBINAR" || isStageActive) && (
+        <StagePresentationBar
+          spaceTitle={space.name}
+          isHost={isHost}
+          currentFloor={currentFloor}
+          onSelectFloor={handleElevatorFloor}
+          speakers={space.activeStageSpeakers}
+          isPresenting={isPresentingOnStage}
+          onTogglePresenting={() => {
+            handleProtectedAction(
+              "Step Onto Presentation Stage",
+              "Sign in with Google to take the stage microphone, broadcast to all tables, and share your screen live.",
+              <Radio className="w-7 h-7" />,
+              () => {
+                setIsPresentingOnStage(!isPresentingOnStage);
+                spacesSfx.playPartyFanfare();
+                handleSendSpeech(
+                  !isPresentingOnStage
+                    ? "🎤 Stepped onto the Presentation Stage! Broadcasting to all tables."
+                    : "👋 Stepped down from stage to table seating."
+                );
+              }
+            );
+          }}
+          activeScreenStream={activeScreenStream}
+          onOpenMap={() => setActivityMapOpen(true)}
+        />
+      )}
 
       {/* 3. Main 2D Spatial Canvas Viewport (Fullscreen Immersive) */}
       <main className="flex-1 relative w-full h-full overflow-hidden">
@@ -1712,6 +1806,18 @@ export default function DynamicSpaceWorldPage() {
           </div>
         </div>
       )}
+
+      {/* Interactive Social Side Panel (Image 1 Fidelity: Q&A with Upvoting, Polls, Chat, Attendees) */}
+      <EventSocialPanel
+        isOpen={eventSocialPanelOpen}
+        onClose={() => setEventSocialPanelOpen(false)}
+        currentTab={eventSocialPanelTab}
+        onTabChange={(t) => setEventSocialPanelTab(t)}
+        localAvatar={localAvatar}
+        remoteAvatars={remoteAvatars}
+        isHost={isHost}
+        onSendChat={(msg) => handleSendSpeech(msg)}
+      />
     </div>
   );
 }
