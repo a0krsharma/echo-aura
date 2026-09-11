@@ -1033,79 +1033,144 @@ export const DEFAULT_AMBIENT_BOTS: SpatialAvatar[] = [
   },
 ];
 
-// ── FIRESTORE PERSISTENCE METHODS ──
+// ── FIRESTORE & LOCAL FALLBACK PERSISTENCE METHODS ──
 const SPACES_COLLECTION = "spaces";
+const LOCAL_SPACES_KEY = "echo_local_spaces_cache";
+
+function getLocalSpacesCache(): SpaceDoc[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(LOCAL_SPACES_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalSpace(space: SpaceDoc) {
+  if (typeof window === "undefined") return;
+  try {
+    const existing = getLocalSpacesCache().filter((s) => s.id !== space.id);
+    existing.unshift(space);
+    localStorage.setItem(LOCAL_SPACES_KEY, JSON.stringify(existing.slice(0, 30)));
+  } catch {}
+}
 
 export async function createSpaceDoc(space: Omit<SpaceDoc, "id">): Promise<string> {
-  const db = getFirebaseDb();
-  const docRef = doc(collection(db, SPACES_COLLECTION));
+  const generatedId = `space_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
   const newSpace: SpaceDoc = {
     ...space,
-    id: docRef.id,
+    id: generatedId,
   };
-  await setDoc(docRef, newSpace);
-  return docRef.id;
+
+  // Always save locally first so user can enter immediately
+  saveLocalSpace(newSpace);
+
+  try {
+    const db = getFirebaseDb();
+    const docRef = doc(db, SPACES_COLLECTION, generatedId);
+    await setDoc(docRef, newSpace);
+    return docRef.id;
+  } catch (err) {
+    console.warn("[createSpaceDoc] Firestore write failed, using local/guest space fallback:", err);
+    return generatedId;
+  }
 }
 
 export function subscribeToPublicSpaces(callback: (spaces: SpaceDoc[]) => void): () => void {
-  const db = getFirebaseDb();
-  const q = query(collection(db, SPACES_COLLECTION), limit(60));
+  const localSpaces = getLocalSpacesCache();
+  const initialMerged = [...localSpaces, ...DEFAULT_SPACES];
+  callback(initialMerged);
 
-  const unsub = onSnapshot(
-    q,
-    (snap) => {
-      const now = Date.now();
-      const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as SpaceDoc[];
+  try {
+    const db = getFirebaseDb();
+    const q = query(collection(db, SPACES_COLLECTION), limit(60));
 
-      // Filter expired spaces client-side
-      const valid = docs.filter((s) => {
-        if (!s.name) return false;
-        if (s.expiresAt && s.expiresAt < now) {
-          // Clean up expired space asynchronously
-          deleteDoc(doc(db, SPACES_COLLECTION, s.id)).catch(() => {});
-          return false;
-        }
-        return true;
-      });
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const now = Date.now();
+        const firestoreDocs = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as SpaceDoc[];
 
-      if (valid.length === 0) {
-        callback(DEFAULT_SPACES);
-      } else {
-        callback(valid);
+        // Filter expired spaces
+        const valid = firestoreDocs.filter((s) => {
+          if (!s.name) return false;
+          if (s.expiresAt && s.expiresAt < now) {
+            deleteDoc(doc(db, SPACES_COLLECTION, s.id)).catch(() => {});
+            return false;
+          }
+          return true;
+        });
+
+        const seenIds = new Set<string>();
+        const combined: SpaceDoc[] = [];
+
+        [...getLocalSpacesCache(), ...valid, ...DEFAULT_SPACES].forEach((s) => {
+          if (!seenIds.has(s.id)) {
+            seenIds.add(s.id);
+            combined.push(s);
+          }
+        });
+
+        callback(combined);
+      },
+      (err) => {
+        console.warn("[subscribeToPublicSpaces] Firestore subscription unavailable, using local spaces:", err.message);
+        callback(initialMerged);
       }
-    },
-    (err) => {
-      console.warn("[subscribeToPublicSpaces] Error, using defaults:", err);
-      callback(DEFAULT_SPACES);
-    }
-  );
+    );
 
-  return unsub;
+    return unsub;
+  } catch (err) {
+    console.warn("[subscribeToPublicSpaces] Error initializing Firestore:", err);
+    return () => {};
+  }
 }
 
 export async function getSpaceDoc(spaceId: string): Promise<SpaceDoc | null> {
-  // Check default seed spaces first
+  // 1. Check default seed spaces
   const defaultFound = DEFAULT_SPACES.find((s) => s.id === spaceId);
   if (defaultFound) return defaultFound;
 
+  // 2. Check local spaces cache
+  const localSpaces = getLocalSpacesCache();
+  const localFound = localSpaces.find((s) => s.id === spaceId);
+  if (localFound) return localFound;
+
+  // 3. Query Firestore
   try {
     const db = getFirebaseDb();
     const snap = await getDoc(doc(db, SPACES_COLLECTION, spaceId));
     if (snap.exists()) {
-      return { id: snap.id, ...snap.data() } as SpaceDoc;
+      const data = { id: snap.id, ...snap.data() } as SpaceDoc;
+      saveLocalSpace(data);
+      return data;
     }
   } catch (err) {
-    console.warn("[getSpaceDoc] Failed fetching doc:", err);
+    console.warn("[getSpaceDoc] Failed fetching doc from Firestore:", err);
   }
+
   return null;
 }
 
 export async function updateSpaceDoc(spaceId: string, updates: Partial<SpaceDoc>): Promise<void> {
+  // Update local cache
+  if (typeof window !== "undefined") {
+    try {
+      const local = getLocalSpacesCache();
+      const idx = local.findIndex((s) => s.id === spaceId);
+      if (idx !== -1) {
+        local[idx] = { ...local[idx], ...updates };
+        localStorage.setItem(LOCAL_SPACES_KEY, JSON.stringify(local));
+      }
+    } catch {}
+  }
+
   try {
     const db = getFirebaseDb();
     await updateDoc(doc(db, SPACES_COLLECTION, spaceId), updates);
   } catch (err) {
-    console.warn("[updateSpaceDoc] Error updating space:", err);
+    console.warn("[updateSpaceDoc] Firestore update skipped, cached locally:", err);
   }
 }
 

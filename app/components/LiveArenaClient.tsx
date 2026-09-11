@@ -732,7 +732,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
         duration: "0:15",
         decibels: `${livePeakDb.toFixed(1)} dB`,
         reactionsCount: totalEngagement,
-        audioSample: "https://res.cloudinary.com/dokmhb8tq/video/upload/v1786070251/eur02gdv8sicnxvalcij.mp3",
+        audioSample: "data:audio/mp3;base64,//uQxAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAACAAACcQCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA//sQxAADgnABzcAYAgNGjx7ZEEYDB48e2RBGAwAP/7kGQAAA4JwAc3AGAP/7kGQAAA4JwAc3AGAA==",
       },
       {
         id: 2,
@@ -742,7 +742,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
         duration: "0:15",
         decibels: `${(livePeakDb + 2.4).toFixed(1)} dB`,
         reactionsCount: Math.round(totalEngagement * 1.35),
-        audioSample: "https://res.cloudinary.com/dokmhb8tq/video/upload/v1786070251/eur02gdv8sicnxvalcij.mp3",
+        audioSample: "data:audio/mp3;base64,//uQxAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAACAAACcQCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA//sQxAADgnABzcAYAgNGjx7ZEEYDB48e2RBGAwAP/7kGQAAA4JwAc3AGAP/7kGQAAA4JwAc3AGAA==",
       },
       {
         id: 3,
@@ -752,7 +752,7 @@ function LiveArenaContent({ clashId }: LiveArenaProps) {
         duration: "0:15",
         decibels: `${(livePeakDb - 1.2).toFixed(1)} dB`,
         reactionsCount: Math.round(totalEngagement * 1.15),
-        audioSample: "https://res.cloudinary.com/dokmhb8tq/video/upload/v1786070251/eur02gdv8sicnxvalcij.mp3",
+        audioSample: "data:audio/mp3;base64,//uQxAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAACAAACcQCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA//sQxAADgnABzcAYAgNGjx7ZEEYDB48e2RBGAwAP/7kGQAAA4JwAc3AGAP/7kGQAAA4JwAc3AGAA==",
       },
     ];
   }, [clash, totalVotes, liveSurgeCount, livePeakDb, chatMessages.length]);

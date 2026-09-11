@@ -126,14 +126,22 @@ export default function SpatialVoiceManager({
 
         await client.join(AGORA_APP_ID, channelName, token, numericUid);
 
-        // Create & publish local mic track if permissions granted
+        // Create & publish local mic track if permissions granted and still connected
         try {
+          if (!isMounted || client.connectionState !== "CONNECTED") return;
+
           const micTrack = await AgoraRTC.createMicrophoneAudioTrack({
             encoderConfig: "high_quality_stereo",
             AEC: true,
             ANS: true,
             AGC: true,
           });
+
+          if (!isMounted || client.connectionState !== "CONNECTED") {
+            micTrack.stop();
+            micTrack.close();
+            return;
+          }
 
           localTrackRef.current = micTrack;
           await client.publish([micTrack]);
@@ -153,11 +161,16 @@ export default function SpatialVoiceManager({
     return () => {
       isMounted = false;
       if (localTrackRef.current) {
-        localTrackRef.current.stop();
-        localTrackRef.current.close();
+        try {
+          localTrackRef.current.stop();
+          localTrackRef.current.close();
+        } catch {}
+        localTrackRef.current = null;
       }
       if (clientRef.current) {
-        clientRef.current.leave().catch(() => {});
+        if (clientRef.current.connectionState === "CONNECTED" || clientRef.current.connectionState === "CONNECTING") {
+          clientRef.current.leave().catch(() => {});
+        }
       }
       remoteTracksRef.current.clear();
     };

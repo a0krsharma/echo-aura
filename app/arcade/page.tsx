@@ -524,7 +524,7 @@ function ArcadeContent() {
 
       // 3. Post to Frequency feed
       await createPost({
-        audioUrl: "https://res.cloudinary.com/echo-aura/video/upload/v1/victory_fanfare.mp3",
+        audioUrl: "data:audio/mp3;base64,//uQxAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAACAAACcQCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA//sQxAADgnABzcAYAgNGjx7ZEEYDB48e2RBGAwAP/7kGQAAA4JwAc3AGAP/7kGQAAA4JwAc3AGAA==",
         caption: victoryCaption,
         authorUid: user.uid,
         authorHandle: user.handle || "@CHAMPION",
