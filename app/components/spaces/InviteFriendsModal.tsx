@@ -57,6 +57,18 @@ export default function InviteFriendsModal({
     return `https://echo-aura.vercel.app/spaces/${spaceId}`;
   };
 
+  const getShareText = () => {
+    const messages: Record<string, string> = {
+      birthday: `🎂 You're invited to my Virtual Birthday Party in ${spaceName}! Come join me to cut the cake, pop champagne, play UNO & Spin the Bottle, and celebrate!`,
+      dinner: `🫓 Join our Dinner Feast in ${spaceName}! Fresh tandoori butter naan, Italian pasta, Hakka noodles, and champagne at the banquet table!`,
+      uno: `🃏 UNO tournament happening right now in ${spaceName}! Winner takes $50 cash! Jump in to play!`,
+      play: `Hey! I'm in ${spaceName}. Come hang out, play Super Mario co-op, jam music, or study together!`,
+      sing: `🎵 Jam and sing with me in ${spaceName}!`,
+      study: `📚 Join my cozy study session in ${spaceName}!`,
+    };
+    return messages[selectedActivity] || messages.play;
+  };
+
   const handleCopy = () => {
     navigator.clipboard.writeText(getShareUrl());
     setCopied(true);
@@ -69,7 +81,7 @@ export default function InviteFriendsModal({
       try {
         await navigator.share({
           title: `Join me in ${spaceName} on Echo Spaces!`,
-          text: `Hey! I'm in ${spaceName}. Come hang out, play Super Mario co-op, jam music, or study together!`,
+          text: getShareText(),
           url: getShareUrl(),
         });
       } catch (e) {}
@@ -158,9 +170,12 @@ export default function InviteFriendsModal({
           </label>
           <div className="grid grid-cols-3 gap-1.5 text-xs font-mono">
             {[
-              { id: "play", label: "🕹️ Play Games", icon: <Gamepad2 className="w-3.5 h-3.5" /> },
-              { id: "sing", label: "🎵 Jam / Sing", icon: <Music className="w-3.5 h-3.5" /> },
-              { id: "study", label: "📚 Read / Study", icon: <BookOpen className="w-3.5 h-3.5" /> },
+              { id: "birthday", label: "🎂 Birthday Party" },
+              { id: "dinner", label: "🫓 Dinner Feast" },
+              { id: "uno", label: "🃏 UNO Match" },
+              { id: "play", label: "🕹️ Play Games" },
+              { id: "sing", label: "🎵 Jam / Sing" },
+              { id: "study", label: "📚 Read / Study" },
             ].map((act) => (
               <button
                 key={act.id}

@@ -191,6 +191,33 @@ export default function HostEventModal({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {/* Preset 0: Virtual Birthday Party */}
+              <button
+                type="button"
+                onClick={() =>
+                  handleHostPreset(
+                    "Virtual Birthday Party",
+                    "PARTY_CLUB",
+                    "🎂 Happy Birthday Celebration is LIVE! Meet at the Fountain Room for cake cutting, champagne & dinner!",
+                    { x: 1200, y: 350 }
+                  )
+                }
+                className="p-3 rounded-2xl border border-rose-500/40 bg-gradient-to-r from-rose-500/20 to-amber-500/20 hover:from-rose-500/30 hover:to-amber-500/30 text-left transition-all cursor-pointer group col-span-1 sm:col-span-2 shadow-md"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-2xl animate-bounce">🎂</span>
+                  <span className="text-xs font-mono font-bold text-amber-300 group-hover:text-white">
+                    Host Virtual Birthday Party
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-400 text-black uppercase font-mono">
+                    Cake + Dinner + Games
+                  </span>
+                </div>
+                <p className="text-[10px] font-mono text-neutral-300 leading-tight">
+                  Grand celebratory cake cutting, champagne toast, banquet dining table, party games & fanfare.
+                </p>
+              </button>
+
               {/* Preset 1: Candlelight Dinner Gala */}
               <button
                 type="button"

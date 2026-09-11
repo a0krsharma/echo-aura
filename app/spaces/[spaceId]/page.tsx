@@ -38,6 +38,7 @@ import AutoSeatingModal from "@/app/components/spaces/AutoSeatingModal";
 import SpaceCateringModal from "@/app/components/spaces/SpaceCateringModal";
 import SpaceGiftingModal from "@/app/components/spaces/SpaceGiftingModal";
 import { UnoGameModal } from "@/app/components/spaces/UnoGameModal";
+import BirthdayCakeModal from "@/app/components/spaces/BirthdayCakeModal";
 import {
   getWalletState,
   canClaimDailyReward,
@@ -171,6 +172,13 @@ export default function DynamicSpaceWorldPage() {
   const [giftingModalOpen, setGiftingModalOpen] = useState(false);
   const [seatingModalOpen, setSeatingModalOpen] = useState(false);
   const [unoModalOpen, setUnoModalOpen] = useState(false);
+  const [birthdayCakeModalOpen, setBirthdayCakeModalOpen] = useState(false);
+  const [birthdayStar, setBirthdayStar] = useState<{ isBirthdayMode: boolean; name: string; gender: "boy" | "girl" }>({
+    isBirthdayMode: false,
+    name: "",
+    gender: "boy",
+  });
+  const [screenConfettiActive, setScreenConfettiActive] = useState(false);
   const [giftReceivedToast, setGiftReceivedToast] = useState<{ from: string; giftName: string; icon: string } | null>(null);
 
   // Table dishes placed on Banquet Table
@@ -270,6 +278,78 @@ export default function DynamicSpaceWorldPage() {
     setGiftReceivedToast({ from: localAvatar.handle, giftName, icon });
     setTimeout(() => setGiftReceivedToast(null), 5000);
     handleSendSpeech(`🎁 ${localAvatar.handle} sent ${giftName} (${icon}) to ${recipient}!`);
+  };
+
+  // Screen Confetti Explosion Watcher
+  useEffect(() => {
+    if (confettiBlastCount > 0) {
+      setScreenConfettiActive(true);
+      const timer = setTimeout(() => setScreenConfettiActive(false), 4500);
+      return () => clearTimeout(timer);
+    }
+  }, [confettiBlastCount]);
+
+  // Handle Serving Birthday Cake directly to table
+  const handleServeCake = () => {
+    const cakeExists = tableDishes.some((d) => d.itemId === "birthday_cake");
+    if (!cakeExists) {
+      const cakeDish: TableDish = {
+        id: `cake_${Date.now()}`,
+        itemId: "birthday_cake",
+        name: "Triple Chocolate Birthday Celebration Cake",
+        icon: "🎂",
+        x: 1200,
+        y: 350,
+        orderedBy: localAvatar.handle,
+        orderedAt: Date.now(),
+        bitesLeft: 8,
+      };
+      setTableDishes((prev) => [...prev, cakeDish]);
+    }
+    setBirthdayCakeModalOpen(true);
+    spacesSfx.playPartyFanfare();
+    handleTriggerConfetti();
+    handleSendSpeech(`🎂 The Grand Birthday Celebration Cake is served on the Banquet Table! Gather round! ✨`);
+  };
+
+  // Handle Dressing as Birthday Boy or Girl
+  const handleDressBirthday = (gender: "boy" | "girl") => {
+    const updated: AvatarConfig = {
+      ...avatarConfig,
+      outfit: gender === "boy" ? "tuxedo" : "dress",
+      outfitColor: gender === "boy" ? "#38bdf8" : "#f43f5e",
+      accessory: "crown",
+      headwear: "crown",
+      aura: gender === "boy" ? "stardust" : "flame",
+      expression: "smile",
+    };
+    setAvatarConfig(updated);
+    setLocalAvatar((prev) => ({
+      ...prev,
+      avatarConfig: updated,
+      hoodieColor: updated.outfitColor,
+      statusText: gender === "boy" ? "🎂 Birthday Boy! VIP Star" : "👑 Birthday Queen! Celebrating Today 🎂",
+    }));
+
+    setBirthdayStar({
+      isBirthdayMode: true,
+      name: localAvatar.handle,
+      gender,
+    });
+
+    try {
+      localStorage.setItem("echo_spaces_avatar", JSON.stringify(updated));
+    } catch {}
+
+    setSpace((prev) => ({ ...prev, vibe: "PARTY_CLUB" }));
+
+    spacesSfx.playPartyFanfare();
+    handleTriggerConfetti();
+    handleSendSpeech(
+      gender === "boy"
+        ? `👑 @${localAvatar.handle} is dressed up as the Birthday Boy! Come give wishes & gifts! 🎉🎂`
+        : `👑 @${localAvatar.handle} is dressed up as the Birthday Girl! Come give wishes & gifts! 🎉🎂`
+    );
   };
 
   // Space Decoration Mode
@@ -701,6 +781,75 @@ export default function DynamicSpaceWorldPage() {
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col justify-between selection:bg-cyan-500 selection:text-black overflow-hidden relative">
+      {/* Screen-Wide Celebration Confetti Explosion */}
+      {screenConfettiActive && (
+        <div className="fixed inset-0 pointer-events-none z-[100] overflow-hidden">
+          {Array.from({ length: 90 }).map((_, idx) => (
+            <div
+              key={idx}
+              className="absolute animate-bounce"
+              style={{
+                top: `${Math.random() * 90}%`,
+                left: `${Math.random() * 98}%`,
+                width: `${Math.random() * 14 + 6}px`,
+                height: `${Math.random() * 20 + 8}px`,
+                backgroundColor: ["#f43f5e", "#ec4899", "#8b5cf6", "#3b82f6", "#06b6d4", "#10b981", "#f59e0b", "#eab308"][
+                  Math.floor(Math.random() * 8)
+                ],
+                borderRadius: Math.random() > 0.5 ? "50%" : "3px",
+                transform: `rotate(${Math.random() * 360}deg)`,
+                opacity: 0.95,
+                transition: "all 1.2s ease-out",
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Birthday Party Meetup & Wish Greeting Bar */}
+      {birthdayStar.isBirthdayMode && (
+        <div className="bg-gradient-to-r from-amber-500 via-rose-500 to-purple-600 text-white px-3 sm:px-6 py-2 flex items-center justify-between z-40 shadow-xl border-b border-amber-400/40 animate-in slide-in-from-top">
+          <div className="flex items-center gap-2.5">
+            <span className="text-2xl animate-bounce">🎂</span>
+            <div className="font-mono">
+              <span className="text-xs font-black uppercase tracking-wider text-black bg-amber-300 px-2 py-0.5 rounded-full mr-2">
+                BIRTHDAY VIP
+              </span>
+              <span className="text-xs font-bold">
+                Celebrating {birthdayStar.name || localAvatar.handle}'s Birthday Party!
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                spacesSfx.playKeyNote(5);
+                handleSendSpeech(`🎉 Happy Birthday ${birthdayStar.name || localAvatar.handle}! 🎂 May your year be filled with happiness & victory! ✨`);
+                handleTriggerConfetti();
+              }}
+              className="px-3 py-1 rounded-xl bg-white text-black font-mono text-xs font-black hover:bg-neutral-100 transition shadow-sm active:scale-95 cursor-pointer"
+            >
+              🎈 Wish Happy Birthday!
+            </button>
+
+            <button
+              onClick={handleServeCake}
+              className="px-3 py-1 rounded-xl bg-black/40 hover:bg-black/60 border border-white/40 text-white font-mono text-xs font-bold transition shadow-sm active:scale-95 cursor-pointer"
+            >
+              🎂 Cut Cake Ceremony
+            </button>
+
+            <button
+              onClick={() => setGiftingModalOpen(true)}
+              className="hidden sm:inline-flex px-3 py-1 rounded-xl bg-pink-500 hover:bg-pink-400 text-white font-mono text-xs font-bold transition shadow-sm active:scale-95 cursor-pointer"
+            >
+              🎁 Give Gift
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 1. Global Announcement Ticker */}
       {space.announcement && space.announcement.expiresAt > Date.now() && (
         <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-black px-4 py-1 font-mono text-xs font-bold text-center flex items-center justify-center gap-2 shadow-lg animate-in slide-in-from-top z-50">
@@ -1278,6 +1427,48 @@ export default function DynamicSpaceWorldPage() {
         onSendSpeech={handleSendSpeech}
         onCapturePhoto={handleCapturePhoto}
         onStartScreenShare={handleStartScreenShare}
+        onServeCake={handleServeCake}
+        onDressBirthday={handleDressBirthday}
+        onOpenCatering={() => {
+          setPartyModalOpen(false);
+          setCateringModalOpen(true);
+        }}
+        onOpenSeating={() => {
+          setPartyModalOpen(false);
+          setSeatingModalOpen(true);
+        }}
+        onOpenUno={() => {
+          setPartyModalOpen(false);
+          setUnoModalOpen(true);
+        }}
+        onOpenGifting={() => {
+          setPartyModalOpen(false);
+          setGiftingModalOpen(true);
+        }}
+      />
+
+      {/* Interactive Birthday Cake Ceremony Modal (Blow Candles, Cut Cake, Pop Champagne, Hand Out Slices) */}
+      <BirthdayCakeModal
+        isOpen={birthdayCakeModalOpen}
+        onClose={() => setBirthdayCakeModalOpen(false)}
+        birthdayPersonName={birthdayStar.name || localAvatar.handle}
+        isHost={isHost}
+        onTriggerConfetti={handleTriggerConfetti}
+        onSendSpeech={handleSendSpeech}
+        onPopChampagne={() => {
+          handleTriggerConfetti();
+        }}
+        onOpenGifting={() => {
+          setBirthdayCakeModalOpen(false);
+          setGiftingModalOpen(true);
+        }}
+        onOpenGames={() => {
+          setBirthdayCakeModalOpen(false);
+          setPartyModalOpen(true);
+        }}
+        onCakeCutSuccess={() => {
+          refreshWalletCash();
+        }}
       />
 
       {/* Dinner Party Catering & Table Food Menu (Butter Naan, Pasta, Cake, Champagne, Chinese, Chills) */}

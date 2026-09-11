@@ -31,6 +31,12 @@ import {
   Pause,
   ChevronRight,
   Cake,
+  Crown,
+  UtensilsCrossed,
+  Armchair,
+  Dices,
+  Gift,
+  Wine,
 } from "lucide-react";
 import { spacesSfx } from "@/lib/spacesSfx";
 import { SpatialAvatar } from "@/lib/spaces";
@@ -45,6 +51,12 @@ interface PartyToolsModalProps {
   onSendSpeech: (text: string) => void;
   onCapturePhoto: () => Promise<string | null>;
   onStartScreenShare?: () => void;
+  onServeCake?: () => void;
+  onDressBirthday?: (gender: "boy" | "girl") => void;
+  onOpenCatering?: () => void;
+  onOpenSeating?: () => void;
+  onOpenUno?: () => void;
+  onOpenGifting?: () => void;
 }
 
 type PartyTab = "ambiance" | "dice" | "bottle" | "birthday" | "icebreakers" | "photobooth";
@@ -83,11 +95,16 @@ export default function PartyToolsModal({
   onSendSpeech,
   onCapturePhoto,
   onStartScreenShare,
+  onServeCake,
+  onDressBirthday,
+  onOpenCatering,
+  onOpenSeating,
+  onOpenUno,
+  onOpenGifting,
 }: PartyToolsModalProps) {
-  const [activeTab, setActiveTab] = useState<PartyTab>("ambiance");
-
-  // Ambiance State
+  const [activeTab, setActiveTab] = useState<PartyTab>("birthday");
   const [currentTrack, setCurrentTrack] = useState<string | null>(null);
+  const [modalConfettiBurst, setModalConfettiBurst] = useState(false);
   const [ambianceVolume, setAmbianceVol] = useState(0.4);
 
   // Dice State
@@ -170,6 +187,8 @@ export default function PartyToolsModal({
   const handleCelebrationBlast = () => {
     spacesSfx.playPartyFanfare();
     onTriggerConfetti();
+    setModalConfettiBurst(true);
+    setTimeout(() => setModalConfettiBurst(false), 4000);
     onSendSpeech("🎉 CELEBRATION! Happy Birthday & Cheers! 🎂✨");
   };
 
@@ -200,7 +219,31 @@ export default function PartyToolsModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in">
-      <div className="bg-neutral-950 border border-neutral-800 rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95">
+      {/* Visual Confetti Burst Inside Modal */}
+      {modalConfettiBurst && (
+        <div className="absolute inset-0 pointer-events-none z-50 overflow-hidden">
+          {Array.from({ length: 50 }).map((_, i) => (
+            <div
+              key={i}
+              className="absolute animate-bounce"
+              style={{
+                top: `${Math.random() * 85}%`,
+                left: `${Math.random() * 95}%`,
+                width: `${Math.random() * 12 + 6}px`,
+                height: `${Math.random() * 16 + 6}px`,
+                backgroundColor: ["#f43f5e", "#ec4899", "#8b5cf6", "#3b82f6", "#10b981", "#f59e0b", "#eab308"][
+                  Math.floor(Math.random() * 7)
+                ],
+                borderRadius: Math.random() > 0.5 ? "50%" : "3px",
+                transform: `rotate(${Math.random() * 360}deg)`,
+                opacity: 0.9,
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      <div className="bg-neutral-950 border border-neutral-800 rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 relative">
         {/* Header */}
         <div className="px-6 py-4 border-b border-neutral-900 flex items-center justify-between bg-neutral-900/60">
           <div className="flex items-center gap-2.5">
@@ -559,13 +602,164 @@ export default function PartyToolsModal({
                   <button
                     onClick={() => {
                       spacesSfx.playKeyNote(5);
-                      onSendSpeech("🎂 Serving birthday cake slices for everyone!");
+                      if (onServeCake) {
+                        onServeCake();
+                      } else {
+                        onSendSpeech("🎂 Serving birthday cake slices for everyone!");
+                      }
                     }}
-                    className="px-4 py-3 rounded-2xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-white font-mono text-xs font-bold flex items-center gap-2 transition-all cursor-pointer"
+                    className="px-5 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-black font-mono text-xs font-black flex items-center gap-2 transition-all cursor-pointer shadow-lg shadow-amber-500/20 active:scale-95"
                   >
-                    <Cake className="w-4 h-4 text-amber-400" />
-                    <span>Serve Virtual Cake</span>
+                    <Cake className="w-4 h-4" />
+                    <span>🎂 Serve Virtual Cake & Cut</span>
                   </button>
+                </div>
+              </div>
+
+              {/* 1. Birthday Boy & Birthday Girl Dress-Up */}
+              <div className="p-5 rounded-2xl bg-neutral-900/60 border border-neutral-800 space-y-3 text-left">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                    <Crown className="w-4 h-4" />
+                    <span>Birthday Star Dress-Up (Royal Crown & Gala Attire)</span>
+                  </span>
+                  <span className="text-[10px] font-mono text-neutral-400">1-click instant dress-up</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    onClick={() => {
+                      spacesSfx.playKeyNote(3);
+                      onDressBirthday?.("boy");
+                    }}
+                    className="p-3.5 rounded-xl bg-gradient-to-r from-sky-600/20 via-blue-600/20 to-indigo-600/20 border border-sky-500/40 hover:border-sky-400 text-left transition cursor-pointer flex items-center gap-3 active:scale-95"
+                  >
+                    <span className="text-3xl">👑</span>
+                    <div>
+                      <div className="text-xs font-mono font-bold text-white flex items-center gap-1.5">
+                        <span>Dress as Birthday Boy</span>
+                        <span className="px-1.5 py-0.2 rounded text-[9px] bg-sky-500/30 text-sky-300 font-mono">VIP</span>
+                      </div>
+                      <div className="text-[10px] font-mono text-neutral-400 mt-0.5">
+                        Gold Crown + Royal Tuxedo + Stardust Aura
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      spacesSfx.playKeyNote(3);
+                      onDressBirthday?.("girl");
+                    }}
+                    className="p-3.5 rounded-xl bg-gradient-to-r from-pink-600/20 via-rose-600/20 to-purple-600/20 border border-pink-500/40 hover:border-pink-400 text-left transition cursor-pointer flex items-center gap-3 active:scale-95"
+                  >
+                    <span className="text-3xl">👸</span>
+                    <div>
+                      <div className="text-xs font-mono font-bold text-white flex items-center gap-1.5">
+                        <span>Dress as Birthday Girl</span>
+                        <span className="px-1.5 py-0.2 rounded text-[9px] bg-pink-500/30 text-pink-300 font-mono">VIP</span>
+                      </div>
+                      <div className="text-[10px] font-mono text-neutral-400 mt-0.5">
+                        Gold Tiara + Rose Gala Gown + Sparkle Flame
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* 2. Complete Birthday Party Playbook & Activities */}
+              <div className="p-5 rounded-2xl bg-neutral-900/60 border border-neutral-800 space-y-3 text-left">
+                <span className="font-mono text-xs font-bold text-neutral-300 flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-cyan-400" />
+                  <span>Birthday Party Activities & Games</span>
+                </span>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                  {onOpenCatering && (
+                    <button
+                      onClick={() => {
+                        onClose();
+                        onOpenCatering();
+                      }}
+                      className="p-3 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-amber-500/50 text-left transition cursor-pointer flex flex-col justify-between"
+                    >
+                      <span className="text-2xl">🫓</span>
+                      <div className="mt-2">
+                        <div className="text-xs font-mono font-bold text-white">Dinner Banquet</div>
+                        <div className="text-[10px] font-mono text-neutral-400">Naan, Pasta, Hakka, Nachos</div>
+                      </div>
+                    </button>
+                  )}
+
+                  {onOpenSeating && (
+                    <button
+                      onClick={() => {
+                        onClose();
+                        onOpenSeating();
+                      }}
+                      className="p-3 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-sky-500/50 text-left transition cursor-pointer flex flex-col justify-between"
+                    >
+                      <span className="text-2xl">🪑</span>
+                      <div className="mt-2">
+                        <div className="text-xs font-mono font-bold text-white">Auto-Seat Guests</div>
+                        <div className="text-[10px] font-mono text-neutral-400">2-16 banquet chairs</div>
+                      </div>
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => setActiveTab("bottle")}
+                    className="p-3 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-purple-500/50 text-left transition cursor-pointer flex flex-col justify-between"
+                  >
+                    <span className="text-2xl">🍾</span>
+                    <div className="mt-2">
+                      <div className="text-xs font-mono font-bold text-white">Spin the Bottle</div>
+                      <div className="text-[10px] font-mono text-neutral-400">Truth or Dare</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab("dice")}
+                    className="p-3 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-emerald-500/50 text-left transition cursor-pointer flex flex-col justify-between"
+                  >
+                    <span className="text-2xl">🎲</span>
+                    <div className="mt-2">
+                      <div className="text-xs font-mono font-bold text-white">3D Dice Roller</div>
+                      <div className="text-[10px] font-mono text-neutral-400">d6 and d20 dice</div>
+                    </div>
+                  </button>
+
+                  {onOpenUno && (
+                    <button
+                      onClick={() => {
+                        onClose();
+                        onOpenUno();
+                      }}
+                      className="p-3 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-rose-500/50 text-left transition cursor-pointer flex flex-col justify-between"
+                    >
+                      <span className="text-2xl">🃏</span>
+                      <div className="mt-2">
+                        <div className="text-xs font-mono font-bold text-white">Multiplayer UNO</div>
+                        <div className="text-[10px] font-mono text-neutral-400">Play for $50 Cash</div>
+                      </div>
+                    </button>
+                  )}
+
+                  {onOpenGifting && (
+                    <button
+                      onClick={() => {
+                        onClose();
+                        onOpenGifting();
+                      }}
+                      className="p-3 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-pink-500/50 text-left transition cursor-pointer flex flex-col justify-between"
+                    >
+                      <span className="text-2xl">🎁</span>
+                      <div className="mt-2">
+                        <div className="text-xs font-mono font-bold text-white">Gift Birthday Star</div>
+                        <div className="text-[10px] font-mono text-neutral-400">Roses, Crown, Teddy</div>
+                      </div>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
