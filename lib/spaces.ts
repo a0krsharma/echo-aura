@@ -1235,8 +1235,12 @@ export async function createSpaceDoc(space: Omit<SpaceDoc, "id">): Promise<strin
     const docRef = doc(db, SPACES_COLLECTION, generatedId);
     await setDoc(docRef, newSpace);
     return docRef.id;
-  } catch (err) {
-    console.warn("[createSpaceDoc] Firestore write failed, using local/guest space fallback:", err);
+  } catch (err: any) {
+    if (err?.code === "permission-denied" || err?.message?.includes("permissions")) {
+      console.info("[createSpaceDoc] Guest mode: space stored in local storage cache.");
+    } else {
+      console.warn("[createSpaceDoc] Firestore write skipped, using local space cache:", err);
+    }
     return generatedId;
   }
 }
@@ -1278,15 +1282,18 @@ export function subscribeToPublicSpaces(callback: (spaces: SpaceDoc[]) => void):
 
         callback(combined);
       },
-      (err) => {
-        console.warn("[subscribeToPublicSpaces] Firestore subscription unavailable, using local spaces:", err.message);
+      (err: any) => {
+        if (err?.code === "permission-denied" || err?.message?.includes("permissions")) {
+          // Clean guest mode fallback
+        } else {
+          console.warn("[subscribeToPublicSpaces] Using local spaces fallback:", err?.message || err);
+        }
         callback(initialMerged);
       }
     );
 
     return unsub;
   } catch (err) {
-    console.warn("[subscribeToPublicSpaces] Error initializing Firestore:", err);
     return () => {};
   }
 }
@@ -1311,7 +1318,7 @@ export async function getSpaceDoc(spaceId: string): Promise<SpaceDoc | null> {
       return data;
     }
   } catch (err) {
-    console.warn("[getSpaceDoc] Failed fetching doc from Firestore:", err);
+    // Falls back to local/default
   }
 
   return null;
@@ -1333,8 +1340,12 @@ export async function updateSpaceDoc(spaceId: string, updates: Partial<SpaceDoc>
   try {
     const db = getFirebaseDb();
     await updateDoc(doc(db, SPACES_COLLECTION, spaceId), updates);
-  } catch (err) {
-    console.warn("[updateSpaceDoc] Firestore update skipped, cached locally:", err);
+  } catch (err: any) {
+    if (err?.code === "permission-denied" || err?.message?.includes("permissions")) {
+      // Clean guest mode fallback
+    } else {
+      console.warn("[updateSpaceDoc] Firestore update skipped, cached locally:", err);
+    }
   }
 }
 

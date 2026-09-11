@@ -35,10 +35,24 @@ export default function SpatialVoiceManager({
   const clientRef = useRef<IAgoraRTCClient | null>(null);
   const localTrackRef = useRef<IMicrophoneAudioTrack | ILocalAudioTrack | null>(null);
   const remoteTracksRef = useRef<Map<string, IRemoteAudioTrack>>(new Map());
+  const sessionUidRef = useRef<number | null>(null);
+
+  // Derive stable, session-unique 32-bit integer UID to prevent Agora UID_CONFLICT
+  if (!sessionUidRef.current) {
+    const rawUid = user?.uid || `guest_${Math.random().toString(36).slice(2, 7)}`;
+    let hash = 0;
+    for (let i = 0; i < rawUid.length; i++) {
+      hash = (hash << 5) - hash + rawUid.charCodeAt(i);
+      hash |= 0;
+    }
+    const randomNonce = Math.floor(Math.random() * 100000);
+    sessionUidRef.current = ((Math.abs(hash) + randomNonce) % 89999999) + 10000000;
+  }
+  const numericUid = sessionUidRef.current;
 
   // 1. Join Agora Channel & Manage Real-time Audio
   useEffect(() => {
-    if (typeof window === "undefined" || !user || !spaceId) return;
+    if (typeof window === "undefined" || !spaceId) return;
 
     let isMounted = true;
     const client = AgoraRTC.createClient({ codec: "vp8", mode: "rtc" });
@@ -54,8 +68,8 @@ export default function SpatialVoiceManager({
 
         volumes.forEach((v) => {
           if (v.level > 12) {
-            if (v.uid === 0 || String(v.uid) === user.uid) {
-              speaking.add(user.uid);
+            if (v.uid === 0 || v.uid === numericUid || String(v.uid) === user?.uid) {
+              if (user?.uid) speaking.add(user.uid);
               localIsSpeaking = true;
             } else {
               speaking.add(String(v.uid));
@@ -73,9 +87,11 @@ export default function SpatialVoiceManager({
 
     // Remote Audio Track publishing
     client.on("user-published", async (remoteUser, mediaType) => {
+      if (!isMounted) return;
       if (mediaType === "audio") {
         try {
           await client.subscribe(remoteUser, mediaType);
+          if (!isMounted) return;
           if (remoteUser.audioTrack) {
             const uidStr = String(remoteUser.uid);
             remoteTracksRef.current.set(uidStr, remoteUser.audioTrack);
@@ -100,15 +116,8 @@ export default function SpatialVoiceManager({
 
     const initAgora = async () => {
       try {
+        if (!isMounted) return;
         const channelName = `echo_spaces_${spaceId}`;
-        
-        // Derive clean 32-bit positive integer UID for Agora
-        let hash = 0;
-        for (let i = 0; i < user.uid.length; i++) {
-          hash = (hash << 5) - hash + user.uid.charCodeAt(i);
-          hash |= 0;
-        }
-        const numericUid = Math.abs(hash) % 100000000 + 1;
 
         // Fetch valid dynamic AccessToken2 from backend
         let token: string | null = null;
@@ -116,6 +125,7 @@ export default function SpatialVoiceManager({
           const res = await fetch(
             `/api/agora/token?channel=${encodeURIComponent(channelName)}&uid=${numericUid}`
           );
+          if (!isMounted) return;
           if (res.ok) {
             const data = await res.json();
             token = data.token || null;
@@ -124,7 +134,12 @@ export default function SpatialVoiceManager({
           console.warn("[SpatialVoice] Token fetch error, falling back to static:", tokErr);
         }
 
+        if (!isMounted) return;
         await client.join(AGORA_APP_ID, channelName, token, numericUid);
+        if (!isMounted) {
+          client.leave().catch(() => {});
+          return;
+        }
 
         // Create & publish local mic track if permissions granted and still connected
         try {
@@ -151,7 +166,12 @@ export default function SpatialVoiceManager({
           if (isMounted) setIsConnected(true); // Connected as listener
         }
       } catch (err: any) {
-        console.warn("[SpatialVoice] Agora server unavailable, running in proximity mode:", err?.message || err);
+        if (err?.code === "UID_CONFLICT") {
+          console.warn("[SpatialVoice] Retrying with fresh session UID due to temporary conflict...");
+          sessionUidRef.current = Math.floor(Math.random() * 89999999) + 10000000;
+        } else {
+          console.warn("[SpatialVoice] Agora server unavailable, running in proximity mode:", err?.message || err);
+        }
         if (isMounted) setIsConnected(false);
       }
     };
@@ -167,14 +187,12 @@ export default function SpatialVoiceManager({
         } catch {}
         localTrackRef.current = null;
       }
-      if (clientRef.current) {
-        if (clientRef.current.connectionState === "CONNECTED" || clientRef.current.connectionState === "CONNECTING") {
-          clientRef.current.leave().catch(() => {});
-        }
-      }
+      try {
+        client.leave().catch(() => {});
+      } catch {}
       remoteTracksRef.current.clear();
     };
-  }, [spaceId, user]);
+  }, [spaceId, user?.uid, numericUid]);
 
   // 2. Spatial Distance Volume Attenuation Engine
   useEffect(() => {
@@ -234,23 +252,26 @@ export default function SpatialVoiceManager({
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1.5 shrink-0">
       <button
         type="button"
         onClick={handleToggleMic}
-        className={`px-3 py-1.5 rounded-xl border flex items-center gap-1.5 text-xs font-mono font-black uppercase transition-all active:scale-95 cursor-pointer shadow-md ${
+        className={`px-2.5 py-1.5 rounded-xl border flex items-center gap-1.5 text-xs font-mono font-bold transition-all active:scale-95 cursor-pointer shadow-sm shrink-0 ${
           isMuted
-            ? "bg-red-500/20 border-red-500 text-red-300"
-            : "bg-emerald-500/20 border-emerald-400 text-emerald-300 animate-pulse"
+            ? "bg-rose-950/30 border-rose-800/40 text-rose-300 hover:bg-rose-900/40"
+            : "bg-emerald-950/30 border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/40"
         }`}
+        title={isMuted ? "Unmute Mic (Spatial 360° Proximity Audio)" : "Mute Mic (Spatial 360° Proximity Audio)"}
       >
-        {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-        <span>{isMuted ? "MIC MUTED" : "MIC LIVE"}</span>
+        {isMuted ? <MicOff className="w-3.5 h-3.5 text-rose-400" /> : <Mic className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />}
+        <span className="text-[11px] font-mono font-bold">
+          {isMuted ? "Muted" : "Live"}
+        </span>
       </button>
 
-      <div className="hidden sm:flex items-center gap-1 text-[10px] font-mono text-neutral-400">
+      <div className="hidden 2xl:flex items-center gap-1 text-[10px] font-mono text-neutral-400">
         <Radio className="w-3 h-3 text-cyan-400 animate-pulse" />
-        <span>SPATIAL AUDIO: <strong>360° PROXIMITY</strong></span>
+        <span>360° AUDIO</span>
       </div>
     </div>
   );

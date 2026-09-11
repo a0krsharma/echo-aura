@@ -1194,9 +1194,9 @@ export default function DynamicSpaceWorldPage() {
           </button>
 
           {/* Spatial Voice Proximity Audio Manager */}
-          <div className="hidden xl:block">
+          <div className="hidden sm:block shrink-0">
             <SpatialVoiceManager
-              spaceId={space.id}
+              spaceId={spaceId}
               localAvatar={localAvatar}
               remoteAvatars={remoteAvatars}
               onSpeakingUidsChange={setSpeakingUids}
