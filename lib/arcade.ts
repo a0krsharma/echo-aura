@@ -121,7 +121,8 @@ export type ArcadeGameType =
   | "subway_surfer"
   | "hill_climb"
   | "super_mario"
-  | "mini_composer";
+  | "mini_composer"
+  | "guitar_hero";
 
 export type ArcadeMatchMode = "MULTIPLAYER" | "VS_COMPUTER";
 

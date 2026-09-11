@@ -71,6 +71,7 @@ import SubwaySurferGame from "@/app/components/arcade/SubwaySurferGame";
 import HillClimbRacingGame from "@/app/components/arcade/HillClimbRacingGame";
 import SuperMarioGame from "@/app/components/arcade/SuperMarioGame";
 import MiniComposerGame from "@/app/components/arcade/MiniComposerGame";
+import GuitarHeroGame from "@/app/components/arcade/GuitarHeroGame";
 import ArcadeInviteModal from "@/app/components/arcade/ArcadeInviteModal";
 import ArcadeCreateModal from "@/app/components/arcade/ArcadeCreateModal";
 import ArcadeGameRulesModal from "@/app/components/arcade/ArcadeGameRulesModal";
@@ -175,6 +176,7 @@ const CLEAN_GAMES: MasterRankedGame[] = [
   { id: "hill_climb", name: "Hill Climb Legends", category: "PHYSICS", icon: "🚗", description: "2-pedal terrain physics racer with suspension, air flips, fuel canisters & 3 vehicles" },
   { id: "super_mario", name: "Super Mario Adventure", category: "PHYSICS", icon: "🍄", description: "Classic 2D retro plumber platformer with Goombas, question blocks, mushrooms & fireballs" },
   { id: "mini_composer", name: "Mini Composer & Piano", category: "PUZZLE", icon: "🎼", description: "Interactive 2-octave piano & sheet music composer with song tutor, ear trainer & polyphonic synth" },
+  { id: "guitar_hero", name: "Guitar Hero & Studio", category: "PHYSICS", icon: "🎸", description: "Rhythm rock highway with 5 lanes, 3D fretboard, acoustic chord strummer & overdrive electric solos" },
 ];
 
 function ArcadeContent() {
@@ -1204,6 +1206,22 @@ function ArcadeContent() {
             )}
             {activeMatch.gameType === "mini_composer" && (
               <MiniComposerGame
+                match={activeMatch}
+                currentUid={user?.uid || ""}
+                isHost={activeMatch.hostUid === user?.uid}
+                onBack={handleExitActiveMatch}
+                onInviteFriend={() => {
+                  if (activeMatch.mode === "VS_COMPUTER") {
+                    handleOpenCreate(activeMatch.gameType);
+                  } else {
+                    setInviteModalMatch(activeMatch);
+                  }
+                }}
+                onRandomMatch={() => handleStartRandomMatch(activeMatch.gameType)}
+              />
+            )}
+            {activeMatch.gameType === "guitar_hero" && (
+              <GuitarHeroGame
                 match={activeMatch}
                 currentUid={user?.uid || ""}
                 isHost={activeMatch.hostUid === user?.uid}

@@ -17,6 +17,7 @@ import SubwaySurferGame from "@/app/components/arcade/SubwaySurferGame";
 import HillClimbRacingGame from "@/app/components/arcade/HillClimbRacingGame";
 import SuperMarioGame from "@/app/components/arcade/SuperMarioGame";
 import MiniComposerGame from "@/app/components/arcade/MiniComposerGame";
+import GuitarHeroGame from "@/app/components/arcade/GuitarHeroGame";
 import FruitNinjaGame from "@/app/components/arcade/FruitNinjaGame";
 import Connect4Game from "@/app/components/arcade/Connect4Game";
 import ChessGame from "@/app/components/arcade/ChessGame";
@@ -107,6 +108,16 @@ export const SPACE_ARCADE_GAMES: SpaceArcadeGameDef[] = [
     players: "1-4 Players",
     color: "#3b82f6",
     badge: "NEW",
+  },
+  {
+    id: "guitar_hero",
+    name: "Guitar Hero & Studio",
+    category: "ACTION",
+    icon: "🎸",
+    description: "Rhythm rock highway with 5 lanes, 3D fretboard, acoustic chord strummer & overdrive electric solos.",
+    players: "1-4 Players",
+    color: "#ef4444",
+    badge: "HOT",
   },
   {
     id: "fruit_ninja",
@@ -764,6 +775,18 @@ export default function SpaceArcadeModal({
               {activeGame.id === "mini_composer" && activeMatch && (
                 <div className="w-full max-w-4xl">
                   <MiniComposerGame
+                    match={activeMatch}
+                    currentUid={user?.uid || ""}
+                    isHost={activeMatch.hostUid === user?.uid}
+                    onBack={() => setActiveGame(null)}
+                  />
+                </div>
+              )}
+
+              {/* 🎸 Guitar Hero */}
+              {activeGame.id === "guitar_hero" && activeMatch && (
+                <div className="w-full max-w-4xl">
+                  <GuitarHeroGame
                     match={activeMatch}
                     currentUid={user?.uid || ""}
                     isHost={activeMatch.hostUid === user?.uid}
