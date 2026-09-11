@@ -15,6 +15,8 @@ import {
   ChevronDown,
   ChevronUp,
   Check,
+  Zap,
+  Tv,
 } from "lucide-react";
 import { partyMusicEngine, PARTY_PLAYLIST, PartyTrack } from "@/lib/partyMusicEngine";
 
@@ -22,6 +24,7 @@ interface PartyMusicBarProps {
   userHandle?: string;
   compact?: boolean;
   onSongChanged?: (newTrack: PartyTrack) => void;
+  onOpenTeleparty?: () => void;
   className?: string;
 }
 
@@ -29,11 +32,13 @@ export function PartyMusicBar({
   userHandle = "Guest",
   compact = false,
   onSongChanged,
+  onOpenTeleparty,
   className = "",
 }: PartyMusicBarProps) {
   const [musicState, setMusicState] = useState(partyMusicEngine.getState());
   const [isMuted, setIsMuted] = useState(false);
   const [playlistOpen, setPlaylistOpen] = useState(false);
+  const [playlistFilter, setPlaylistFilter] = useState<"all" | "fast" | "punjabi" | "bollywood" | "lofi">("all");
   const [prevVolume, setPrevVolume] = useState(0.35);
   const [skipToast, setSkipToast] = useState<string | null>(null);
 
@@ -68,6 +73,20 @@ export function PartyMusicBar({
     partyMusicEngine.play(index);
     setPlaylistOpen(false);
     onSongChanged?.(PARTY_PLAYLIST[index]);
+  };
+
+  const handlePlayFastParty = () => {
+    const fastItems = PARTY_PLAYLIST.map((t, idx) => ({ t, idx })).filter(
+      (item) => item.t.bpm >= 130
+    );
+    if (fastItems.length > 0) {
+      const nextFast =
+        fastItems.find((item) => item.idx !== musicState.trackIndex) || fastItems[0];
+      partyMusicEngine.play(nextFast.idx);
+      setSkipToast(`⚡ ${nextFast.t.bpm} BPM FAST PARTY: "${nextFast.t.title}"! 🔥`);
+      setTimeout(() => setSkipToast(null), 3500);
+      onSongChanged?.(nextFast.t);
+    }
   };
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -201,7 +220,7 @@ export function PartyMusicBar({
             )}
           </button>
 
-          {/* Skip / Change Song button (The core requirement: "user can change the song if not liked") */}
+          {/* Skip / Change Song button */}
           <button
             onClick={handleNext}
             className="px-2.5 py-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/25 text-emerald-300 hover:text-emerald-200 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm group"
@@ -210,6 +229,28 @@ export function PartyMusicBar({
             <SkipForward className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
             <span className="hidden sm:inline">Change Song</span>
           </button>
+
+          {/* ⚡ Fast Party Mode Button (130-142 BPM) */}
+          <button
+            onClick={handlePlayFastParty}
+            className="px-2.5 py-1.5 rounded-xl border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/25 text-amber-300 hover:text-amber-200 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm group"
+            title="Cue 130-142 BPM High-Tempo Fast Party Bangers"
+          >
+            <Zap className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform" />
+            <span className="hidden md:inline">⚡ Fast Party</span>
+          </button>
+
+          {/* YouTube / Watch Party Audio Sync */}
+          {onOpenTeleparty && (
+            <button
+              onClick={onOpenTeleparty}
+              className="px-2.5 py-1.5 rounded-xl border border-red-500/40 bg-red-500/10 hover:bg-red-500/25 text-red-300 hover:text-red-200 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+              title="Sync YouTube Videos or Spotify Audio with Room"
+            >
+              <Tv className="w-3.5 h-3.5 text-red-400" />
+              <span className="hidden lg:inline">Sync YouTube</span>
+            </button>
+          )}
 
           {/* Playlist Dropdown Toggle */}
           <button
@@ -266,10 +307,10 @@ export function PartyMusicBar({
         <span>{formatTime(currentTrack.durationSeconds)}</span>
       </div>
 
-      {/* Playlist Drawer */}
+      {/* Playlist Drawer with Fast Party Filters */}
       {playlistOpen && (
-        <div className="mt-3 pt-3 border-t border-neutral-800 space-y-1 max-h-52 overflow-y-auto custom-scrollbar">
-          <div className="flex items-center justify-between text-[11px] font-bold text-neutral-400 uppercase tracking-wider px-1 pb-1">
+        <div className="mt-3 pt-3 border-t border-neutral-800 space-y-2 max-h-64 overflow-y-auto custom-scrollbar">
+          <div className="flex items-center justify-between text-[11px] font-bold text-neutral-400 uppercase tracking-wider px-1">
             <span className="flex items-center gap-1">
               <Radio className="w-3.5 h-3.5 text-emerald-400" />
               Party Queue ({PARTY_PLAYLIST.length} Tracks)
@@ -277,38 +318,76 @@ export function PartyMusicBar({
             <span className="text-[10px] text-neutral-500">Synced Room Audio</span>
           </div>
 
-          {PARTY_PLAYLIST.map((t, idx) => {
-            const isCur = idx === musicState.trackIndex;
-            return (
+          {/* Filter Pills */}
+          <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1">
+            {(
+              [
+                { id: "all", label: "All Tracks" },
+                { id: "fast", label: "⚡ Fast Party (130+ BPM)" },
+                { id: "punjabi", label: "🔥 Punjabi" },
+                { id: "bollywood", label: "💃 Bollywood" },
+                { id: "lofi", label: "🌙 Lo-Fi" },
+              ] as const
+            ).map((flt) => (
               <button
-                key={t.id}
-                onClick={() => handleSelectTrack(idx)}
-                className={`w-full flex items-center justify-between p-2 rounded-xl text-left text-xs transition-all cursor-pointer ${
-                  isCur
-                    ? "bg-emerald-500/15 border border-emerald-500/40 text-emerald-200"
-                    : "hover:bg-neutral-900 text-neutral-300 hover:text-white border border-transparent"
+                key={flt.id}
+                onClick={() => setPlaylistFilter(flt.id)}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold whitespace-nowrap transition cursor-pointer ${
+                  playlistFilter === flt.id
+                    ? "bg-emerald-500 text-neutral-950 shadow-xs"
+                    : "bg-neutral-900 hover:bg-neutral-800 text-neutral-400 border border-neutral-800"
                 }`}
               >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="text-lg shrink-0">{t.coverArt}</span>
-                  <div className="min-w-0">
-                    <div className="font-semibold truncate text-xs flex items-center gap-1.5">
-                      {t.title}
-                      {isCur && <span className="text-[10px] text-emerald-400 font-mono">● LIVE</span>}
-                    </div>
-                    <div className="text-[11px] text-neutral-400 truncate">{t.artist}</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0 text-[10px] font-mono text-neutral-500">
-                  <span className={`px-1.5 py-0.5 rounded border ${getGenreColor(t.genre)}`}>
-                    {t.genre}
-                  </span>
-                  {isCur && <Check className="w-3.5 h-3.5 text-emerald-400" />}
-                </div>
+                {flt.label}
               </button>
-            );
-          })}
+            ))}
+          </div>
+
+          {/* Track List */}
+          <div className="space-y-1">
+            {PARTY_PLAYLIST.map((t, idx) => {
+              const isCur = idx === musicState.trackIndex;
+              if (playlistFilter === "fast" && t.bpm < 130) return null;
+              if (playlistFilter === "punjabi" && t.genre !== "punjabi") return null;
+              if (playlistFilter === "bollywood" && t.genre !== "bollywood") return null;
+              if (playlistFilter === "lofi" && t.genre !== "lofi") return null;
+
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => handleSelectTrack(idx)}
+                  className={`w-full flex items-center justify-between p-2 rounded-xl text-left text-xs transition-all cursor-pointer ${
+                    isCur
+                      ? "bg-emerald-500/15 border border-emerald-500/40 text-emerald-200"
+                      : "hover:bg-neutral-900 text-neutral-300 hover:text-white border border-transparent"
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="text-lg shrink-0">{t.coverArt}</span>
+                    <div className="min-w-0">
+                      <div className="font-semibold truncate text-xs flex items-center gap-1.5">
+                        {t.title}
+                        {isCur && <span className="text-[10px] text-emerald-400 font-mono">● LIVE</span>}
+                        {t.bpm >= 130 && (
+                          <span className="text-[9px] bg-amber-500/20 text-amber-300 px-1 py-0.2 rounded font-mono font-bold">
+                            ⚡ {t.bpm} BPM
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-neutral-400 truncate">{t.artist}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0 text-[10px] font-mono text-neutral-500">
+                    <span className={`px-1.5 py-0.5 rounded border ${getGenreColor(t.genre)}`}>
+                      {t.genre}
+                    </span>
+                    {isCur && <Check className="w-3.5 h-3.5 text-emerald-400" />}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>

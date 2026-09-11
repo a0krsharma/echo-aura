@@ -55,6 +55,7 @@ interface PartyTableGamesModalProps {
   onlineParticipants: Array<{ uid: string; displayName: string; photoURL?: string }>;
   initialTab?: PartyGameTab;
   onOpenUno?: () => void;
+  onOpenTeleparty?: () => void;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -133,6 +134,7 @@ export function PartyTableGamesModal({
   onlineParticipants,
   initialTab = "ludo",
   onOpenUno,
+  onOpenTeleparty,
 }: PartyTableGamesModalProps) {
   const [activeTab, setActiveTab] = useState<PartyGameTab>(initialTab);
 
@@ -525,7 +527,7 @@ export function PartyTableGamesModal({
           </div>
 
           {/* Embedded Synced Party Music Bar */}
-          <PartyMusicBar userHandle={localUserName} compact={false} />
+          <PartyMusicBar userHandle={localUserName} compact={false} onOpenTeleparty={onOpenTeleparty} />
         </div>
 
         {/* NAVIGATION TABS: 6 Games */}

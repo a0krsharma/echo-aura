@@ -902,7 +902,7 @@ export function checkCollision(x: number, y: number, radius = 10): boolean {
 export function getNearbyInteractiveObject(
   x: number,
   y: number,
-  reachDist = 55
+  reachDist = 75
 ): InteractiveObject | null {
   for (const obj of INTERACTIVE_OBJECTS) {
     const centerX = obj.x + obj.w / 2;

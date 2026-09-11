@@ -762,10 +762,36 @@ export default function DynamicSpaceWorldPage() {
       handleSendSpeech("🔨 Order in the court!");
     } else if (obj.type === "pomodoro") {
       spacesSfx.playFocusBell();
-    } else if (obj.type === "piano") {
-      spacesSfx.playKeyNote(1);
-    } else if (obj.type === "drums") {
-      spacesSfx.playDrumPad("kick");
+    } else if (obj.type === "podium" || obj.id === "concert_stage_mic" || obj.id === "debate_prop_podium" || obj.id === "debate_opp_podium") {
+      const nextStage = !isPresentingOnStage;
+      setIsPresentingOnStage(nextStage);
+      spacesSfx.playPartyFanfare();
+      handleSendSpeech(
+        nextStage
+          ? "🎤 Stepped up to the Stage Microphone! Broadcasting live to the whole room!"
+          : "👋 Stepped down from the stage microphone."
+      );
+    } else if (obj.type === "piano" || obj.id === "music_piano") {
+      const nextSitting = !localAvatar.isSitting;
+      handleSit(nextSitting, nextSitting ? "music_piano_stool" : undefined);
+      if (nextSitting) {
+        handleMove(245, 825, "up", false);
+        spacesSfx.playKeyNote(1);
+        setTimeout(() => spacesSfx.playKeyNote(3), 120);
+        setTimeout(() => spacesSfx.playKeyNote(5), 240);
+        setTimeout(() => spacesSfx.playKeyNote(8), 360);
+        handleSendSpeech("🎹 Playing live Grand Synthesizer Piano at the Jam Studio!");
+      }
+    } else if (obj.type === "drums" || obj.id === "music_drums") {
+      const nextSitting = !localAvatar.isSitting;
+      handleSit(nextSitting, nextSitting ? "music_drum_stool" : undefined);
+      if (nextSitting) {
+        handleMove(375, 820, "up", false);
+        spacesSfx.playDrumPad("kick");
+        setTimeout(() => spacesSfx.playDrumPad("snare"), 140);
+        setTimeout(() => spacesSfx.playDrumPad("hihat"), 280);
+        handleSendSpeech("🥁 Jamming on the Drum Kit at the Music Academy!");
+      }
     }
   };
 
@@ -1934,6 +1960,7 @@ export default function DynamicSpaceWorldPage() {
           displayName: r.handle,
           photoURL: r.avatarUrl,
         }))}
+        onOpenTeleparty={() => setTelepartyModalOpen(true)}
       />
 
       {/* Banquet Table Games Lounge (Ludo, Spin the Bottle, RPS, Antakshari, Raja Mantri, UNO) */}
@@ -1956,6 +1983,7 @@ export default function DynamicSpaceWorldPage() {
           setPartyTableGamesOpen(false);
           setUnoModalOpen(true);
         }}
+        onOpenTeleparty={() => setTelepartyModalOpen(true)}
       />
 
       {/* Frictionless Guest Auth Gate Modal */}
@@ -1976,6 +2004,8 @@ export default function DynamicSpaceWorldPage() {
         syncState={telepartySyncState}
         onUpdateSyncState={(next) => setTelepartySyncState(next)}
         onBroadcastSpeech={(msg) => handleSendSpeech(msg)}
+        onOpenInviteFriends={() => setInviteModalOpen(true)}
+        spaceId={space.id}
       />
 
       {/* Full Host Room Controls Modal (16-Seat Chairs, Cake Designer & Table Decor) */}

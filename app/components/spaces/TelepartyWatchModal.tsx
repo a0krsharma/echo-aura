@@ -33,6 +33,8 @@ interface TelepartyWatchModalProps {
   onBroadcastSpeech?: (text: string) => void;
   syncState?: TelepartySyncState;
   onUpdateSyncState?: (state: TelepartySyncState) => void;
+  onOpenInviteFriends?: () => void;
+  spaceId?: string;
 }
 
 const PRESET_CHANNELS = [
@@ -93,6 +95,8 @@ export default function TelepartyWatchModal({
   onBroadcastSpeech,
   syncState,
   onUpdateSyncState,
+  onOpenInviteFriends,
+  spaceId,
 }: TelepartyWatchModalProps) {
   const [inputUrl, setInputUrl] = useState("");
   const [currentVideoId, setCurrentVideoId] = useState("jfKfPfyJRdk");
@@ -101,6 +105,7 @@ export default function TelepartyWatchModal({
   const [isMuted, setIsMuted] = useState(false);
   const [reactions, setReactions] = useState<Array<{ id: string; emoji: string; x: number }>>([]);
   const [isMiniMode, setIsMiniMode] = useState(false);
+  const [inviteToast, setInviteToast] = useState<string | null>(null);
 
   const [embedOrigin, setEmbedOrigin] = useState("");
 
@@ -278,15 +283,34 @@ export default function TelepartyWatchModal({
 
             <button
               onClick={() => {
-                spacesSfx.playKeyNote(3);
-                onBroadcastSpeech?.(`🍿 Watching "${videoTitle}" with @${userHandle}! Come sit with us!`);
+                spacesSfx.playKeyNote(5);
+                const watchUrl = typeof window !== "undefined"
+                  ? `${window.location.origin}${window.location.pathname}?teleparty=${currentVideoId}`
+                  : "";
+                if (navigator.clipboard) {
+                  navigator.clipboard.writeText(watchUrl || window.location.href);
+                }
+                setInviteToast("✅ Watch Party link copied! Opening friends invite...");
+                setTimeout(() => setInviteToast(null), 3500);
+                if (onOpenInviteFriends) {
+                  onOpenInviteFriends();
+                }
+                onBroadcastSpeech?.(`🍿 Watching "${videoTitle}" with @${userHandle}! Join our watch party!`);
               }}
-              className="px-3 py-1.5 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/40 text-purple-200 font-mono text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+              className="px-3 py-1.5 rounded-xl bg-purple-600/40 hover:bg-purple-600/60 border border-purple-500/50 text-purple-200 font-mono text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-md shadow-purple-600/20"
+              title="Copy Watch Party Link & Invite Friends"
             >
               <Share2 className="w-3.5 h-3.5" />
-              <span>Invite Space</span>
+              <span>Invite Friends & Space</span>
             </button>
           </div>
+
+          {/* Invite Toast Notification */}
+          {inviteToast && (
+            <div className="w-full text-center py-1 px-3 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-mono text-[11px] rounded-xl animate-in fade-in slide-in-from-top-1">
+              {inviteToast}
+            </div>
+          )}
 
           {/* Quick Reaction Emoji Bursts */}
           <div className="flex items-center gap-1">

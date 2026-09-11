@@ -164,7 +164,245 @@ export const ROUND_TABLE_CHAIRS: TableChairDef[] = NUMBERED_TABLES.flatMap((tbl)
   })
 );
 
+// 🎭 18 Concert & Festival Auditorium Velvet Chairs (3 Rows of 6 Seats facing the Center Stage)
+export const CONCERT_CHAIRS: TableChairDef[] = [
+  // Row A (Front VIP Row - y: 860)
+  ...[0, 1, 2, 3, 4, 5].map((i) => ({
+    id: `concert_chair_a_${i + 1}`,
+    name: `Concert VIP Seat A${i + 1}`,
+    tableName: "Concert Hall Auditorium",
+    x: 640 + i * 60,
+    y: 860,
+    faceDirection: "up" as const,
+  })),
+  // Row B (Middle Row - y: 930)
+  ...[0, 1, 2, 3, 4, 5].map((i) => ({
+    id: `concert_chair_b_${i + 1}`,
+    name: `Concert Center Seat B${i + 1}`,
+    tableName: "Concert Hall Auditorium",
+    x: 640 + i * 60,
+    y: 930,
+    faceDirection: "up" as const,
+  })),
+  // Row C (Balcony Tier Row - y: 1000)
+  ...[0, 1, 2, 3, 4, 5].map((i) => ({
+    id: `concert_chair_c_${i + 1}`,
+    name: `Concert Balcony Seat C${i + 1}`,
+    tableName: "Concert Hall Auditorium",
+    x: 640 + i * 60,
+    y: 1000,
+    faceDirection: "up" as const,
+  })),
+];
+
+// 🎵 7 Music Studio Jam & Instrument Seating
+export const MUSIC_JAM_CHAIRS: TableChairDef[] = [
+  {
+    id: "music_piano_bench",
+    name: "Grand Synthesizer Piano Bench",
+    tableName: "Music Studio Piano",
+    x: 245,
+    y: 825,
+    faceDirection: "up",
+  },
+  {
+    id: "music_drum_throne",
+    name: "4-Pad Drum Machine Throne",
+    tableName: "Music Studio Drums",
+    x: 375,
+    y: 820,
+    faceDirection: "up",
+  },
+  // 5 Acoustic Jam Circle Chairs around the rug (x: 230, y: 950)
+  {
+    id: "music_jam_chair_1",
+    name: "Acoustic Jam Chair (North)",
+    tableName: "Music Jam Circle",
+    x: 230,
+    y: 910,
+    faceDirection: "down",
+  },
+  {
+    id: "music_jam_chair_2",
+    name: "Acoustic Jam Chair (South)",
+    tableName: "Music Jam Circle",
+    x: 230,
+    y: 990,
+    faceDirection: "up",
+  },
+  {
+    id: "music_jam_chair_3",
+    name: "Acoustic Jam Chair (West)",
+    tableName: "Music Jam Circle",
+    x: 180,
+    y: 950,
+    faceDirection: "right",
+  },
+  {
+    id: "music_jam_chair_4",
+    name: "Acoustic Jam Chair (East)",
+    tableName: "Music Jam Circle",
+    x: 280,
+    y: 950,
+    faceDirection: "left",
+  },
+  {
+    id: "music_jam_chair_5",
+    name: "Acoustic Jam Chair (Bass)",
+    tableName: "Music Jam Circle",
+    x: 270,
+    y: 985,
+    faceDirection: "left",
+  },
+];
+
+// 💼 12 Coworking Office Swivel Desks & Watercooler Lounge
+export const OFFICE_SEATS: TableChairDef[] = [
+  // Pod Alpha Swivel Chairs
+  {
+    id: "office_chair_alpha_1",
+    name: "Pod Alpha Swivel Desk 1",
+    tableName: "Pod Alpha Workstation",
+    x: 117,
+    y: 375,
+    faceDirection: "up",
+  },
+  {
+    id: "office_chair_alpha_2",
+    name: "Pod Alpha Swivel Desk 2",
+    tableName: "Pod Alpha Workstation",
+    x: 197,
+    y: 375,
+    faceDirection: "up",
+  },
+  {
+    id: "office_chair_alpha_3",
+    name: "Pod Alpha Swivel Desk 3",
+    tableName: "Pod Alpha Workstation",
+    x: 117,
+    y: 475,
+    faceDirection: "up",
+  },
+  {
+    id: "office_chair_alpha_4",
+    name: "Pod Alpha Swivel Desk 4",
+    tableName: "Pod Alpha Workstation",
+    x: 197,
+    y: 475,
+    faceDirection: "up",
+  },
+  // Strategy & Ops Pod Chairs
+  {
+    id: "office_chair_strat_1",
+    name: "Strategy Battlestation Chair 1",
+    tableName: "Strategy & Ops Pod",
+    x: 304,
+    y: 398,
+    faceDirection: "up",
+  },
+  {
+    id: "office_chair_strat_2",
+    name: "Strategy Battlestation Chair 2",
+    tableName: "Strategy & Ops Pod",
+    x: 369,
+    y: 398,
+    faceDirection: "up",
+  },
+  {
+    id: "office_chair_strat_3",
+    name: "Strategy Battlestation Chair 3",
+    tableName: "Strategy & Ops Pod",
+    x: 304,
+    y: 458,
+    faceDirection: "up",
+  },
+  {
+    id: "office_chair_strat_4",
+    name: "Strategy Battlestation Chair 4",
+    tableName: "Strategy & Ops Pod",
+    x: 369,
+    y: 458,
+    faceDirection: "up",
+  },
+  // Breakout Watercooler Couch Seats
+  {
+    id: "office_couch_seat_1",
+    name: "Watercooler Couch Seat 1",
+    tableName: "Breakout Watercooler Lounge",
+    x: 235,
+    y: 400,
+    faceDirection: "down",
+  },
+  {
+    id: "office_couch_seat_2",
+    name: "Watercooler Couch Seat 2",
+    tableName: "Breakout Watercooler Lounge",
+    x: 265,
+    y: 400,
+    faceDirection: "down",
+  },
+  {
+    id: "office_couch_seat_3",
+    name: "Watercooler Couch Seat 3",
+    tableName: "Breakout Watercooler Lounge",
+    x: 295,
+    y: 400,
+    faceDirection: "down",
+  },
+  {
+    id: "office_couch_seat_4",
+    name: "Watercooler Couch Seat 4",
+    tableName: "Breakout Watercooler Lounge",
+    x: 315,
+    y: 400,
+    faceDirection: "down",
+  },
+];
+
+// ⛲ 4 Echo Marble Fountain Garden Benches
+export const COURTYARD_BENCHES: TableChairDef[] = [
+  {
+    id: "courtyard_bench_north",
+    name: "Fountain Garden Bench (North)",
+    tableName: "Echo Marble Fountain Courtyard",
+    x: 800,
+    y: 535,
+    faceDirection: "down",
+  },
+  {
+    id: "courtyard_bench_south",
+    name: "Fountain Garden Bench (South)",
+    tableName: "Echo Marble Fountain Courtyard",
+    x: 800,
+    y: 645,
+    faceDirection: "up",
+  },
+  {
+    id: "courtyard_bench_west",
+    name: "Fountain Garden Bench (West)",
+    tableName: "Echo Marble Fountain Courtyard",
+    x: 745,
+    y: 590,
+    faceDirection: "right",
+  },
+  {
+    id: "courtyard_bench_east",
+    name: "Fountain Garden Bench (East)",
+    tableName: "Echo Marble Fountain Courtyard",
+    x: 855,
+    y: 590,
+    faceDirection: "left",
+  },
+];
+
 export const ALL_TABLE_CHAIRS: TableChairDef[] = [...BANQUET_CHAIRS, ...ROUND_TABLE_CHAIRS];
+export const ALL_WORLD_SEATS: TableChairDef[] = [
+  ...ALL_TABLE_CHAIRS,
+  ...CONCERT_CHAIRS,
+  ...MUSIC_JAM_CHAIRS,
+  ...OFFICE_SEATS,
+  ...COURTYARD_BENCHES,
+];
 
 export default function EchoSpacesWorld({
   localAvatar,
@@ -579,8 +817,8 @@ export default function EchoSpacesWorld({
       }
     }
 
-    // Check if clicked directly on any Banquet or Round Table chair
-    for (const chair of ALL_TABLE_CHAIRS) {
+    // Check if clicked directly on any chair across all zones (Concert, Music, Office, Courtyard, Tables)
+    for (const chair of ALL_WORLD_SEATS) {
       if (Math.hypot(worldClickX - chair.x, worldClickY - chair.y) <= 24) {
         clickTargetRef.current = { x: chair.x, y: chair.y, time: Date.now() };
         onMove(chair.x, chair.y, chair.faceDirection, false);
@@ -745,7 +983,7 @@ export default function EchoSpacesWorld({
       const nearby = getNearbyInteractiveObject(posX, posY);
       nearbyObjectRef.current = nearby;
 
-      const nearbyTableChair = ALL_TABLE_CHAIRS.find(
+      const nearbyTableChair = ALL_WORLD_SEATS.find(
         (c) => Math.hypot(posX - c.x, posY - c.y) <= 38
       );
       nearbyTableChairRef.current = nearbyTableChair || null;
@@ -1994,6 +2232,176 @@ export default function EchoSpacesWorld({
         ctx.restore();
       });
 
+      // ── RENDER 18 CONCERT HALL AUDIENCE VELVET THEATER CHAIRS (Rows A, B, C) ──
+      CONCERT_CHAIRS.forEach((chair) => {
+        ctx.save();
+        const isSeatedHere = localAvatar.isSitting && localAvatar.sittingObjectId === chair.id;
+
+        // Soft drop shadow
+        ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+        ctx.beginPath();
+        ctx.ellipse(chair.x, chair.y + 10, 18, 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Active Golden/Teal Halo if player is seated
+        if (isSeatedHere) {
+          ctx.strokeStyle = "#f59e0b";
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.arc(chair.x, chair.y, 22, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        // Velvet Chair Cushion Base
+        ctx.fillStyle = isSeatedHere ? "#0f766e" : "#881337";
+        ctx.beginPath();
+        ctx.roundRect(chair.x - 14, chair.y - 8, 28, 20, 6);
+        ctx.fill();
+        ctx.strokeStyle = isSeatedHere ? "#f59e0b" : "#be123c";
+        ctx.lineWidth = 1.8;
+        ctx.stroke();
+
+        // High Velvet Backrest (Facing Up towards Stage)
+        ctx.fillStyle = isSeatedHere ? "#115e59" : "#9f1239";
+        ctx.beginPath();
+        ctx.roundRect(chair.x - 13, chair.y + 4, 26, 8, 4);
+        ctx.fill();
+
+        // Polished Brass / Gold Armrests
+        ctx.fillStyle = "#ca8a04";
+        ctx.fillRect(chair.x - 16, chair.y - 6, 3, 14);
+        ctx.fillRect(chair.x + 13, chair.y - 6, 3, 14);
+
+        // Seat Number Tag (A1, A2... C6)
+        ctx.fillStyle = isSeatedHere ? "#fef08a" : "#fda4af";
+        ctx.font = "bold 8px monospace";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const tag = chair.id.split("_").slice(-2).join("").toUpperCase();
+        ctx.fillText(tag, chair.x, chair.y - 1);
+
+        ctx.restore();
+      });
+
+      // ── RENDER MUSIC JAM STUDIO CHAIRS & INSTRUMENT BENCHES ──
+      MUSIC_JAM_CHAIRS.forEach((chair) => {
+        ctx.save();
+        const isSeatedHere = localAvatar.isSitting && localAvatar.sittingObjectId === chair.id;
+
+        // Shadow
+        ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+        ctx.beginPath();
+        ctx.ellipse(chair.x, chair.y + 6, 15, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (isSeatedHere) {
+          ctx.strokeStyle = "#f59e0b";
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.arc(chair.x, chair.y, 18, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        if (chair.id === "music_piano_bench") {
+          // Grand Synthesizer Piano Bench (Leather padded long stool)
+          ctx.fillStyle = isSeatedHere ? "#0f766e" : "#27272a";
+          ctx.beginPath();
+          ctx.roundRect(chair.x - 18, chair.y - 7, 36, 14, 4);
+          ctx.fill();
+          ctx.strokeStyle = isSeatedHere ? "#f59e0b" : "#f43f5e";
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+          // Buttons tufting
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(chair.x - 8, chair.y - 1, 2, 2);
+          ctx.fillRect(chair.x + 6, chair.y - 1, 2, 2);
+        } else if (chair.id === "music_drum_throne") {
+          // Drum Throne (Round swivel stool)
+          ctx.fillStyle = isSeatedHere ? "#0f766e" : "#18181b";
+          ctx.beginPath();
+          ctx.arc(chair.x, chair.y, 11, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = isSeatedHere ? "#f59e0b" : "#a1a1aa";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.fillStyle = "#38bdf8";
+          ctx.beginPath();
+          ctx.arc(chair.x, chair.y, 4, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          // Acoustic Jam Circle Chair
+          ctx.fillStyle = isSeatedHere ? "#0f766e" : "#78350f";
+          ctx.beginPath();
+          ctx.roundRect(chair.x - 11, chair.y - 11, 22, 22, 5);
+          ctx.fill();
+          ctx.strokeStyle = isSeatedHere ? "#f59e0b" : "#b45309";
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+          // Teal cushion center
+          ctx.fillStyle = isSeatedHere ? "#fef08a" : "#0284c7";
+          ctx.beginPath();
+          ctx.roundRect(chair.x - 7, chair.y - 7, 14, 14, 3);
+          ctx.fill();
+        }
+
+        ctx.restore();
+      });
+
+      // ── RENDER 4 COURTYARD MARBLE FOUNTAIN BENCHES ──
+      COURTYARD_BENCHES.forEach((bench) => {
+        ctx.save();
+        const isSeatedHere = localAvatar.isSitting && localAvatar.sittingObjectId === bench.id;
+
+        // Drop shadow
+        ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
+        ctx.beginPath();
+        const isHoriz = bench.faceDirection === "up" || bench.faceDirection === "down";
+        ctx.ellipse(bench.x, bench.y + 4, isHoriz ? 24 : 8, isHoriz ? 8 : 24, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (isSeatedHere) {
+          ctx.strokeStyle = "#f59e0b";
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.arc(bench.x, bench.y, 22, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        // Garden bench wood planks
+        ctx.fillStyle = isSeatedHere ? "#0f766e" : "#78350f";
+        ctx.beginPath();
+        if (isHoriz) {
+          ctx.roundRect(bench.x - 22, bench.y - 9, 44, 18, 4);
+        } else {
+          ctx.roundRect(bench.x - 9, bench.y - 22, 18, 44, 4);
+        }
+        ctx.fill();
+        ctx.strokeStyle = isSeatedHere ? "#f59e0b" : "#334155";
+        ctx.lineWidth = 1.8;
+        ctx.stroke();
+
+        // Bench Slats Detail
+        ctx.strokeStyle = "#451a03";
+        ctx.lineWidth = 1;
+        if (isHoriz) {
+          ctx.beginPath();
+          ctx.moveTo(bench.x - 20, bench.y - 3);
+          ctx.lineTo(bench.x + 20, bench.y - 3);
+          ctx.moveTo(bench.x - 20, bench.y + 3);
+          ctx.lineTo(bench.x + 20, bench.y + 3);
+          ctx.stroke();
+        } else {
+          ctx.beginPath();
+          ctx.moveTo(bench.x - 3, bench.y - 20);
+          ctx.lineTo(bench.x - 3, bench.y + 20);
+          ctx.moveTo(bench.x + 3, bench.y - 20);
+          ctx.lineTo(bench.x + 3, bench.y + 20);
+          ctx.stroke();
+        }
+
+        ctx.restore();
+      });
+
       // ── RENDER PLACED CUSTOM DECORATIONS (Build Mode Items) ──
       localDecorations.forEach((d) => {
         ctx.save();
@@ -3064,63 +3472,151 @@ export default function EchoSpacesWorld({
       )}
 
       {/* SEATED AT DINNER / PARTY TABLE FLOATING ACTION BAR */}
-      {localAvatar.isSitting && (
-        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-40 bg-neutral-950/95 border-2 border-amber-500/60 rounded-3xl px-4 py-2.5 shadow-[0_0_30px_rgba(245,158,11,0.25)] backdrop-blur-md flex items-center gap-3 animate-in fade-in slide-in-from-bottom-3 max-w-[95vw] overflow-x-auto custom-scrollbar pointer-events-auto">
-          <div className="flex items-center gap-2 pr-3 border-r border-neutral-800 shrink-0">
-            <span className="text-xl">🪑</span>
-            <div>
-              <div className="text-[11px] font-black uppercase text-amber-400 font-mono">
-                {ALL_TABLE_CHAIRS.find((c) => c.id === localAvatar.sittingObjectId)?.name || "Seated at Table"}
-              </div>
-              <div className="text-[10px] text-neutral-400 font-mono">
-                {ALL_TABLE_CHAIRS.find((c) => c.id === localAvatar.sittingObjectId)?.tableName || "Party Lounge"}
+      {localAvatar.isSitting && (() => {
+        const curSeat = ALL_WORLD_SEATS.find((c) => c.id === localAvatar.sittingObjectId);
+        const seatName = curSeat?.name || "Seated in World";
+        const tableName = curSeat?.tableName || "Interactive Space";
+        const isPiano = curSeat?.id.includes("piano");
+        const isDrums = curSeat?.id.includes("drum");
+        const isConcert = curSeat?.id.includes("concert");
+        const isCourtyard = curSeat?.id.includes("courtyard");
+        const isOffice = curSeat?.id.includes("office");
+
+        return (
+          <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-40 bg-neutral-950/95 border-2 border-amber-500/60 rounded-3xl px-4 py-2.5 shadow-[0_0_30px_rgba(245,158,11,0.25)] backdrop-blur-md flex items-center gap-3 animate-in fade-in slide-in-from-bottom-3 max-w-[95vw] overflow-x-auto custom-scrollbar pointer-events-auto">
+            <div className="flex items-center gap-2 pr-3 border-r border-neutral-800 shrink-0">
+              <span className="text-xl">
+                {isPiano ? "🎹" : isDrums ? "🥁" : isConcert ? "🎭" : isCourtyard ? "⛲" : isOffice ? "💼" : "🪑"}
+              </span>
+              <div>
+                <div className="text-[11px] font-black uppercase text-amber-400 font-mono">
+                  {seatName}
+                </div>
+                <div className="text-[10px] text-neutral-400 font-mono">
+                  {tableName}
+                </div>
               </div>
             </div>
+
+            {isPiano && (
+              <button
+                type="button"
+                onClick={() => {
+                  [1, 3, 5, 6, 8].forEach((note, i) => {
+                    setTimeout(() => spacesSfx.playKeyNote(note), i * 150);
+                  });
+                  onSendSpeech("🎹 Playing live melodic arpeggios on the Grand Synthesizer Piano! ✨");
+                }}
+                className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-mono text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-md shrink-0"
+              >
+                <span>🎹</span>
+                <span>Play Live Arpeggio</span>
+              </button>
+            )}
+
+            {isDrums && (
+              <button
+                type="button"
+                onClick={() => {
+                  [1, 2, 1, 2, 4].forEach((pad, i) => {
+                    setTimeout(() => spacesSfx.playKeyNote(pad + 1), i * 110);
+                  });
+                  onSendSpeech("🥁 Laid down a heavy 4-pad drum roll beat! 💥");
+                }}
+                className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-mono text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-md shrink-0"
+              >
+                <span>🥁</span>
+                <span>Drum Solo</span>
+              </button>
+            )}
+
+            {isConcert && (
+              <button
+                type="button"
+                onClick={() => {
+                  spacesSfx.playEmotePop();
+                  onSendSpeech("👏 Bravo! Standing ovation for the stage performance! 🎉");
+                  triggerEmote("👏");
+                }}
+                className="px-3 py-1.5 rounded-xl bg-rose-700 hover:bg-rose-600 text-white font-mono text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-md shrink-0"
+              >
+                <span>👏</span>
+                <span>Applaud Stage</span>
+              </button>
+            )}
+
+            {isCourtyard && (
+              <button
+                type="button"
+                onClick={() => {
+                  spacesSfx.playChampagneCork();
+                  onSendSpeech("🪙 Tossed an Aura coin into the Echo Fountain! (+5 Aura) ✨");
+                }}
+                className="px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-mono text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-md shrink-0"
+              >
+                <span>🪙</span>
+                <span>Toss Fountain Coin</span>
+              </button>
+            )}
+
+            {isOffice && (
+              <button
+                type="button"
+                onClick={() => {
+                  spacesSfx.playZoneChime();
+                  onSendSpeech("💼 Entered Deep Focus Coworking Mode. Let's build! 🚀");
+                }}
+                className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-md shrink-0"
+              >
+                <span>💼</span>
+                <span>Focus Cowork</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => onOpenUno?.()}
+              className="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-mono text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-md shadow-red-600/30 shrink-0"
+            >
+              <span>🃏</span>
+              <span>Play UNO</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onOpenPartyGames?.()}
+              className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-mono text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-md shadow-amber-500/30 shrink-0"
+            >
+              <span>🎲</span>
+              <span>Party Table Games</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                spacesSfx.playChampagneCork();
+                onSendSpeech("🥂 Raised a toast to everyone in the room! Cheers! ✨");
+              }}
+              className="px-3 py-1.5 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/40 text-purple-200 font-mono text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-95 shrink-0"
+            >
+              <span>🥂</span>
+              <span>Toast Room</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                spacesSfx.playSitPop();
+                onSit(false);
+              }}
+              className="px-2.5 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white font-mono text-xs font-semibold transition cursor-pointer shrink-0"
+              title="Stand Up"
+            >
+              <span>Stand Up 🚶</span>
+            </button>
           </div>
-
-          <button
-            type="button"
-            onClick={() => onOpenUno?.()}
-            className="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-mono text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-md shadow-red-600/30 shrink-0"
-          >
-            <span>🃏</span>
-            <span>Play UNO</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onOpenPartyGames?.()}
-            className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-mono text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-md shadow-amber-500/30 shrink-0"
-          >
-            <span>🎲</span>
-            <span>Party Table Games</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              spacesSfx.playChampagneCork();
-              onSendSpeech("🥂 Raised a toast to everyone at the banquet table! Cheers! ✨");
-            }}
-            className="px-3 py-1.5 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/40 text-purple-200 font-mono text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-95 shrink-0"
-          >
-            <span>🥂</span>
-            <span>Toast Table</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              spacesSfx.playSitPop();
-              onSit(false);
-            }}
-            className="px-2.5 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white font-mono text-xs font-semibold transition cursor-pointer shrink-0"
-            title="Stand Up"
-          >
-            <span>Stand Up 🚶</span>
-          </button>
-        </div>
-      )}
+        );
+      })()}
 
       {/* FLOATING ACTION & CHAT BAR (Icon-First Gather Dock) */}
       <div className="absolute bottom-4 left-4 right-4 max-w-xl mx-auto z-30 flex items-center gap-1.5 pointer-events-auto">
