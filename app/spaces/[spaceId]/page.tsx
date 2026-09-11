@@ -34,6 +34,19 @@ import HostEventModal from "@/app/components/spaces/HostEventModal";
 import MiniMapRadar from "@/app/components/spaces/MiniMapRadar";
 import HostQuickControlBar from "@/app/components/spaces/HostQuickControlBar";
 import PartyToolsModal from "@/app/components/spaces/PartyToolsModal";
+import AutoSeatingModal from "@/app/components/spaces/AutoSeatingModal";
+import SpaceCateringModal from "@/app/components/spaces/SpaceCateringModal";
+import SpaceGiftingModal from "@/app/components/spaces/SpaceGiftingModal";
+import { UnoGameModal } from "@/app/components/spaces/UnoGameModal";
+import {
+  getWalletState,
+  canClaimDailyReward,
+  claimDailyReward,
+  TableDish,
+  ChairReservation,
+  BoutiqueOutfit,
+} from "@/lib/spacesEconomy";
+import { playNomEating, playCashRegister } from "@/lib/spacesSfx";
 import {
   SpaceDoc,
   SpaceZoneId,
@@ -70,6 +83,11 @@ import {
   Tv,
   Edit2,
   Wine,
+  UtensilsCrossed,
+  Gift,
+  Armchair,
+  Dices,
+  Coins,
 } from "lucide-react";
 
 export default function DynamicSpaceWorldPage() {
@@ -141,6 +159,118 @@ export default function DynamicSpaceWorldPage() {
   const [gatherToast, setGatherToast] = useState<{ text: string; x: number; y: number } | null>(null);
   const [activeScreenStream, setActiveScreenStream] = useState<MediaStream | null>(null);
   const canvasElementRef = React.useRef<HTMLCanvasElement | null>(null);
+
+  // Virtual Economy & Social Party States
+  const [walletCash, setWalletCash] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      return getWalletState().cash;
+    }
+    return 500;
+  });
+  const [cateringModalOpen, setCateringModalOpen] = useState(false);
+  const [giftingModalOpen, setGiftingModalOpen] = useState(false);
+  const [seatingModalOpen, setSeatingModalOpen] = useState(false);
+  const [unoModalOpen, setUnoModalOpen] = useState(false);
+  const [giftReceivedToast, setGiftReceivedToast] = useState<{ from: string; giftName: string; icon: string } | null>(null);
+
+  // Table dishes placed on Banquet Table
+  const [tableDishes, setTableDishes] = useState<TableDish[]>([
+    {
+      id: "init_naan",
+      itemId: "butter_naan_feast",
+      name: "Butter Naan & Dal Makhani Feast",
+      icon: "🫓",
+      x: 1120,
+      y: 350,
+      orderedBy: "Gather Chef",
+      orderedAt: Date.now(),
+      bitesLeft: 6,
+    },
+    {
+      id: "init_pasta",
+      itemId: "creamy_pasta",
+      name: "Truffle Alfredo Italian Pasta",
+      icon: "🍝",
+      x: 1200,
+      y: 350,
+      orderedBy: "Gather Chef",
+      orderedAt: Date.now(),
+      bitesLeft: 4,
+    },
+    {
+      id: "init_champagne",
+      itemId: "vintage_champagne",
+      name: "Vintage Sparkling Champagne",
+      icon: "🍾",
+      x: 1280,
+      y: 350,
+      orderedBy: "Gather Chef",
+      orderedAt: Date.now(),
+      bitesLeft: 5,
+    },
+  ]);
+
+  // Smart Banquet Chair Reservations
+  const [chairReservations, setChairReservations] = useState<ChairReservation[]>([]);
+
+  // Handlers for Dish bites & Daily Reward
+  const handleBiteDish = (dishId: string) => {
+    playNomEating();
+    setTableDishes((prev) => {
+      return prev
+        .map((d) => {
+          if (d.id === dishId) {
+            const nextBites = d.bitesLeft - 1;
+            if (nextBites <= 0) {
+              handleSendSpeech(`😋 Finished every bite of ${d.name}! So satisfying.`);
+              return null;
+            }
+            handleSendSpeech(`🍽️ Took a delicious bite of ${d.name}! (${nextBites} bites left)`);
+            return { ...d, bitesLeft: nextBites };
+          }
+          return d;
+        })
+        .filter(Boolean) as TableDish[];
+    });
+  };
+
+  const handleClaimDailyAllowance = () => {
+    const success = claimDailyReward();
+    if (success) {
+      playCashRegister();
+      setWalletCash(getWalletState().cash);
+      handleSendSpeech("💵 Claimed daily +$100 Echo Cash reward!");
+    }
+  };
+
+  const refreshWalletCash = () => {
+    setWalletCash(getWalletState().cash);
+  };
+
+  const handleEquipOutfit = (outfit: BoutiqueOutfit) => {
+    const updated = {
+      ...avatarConfig,
+      outfit: outfit.outfitType as any,
+      outfitColor: outfit.color,
+      accessory: (outfit.accessory || avatarConfig.accessory) as any,
+    };
+    setAvatarConfig(updated);
+    setLocalAvatar((prev) => ({
+      ...prev,
+      avatarConfig: updated,
+      hoodieColor: outfit.color,
+    }));
+    try {
+      localStorage.setItem("echo_spaces_avatar", JSON.stringify(updated));
+    } catch {}
+    handleSendSpeech(`✨ Swapped into fresh boutique fit: ${outfit.name}!`);
+  };
+
+  const handleSendGift = (recipient: string, giftName: string, icon: string) => {
+    setGiftReceivedToast({ from: localAvatar.handle, giftName, icon });
+    setTimeout(() => setGiftReceivedToast(null), 5000);
+    handleSendSpeech(`🎁 ${localAvatar.handle} sent ${giftName} (${icon}) to ${recipient}!`);
+  };
 
   // Space Decoration Mode
   const [isDecorateMode, setIsDecorateMode] = useState(false);
@@ -691,6 +821,71 @@ export default function DynamicSpaceWorldPage() {
               </button>
             ))}
           </div>
+
+          {/* Virtual Paper Money (Echo Cash) Wallet */}
+          <button
+            onClick={handleClaimDailyAllowance}
+            className="px-2.5 py-1.5 rounded-xl border border-emerald-500/40 bg-emerald-950/30 hover:bg-emerald-900/40 text-emerald-300 font-mono text-xs font-black flex items-center gap-1.5 shadow-sm transition-all cursor-pointer group"
+            title="Click to claim Daily +$100 Cash allowance!"
+          >
+            <span>💵</span>
+            <span>${walletCash}</span>
+            {canClaimDailyReward() && (
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+            )}
+          </button>
+
+          {/* Catering Feasts (Butter Naan, Pasta, Cake, Champagne, Chinese, Chills) */}
+          <button
+            onClick={() => {
+              spacesSfx.playKeyNote(1);
+              setCateringModalOpen(true);
+            }}
+            className="px-2.5 py-1.5 rounded-xl border border-amber-500/30 bg-neutral-900/80 hover:bg-neutral-800 text-amber-300 hover:text-amber-200 text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+            title="Order Catering: Butter Naan, Pasta, Cake, Champagne, Chinese, Chills"
+          >
+            <UtensilsCrossed className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden xl:inline">Catering</span>
+          </button>
+
+          {/* Boutique Wardrobe & Gifting */}
+          <button
+            onClick={() => {
+              spacesSfx.playKeyNote(2);
+              setGiftingModalOpen(true);
+            }}
+            className="px-2.5 py-1.5 rounded-xl border border-pink-500/30 bg-neutral-900/80 hover:bg-neutral-800 text-pink-300 hover:text-pink-200 text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+            title="Boutique Wardrobe & Friend Gifting"
+          >
+            <Gift className="w-3.5 h-3.5 text-pink-400" />
+            <span className="hidden xl:inline">Gifts & Fits</span>
+          </button>
+
+          {/* Smart Auto-Seating */}
+          <button
+            onClick={() => {
+              spacesSfx.playKeyNote(3);
+              setSeatingModalOpen(true);
+            }}
+            className="px-2.5 py-1.5 rounded-xl border border-sky-500/30 bg-neutral-900/80 hover:bg-neutral-800 text-sky-300 hover:text-sky-200 text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+            title="Auto-Assign Banquet Table Chairs (2 to 16 guests)"
+          >
+            <Armchair className="w-3.5 h-3.5 text-sky-400" />
+            <span className="hidden xl:inline">Seating</span>
+          </button>
+
+          {/* Multiplayer Uno Card Table */}
+          <button
+            onClick={() => {
+              spacesSfx.playKeyNote(4);
+              setUnoModalOpen(true);
+            }}
+            className="px-2.5 py-1.5 rounded-xl border border-rose-500/40 bg-gradient-to-r from-rose-500/20 to-amber-500/20 hover:from-rose-500/30 hover:to-amber-500/30 text-rose-300 hover:text-rose-200 text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+            title="Play Multiplayer Uno Card Game (Prize: $50)"
+          >
+            <Dices className="w-3.5 h-3.5 text-rose-400" />
+            <span className="hidden sm:inline">Uno Table</span>
+          </button>
         </div>
 
         {/* Right: Jukebox, Whiteboard, Studio, Share, Settings */}
@@ -783,6 +978,9 @@ export default function DynamicSpaceWorldPage() {
           onGetCanvasRef={(canvas) => {
             canvasElementRef.current = canvas;
           }}
+          tableDishes={tableDishes}
+          chairReservations={chairReservations}
+          onBiteDish={handleBiteDish}
         />
       </main>
 
@@ -1081,6 +1279,95 @@ export default function DynamicSpaceWorldPage() {
         onCapturePhoto={handleCapturePhoto}
         onStartScreenShare={handleStartScreenShare}
       />
+
+      {/* Dinner Party Catering & Table Food Menu (Butter Naan, Pasta, Cake, Champagne, Chinese, Chills) */}
+      <SpaceCateringModal
+        isOpen={cateringModalOpen}
+        onClose={() => {
+          setCateringModalOpen(false);
+          refreshWalletCash();
+        }}
+        userHandle={localAvatar.handle}
+        activeDishes={tableDishes}
+        onOrderDish={(dish) => {
+          setTableDishes((prev) => [...prev, dish]);
+          refreshWalletCash();
+        }}
+        onEatBite={handleBiteDish}
+        onBroadcastSpeech={handleSendSpeech}
+      />
+
+      {/* Boutique Wardrobe & Virtual Gifting to Friends */}
+      <SpaceGiftingModal
+        isOpen={giftingModalOpen}
+        onClose={() => {
+          setGiftingModalOpen(false);
+          refreshWalletCash();
+        }}
+        localAvatar={localAvatar}
+        remoteAvatars={remoteAvatars}
+        onSendGift={(targetHandle, gift, note) => {
+          handleSendGift(targetHandle, gift.name, gift.icon);
+          refreshWalletCash();
+        }}
+        onEquipOutfit={(newConfig) => {
+          const updated = {
+            ...avatarConfig,
+            ...newConfig,
+          };
+          setAvatarConfig(updated);
+          setLocalAvatar((prev) => ({
+            ...prev,
+            avatarConfig: updated,
+            hoodieColor: updated.outfitColor || prev.hoodieColor,
+          }));
+          try {
+            localStorage.setItem("echo_spaces_avatar", JSON.stringify(updated));
+          } catch {}
+          refreshWalletCash();
+        }}
+      />
+
+      {/* Smart Banquet Chair Auto-Seating (2 to 16 guests) */}
+      <AutoSeatingModal
+        isOpen={seatingModalOpen}
+        onClose={() => setSeatingModalOpen(false)}
+        localAvatar={localAvatar}
+        remoteAvatars={remoteAvatars}
+        onApplySeating={(reservations) => {
+          setChairReservations(reservations);
+        }}
+        onTeleportToSeat={(x, y) => handleTeleport(x, y)}
+        onBroadcastSpeech={handleSendSpeech}
+      />
+
+      {/* Multiplayer Uno Card Table (You, Left, Across, Right) */}
+      <UnoGameModal
+        isOpen={unoModalOpen}
+        onClose={() => {
+          setUnoModalOpen(false);
+          refreshWalletCash();
+        }}
+        spaceTitle={space.name}
+        localUserName={localAvatar.handle}
+        localUserAvatar={localAvatar.avatarUrl || "👑"}
+        onlineParticipants={remoteAvatars.map((r) => ({
+          uid: r.uid,
+          displayName: r.handle,
+          photoURL: r.avatarUrl,
+        }))}
+      />
+
+      {/* Floating Gift Received Toast */}
+      {giftReceivedToast && (
+        <div className="fixed top-20 right-6 z-50 p-4 rounded-2xl bg-gradient-to-r from-pink-600 via-rose-600 to-amber-600 text-white shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-4 duration-300">
+          <span className="text-3xl animate-bounce">{giftReceivedToast.icon}</span>
+          <div>
+            <div className="text-xs font-black uppercase tracking-wider text-pink-200">Special Gift Received!</div>
+            <div className="text-sm font-bold">{giftReceivedToast.from} sent {giftReceivedToast.giftName}</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

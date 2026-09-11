@@ -172,9 +172,9 @@ export interface AvatarConfig {
   skinTone: string; // Hex color
   hairStyle: "short" | "spiky" | "waves" | "ponytail" | "afro" | "beanie" | "cap" | "bald";
   hairColor: string; // Hex color
-  outfit: "hoodie" | "suit" | "bomber" | "tshirt" | "robe";
+  outfit: "hoodie" | "suit" | "bomber" | "tshirt" | "robe" | "tuxedo" | "dress";
   outfitColor: string; // Hex color
-  accessory: "none" | "glasses" | "headphones" | "shades";
+  accessory: "none" | "glasses" | "headphones" | "shades" | "crown";
   headwear?: "none" | "crown" | "beret" | "cowboy" | "wizard" | "cyber_visor";
   aura?: "none" | "stardust" | "flame" | "electric" | "sakura";
   expression?: "smile" | "cool" | "wink" | "neutral";

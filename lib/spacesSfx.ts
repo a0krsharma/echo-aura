@@ -599,6 +599,154 @@ class SpacesSoundEngine {
     } catch {}
   }
 
+  // 23. Cash Register Cha-Ching (💵 Paper Money Transaction)
+  playCashRegister() {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      // Drawer slide noise
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = "triangle";
+      osc1.frequency.setValueAtTime(180, ctx.currentTime);
+      gain1.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.start(ctx.currentTime);
+      osc1.stop(ctx.currentTime + 0.1);
+
+      // High Bell Ring (Cha-ching!)
+      [1318.51, 1975.53].forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + 0.08 + idx * 0.06);
+        gain.gain.setValueAtTime(0.35, ctx.currentTime + 0.08 + idx * 0.06);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08 + idx * 0.06 + 0.4);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + 0.08 + idx * 0.06);
+        osc.stop(ctx.currentTime + 0.08 + idx * 0.06 + 0.4);
+      });
+    } catch {}
+  }
+
+  // 24. Popping Champagne Cork (🍾 Pop + Fizz)
+  playChampagneCork() {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      // Pop impulse
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(600, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.08);
+      gain.gain.setValueAtTime(0.6, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.08);
+
+      // Bubble fizz
+      for (let i = 0; i < 6; i++) {
+        const t = ctx.currentTime + 0.06 + i * 0.04;
+        const bOsc = ctx.createOscillator();
+        const bGain = ctx.createGain();
+        bOsc.type = "triangle";
+        bOsc.frequency.setValueAtTime(1400 + Math.random() * 800, t);
+        bGain.gain.setValueAtTime(0.12, t);
+        bGain.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+        bOsc.connect(bGain);
+        bGain.connect(ctx.destination);
+        bOsc.start(t);
+        bOsc.stop(t + 0.03);
+      }
+    } catch {}
+  }
+
+  // 25. Eating & Tasting Food (😋 Nom Nom Crunch)
+  playNomEating() {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      [0, 0.08, 0.16].forEach((delay) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "square";
+        osc.frequency.setValueAtTime(260 + Math.random() * 80, ctx.currentTime + delay);
+        gain.gain.setValueAtTime(0.2, ctx.currentTime + delay);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.05);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + delay);
+        osc.stop(ctx.currentTime + delay + 0.05);
+      });
+    } catch {}
+  }
+
+  // 26. UNO Card Play Snap (🃏 Card Flick)
+  playUnoCardPlay() {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(800, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.06);
+      gain.gain.setValueAtTime(0.35, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.06);
+    } catch {}
+  }
+
+  // 27. UNO Turn Chime (🔔 It's your turn!)
+  playUnoTurnChime() {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      [659.25, 880].forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.08);
+        gain.gain.setValueAtTime(0.25, ctx.currentTime + idx * 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.08 + 0.25);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + idx * 0.08);
+        osc.stop(ctx.currentTime + idx * 0.08 + 0.25);
+      });
+    } catch {}
+  }
+
+  // 28. UNO Shout Fanfare (💥 Dramatic UNO!)
+  playUnoShout() {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      const fanfareNotes = [440, 554.37, 659.25, 880, 1108.73];
+      fanfareNotes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.07);
+        gain.gain.setValueAtTime(0.3, ctx.currentTime + idx * 0.07);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.07 + 0.4);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + idx * 0.07);
+        osc.stop(ctx.currentTime + idx * 0.07 + 0.4);
+      });
+    } catch {}
+  }
+
   // ── PROCEDURAL AMBIENT MUSIC ENGINE ──
   private ambianceInterval: any = null;
   private currentAmbiance: string | null = null;
@@ -734,4 +882,13 @@ class SpacesSoundEngine {
 }
 
 export const spacesSfx = new SpacesSoundEngine();
+
+// Standalone functional exports for convenient component imports
+export const playCashRegister = () => spacesSfx.playCashRegister();
+export const playChampagneCork = () => spacesSfx.playChampagneCork();
+export const playNomEating = () => spacesSfx.playNomEating();
+export const playUnoCardPlay = () => spacesSfx.playUnoCardPlay();
+export const playUnoTurnChime = () => spacesSfx.playUnoTurnChime();
+export const playUnoShout = () => spacesSfx.playUnoShout();
+export const playGameVictory = () => spacesSfx.playPartyFanfare();
 

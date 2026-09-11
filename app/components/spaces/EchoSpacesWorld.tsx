@@ -23,6 +23,7 @@ import {
   getNearbyInteractiveObject,
 } from "@/lib/spaces";
 import { spacesSfx } from "@/lib/spacesSfx";
+import { TableDish, ChairReservation } from "@/lib/spacesEconomy";
 import { useAuth } from "@/app/components/AuthProvider";
 import ProximityAttendeesBar from "@/app/components/spaces/ProximityAttendeesBar";
 import {
@@ -73,6 +74,9 @@ interface EchoSpacesWorldProps {
   onUpdateDecorations?: (decorations: CustomDecoration[]) => void;
   confettiTrigger?: number;
   onGetCanvasRef?: (canvas: HTMLCanvasElement | null) => void;
+  tableDishes?: TableDish[];
+  chairReservations?: ChairReservation[];
+  onBiteDish?: (dishId: string) => void;
 }
 
 const EMOTE_REACTIONS = ["💖", "🔥", "🎉", "👏", "💡", "☕", "🚀", "👋"];
@@ -101,10 +105,19 @@ export default function EchoSpacesWorld({
   onUpdateDecorations,
   confettiTrigger = 0,
   onGetCanvasRef,
+  tableDishes = [],
+  chairReservations = [],
+  onBiteDish,
 }: EchoSpacesWorldProps) {
   const { user } = useAuth();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  const tableDishesRef = useRef(tableDishes);
+  useEffect(() => { tableDishesRef.current = tableDishes; }, [tableDishes]);
+
+  const chairReservationsRef = useRef(chairReservations);
+  useEffect(() => { chairReservationsRef.current = chairReservations; }, [chairReservations]);
 
   // Viewport dimensions & fullscreen
   const [viewportDim, setViewportDim] = useState({ w: 1024, h: 680 });
@@ -462,6 +475,16 @@ export default function EchoSpacesWorld({
         onSit(true, d.id);
         spacesSfx.playSitPop();
         return;
+      }
+    }
+
+    // Check if clicked directly on a catering table dish
+    if (tableDishesRef.current && onBiteDish) {
+      for (const dish of tableDishesRef.current) {
+        if (Math.hypot(worldClickX - dish.x, worldClickY - dish.y) < 22) {
+          onBiteDish(dish.id);
+          return;
+        }
       }
     }
 
@@ -1304,6 +1327,87 @@ export default function EchoSpacesWorld({
       ctx.beginPath();
       ctx.roundRect(1376, 344, 18, 22, 5);
       ctx.fill();
+
+      // ── Render Active Catering Dishes on Banquet Table ──
+      const curDishes = tableDishesRef.current;
+      if (curDishes && curDishes.length > 0) {
+        curDishes.forEach((dish) => {
+          ctx.save();
+          // Plate / Dish base
+          ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
+          ctx.beginPath();
+          ctx.arc(dish.x, dish.y, 14, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "#cbd5e1";
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+
+          // Dish Icon
+          ctx.font = "14px sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(dish.icon, dish.x, dish.y);
+
+          // Bites Taglet
+          ctx.fillStyle = "#0f172a";
+          ctx.beginPath();
+          ctx.roundRect(dish.x - 22, dish.y + 13, 44, 12, 3);
+          ctx.fill();
+          ctx.strokeStyle = "#38bdf8";
+          ctx.lineWidth = 0.8;
+          ctx.stroke();
+          ctx.fillStyle = "#38bdf8";
+          ctx.font = "bold 8px monospace";
+          ctx.fillText(`${dish.bitesLeft} left`, dish.x, dish.y + 19);
+
+          // Rising Steam Curls
+          const steamT = timeMs * 0.006 + dish.x;
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.65)";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(dish.x, dish.y - 12);
+          ctx.quadraticCurveTo(dish.x - 3, dish.y - 18, dish.x + Math.sin(steamT) * 3, dish.y - 24);
+          ctx.stroke();
+          ctx.restore();
+        });
+      }
+
+      // ── Render Smart Chair Reservations & Seat Nametags ──
+      const curReservations = chairReservationsRef.current;
+      if (curReservations && curReservations.length > 0) {
+        curReservations.forEach((res) => {
+          ctx.save();
+          const pulse = Math.sin(timeMs * 0.005 + res.chairIndex) * 0.25 + 0.65;
+          ctx.strokeStyle = `rgba(56, 189, 248, ${pulse})`;
+          ctx.lineWidth = 2;
+          ctx.strokeRect(res.x - 12, res.y - 10, 24, 20);
+
+          if (res.reservedForHandle) {
+            ctx.fillStyle = "#09090b";
+            ctx.beginPath();
+            ctx.roundRect(res.x - 28, res.y - 24, 56, 14, 4);
+            ctx.fill();
+            ctx.strokeStyle = "#38bdf8";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            ctx.fillStyle = "#e0f2fe";
+            ctx.font = "bold 8px monospace";
+            ctx.textAlign = "center";
+            ctx.fillText(`@${res.reservedForHandle.slice(0, 8)}`, res.x, res.y - 14);
+          } else {
+            ctx.fillStyle = "rgba(15, 23, 42, 0.8)";
+            ctx.beginPath();
+            ctx.roundRect(res.x - 14, res.y - 20, 28, 12, 3);
+            ctx.fill();
+            ctx.fillStyle = "#94a3b8";
+            ctx.font = "bold 7px monospace";
+            ctx.textAlign = "center";
+            ctx.fillText(`#${res.chairIndex + 1}`, res.x, res.y - 11);
+          }
+          ctx.restore();
+        });
+      }
 
       // Decorated Christmas Holiday Tree in bottom-right corner (x: 1460, y: 435)
       // Layered pine boughs
