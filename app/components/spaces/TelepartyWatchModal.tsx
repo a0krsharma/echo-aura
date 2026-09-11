@@ -102,6 +102,34 @@ export default function TelepartyWatchModal({
   const [reactions, setReactions] = useState<Array<{ id: string; emoji: string; x: number }>>([]);
   const [isMiniMode, setIsMiniMode] = useState(false);
 
+  const [embedOrigin, setEmbedOrigin] = useState("");
+
+  // Suppress third-party Chrome extension errors (like Teleparty / content-youtube-embed)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setEmbedOrigin(window.location.origin);
+    }
+
+    const handleExtensionError = (event: ErrorEvent) => {
+      const msg = event.message || "";
+      const file = event.filename || "";
+      if (
+        file.includes("chrome-extension://") ||
+        file.includes("content-youtube-embed") ||
+        msg.includes("This script should only be loaded in a browser extension")
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        return true;
+      }
+    };
+
+    window.addEventListener("error", handleExtensionError, true);
+    return () => {
+      window.removeEventListener("error", handleExtensionError, true);
+    };
+  }, []);
+
   // Sync with external state if passed
   useEffect(() => {
     if (syncState && syncState.videoId && syncState.videoId !== currentVideoId) {
@@ -227,12 +255,12 @@ export default function TelepartyWatchModal({
         <div className="relative w-full aspect-video bg-black overflow-hidden group">
           <iframe
             key={currentVideoId}
-            src={`https://www.youtube.com/embed/${currentVideoId}?autoplay=1&enablejsapi=1&rel=0&modestbranding=1&mute=${
+            src={`https://www.youtube-nocookie.com/embed/${currentVideoId}?autoplay=1&enablejsapi=1&rel=0&modestbranding=1&mute=${
               isMuted ? "1" : "0"
-            }`}
+            }${embedOrigin ? `&origin=${encodeURIComponent(embedOrigin)}` : ""}`}
             title={videoTitle}
             className="w-full h-full border-0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowFullScreen
           />
         </div>
