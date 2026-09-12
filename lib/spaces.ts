@@ -929,179 +929,8 @@ export function getNearbyInteractiveObject(
   return null;
 }
 
-// ── DEFAULT SEED SPACES ──
-export const DEFAULT_SPACES: SpaceDoc[] = [
-  {
-    id: "igniting_creativity_keynote",
-    name: "Igniting Creativity: The Spark of Imagination",
-    description: "Live keynote panel on creative burnout, pitching, and AI workflows. Features live stage presenters, numbered round tables, Q&A and audience polls.",
-    category: "WEBINAR",
-    vibe: "MIDNIGHT_NEON",
-    hostUid: "sophia_gilbert",
-    hostHandle: "@SOPHIA_GILBERT",
-    hostAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150",
-    participantCount: 48,
-    maxParticipants: 150,
-    isPublic: true,
-    createdAt: Date.now() - 1800000,
-    expiresAt: Date.now() + 1000 * 60 * 60 * 4,
-    floorPlanType: "keynote_hall",
-    liveStageStatus: "🎙️ Keynote Panel Live on Stage",
-    featuredBadge: "🔥 FEATURED KEYNOTE",
-    tableCount: 12,
-    activeStageSpeakers: [],
-  },
-  {
-    id: "abhishek_bday_bash",
-    name: "Abhishek's Grand 24th Birthday Bash & Gala",
-    description: "Grand celebratory birthday bash with triple chocolate cake cutting, champagne flutes, banquet feast tables, Uno and Ludo party tables!",
-    category: "CAFE",
-    vibe: "PARTY_CLUB",
-    hostUid: "abhishek",
-    hostHandle: "@ABHISHEK",
-    hostAvatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150",
-    participantCount: 22,
-    maxParticipants: 50,
-    isPublic: true,
-    createdAt: Date.now() - 3600000,
-    expiresAt: Date.now() + 1000 * 60 * 60 * 8,
-    floorPlanType: "ballroom",
-    liveStageStatus: "🎂 Cake Cutting in 5 Mins & Champagne",
-    featuredBadge: "🎉 BIRTHDAY BASH",
-    tableCount: 8,
-    activeTableCount: 6,
-  },
-  {
-    id: "holiday_fireside_lodge",
-    name: "Winter Fireside Lodge & Holiday Dinner Gala",
-    description: "Luxury warm lodge with roaring fireplace, glowing Christmas trees, cozy sofas, mulled cider, and intimate table conversations.",
-    category: "GALA_DINNER",
-    vibe: "DINNER_GALA",
-    hostUid: "elena_rose",
-    hostHandle: "@ELENA_ROSE",
-    hostAvatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150",
-    participantCount: 19,
-    maxParticipants: 40,
-    isPublic: true,
-    createdAt: Date.now() - 2400000,
-    expiresAt: Date.now() + 1000 * 60 * 60 * 6,
-    floorPlanType: "fireside_lodge",
-    liveStageStatus: "🍷 Fireside Dinner & Jazz Live",
-    featuredBadge: "🎄 HOLIDAY GALA",
-    tableCount: 6,
-    activeTableCount: 5,
-  },
-  {
-    id: "championx_townhall",
-    name: "ChampionX Global Townhall & Product Demo",
-    description: "Executive terrace presentation stage with live screen share, 8-seater roundtable discussions, and corporate lounge.",
-    category: "WEBINAR",
-    vibe: "SUNNY_DAYLIGHT",
-    hostUid: "champion_host",
-    hostHandle: "@CHAMPION_HOST",
-    hostAvatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150",
-    participantCount: 34,
-    maxParticipants: 100,
-    isPublic: true,
-    createdAt: Date.now() - 1200000,
-    expiresAt: Date.now() + 1000 * 60 * 60 * 3,
-    floorPlanType: "rooftop",
-    liveStageStatus: "📊 Product v3.0 Live Screen Share",
-    featuredBadge: "💼 ALL-HANDS",
-    tableCount: 10,
-    activeTableCount: 7,
-  },
-  {
-    id: "central_piazza_cafe",
-    name: "Central Piazza European Cafe & Casual Mixer",
-    description: "Outdoor sunlit cobblestone town square with marble fountain, bistro cafe tables with umbrellas, and relaxed catchups.",
-    category: "PIAZZA",
-    vibe: "SUNSET_LOFI",
-    hostUid: "marco_barista",
-    hostHandle: "@MARCO_BARISTA",
-    hostAvatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150",
-    participantCount: 16,
-    maxParticipants: 35,
-    isPublic: true,
-    createdAt: Date.now() - 4000000,
-    expiresAt: null,
-    floorPlanType: "piazza_cafe",
-    liveStageStatus: "☕ Fountain Cafe Tables Open",
-    featuredBadge: "⛲ PIAZZA MIXER",
-    tableCount: 6,
-    activeTableCount: 4,
-  },
-  {
-    id: "genesis_campus",
-    name: "Echo Genesis Campus",
-    description: "The official master 5-zone interactive metaverse with office, library, music, concert & debate.",
-    category: "CAMPUS",
-    vibe: "MIDNIGHT_NEON",
-    hostUid: "echo_system",
-    hostHandle: "@ECHO_SYSTEM",
-    participantCount: 8,
-    maxParticipants: 100,
-    isPublic: true,
-    createdAt: Date.now() - 3600000,
-    expiresAt: null, // Persistent
-  },
-  {
-    id: "virtual_office_hq",
-    name: "HyperLoop Engineering Office",
-    description: "Daily standups, sprint roadmaps, desks & whiteboards for remote builders.",
-    category: "OFFICE",
-    vibe: "SUNNY_DAYLIGHT",
-    hostUid: "maya_dev",
-    hostHandle: "@MAYA_LEAD",
-    participantCount: 5,
-    maxParticipants: 30,
-    isPublic: true,
-    createdAt: Date.now() - 1800000,
-    expiresAt: Date.now() + 7200000, // 2 hours remaining
-  },
-  {
-    id: "lofi_study_sanctuary",
-    name: "Midnight Lofi Study Sanctuary",
-    description: "25m Pomodoro focus intervals, ambient rain audio, and quiet book carrels.",
-    category: "LIBRARY",
-    vibe: "COZY_RAINY",
-    hostUid: "ezra_books",
-    hostHandle: "@ARCHIVIST_EZRA",
-    participantCount: 12,
-    maxParticipants: 50,
-    isPublic: true,
-    createdAt: Date.now() - 900000,
-    expiresAt: Date.now() + 10800000,
-  },
-  {
-    id: "synthwave_jam_room",
-    name: "Analog Jam & Synth Academy",
-    description: "Live 8-key synthesizer piano, 4-pad drum machine, and acoustic jam sessions.",
-    category: "MUSIC",
-    vibe: "SUNSET_LOFI",
-    hostUid: "leo_composer",
-    hostHandle: "@LEO_AUDIO",
-    participantCount: 6,
-    maxParticipants: 25,
-    isPublic: true,
-    createdAt: Date.now() - 600000,
-    expiresAt: Date.now() + 14400000,
-  },
-  {
-    id: "town_hall_clash",
-    name: "Oxford Union Debate Arena",
-    category: "DEBATE",
-    vibe: "MIDNIGHT_NEON",
-    description: "Proposition vs Opposition with Judge Gavel, 60s speech clocks, and live audience voting.",
-    hostUid: "senator_vance",
-    hostHandle: "@VANCE_SENATE",
-    participantCount: 9,
-    maxParticipants: 60,
-    isPublic: true,
-    createdAt: Date.now() - 1200000,
-    expiresAt: Date.now() + 3600000,
-  },
-];
+/// ── DEFAULT SEED SPACES (Empty: Real Online Live Spaces Only) ──
+export const DEFAULT_SPACES: SpaceDoc[] = [];
 
 // ── REAL LIVE PRESENCE (No Fake Ambient Bots) ──
 export const DEFAULT_AMBIENT_BOTS: SpatialAvatar[] = [];
@@ -1110,11 +939,31 @@ export const DEFAULT_AMBIENT_BOTS: SpatialAvatar[] = [];
 const SPACES_COLLECTION = "spaces";
 const LOCAL_SPACES_KEY = "echo_local_spaces_cache";
 
+const KNOWN_MOCK_SPACE_IDS = new Set([
+  "igniting_creativity_keynote",
+  "abhishek_bday_bash",
+  "holiday_fireside_lodge",
+  "championx_townhall",
+  "central_piazza_cafe",
+  "genesis_campus",
+  "virtual_office_hq",
+  "lofi_study_sanctuary",
+  "synthwave_jam_room",
+  "town_hall_clash",
+]);
+
 function getLocalSpacesCache(): SpaceDoc[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(LOCAL_SPACES_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const parsed: SpaceDoc[] = JSON.parse(raw);
+    // Automatically purge old mock/demo spaces from client cache
+    const cleaned = parsed.filter((s) => s && s.id && !KNOWN_MOCK_SPACE_IDS.has(s.id));
+    if (cleaned.length !== parsed.length) {
+      localStorage.setItem(LOCAL_SPACES_KEY, JSON.stringify(cleaned));
+    }
+    return cleaned;
   } catch {
     return [];
   }
@@ -1155,9 +1004,8 @@ export async function createSpaceDoc(space: Omit<SpaceDoc, "id">): Promise<strin
 }
 
 export function subscribeToPublicSpaces(callback: (spaces: SpaceDoc[]) => void): () => void {
-  const localSpaces = getLocalSpacesCache();
-  const initialMerged = [...localSpaces, ...DEFAULT_SPACES];
-  callback(initialMerged);
+  const localSpaces = getLocalSpacesCache().filter((s) => !KNOWN_MOCK_SPACE_IDS.has(s.id));
+  callback(localSpaces);
 
   try {
     const db = getFirebaseDb();
@@ -1169,9 +1017,10 @@ export function subscribeToPublicSpaces(callback: (spaces: SpaceDoc[]) => void):
         const now = Date.now();
         const firestoreDocs = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as SpaceDoc[];
 
-        // Filter expired spaces
+        // Filter expired spaces and any legacy mock spaces
         const valid = firestoreDocs.filter((s) => {
           if (!s.name) return false;
+          if (KNOWN_MOCK_SPACE_IDS.has(s.id)) return false;
           if (s.expiresAt && s.expiresAt < now) {
             deleteDoc(doc(db, SPACES_COLLECTION, s.id)).catch(() => {});
             return false;
@@ -1182,8 +1031,8 @@ export function subscribeToPublicSpaces(callback: (spaces: SpaceDoc[]) => void):
         const seenIds = new Set<string>();
         const combined: SpaceDoc[] = [];
 
-        [...getLocalSpacesCache(), ...valid, ...DEFAULT_SPACES].forEach((s) => {
-          if (!seenIds.has(s.id)) {
+        [...getLocalSpacesCache(), ...valid].forEach((s) => {
+          if (!seenIds.has(s.id) && !KNOWN_MOCK_SPACE_IDS.has(s.id)) {
             seenIds.add(s.id);
             combined.push(s);
           }
@@ -1197,7 +1046,7 @@ export function subscribeToPublicSpaces(callback: (spaces: SpaceDoc[]) => void):
         } else {
           console.warn("[subscribeToPublicSpaces] Using local spaces fallback:", err?.message || err);
         }
-        callback(initialMerged);
+        callback(localSpaces);
       }
     );
 
@@ -1260,6 +1109,16 @@ export async function updateSpaceDoc(spaceId: string, updates: Partial<SpaceDoc>
 }
 
 export async function deleteSpaceDoc(spaceId: string): Promise<void> {
+  // 1. Instantly purge from local storage cache
+  if (typeof window !== "undefined") {
+    try {
+      const local = getLocalSpacesCache();
+      const filtered = local.filter((s) => s.id !== spaceId);
+      localStorage.setItem(LOCAL_SPACES_KEY, JSON.stringify(filtered));
+    } catch {}
+  }
+
+  // 2. Delete from Firestore
   try {
     const db = getFirebaseDb();
     await deleteDoc(doc(db, SPACES_COLLECTION, spaceId));

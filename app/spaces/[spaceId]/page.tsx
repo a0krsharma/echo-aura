@@ -66,6 +66,7 @@ import {
   SPACES_ZONES,
   getSpaceDoc,
   updateSpaceDoc,
+  deleteSpaceDoc,
   subscribeToSpaceDoc,
   subscribeToSpaceParticipants,
   updateSpaceParticipant,
@@ -108,6 +109,7 @@ import {
   Crown,
   Bell,
   HelpCircle,
+  Trash2,
   BarChart2,
   Radio,
   Music,
@@ -1735,6 +1737,31 @@ export default function DynamicSpaceWorldPage() {
                   <div className="flex flex-col">
                     <span className="font-bold text-red-400">Teleparty YouTube Co-Watch</span>
                     <span className="text-[10px] text-neutral-400">Synchronized video & music party</span>
+                  </div>
+                </button>
+
+                <div className="h-px bg-neutral-800 my-1" />
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const confirmDel = window.confirm(
+                      `Are you sure you want to permanently delete "${space.name}"? This will close the room for all participants.`
+                    );
+                    if (!confirmDel) return;
+                    try {
+                      spacesSfx.playGavelStrike();
+                      await deleteSpaceDoc(space.id);
+                      router.push("/spaces");
+                    } catch (e) {
+                      console.error("Failed to delete space:", e);
+                    }
+                  }}
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 bg-red-950/40 hover:bg-red-900/60 text-red-300 hover:text-red-200 border border-red-900/50 transition-colors cursor-pointer"
+                >
+                  <Trash2 className="w-4 h-4 text-red-400" />
+                  <div className="flex flex-col">
+                    <span className="font-bold">Delete Space</span>
+                    <span className="text-[10px] text-red-400/80">Permanently close & remove room</span>
                   </div>
                 </button>
               </div>
