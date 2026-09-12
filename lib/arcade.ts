@@ -118,8 +118,6 @@ export type ArcadeGameType =
   | "cup_pong"
   | "fruit_ninja"
   | "bottle_shooter"
-  | "subway_surfer"
-  | "hill_climb"
   | "super_mario"
   | "mini_composer"
   | "guitar_hero";

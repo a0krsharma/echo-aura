@@ -13,8 +13,6 @@ import {
 } from "@/lib/arcade";
 
 // Game Components
-import SubwaySurferGame from "@/app/components/arcade/SubwaySurferGame";
-import HillClimbRacingGame from "@/app/components/arcade/HillClimbRacingGame";
 import SuperMarioGame from "@/app/components/arcade/SuperMarioGame";
 import MiniComposerGame from "@/app/components/arcade/MiniComposerGame";
 import GuitarHeroGame from "@/app/components/arcade/GuitarHeroGame";
@@ -69,26 +67,6 @@ export interface SpaceArcadeGameDef {
 
 export const SPACE_ARCADE_GAMES: SpaceArcadeGameDef[] = [
   // 🛹 Action & Runner
-  {
-    id: "subway_surfer",
-    name: "Subway Surfers",
-    category: "ACTION",
-    icon: "🛹",
-    description: "3D canvas endless track runner with barrier dodging & gold coin multiplier.",
-    players: "1-4 Players",
-    color: "#0284c7",
-    badge: "POPULAR",
-  },
-  {
-    id: "hill_climb",
-    name: "Hill Climb Racing",
-    category: "ACTION",
-    icon: "🚗",
-    description: "2D physics jeep climbing steep bouncy hills with torque control & gas fuel.",
-    players: "1-4 Players",
-    color: "#eab308",
-    badge: "HOT",
-  },
   {
     id: "super_mario",
     name: "Super Mario Adventure",
@@ -732,30 +710,6 @@ export default function SpaceArcadeModal({
                       </button>
                     </div>
                   )}
-                </div>
-              )}
-
-              {/* 🛹 2. Subway Surfers */}
-              {activeGame.id === "subway_surfer" && activeMatch && (
-                <div className="w-full max-w-4xl">
-                  <SubwaySurferGame
-                    match={activeMatch}
-                    currentUid={user?.uid || ""}
-                    isHost={activeMatch.hostUid === user?.uid}
-                    onBack={() => setActiveGame(null)}
-                  />
-                </div>
-              )}
-
-              {/* 🚗 3. Hill Climb Racing */}
-              {activeGame.id === "hill_climb" && activeMatch && (
-                <div className="w-full max-w-4xl">
-                  <HillClimbRacingGame
-                    match={activeMatch}
-                    currentUid={user?.uid || ""}
-                    isHost={activeMatch.hostUid === user?.uid}
-                    onBack={() => setActiveGame(null)}
-                  />
                 </div>
               )}
 

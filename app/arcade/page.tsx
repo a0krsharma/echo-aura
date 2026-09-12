@@ -67,8 +67,6 @@ import FindMatchGame from "@/app/components/arcade/FindMatchGame";
 import CupPongGame from "@/app/components/arcade/CupPongGame";
 import FruitNinjaGame from "@/app/components/arcade/FruitNinjaGame";
 import BottleShooterGame from "@/app/components/arcade/BottleShooterGame";
-import SubwaySurferGame from "@/app/components/arcade/SubwaySurferGame";
-import HillClimbRacingGame from "@/app/components/arcade/HillClimbRacingGame";
 import SuperMarioGame from "@/app/components/arcade/SuperMarioGame";
 import MiniComposerGame from "@/app/components/arcade/MiniComposerGame";
 import GuitarHeroGame from "@/app/components/arcade/GuitarHeroGame";
@@ -172,8 +170,6 @@ const CLEAN_GAMES: MasterRankedGame[] = [
   { id: "cup_pong", name: "Cup Pong", category: "PHYSICS", icon: "🥤", description: "Parabolic 3D flick toss into red party cup pyramids" },
   { id: "fruit_ninja", name: "Fruit Ninja Dojo", category: "PHYSICS", icon: "🍉", description: "60 FPS blade swipe slicing, multi-fruit combos, juicy wall splatters & bomb dodging" },
   { id: "bottle_shooter", name: "Saloon Bottle Shooter", category: "PHYSICS", icon: "🍾", description: "6-shot revolver precision target gunner with glass shrapnel physics & TNT chain blasts" },
-  { id: "subway_surfer", name: "Subway Surf Rush", category: "PHYSICS", icon: "🏃‍♂️", description: "3D perspective 3-track subway runner with oncoming trains, hoverboards, jetpacks & inspector chase" },
-  { id: "hill_climb", name: "Hill Climb Legends", category: "PHYSICS", icon: "🚗", description: "2-pedal terrain physics racer with suspension, air flips, fuel canisters & 3 vehicles" },
   { id: "super_mario", name: "Super Mario Adventure", category: "PHYSICS", icon: "🍄", description: "Classic 2D retro plumber platformer with Goombas, question blocks, mushrooms & fireballs" },
   { id: "mini_composer", name: "Mini Composer & Piano", category: "PUZZLE", icon: "🎼", description: "Interactive 2-octave piano & sheet music composer with song tutor, ear trainer & polyphonic synth" },
   { id: "guitar_hero", name: "Guitar Hero & Studio", category: "PHYSICS", icon: "🎸", description: "Rhythm rock highway with 5 lanes, 3D fretboard, acoustic chord strummer & overdrive electric solos" },
@@ -1142,38 +1138,6 @@ function ArcadeContent() {
             )}
             {activeMatch.gameType === "bottle_shooter" && (
               <BottleShooterGame
-                match={activeMatch}
-                currentUid={user?.uid || ""}
-                isHost={activeMatch.hostUid === user?.uid}
-                onBack={handleExitActiveMatch}
-                onInviteFriend={() => {
-                  if (activeMatch.mode === "VS_COMPUTER") {
-                    handleOpenCreate(activeMatch.gameType);
-                  } else {
-                    setInviteModalMatch(activeMatch);
-                  }
-                }}
-                onRandomMatch={() => handleStartRandomMatch(activeMatch.gameType)}
-              />
-            )}
-            {activeMatch.gameType === "subway_surfer" && (
-              <SubwaySurferGame
-                match={activeMatch}
-                currentUid={user?.uid || ""}
-                isHost={activeMatch.hostUid === user?.uid}
-                onBack={handleExitActiveMatch}
-                onInviteFriend={() => {
-                  if (activeMatch.mode === "VS_COMPUTER") {
-                    handleOpenCreate(activeMatch.gameType);
-                  } else {
-                    setInviteModalMatch(activeMatch);
-                  }
-                }}
-                onRandomMatch={() => handleStartRandomMatch(activeMatch.gameType)}
-              />
-            )}
-            {activeMatch.gameType === "hill_climb" && (
-              <HillClimbRacingGame
                 match={activeMatch}
                 currentUid={user?.uid || ""}
                 isHost={activeMatch.hostUid === user?.uid}

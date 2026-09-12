@@ -64,8 +64,6 @@ const GAME_META: Record<string, { name: string; icon: string; desc: string; maxA
   math_blitz: { name: "MATRIX MATH BLITZ", icon: "⚡", desc: "Rapid 1v1 mental arithmetic speed duel", maxAllowed: 2 },
   fruit_ninja: { name: "FRUIT NINJA DOJO", icon: "🍉", desc: "60 FPS blade swipe slicing, multi-fruit combos & bomb dodging", maxAllowed: 2 },
   bottle_shooter: { name: "SALOON BOTTLE SHOOTER", icon: "🍾", desc: "6-shot revolver precision target gunner with glass shrapnel & TNT chain blasts", maxAllowed: 2 },
-  subway_surfer: { name: "SUBWAY SURF RUSH", icon: "🏃‍♂️", desc: "3D perspective 3-track subway runner with trains, hoverboards, jetpacks & inspector chase", maxAllowed: 2 },
-  hill_climb: { name: "HILL CLIMB LEGENDS", icon: "🚗", desc: "2-pedal terrain physics racer with suspension, air flips, fuel canisters & 3 vehicles", maxAllowed: 2 },
 };
 
 export default function ArcadeCreateModal({
