@@ -1131,6 +1131,8 @@ export function subscribeToSpaceDoc(
   spaceId: string,
   callback: (space: SpaceDoc | null) => void
 ): () => void {
+  const getFallback = () => getLocalSpacesCache().find((s) => s.id === spaceId) || null;
+
   try {
     const db = getFirebaseDb();
     const unsub = onSnapshot(
@@ -1140,20 +1142,17 @@ export function subscribeToSpaceDoc(
           const data = { id: snap.id, ...snap.data() } as SpaceDoc;
           callback(data);
         } else {
-          const fallback = DEFAULT_SPACES.find((s) => s.id === spaceId) || null;
-          callback(fallback);
+          callback(getFallback());
         }
       },
       (err) => {
         console.warn("[subscribeToSpaceDoc] Live snapshot fallback to cache:", err);
-        const fallback = DEFAULT_SPACES.find((s) => s.id === spaceId) || null;
-        callback(fallback);
+        callback(getFallback());
       }
     );
     return unsub;
   } catch (err) {
-    const fallback = DEFAULT_SPACES.find((s) => s.id === spaceId) || null;
-    callback(fallback);
+    callback(getFallback());
     return () => {};
   }
 }

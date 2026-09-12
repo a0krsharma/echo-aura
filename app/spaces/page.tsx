@@ -46,6 +46,7 @@ import {
   Mic,
   Music,
   Crown,
+  Zap,
 } from "lucide-react";
 
 const CATEGORIES = [
@@ -142,7 +143,43 @@ export default function SpacesLobbyPage() {
     return () => unsub();
   }, []);
 
-  // 1-Click Instant Host for Friends
+  // ⚡ 1-Click Instant Host (Zero Friction, Instant Entry)
+  const handle1ClickInstantHost = async (customName?: string) => {
+    try {
+      setQuickHosting("instant_host");
+      spacesSfx.playKeyNote(4);
+      const hostHandle = user?.handle || "@HOST";
+      const hostUid = user?.uid || "guest_host";
+      const spaceName = customName || `${hostHandle}'s Party & Game Lounge`;
+
+      const createdId = await createSpaceDoc({
+        name: spaceName,
+        category: "ARCADE",
+        vibe: "PARTY_CLUB",
+        hostUid,
+        hostHandle,
+        description: "Live spatial lounge with table games (Ludo & UNO), mic proximity voice, and synced Spotify music.",
+        participantCount: 1,
+        maxParticipants: 50,
+        isPublic: true,
+        expiresAt: Date.now() + 1000 * 60 * 60 * 24, // 24 hours
+        decorations: [],
+        createdAt: Date.now(),
+        floorPlanType: "ballroom",
+      });
+
+      spacesSfx.playZoneChime();
+      setStatusFeedback("🚀 Space created! Entering room...");
+      router.push(`/spaces/${createdId}`);
+    } catch (e) {
+      console.error("Failed to 1-click host space:", e);
+      setStatusFeedback("Failed to host space. Please try again.");
+    } finally {
+      setQuickHosting(null);
+    }
+  };
+
+  // 1-Click Instant Host for Friends (Presets)
   const handle1ClickQuickHost = async (preset: (typeof STARTER_PRESETS)[0]) => {
     try {
       setQuickHosting(preset.id);
@@ -268,14 +305,18 @@ export default function SpacesLobbyPage() {
             </button>
 
             <button
-              onClick={() => {
-                spacesSfx.playKeyNote(4);
-                setCreateModalOpen(true);
-              }}
-              className="px-4 py-2 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-black text-xs font-mono font-bold flex items-center gap-1.5 active:scale-95 transition-all shadow-lg shadow-cyan-500/20 cursor-pointer"
+              onClick={() => handle1ClickInstantHost()}
+              disabled={!!quickHosting}
+              className="px-4 py-2 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-black text-xs font-mono font-bold flex items-center gap-1.5 active:scale-95 transition-all shadow-lg shadow-cyan-500/20 cursor-pointer disabled:opacity-50"
             >
-              <Plus className="w-4 h-4" />
-              <span>HOST A SPACE</span>
+              {quickHosting === "instant_host" ? (
+                <span className="animate-spin text-xs">⏳ Launching...</span>
+              ) : (
+                <>
+                  <Zap className="w-4 h-4 text-black" />
+                  <span>1-CLICK HOST A SPACE</span>
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -299,12 +340,19 @@ export default function SpacesLobbyPage() {
             </div>
 
             <button
-              onClick={() => setCreateModalOpen(true)}
-              className="self-start md:self-center px-5 py-3 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-black font-mono font-bold text-xs sm:text-sm flex items-center gap-2 shadow-xl shadow-cyan-500/20 active:scale-95 transition-all cursor-pointer shrink-0"
+              onClick={() => handle1ClickInstantHost()}
+              disabled={!!quickHosting}
+              className="self-start md:self-center px-5 py-3 rounded-2xl bg-gradient-to-r from-cyan-400 via-sky-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-black font-mono font-black text-xs sm:text-sm flex items-center gap-2 shadow-xl shadow-cyan-500/25 active:scale-95 transition-all cursor-pointer shrink-0 disabled:opacity-50"
             >
-              <Plus className="w-4 h-4" />
-              <span>Host Custom Space</span>
-              <ArrowRight className="w-4 h-4" />
+              {quickHosting === "instant_host" ? (
+                <span className="animate-spin text-xs">⏳ Launching Room...</span>
+              ) : (
+                <>
+                  <Zap className="w-4 h-4" />
+                  <span>Start My Space (1-Click)</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </div>
 
@@ -442,10 +490,11 @@ export default function SpacesLobbyPage() {
               </p>
             </div>
             <button
-              onClick={() => setCreateModalOpen(true)}
-              className="px-5 py-2.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-black font-mono font-bold text-xs cursor-pointer active:scale-95 transition-all shadow-lg shadow-cyan-500/20"
+              onClick={() => handle1ClickInstantHost()}
+              disabled={!!quickHosting}
+              className="px-5 py-2.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-black font-mono font-bold text-xs cursor-pointer active:scale-95 transition-all shadow-lg shadow-cyan-500/20 disabled:opacity-50"
             >
-              + HOST A NEW SPACE
+              {quickHosting === "instant_host" ? "⏳ Creating Space..." : "+ 1-CLICK HOST A SPACE"}
             </button>
           </div>
         ) : (

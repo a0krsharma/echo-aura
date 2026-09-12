@@ -114,6 +114,7 @@ import {
   Radio,
   Music,
   MoreHorizontal,
+  MessageSquare,
 } from "lucide-react";
 
 export default function DynamicSpaceWorldPage() {
@@ -121,11 +122,36 @@ export default function DynamicSpaceWorldPage() {
   const router = useRouter();
   const { user } = useAuth();
 
-  const spaceId = (params?.spaceId as string) || "genesis_campus";
+  const spaceId = (params?.spaceId as string) || "hangout_space";
 
-  // Space Doc State
+  // Space Doc State with safe fallback to prevent undefined crashes
   const [space, setSpace] = useState<SpaceDoc>(() => {
-    return DEFAULT_SPACES.find((s) => s.id === spaceId) || DEFAULT_SPACES[0];
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("echo_local_spaces_cache");
+        if (raw) {
+          const list: SpaceDoc[] = JSON.parse(raw);
+          const found = list.find((s) => s.id === spaceId);
+          if (found) return found;
+        }
+      } catch {}
+    }
+    return {
+      id: spaceId,
+      name: "Live Hangout Lounge",
+      description: "Live spatial room for table games, proximity voice, and synced Spotify music.",
+      category: "ARCADE",
+      vibe: "PARTY_CLUB",
+      hostUid: "host",
+      hostHandle: "@HOST",
+      participantCount: 1,
+      maxParticipants: 50,
+      isPublic: true,
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 86400000,
+      floorPlanType: "ballroom",
+      decorations: [],
+    };
   });
   const [loading, setLoading] = useState(true);
 
@@ -210,7 +236,7 @@ export default function DynamicSpaceWorldPage() {
   const [giftReceivedToast, setGiftReceivedToast] = useState<{ from: string; giftName: string; icon: string } | null>(null);
 
   // Stage Presentation & Event Social Panel (Only auto-active on Webinars)
-  const [isStageActive, setIsStageActive] = useState(() => space.category === "WEBINAR");
+  const [isStageActive, setIsStageActive] = useState(() => Boolean(space?.category === "WEBINAR"));
   const [isPresentingOnStage, setIsPresentingOnStage] = useState(false);
   const [eventSocialPanelOpen, setEventSocialPanelOpen] = useState(false);
   const [eventSocialPanelTab, setEventSocialPanelTab] = useState<EventPanelTab>("qa");
@@ -1141,606 +1167,172 @@ export default function DynamicSpaceWorldPage() {
       )}
 
       {/* 2. Top World Navigation & Command Header (Gather.town exact layout) */}
-      <header className="border-b border-neutral-800 bg-neutral-950/95 backdrop-blur-md px-3 sm:px-6 py-2 flex items-center justify-between z-30 shrink-0">
-        {/* Left: Back, Space Name with 1-click rename & Room Dropdown */}
-        <div className="flex items-center gap-2">
+      {/* 2. Simplified, Beginner-Friendly Top Navigation Header */}
+      <header className="border-b border-neutral-800 bg-neutral-950/95 backdrop-blur-md px-3 sm:px-6 py-2 flex items-center justify-between z-30 shrink-0 gap-2">
+        {/* Left: Back to Spaces, Space Name & Live Online Count */}
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <Link
             href="/spaces"
-            className="p-1.5 rounded-xl border border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-900 transition-colors cursor-pointer"
+            className="p-2 rounded-xl border border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-900 transition-colors cursor-pointer shrink-0"
             title="Back to Spaces Lobby"
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
 
-          {/* Space Name & 1-Click Rename */}
+          {/* Space Title */}
+          <div className="flex items-center gap-2 truncate">
+            <h1 className="font-mono text-xs sm:text-sm font-black text-white truncate max-w-[120px] sm:max-w-[200px]">
+              {space.name}
+            </h1>
+          </div>
+
+          {/* Live Online Count */}
+          <div className="flex items-center gap-1.5 text-xs font-mono text-cyan-400 bg-cyan-950/40 border border-cyan-800/40 px-2.5 py-1 rounded-xl shrink-0">
+            <Users className="w-3.5 h-3.5" />
+            <span>{remoteAvatars.length + 1} online</span>
+          </div>
+        </div>
+
+        {/* Center: The 3 Core Actions (Play Games, Spotify Music, Chat) */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* 🎲 Play Table Games Button */}
           <button
             type="button"
             onClick={() => {
-              spacesSfx.playKeyNote(3);
-              setHostEventModalOpen(true);
+              spacesSfx.playKeyNote(5);
+              setPartyTableGameTab("ludo");
+              setPartyTableGamesOpen(true);
             }}
-            className="px-2.5 py-1.5 rounded-xl bg-neutral-900/90 border border-neutral-800 hover:border-cyan-500/50 text-left flex items-center gap-1.5 transition-all cursor-pointer group shadow-sm"
-            title="Click to Rename Space or Change Atmosphere"
+            className="px-3 sm:px-4 py-1.5 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-400 hover:to-rose-400 text-white font-mono font-bold text-xs flex items-center gap-1.5 shadow-md shadow-pink-500/20 active:scale-95 transition-all cursor-pointer shrink-0"
+            title="Play Ludo, UNO, Spin the Bottle, RPS & Table Games"
           >
-            <span className="font-mono text-xs font-black text-white group-hover:text-cyan-300 truncate max-w-[110px] sm:max-w-[180px]">
-              {space.name}
-            </span>
-            <Edit2 className="w-3 h-3 text-neutral-500 group-hover:text-cyan-400 shrink-0" />
+            <span className="text-sm">🎲</span>
+            <span>Play Games</span>
           </button>
 
-          {/* Gather Room Selector Pill ("📍 Fountain Room ˅") */}
-          <div className="relative">
-            <button
-              onClick={() => setRoomDropdownOpen(!roomDropdownOpen)}
-              className="px-3 py-1.5 rounded-xl bg-neutral-900/90 border border-neutral-800 hover:border-neutral-700 text-white font-mono text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
-            >
-              <MapPin className="w-3.5 h-3.5 text-cyan-400" />
-              <span>{activeZoneDef?.name || "Fountain Room"}</span>
-              <ChevronDown className="w-3 h-3 text-neutral-400" />
-            </button>
-
-            {/* Room Dropdown Fast-Travel Menu */}
-            {roomDropdownOpen && (
-              <div className="absolute top-10 left-0 w-60 bg-neutral-950 border border-neutral-800 rounded-2xl shadow-2xl p-1.5 space-y-1 z-50 animate-in zoom-in-95">
-                <div className="text-[10px] font-mono font-bold uppercase text-neutral-400 px-2.5 py-1">
-                  Teleport To Room
-                </div>
-                {ROOM_PRESETS.map((rm) => (
-                  <button
-                    key={rm.name}
-                    onClick={() => handleTeleport(rm.x, rm.y)}
-                    className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
-                  >
-                    <span className="text-base">{rm.icon}</span>
-                    <span>{rm.name}</span>
-                  </button>
-                ))}
-
-                {/* Elevator Floors inside Room Dropdown */}
-                <div className="pt-2 mt-1 border-t border-neutral-800 px-2">
-                  <div className="text-[10px] font-mono font-bold uppercase text-neutral-500 mb-1">
-                    Elevator Floors
-                  </div>
-                  <div className="grid grid-cols-4 gap-1">
-                    {["1st", "3rd", "4th", "ROOF"].map((fl) => (
-                      <button
-                        key={fl}
-                        type="button"
-                        onClick={() => handleElevatorFloor(fl)}
-                        className={`py-1 rounded text-[10px] font-mono font-bold text-center transition cursor-pointer ${
-                          currentFloor === fl
-                            ? "bg-cyan-500 text-black"
-                            : "bg-neutral-900 text-neutral-400 hover:text-white"
-                        }`}
-                      >
-                        {fl}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Private Rug Indicator */}
-          {localAvatar.activeRugId && (
-            <span className="hidden sm:flex text-cyan-400 font-bold items-center gap-1 text-[10px] font-mono bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-800/40 animate-pulse">
-              <Lock className="w-2.5 h-2.5" />
-              <span>PRIVATE AUDIO</span>
-            </span>
-          )}
-        </div>
-
-        {/* Center: Curated Hangout & Banquet Experience Hubs */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* 1. Activities Hub Dropdown (Party Games, Uno, Arcade, Whiteboard, Jukebox, Q&A, Polls) */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => {
-                spacesSfx.playKeyNote(5);
-                setActivitiesDropdownOpen((v) => !v);
-                setHospitalityDropdownOpen(false);
-                setHostHubDropdownOpen(false);
-                setRoomDropdownOpen(false);
-              }}
-              className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer ${
-                activitiesDropdownOpen
-                  ? "border-amber-400 bg-amber-950/50 text-amber-300"
-                  : "border-amber-500/40 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 hover:from-amber-500/30 text-amber-300"
-              }`}
-              title="Interactive Activities, Games & Canvas"
-            >
-              <Dices className="w-3.5 h-3.5 text-amber-400" />
-              <span>Activities</span>
-              <ChevronDown className={`w-3 h-3 transition-transform ${activitiesDropdownOpen ? "rotate-180" : ""}`} />
-            </button>
-
-            {activitiesDropdownOpen && (
-              <div className="absolute top-10 left-0 w-64 bg-neutral-950 border border-neutral-800 rounded-2xl shadow-2xl p-1.5 space-y-1 z-50 animate-in zoom-in-95">
-                <div className="text-[10px] font-mono font-bold uppercase text-neutral-400 px-2.5 py-1">
-                  Space Activities & Games
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    spacesSfx.playKeyNote(5);
-                    setPartyTableGameTab("ludo");
-                    setPartyTableGamesOpen(true);
-                    setActivitiesDropdownOpen(false);
-                  }}
-                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
-                >
-                  <span className="text-base">🎲</span>
-                  <div className="flex flex-col">
-                    <span className="font-bold">Party Games Suite</span>
-                    <span className="text-[10px] text-neutral-400">Ludo, Bottle, RPS, Antakshari</span>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    spacesSfx.playKeyNote(4);
-                    setUnoModalOpen(true);
-                    setActivitiesDropdownOpen(false);
-                  }}
-                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
-                >
-                  <span className="text-base">🃏</span>
-                  <div className="flex flex-col">
-                    <span className="font-bold">Uno Table Game</span>
-                    <span className="text-[10px] text-neutral-400">Classic Uno card battle</span>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    spacesSfx.playKeyNote(3);
-                    setArcadeModalOpen(true);
-                    setActivitiesDropdownOpen(false);
-                  }}
-                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
-                >
-                  <span className="text-base">🕹️</span>
-                  <div className="flex flex-col">
-                    <span className="font-bold">Retro Arcade Cabinet</span>
-                    <span className="text-[10px] text-neutral-400">Pixel jump & space invaders</span>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    spacesSfx.playSitPop();
-                    setWhiteboardModalOpen(true);
-                    setActivitiesDropdownOpen(false);
-                  }}
-                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
-                >
-                  <span className="text-base">🎨</span>
-                  <div className="flex flex-col">
-                    <span className="font-bold">Collaborative Whiteboard</span>
-                    <span className="text-[10px] text-neutral-400">Brainstorm, sketch & draw</span>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    spacesSfx.playKeyNote(2);
-                    setEventSocialPanelTab("qa");
-                    setEventSocialPanelOpen(true);
-                    setActivitiesDropdownOpen(false);
-                  }}
-                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
-                >
-                  <span className="text-base">❓</span>
-                  <div className="flex flex-col">
-                    <span className="font-bold">Live Speaker Q&A</span>
-                    <span className="text-[10px] text-neutral-400">Submit & upvote questions</span>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    spacesSfx.playKeyNote(4);
-                    setTelepartyModalOpen(true);
-                    setActivitiesDropdownOpen(false);
-                  }}
-                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
-                >
-                  <span className="text-base">📺</span>
-                  <div className="flex flex-col">
-                    <span className="font-bold text-red-400">Teleparty YouTube Co-Watch</span>
-                    <span className="text-[10px] text-neutral-400">Synced video & music watch party</span>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    spacesSfx.playKeyNote(3);
-                    setEventSocialPanelTab("polls");
-                    setEventSocialPanelOpen(true);
-                    setActivitiesDropdownOpen(false);
-                  }}
-                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
-                >
-                  <span className="text-base">📊</span>
-                  <div className="flex flex-col">
-                    <span className="font-bold">Interactive Polls</span>
-                    <span className="text-[10px] text-neutral-400">Real-time room polling</span>
-                  </div>
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* 🎵 Party Music Bar Toggle */}
+          {/* 🎵 Spotify & Music Button */}
           <button
             type="button"
             onClick={() => {
               spacesSfx.playKeyNote(2);
               setPartyMusicOpen((v) => !v);
             }}
-            className={`px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0 ${
-              space.spotifySyncState?.isPlaying
-                ? "border-emerald-500 bg-emerald-950/70 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.3)] animate-pulse"
+            className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 ${
+              space?.spotifySyncState?.isPlaying
+                ? "border-emerald-500 bg-emerald-950/70 text-emerald-300 shadow-md shadow-emerald-500/20"
                 : partyMusicOpen
-                ? "border-pink-500 bg-pink-950/60 text-pink-300 shadow-[0_0_12px_rgba(236,72,153,0.3)]"
-                : "border-pink-500/30 bg-neutral-900/90 text-pink-300 hover:bg-neutral-800"
+                ? "border-pink-500 bg-pink-950/60 text-pink-300"
+                : "border-neutral-800 bg-neutral-900/90 text-neutral-300 hover:text-white"
             }`}
-            title="Toggle Synchronized Party Music Bar (Spotify / Party Beats)"
+            title="Toggle Synchronized Music & Spotify Player"
           >
-            {space.spotifySyncState?.isPlaying ? (
-              <span className="flex items-center gap-1.5 text-emerald-300">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
-                <span>Spotify</span>
-              </span>
-            ) : (
-              <span className="flex items-center gap-1.5">
-                <span>🎵</span>
-                <span className="hidden sm:inline">Music</span>
-              </span>
-            )}
+            <Music className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="hidden sm:inline">
+              {space?.spotifySyncState?.isPlaying ? "Spotify Playing" : "Music"}
+            </span>
           </button>
 
-          {/* 2. Hospitality Hub Dropdown (Feast, Seating, Gifting, Cake Ceremony) - Desktop */}
-          <div className="relative hidden md:block">
-            <button
-              type="button"
-              onClick={() => {
-                spacesSfx.playKeyNote(1);
-                setHospitalityDropdownOpen((v) => !v);
-                setActivitiesDropdownOpen(false);
-                setHostHubDropdownOpen(false);
-                setRoomDropdownOpen(false);
-              }}
-              className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer ${
-                hospitalityDropdownOpen
-                  ? "border-sky-400 bg-sky-950/50 text-sky-300"
-                  : "border-sky-500/30 bg-neutral-900/90 text-sky-300 hover:bg-neutral-800"
-              }`}
-              title="Hospitality: Feasts, Table Seating, Gifting & Cake"
-            >
-              <UtensilsCrossed className="w-3.5 h-3.5 text-sky-400" />
-              <span>Hospitality</span>
-              <ChevronDown className={`w-3 h-3 transition-transform ${hospitalityDropdownOpen ? "rotate-180" : ""}`} />
-            </button>
-
-            {hospitalityDropdownOpen && (
-              <div className="absolute top-10 left-0 w-64 bg-neutral-950 border border-neutral-800 rounded-2xl shadow-2xl p-1.5 space-y-1 z-50 animate-in zoom-in-95">
-                <div className="text-[10px] font-mono font-bold uppercase text-neutral-400 px-2.5 py-1">
-                  Banquet Hospitality & Dining
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    spacesSfx.playKeyNote(1);
-                    setCateringModalOpen(true);
-                    setHospitalityDropdownOpen(false);
-                  }}
-                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
-                >
-                  <span className="text-base">🫓</span>
-                  <div className="flex flex-col">
-                    <span className="font-bold">Gourmet Catering Feast</span>
-                    <span className="text-[10px] text-neutral-400">Naan, pasta, champagne & dishes</span>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    spacesSfx.playKeyNote(3);
-                    setSeatingModalOpen(true);
-                    setHospitalityDropdownOpen(false);
-                  }}
-                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
-                >
-                  <span className="text-base">🪑</span>
-                  <div className="flex flex-col">
-                    <span className="font-bold">Smart Banquet Seating</span>
-                    <span className="text-[10px] text-neutral-400">Auto-assign 2 to 16 chairs</span>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    spacesSfx.playKeyNote(2);
-                    setGiftingModalOpen(true);
-                    setHospitalityDropdownOpen(false);
-                  }}
-                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
-                >
-                  <span className="text-base">🎁</span>
-                  <div className="flex flex-col">
-                    <span className="font-bold">Boutique Outfits & Gifts</span>
-                    <span className="text-[10px] text-neutral-400">Send gifts to attendees</span>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleServeCake();
-                    setHospitalityDropdownOpen(false);
-                  }}
-                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
-                >
-                  <span className="text-base">🎂</span>
-                  <div className="flex flex-col">
-                    <span className="font-bold">Birthday Cake Ceremony</span>
-                    <span className="text-[10px] text-neutral-400">Serve celebration cake to table</span>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    spacesSfx.playKeyNote(4);
-                    setHostRoomControlsOpen(true);
-                    setHospitalityDropdownOpen(false);
-                  }}
-                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
-                >
-                  <span className="text-base">🎛️</span>
-                  <div className="flex flex-col">
-                    <span className="font-bold text-amber-300">Room Chair & Cake Designer</span>
-                    <span className="text-[10px] text-neutral-400">Manage 16 chairs & table decor</span>
-                  </div>
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* 3. Stage Toggle (Webinar/Stage Presenter Dock) - Desktop */}
+          {/* 💬 Room Chat Toggle */}
           <button
             type="button"
             onClick={() => {
-              spacesSfx.playKeyNote(4);
-              setIsStageActive(!isStageActive);
+              spacesSfx.playKeyNote(2);
+              setRightDrawerOpen((prev) => !prev);
+              setRightDrawerTab("chat");
             }}
-            className={`hidden md:flex px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-mono font-bold items-center gap-1.5 shadow-sm transition-all cursor-pointer ${
-              isStageActive
-                ? "border-rose-500/50 bg-rose-950/40 text-rose-300"
-                : "border-neutral-800 bg-neutral-900/80 text-neutral-400 hover:text-white"
+            className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 ${
+              rightDrawerOpen
+                ? "border-cyan-400 bg-cyan-950/50 text-cyan-300"
+                : "border-neutral-800 bg-neutral-900/90 text-neutral-300 hover:text-white"
             }`}
-            title="Toggle Stage Presenters Dock"
+            title="Toggle Room Chat"
           >
-            <Radio className="w-3.5 h-3.5 text-rose-400" />
-            <span>Stage</span>
+            <MessageSquare className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="hidden sm:inline">Chat</span>
           </button>
-
-          {/* 4. Walk to Desk Shortcut - Desktop */}
-          <button
-            type="button"
-            onClick={handleWalkToDesk}
-            className="hidden md:flex p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-cyan-400 text-neutral-300 hover:text-cyan-300 text-xs font-mono font-bold items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
-            title="Automatically walk to your workstation desk"
-          >
-            <Laptop className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Desk</span>
-          </button>
-
-          {/* 5. Mobile Quick "..." More Menu (Hospitality, Stage, Desk, Vibe) */}
-          <div className="relative md:hidden">
-            <button
-              type="button"
-              onClick={() => {
-                spacesSfx.playKeyNote(1);
-                setMobileMoreOpen((v) => !v);
-              }}
-              className={`p-1.5 rounded-xl border text-xs font-mono font-bold flex items-center transition-all cursor-pointer ${
-                mobileMoreOpen
-                  ? "border-cyan-400 bg-cyan-950/50 text-cyan-300"
-                  : "border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white"
-              }`}
-              title="More Space Features"
-            >
-              <MoreHorizontal className="w-4 h-4" />
-            </button>
-
-            {mobileMoreOpen && (
-              <div className="absolute top-10 right-0 w-56 bg-neutral-950 border border-neutral-800 rounded-2xl shadow-2xl p-1.5 space-y-1 z-50 animate-in zoom-in-95">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCateringModalOpen(true);
-                    setMobileMoreOpen(false);
-                  }}
-                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors"
-                >
-                  <span>🫓</span>
-                  <span>Gourmet Catering</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSeatingModalOpen(true);
-                    setMobileMoreOpen(false);
-                  }}
-                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors"
-                >
-                  <span>🪑</span>
-                  <span>Auto-Seating</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleServeCake();
-                    setMobileMoreOpen(false);
-                  }}
-                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors"
-                >
-                  <span>🎂</span>
-                  <span>Cake Ceremony</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsStageActive(!isStageActive);
-                    setMobileMoreOpen(false);
-                  }}
-                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors"
-                >
-                  <span>🎤</span>
-                  <span>{isStageActive ? "Hide Stage" : "Show Stage"}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleWalkToDesk();
-                    setMobileMoreOpen(false);
-                  }}
-                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors"
-                >
-                  <span>💻</span>
-                  <span>Walk to Desk</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setHostEventModalOpen(true);
-                    setMobileMoreOpen(false);
-                  }}
-                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors"
-                >
-                  <span>👑</span>
-                  <span>Host & Theme Vibe</span>
-                </button>
-              </div>
-            )}
-          </div>
         </div>
 
-        {/* Right: Host Hub, Invite, Cash Wallet, Voice & Profile */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          {/* Host Hub Dropdown (Theme/Vibe, Summon Gather Bell, Space Settings) */}
+        {/* Right: Mic Control, Invite Friends & Room Settings / Delete */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* 🎙️ Spatial Voice Mic Control */}
+          <div className="shrink-0">
+            <SpatialVoiceManager
+              spaceId={spaceId}
+              localAvatar={localAvatar}
+              remoteAvatars={remoteAvatars}
+              onSpeakingUidsChange={setSpeakingUids}
+            />
+          </div>
+
+          {/* 🔗 Invite Friends (1-Click Instant Copy) */}
+          <button
+            type="button"
+            onClick={() => {
+              const url = window.location.href;
+              navigator.clipboard.writeText(url);
+              spacesSfx.playKeyNote(3);
+              setWelcomeToast("🎉 Invite link copied! Share with friends to join.");
+              setTimeout(() => setWelcomeToast(null), 3500);
+            }}
+            className="px-3 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-mono font-bold text-xs flex items-center gap-1.5 shadow-md shadow-cyan-500/20 active:scale-95 transition-all cursor-pointer shrink-0"
+            title="Copy Direct Space Invite Link"
+          >
+            <Share2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Invite</span>
+          </button>
+
+          {/* ⚙️ Host Hub & Space Settings (With Delete Space) */}
           <div className="relative">
             <button
               type="button"
               onClick={() => {
-                handleProtectedAction(
-                  "Host Your Own Event & Theme",
-                  "Sign in with Google to host birthday parties, dinner feasts, ghost dating, or customize space vibes permanently.",
-                  <Crown className="w-7 h-7" />,
-                  () => {
-                    spacesSfx.playKeyNote(4);
-                    setHostHubDropdownOpen((v) => !v);
-                    setActivitiesDropdownOpen(false);
-                    setHospitalityDropdownOpen(false);
-                    setRoomDropdownOpen(false);
-                  }
-                );
+                spacesSfx.playKeyNote(4);
+                setHostHubDropdownOpen((v) => !v);
               }}
-              className={`px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer ${
+              className={`p-2 rounded-xl border text-xs font-mono font-bold flex items-center transition-all cursor-pointer ${
                 hostHubDropdownOpen
                   ? "border-purple-400 bg-purple-950/60 text-purple-300"
-                  : "border-purple-500/40 bg-purple-950/30 hover:bg-purple-900/40 text-purple-300"
+                  : "border-neutral-800 bg-neutral-900/80 text-neutral-400 hover:text-white"
               }`}
-              title="Host Controls, Event Themes & Summon Bell"
+              title="Space Settings & Controls"
             >
-              <Crown className="w-3.5 h-3.5 text-purple-400" />
-              <span className="hidden sm:inline">Host Hub</span>
-              <ChevronDown className={`w-3 h-3 transition-transform ${hostHubDropdownOpen ? "rotate-180" : ""}`} />
+              <Settings className="w-4 h-4" />
             </button>
 
             {hostHubDropdownOpen && (
-              <div className="absolute top-10 right-0 w-64 bg-neutral-950 border border-neutral-800 rounded-2xl shadow-2xl p-1.5 space-y-1 z-50 animate-in zoom-in-95">
+              <div className="absolute top-10 right-0 w-60 bg-neutral-950 border border-neutral-800 rounded-2xl shadow-2xl p-1.5 space-y-1 z-50 animate-in zoom-in-95">
                 <div className="text-[10px] font-mono font-bold uppercase text-neutral-400 px-2.5 py-1">
-                  Host Command Center
+                  Space Settings
                 </div>
+
                 <button
                   type="button"
                   onClick={() => {
-                    spacesSfx.playKeyNote(4);
+                    spacesSfx.playKeyNote(3);
                     setHostEventModalOpen(true);
                     setHostHubDropdownOpen(false);
                   }}
-                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
                 >
-                  <span className="text-base">✨</span>
-                  <div className="flex flex-col">
-                    <span className="font-bold">Change Event Theme & Vibe</span>
-                    <span className="text-[10px] text-neutral-400">Birthday, Dinner, Ghost Dating, Gala</span>
-                  </div>
+                  <span>✏️</span>
+                  <span>Rename & Atmosphere</span>
                 </button>
+
                 <button
                   type="button"
                   onClick={() => {
-                    setGatherDropdownOpen(true);
+                    spacesSfx.playKeyNote(2);
+                    setAvatarModalOpen(true);
                     setHostHubDropdownOpen(false);
                   }}
-                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
                 >
-                  <span className="text-base">🔔</span>
-                  <div className="flex flex-col">
-                    <span className="font-bold">Summon Everyone ("Gather All")</span>
-                    <span className="text-[10px] text-neutral-400">Ring the bell to bring guests together</span>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    spacesSfx.playKeyNote(4);
-                    setHostModalOpen(true);
-                    setHostHubDropdownOpen(false);
-                  }}
-                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
-                >
-                  <span className="text-base">⚙️</span>
-                  <div className="flex flex-col">
-                    <span className="font-bold">Space Suite Settings</span>
-                    <span className="text-[10px] text-neutral-400">Capacities, announcements & privacy</span>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    spacesSfx.playKeyNote(5);
-                    setHostRoomControlsOpen(true);
-                    setHostHubDropdownOpen(false);
-                  }}
-                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
-                >
-                  <span className="text-base">🎛️</span>
-                  <div className="flex flex-col">
-                    <span className="font-bold text-amber-300">Room Chair, Cake & Decor Suite</span>
-                    <span className="text-[10px] text-neutral-400">Manage 16 chairs, design cakes & table decor</span>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    spacesSfx.playKeyNote(4);
-                    setTelepartyModalOpen(true);
-                    setHostHubDropdownOpen(false);
-                  }}
-                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
-                >
-                  <span className="text-base">📺</span>
-                  <div className="flex flex-col">
-                    <span className="font-bold text-red-400">Teleparty YouTube Co-Watch</span>
-                    <span className="text-[10px] text-neutral-400">Synchronized video & music party</span>
-                  </div>
+                  <span>🎨</span>
+                  <span>Avatar Studio</span>
                 </button>
 
                 <div className="h-px bg-neutral-800 my-1" />
+
                 <button
                   type="button"
                   onClick={async () => {
@@ -1756,97 +1348,19 @@ export default function DynamicSpaceWorldPage() {
                       console.error("Failed to delete space:", e);
                     }
                   }}
-                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2.5 bg-red-950/40 hover:bg-red-900/60 text-red-300 hover:text-red-200 border border-red-900/50 transition-colors cursor-pointer"
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2 bg-red-950/40 hover:bg-red-900/60 text-red-300 hover:text-red-200 border border-red-900/50 transition-colors cursor-pointer"
                 >
-                  <Trash2 className="w-4 h-4 text-red-400" />
-                  <div className="flex flex-col">
-                    <span className="font-bold">Delete Space</span>
-                    <span className="text-[10px] text-red-400/80">Permanently close & remove room</span>
-                  </div>
+                  <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                  <span className="font-bold">Delete Space</span>
                 </button>
               </div>
             )}
           </div>
-
-          {/* Gather All Preset Modal Dropdown */}
-          {gatherDropdownOpen && (
-            <div className="absolute top-14 right-24 w-56 bg-neutral-950 border border-neutral-800 rounded-2xl shadow-2xl p-1.5 space-y-1 z-50 animate-in zoom-in-95">
-              <div className="text-[10px] font-mono font-bold uppercase text-neutral-400 px-2.5 py-1">
-                Summon Everyone To:
-              </div>
-              {[
-                { name: "Banquet Feast Table", x: 1200, y: 350, icon: "🫓" },
-                { name: "Campfire Patio", x: 800, y: 150, icon: "🪵" },
-                { name: "Retro Pixel Arcade", x: 410, y: 420, icon: "🕹️" },
-                { name: "Concert Amphitheater", x: 800, y: 860, icon: "🎤" },
-              ].map((pt) => (
-                <button
-                  key={pt.name}
-                  onClick={() => {
-                    handleGatherFriends(pt.name, pt.x, pt.y);
-                    setGatherDropdownOpen(false);
-                  }}
-                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors cursor-pointer"
-                >
-                  <span className="text-base">{pt.icon}</span>
-                  <span className="truncate">{pt.name}</span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Virtual Paper Money (Echo Cash) Wallet */}
-          <button
-            onClick={handleClaimDailyAllowance}
-            className="px-2.5 py-1.5 rounded-xl border border-emerald-500/40 bg-emerald-950/30 hover:bg-emerald-900/40 text-emerald-300 font-mono text-xs font-black flex items-center gap-1.5 shadow-sm transition-all cursor-pointer group"
-            title="Click to claim Daily +$100 Cash allowance!"
-          >
-            <span>💵</span>
-            <span>${walletCash}</span>
-            {canClaimDailyReward() && (
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-            )}
-          </button>
-
-          {/* Spatial Voice Proximity Audio Manager */}
-          <div className="hidden sm:block shrink-0">
-            <SpatialVoiceManager
-              spaceId={spaceId}
-              localAvatar={localAvatar}
-              remoteAvatars={remoteAvatars}
-              onSpeakingUidsChange={setSpeakingUids}
-            />
-          </div>
-
-          {/* Invite Friends Modal Trigger */}
-          <button
-            onClick={() => {
-              spacesSfx.playKeyNote(5);
-              setInviteModalOpen(true);
-            }}
-            className="px-3 py-1.5 rounded-xl border border-cyan-500/40 bg-cyan-950/30 hover:bg-cyan-900/40 text-cyan-300 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm"
-            title="Invite Friends (WhatsApp, Telegram, Link)"
-          >
-            <Share2 className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="hidden sm:inline text-xs font-mono font-bold">Invite</span>
-          </button>
-
-          {/* Avatar Studio */}
-          <button
-            onClick={() => {
-              spacesSfx.playKeyNote(2);
-              setAvatarModalOpen(true);
-            }}
-            className="p-2 rounded-xl border border-neutral-800 bg-neutral-900/60 hover:bg-neutral-800 text-amber-400 transition-colors cursor-pointer"
-            title="Edit Avatar & Outfit"
-          >
-            <Palette className="w-4 h-4" />
-          </button>
         </div>
       </header>
 
       {/* Live Stage Presentation Bar (Image 1 & 3 Fidelity) */}
-      {(space.category === "WEBINAR" || isStageActive) && (
+      {(space?.category === "WEBINAR" || isStageActive) && (
         <StagePresentationBar
           spaceTitle={space.name}
           isHost={isHost}
