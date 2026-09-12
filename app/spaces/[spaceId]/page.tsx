@@ -460,7 +460,7 @@ export default function DynamicSpaceWorldPage() {
       if (loaded) {
         setSpace(loaded);
         if (loaded.spotifySyncState && loaded.spotifySyncState.isPlaying && loaded.spotifySyncState.trackId) {
-          // Play matching song for all room participants in background without interrupting games
+          // Play matching song for all room participants
           partyMusicEngine.playSpotifyTrack({
             id: loaded.spotifySyncState.trackId,
             title: loaded.spotifySyncState.trackName,
@@ -468,6 +468,8 @@ export default function DynamicSpaceWorldPage() {
             coverArt: loaded.spotifySyncState.albumArt || "🟢",
             bpm: 128,
           });
+          // Auto-reveal the party music bar so all participants see the live Spotify player and hear the song!
+          setPartyMusicOpen(true);
         }
       }
 
@@ -823,13 +825,7 @@ export default function DynamicSpaceWorldPage() {
 
   // Handle Object Interaction
   const handleInteractObject = (obj: InteractiveObject) => {
-    if (obj.id === "holiday_christmas_tree" || obj.type === "fountain") {
-      spacesSfx.playPartyFanfare();
-      handleSendSpeech("⭐ Made a holiday wish under the Christmas Tree! 🎄🎁");
-    } else if (obj.id === "cozy_fireplace" || obj.type === "coffee") {
-      handleToggleCoffee();
-      handleSendSpeech("🔥 Warming up by the roaring fireside hearth with hot cider! ☕");
-    } else if (obj.type === "whiteboard") {
+    if (obj.type === "whiteboard") {
       setWhiteboardModalOpen(true);
       spacesSfx.playSitPop();
     } else if (obj.type === "arcade") {
@@ -838,6 +834,41 @@ export default function DynamicSpaceWorldPage() {
     } else if (obj.type === "jukebox" || obj.id === "music_jukebox") {
       setJukeboxModalOpen(true);
       spacesSfx.playKeyNote(3);
+    } else if (obj.type === "coffee") {
+      handleToggleCoffee();
+    } else if (obj.type === "fountain") {
+      spacesSfx.playFountainSplash();
+      handleSendSpeech("🪙 Tossed a coin into the Echo Fountain!");
+    } else if (obj.type === "podium") {
+      const nextStage = !isPresentingOnStage;
+      setIsPresentingOnStage(nextStage);
+      spacesSfx.playPartyFanfare();
+      handleSendSpeech(
+        nextStage
+          ? "🎤 Stepped up to the Stage Microphone! Broadcasting live to the whole room!"
+          : "👋 Stepped down from the stage microphone."
+      );
+    } else if (obj.type === "piano" || obj.id === "music_piano") {
+      const nextSitting = !localAvatar.isSitting;
+      handleSit(nextSitting, nextSitting ? "music_piano_stool" : undefined);
+      if (nextSitting) {
+        handleMove(245, 825, "up", false);
+        spacesSfx.playKeyNote(1);
+        setTimeout(() => spacesSfx.playKeyNote(3), 120);
+        setTimeout(() => spacesSfx.playKeyNote(5), 240);
+        setTimeout(() => spacesSfx.playKeyNote(8), 360);
+        handleSendSpeech("🎹 Playing live Grand Synthesizer Piano at the Jam Studio!");
+      }
+    } else if (obj.type === "drums" || obj.id === "music_drums") {
+      const nextSitting = !localAvatar.isSitting;
+      handleSit(nextSitting, nextSitting ? "music_drum_stool" : undefined);
+      if (nextSitting) {
+        handleMove(375, 820, "up", false);
+        spacesSfx.playDrumPad("kick");
+        setTimeout(() => spacesSfx.playDrumPad("snare"), 140);
+        setTimeout(() => spacesSfx.playDrumPad("hihat"), 280);
+        handleSendSpeech("🥁 Jamming on the Drum Kit at the Music Academy!");
+      }
     }
   };
 
@@ -1181,7 +1212,7 @@ export default function DynamicSpaceWorldPage() {
           spaceTitle={space.name}
           isHost={isHost}
           currentFloor={currentFloor}
-          onSelectFloor={() => {}}
+          onSelectFloor={(floor) => setCurrentFloor(floor)}
           speakers={space.activeStageSpeakers}
           isPresenting={isPresentingOnStage}
           onTogglePresenting={() => {
@@ -1217,40 +1248,24 @@ export default function DynamicSpaceWorldPage() {
               setSpace((prev) => ({ ...prev, spotifySyncState: sync }));
             }}
             onOpenTeleparty={() => setTelepartyModalOpen(true)}
-            onMinimize={() => setPartyMusicOpen(false)}
           />
         </div>
       )}
 
-      {/* Floating Spotify Mini-Pill when music is minimized (Never blocks gameplay) */}
+      {/* Floating Spotify Mini-Pill when music is minimized */}
       {space.spotifySyncState?.isPlaying && space.spotifySyncState?.trackId && !partyMusicOpen && (
-        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 animate-in slide-in-from-top-2 max-w-[92vw]">
-          <div
-            onClick={() => setPartyMusicOpen(true)}
-            className="px-3.5 py-1.5 rounded-full bg-neutral-950/95 border border-emerald-500/60 text-emerald-300 font-mono text-xs shadow-2xl flex items-center gap-2 cursor-pointer hover:bg-neutral-900 transition backdrop-blur-xl"
-            title="Click to expand Spotify controls"
-          >
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-            <span className="font-bold text-white shrink-0">DJ @{space.spotifySyncState.djHandle || "Host"}:</span>
-            <span className="truncate max-w-[140px] sm:max-w-[240px] text-emerald-200">
-              {space.spotifySyncState.trackName} - {space.spotifySyncState.artistName}
-            </span>
-            <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30 font-bold shrink-0">
-              Controls ▲
-            </span>
-          </div>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              updateSpaceDoc(spaceId, { spotifySyncState: null });
-              setSpace((prev) => ({ ...prev, spotifySyncState: null }));
-              partyMusicEngine.setExternalAudio(false);
-            }}
-            className="p-1.5 rounded-full bg-neutral-900/90 border border-neutral-800 text-neutral-400 hover:text-rose-400 transition cursor-pointer shadow-lg"
-            title="Exit Spotify"
-          >
-            ✕
-          </button>
+        <div
+          onClick={() => setPartyMusicOpen(true)}
+          className="fixed top-14 left-1/2 -translate-x-1/2 z-30 px-3.5 py-1.5 rounded-full bg-neutral-950/90 border border-emerald-500/50 text-emerald-300 font-mono text-xs shadow-xl flex items-center gap-2 cursor-pointer hover:bg-neutral-900 transition backdrop-blur-md animate-in slide-in-from-top-2 max-w-[92vw]"
+        >
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+          <span className="font-bold text-white shrink-0">DJ @{space.spotifySyncState.djHandle || "Host"}:</span>
+          <span className="truncate text-emerald-200">
+            {space.spotifySyncState.trackName} - {space.spotifySyncState.artistName}
+          </span>
+          <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30 font-bold shrink-0">
+            Open Player
+          </span>
         </div>
       )}
 
@@ -1326,6 +1341,7 @@ export default function DynamicSpaceWorldPage() {
           spacesSfx.playKeyNote(2);
         }}
         onOpenArcade={() => setArcadeModalOpen(true)}
+        onOpenPartyGames={() => setPartyTableGamesOpen(true)}
         onOpenWhiteboard={() => setWhiteboardModalOpen(true)}
         onOpenMeetingModal={() => setMeetingModalOpen(true)}
         onOpenActivityMap={() => setActivityMapOpen(true)}

@@ -87,12 +87,12 @@ export interface TableChairDef {
 }
 
 export const NUMBERED_TABLES = [
-  { id: "tbl_1", num: 1, label: "🎲 Ludo Table 1", x: 670, y: 720, r: 38, cap: 6 },
-  { id: "tbl_2", num: 2, label: "🃏 UNO Table 2", x: 910, y: 720, r: 38, cap: 6 },
-  { id: "tbl_3", num: 3, label: "🍾 Spin the Bottle 3", x: 1150, y: 720, r: 38, cap: 6 },
-  { id: "tbl_4", num: 4, label: "👑 Raja Mantri 4", x: 670, y: 890, r: 38, cap: 6 },
-  { id: "tbl_5", num: 5, label: "✂️ Rock Paper Scissors 5", x: 910, y: 890, r: 38, cap: 6 },
-  { id: "tbl_6", num: 6, label: "🎤 Antakshari Lounge 6", x: 1150, y: 890, r: 38, cap: 6 },
+  { id: "tbl_1", num: 1, label: "Party Table 1", x: 670, y: 780, r: 38, cap: 6 },
+  { id: "tbl_2", num: 2, label: "Party Table 2", x: 910, y: 780, r: 38, cap: 6 },
+  { id: "tbl_3", num: 3, label: "Party Table 3", x: 670, y: 920, r: 38, cap: 6 },
+  { id: "tbl_4", num: 4, label: "Party Table 4", x: 910, y: 920, r: 38, cap: 6 },
+  { id: "tbl_5", num: 5, label: "Party Table 5", x: 670, y: 1060, r: 38, cap: 6 },
+  { id: "tbl_6", num: 6, label: "Party Table 6", x: 910, y: 1060, r: 38, cap: 6 },
 ];
 
 export const BANQUET_CHAIRS: TableChairDef[] = [
@@ -159,8 +159,110 @@ export const ROUND_TABLE_CHAIRS: TableChairDef[] = NUMBERED_TABLES.flatMap((tbl)
 );
 
 
+// 🎵 7 Music Studio Jam & Instrument Seating
+export const MUSIC_JAM_CHAIRS: TableChairDef[] = [
+  {
+    id: "music_piano_bench",
+    name: "Grand Synthesizer Piano Bench",
+    tableName: "Music Studio Piano",
+    x: 245,
+    y: 825,
+    faceDirection: "up",
+  },
+  {
+    id: "music_drum_throne",
+    name: "4-Pad Drum Machine Throne",
+    tableName: "Music Studio Drums",
+    x: 375,
+    y: 820,
+    faceDirection: "up",
+  },
+  // 5 Acoustic Jam Circle Chairs around the rug (x: 230, y: 950)
+  {
+    id: "music_jam_chair_1",
+    name: "Acoustic Jam Chair (North)",
+    tableName: "Music Jam Circle",
+    x: 230,
+    y: 910,
+    faceDirection: "down",
+  },
+  {
+    id: "music_jam_chair_2",
+    name: "Acoustic Jam Chair (South)",
+    tableName: "Music Jam Circle",
+    x: 230,
+    y: 990,
+    faceDirection: "up",
+  },
+  {
+    id: "music_jam_chair_3",
+    name: "Acoustic Jam Chair (West)",
+    tableName: "Music Jam Circle",
+    x: 180,
+    y: 950,
+    faceDirection: "right",
+  },
+  {
+    id: "music_jam_chair_4",
+    name: "Acoustic Jam Chair (East)",
+    tableName: "Music Jam Circle",
+    x: 280,
+    y: 950,
+    faceDirection: "left",
+  },
+  {
+    id: "music_jam_chair_5",
+    name: "Acoustic Jam Chair (Bass)",
+    tableName: "Music Jam Circle",
+    x: 270,
+    y: 985,
+    faceDirection: "left",
+  },
+];
+
+
+// ⛲ 4 Echo Marble Fountain Garden Benches
+export const COURTYARD_BENCHES: TableChairDef[] = [
+  {
+    id: "courtyard_bench_north",
+    name: "Fountain Garden Bench (North)",
+    tableName: "Echo Marble Fountain Courtyard",
+    x: 800,
+    y: 535,
+    faceDirection: "down",
+  },
+  {
+    id: "courtyard_bench_south",
+    name: "Fountain Garden Bench (South)",
+    tableName: "Echo Marble Fountain Courtyard",
+    x: 800,
+    y: 645,
+    faceDirection: "up",
+  },
+  {
+    id: "courtyard_bench_west",
+    name: "Fountain Garden Bench (West)",
+    tableName: "Echo Marble Fountain Courtyard",
+    x: 745,
+    y: 590,
+    faceDirection: "right",
+  },
+  {
+    id: "courtyard_bench_east",
+    name: "Fountain Garden Bench (East)",
+    tableName: "Echo Marble Fountain Courtyard",
+    x: 855,
+    y: 590,
+    faceDirection: "left",
+  },
+];
+
 export const ALL_TABLE_CHAIRS: TableChairDef[] = [...BANQUET_CHAIRS, ...ROUND_TABLE_CHAIRS];
-export const ALL_WORLD_SEATS: TableChairDef[] = [...ALL_TABLE_CHAIRS];
+export const ALL_WORLD_SEATS: TableChairDef[] = [
+  ...ALL_TABLE_CHAIRS,
+  ...MUSIC_JAM_CHAIRS,
+  ...COURTYARD_BENCHES,
+];
 
 export default function EchoSpacesWorld({
   localAvatar,
@@ -357,64 +459,6 @@ export default function EchoSpacesWorld({
     waterSprayRef.current = sprays;
   }, [vibe]);
 
-  // 1. Keyboard Listeners
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        return;
-      }
-
-      const key = e.key.toLowerCase();
-      keysPressed.current[key] = true;
-
-      if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(key)) {
-        clickTargetRef.current = null;
-      }
-
-      if (key === "x" || key === "e") {
-        e.preventDefault();
-        if (nearbyObjectRef.current) {
-          handleInteract(nearbyObjectRef.current);
-        } else if (nearbyTableChairRef.current) {
-          const chair = nearbyTableChairRef.current;
-          if (localAvatar.isSitting) {
-            // If already seated, pressing E opens Party Table Games
-            if (onOpenPartyGames) onOpenPartyGames();
-          } else {
-            // Sit down at this table chair
-            clickTargetRef.current = { x: chair.x, y: chair.y, time: Date.now() };
-            onMove(chair.x, chair.y, chair.faceDirection, false);
-            onSit(true, chair.id);
-            spacesSfx.playSitPop();
-            onSendSpeech(`🪑 Seated at ${chair.name}!`);
-          }
-        }
-      }
-
-      if (key === "g") {
-        e.preventDefault();
-        onToggleGhost?.();
-        spacesSfx.playKeyNote(6);
-      }
-
-      if (key === "h") {
-        e.preventDefault();
-        onToggleHandRaise?.();
-      }
-    };
-
-    const onKeyUp = (e: KeyboardEvent) => {
-      keysPressed.current[e.key.toLowerCase()] = false;
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("keyup", onKeyUp);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("keyup", onKeyUp);
-    };
-  }, [onToggleGhost, onToggleHandRaise]);
-
   // Handle Object Interaction
   const handleInteract = useCallback(
     (obj: InteractiveObject) => {
@@ -443,6 +487,70 @@ export default function EchoSpacesWorld({
     },
     [localAvatar.isSitting, onSit, onInteractObject, onOpenArcade, onOpenJukebox, onOpenWhiteboard, onToggleCoffee]
   );
+
+  // Trigger Nearby Action (Interactive object or Table seating & games)
+  const triggerNearbyAction = useCallback(() => {
+    if (nearbyObjectRef.current) {
+      handleInteract(nearbyObjectRef.current);
+    } else if (nearbyTableChairRef.current) {
+      const chair = nearbyTableChairRef.current;
+      if (localAvatar.isSitting) {
+        if (onOpenPartyGames) onOpenPartyGames();
+      } else {
+        clickTargetRef.current = { x: chair.x, y: chair.y, time: Date.now() };
+        onMove(chair.x, chair.y, chair.faceDirection, false);
+        onSit(true, chair.id);
+        spacesSfx.playSitPop();
+        onSendSpeech(`🪑 Seated at ${chair.name}!`);
+        if (onOpenPartyGames) {
+          setTimeout(() => onOpenPartyGames(), 300);
+        }
+      }
+    }
+  }, [handleInteract, localAvatar.isSitting, onMove, onSit, onOpenPartyGames, onSendSpeech]);
+
+  // 1. Keyboard Listeners
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      const key = e.key.toLowerCase();
+      keysPressed.current[key] = true;
+
+      if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(key)) {
+        clickTargetRef.current = null;
+      }
+
+      if (key === "x" || key === "e") {
+        e.preventDefault();
+        triggerNearbyAction();
+      }
+
+      if (key === "g") {
+        e.preventDefault();
+        onToggleGhost?.();
+        spacesSfx.playKeyNote(6);
+      }
+
+      if (key === "h") {
+        e.preventDefault();
+        onToggleHandRaise?.();
+      }
+    };
+
+    const onKeyUp = (e: KeyboardEvent) => {
+      keysPressed.current[e.key.toLowerCase()] = false;
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+    };
+  }, [onToggleGhost, onToggleHandRaise, triggerNearbyAction]);
 
   // 2. Chat Bubble Send
   const handleSendChat = (e: React.FormEvent) => {
@@ -576,6 +684,9 @@ export default function EchoSpacesWorld({
         onSit(true, chair.id);
         spacesSfx.playSitPop();
         onSendSpeech(`🪑 Seated at ${chair.name}!`);
+        if (onOpenPartyGames) {
+          setTimeout(() => onOpenPartyGames(), 300);
+        }
         return;
       }
     }
@@ -590,6 +701,9 @@ export default function EchoSpacesWorld({
       onSit(true, closestChair.id);
       spacesSfx.playSitPop();
       onSendSpeech(`🪑 Seated at ${closestChair.name}!`);
+      if (onOpenPartyGames) {
+        setTimeout(() => onOpenPartyGames(), 300);
+      }
       return;
     }
 
@@ -605,6 +719,9 @@ export default function EchoSpacesWorld({
         onSit(true, closestChair.id);
         spacesSfx.playSitPop();
         onSendSpeech(`🪑 Seated at ${closestChair.name}!`);
+        if (onOpenPartyGames) {
+          setTimeout(() => onOpenPartyGames(), 300);
+        }
         return;
       }
     }
@@ -861,212 +978,427 @@ export default function EchoSpacesWorld({
       // ═════════════════════════════════════════════════════════════════════
       const timeMs = performance.now();
 
-      // ═════════════════════════════════════════════════════════════════════
-      // ── HOLIDAY DINNER FEAST & GAMES LOUNGE (Single Open Gathering Room) ──
-      // ═════════════════════════════════════════════════════════════════════
+      // ── 1. TOP OUTDOOR PARK (x: 50 to 865, y: 35 to 220) ──
       ctx.save();
+      // Lush Green Lawn Grass
+      ctx.fillStyle = "#225324";
+      ctx.fillRect(50, 35, 815, 185);
 
-      // ── 1. RICH HARDWOOD PARQUET FLOOR (Unified Gathering Hall) ──
-      ctx.fillStyle = vibe === "SUNNY_DAYLIGHT" ? "#3b2314" : "#24140b";
-      ctx.fillRect(40, 40, 1520, 1120);
-
-      // Fine Parquet Wood Floor Planks
-      ctx.strokeStyle = "rgba(0, 0, 0, 0.25)";
-      ctx.lineWidth = 1;
-      for (let fy = 40; fy <= 1160; fy += 40) {
-        ctx.beginPath();
-        ctx.moveTo(40, fy);
-        ctx.lineTo(1560, fy);
-        ctx.stroke();
-      }
-      for (let fx = 40; fx <= 1560; fx += 120) {
-        for (let fy = 40; fy < 1160; fy += 80) {
-          const offset = (fy / 80) % 2 === 0 ? 0 : 60;
-          ctx.beginPath();
-          ctx.moveTo(fx + offset, fy);
-          ctx.lineTo(fx + offset, fy + 40);
-          ctx.stroke();
+      // Subtle grass blade flecks
+      ctx.fillStyle = "rgba(74, 222, 128, 0.12)";
+      for (let gx = 65; gx < 850; gx += 28) {
+        for (let gy = 45; gy < 210; gy += 24) {
+          ctx.fillRect(gx + ((gy * 7) % 15), gy, 2, 4);
         }
       }
 
-      // Baseboard borders around the room perimeter
-      ctx.strokeStyle = "#451a03";
-      ctx.lineWidth = 4;
-      ctx.strokeRect(42, 42, 1516, 1116);
+      // Wooden Post-and-Rail Fence along North, West, East edges
+      ctx.strokeStyle = "#854d0e";
+      ctx.lineWidth = 3;
+      // North rails
+      ctx.beginPath();
+      ctx.moveTo(50, 38);
+      ctx.lineTo(865, 38);
+      ctx.moveTo(50, 44);
+      ctx.lineTo(865, 44);
+      // West rails
+      ctx.moveTo(52, 35);
+      ctx.lineTo(52, 220);
+      // East rails
+      ctx.moveTo(863, 35);
+      ctx.lineTo(863, 220);
+      ctx.stroke();
+
+      // Fence wooden posts every 48px
+      ctx.fillStyle = "#713f12";
+      for (let fx = 50; fx <= 865; fx += 48) {
+        ctx.fillRect(fx - 3, 34, 6, 14);
+      }
+
+      // ── Tiki Bar on Sand Patch (x: 160, y: 125) ──
+      // Sand circle patch
+      ctx.fillStyle = "#fef08a";
+      ctx.beginPath();
+      ctx.arc(160, 125, 44, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#fde047";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Bamboo round bar counter
+      ctx.fillStyle = "#b45309";
+      ctx.beginPath();
+      ctx.arc(160, 125, 22, 0, Math.PI * 2);
+      ctx.fill();
       ctx.strokeStyle = "#78350f";
       ctx.lineWidth = 2;
-      ctx.strokeRect(40, 40, 1520, 1120);
+      ctx.stroke();
 
-      // North Wall Holiday Garland with Twinkling Colored Fairy Lights
-      for (let gx = 50; gx < 1550; gx += 38) {
-        ctx.font = "14px sans-serif";
-        ctx.fillText("🌿", gx, 48);
-        const bulbColors = ["#ef4444", "#eab308", "#3b82f6", "#22c55e", "#ec4899"];
-        const bulbGlow = Math.sin(timeMs * 0.006 + gx) > 0;
-        ctx.fillStyle = bulbGlow ? bulbColors[(gx / 38) % bulbColors.length] : "#ffffff";
-        ctx.beginPath();
-        ctx.arc(gx + 12, 46, 2.5, 0, Math.PI * 2);
-        ctx.fill();
-      }
+      // Drinks on bar
+      ctx.fillStyle = "#f43f5e";
+      ctx.fillRect(152, 118, 4, 6);
+      ctx.fillStyle = "#06b6d4";
+      ctx.fillRect(164, 118, 4, 6);
 
-      // Room Header Title Banner
-      ctx.fillStyle = "rgba(15, 23, 42, 0.88)";
+      // Thatch Umbrella Cone Canopy
+      ctx.fillStyle = "#d97706";
       ctx.beginPath();
-      ctx.roundRect(610, 50, 380, 32, 8);
+      ctx.arc(160, 125, 36, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = "#eab308";
+      ctx.strokeStyle = "#92400e";
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
-      ctx.fillStyle = "#fef08a";
-      ctx.font = "bold 13px monospace";
-      ctx.textAlign = "center";
-      ctx.fillText("🎄 HOLIDAY DINNER FEAST & GAMES LOUNGE", 800, 71);
-
-      // ── 2. ROARING STONE FIREPLACE & HEARTH LOUNGE (x: 180 to 340, y: 260 to 420) ──
-      // Fireside Persian Hearth Rug (rug_fireplace)
-      ctx.fillStyle = "#7f1d1d";
-      ctx.beginPath();
-      ctx.roundRect(180, 310, 160, 120, 8);
-      ctx.fill();
-      ctx.strokeStyle = "#d97706";
-      ctx.lineWidth = 3;
-      ctx.stroke();
-
-      // Golden fringe tassel detail on rug ends
-      ctx.fillStyle = "#fbbf24";
-      for (let fx = 184; fx <= 336; fx += 8) {
-        ctx.fillRect(fx, 308, 4, 3);
-        ctx.fillRect(fx, 429, 4, 3);
-      }
-
-      // Inner ornate medallion pattern
-      ctx.strokeStyle = "rgba(251, 191, 36, 0.4)";
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(196, 326, 128, 88);
-
-      // Warm radial amber fire glow spreading onto the rug & floor
-      const fireGlow = ctx.createRadialGradient(260, 310, 12, 260, 310, 120);
-      fireGlow.addColorStop(0, "rgba(249, 115, 22, 0.45)");
-      fireGlow.addColorStop(0.5, "rgba(234, 88, 12, 0.2)");
-      fireGlow.addColorStop(1, "rgba(234, 88, 12, 0)");
-      ctx.fillStyle = fireGlow;
-      ctx.beginPath();
-      ctx.arc(260, 310, 120, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Heavy Fieldstone Fireplace Chimney & Hearth Masonry
-      ctx.fillStyle = "#1e293b";
-      ctx.beginPath();
-      ctx.roundRect(190, 255, 140, 60, 4);
-      ctx.fill();
-      ctx.strokeStyle = "#475569";
-      ctx.lineWidth = 2.5;
-      ctx.stroke();
-
-      // Stone brick textures
-      ctx.strokeStyle = "rgba(100, 116, 139, 0.4)";
-      ctx.lineWidth = 1;
-      for (let sx = 194; sx < 326; sx += 24) {
+      // Radiating thatch spokes & center pole top
+      ctx.strokeStyle = "rgba(254, 240, 138, 0.4)";
+      for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
         ctx.beginPath();
-        ctx.moveTo(sx, 255);
-        ctx.lineTo(sx, 315);
+        ctx.moveTo(160, 125);
+        ctx.lineTo(160 + Math.cos(a) * 36, 125 + Math.sin(a) * 36);
         ctx.stroke();
       }
-
-      // Fireplace Inner Cavity (Dark Firebox)
-      ctx.fillStyle = "#09090b";
+      ctx.fillStyle = "#78350f";
       ctx.beginPath();
-      ctx.roundRect(220, 275, 80, 40, [8, 8, 0, 0]);
+      ctx.arc(160, 125, 4, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = "#334155";
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
 
-      // Glowing hot coal & charcoal embers bed
+      // 3 Wooden Tiki Stools
+      const stoolPositions = [
+        { x: 132, y: 142 },
+        { x: 160, y: 160 },
+        { x: 188, y: 142 },
+      ];
+      stoolPositions.forEach((st) => {
+        ctx.fillStyle = "#78350f";
+        ctx.beginPath();
+        ctx.arc(st.x, st.y, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#fde68a";
+        ctx.beginPath();
+        ctx.arc(st.x, st.y, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // ── Yellow/Black Hazard Utility Box (x: 270, y: 70) ──
+      ctx.save();
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(270, 70, 28, 22);
+      ctx.strokeStyle = "#475569";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(270, 70, 28, 22);
+
+      // 45° Diagonal Zebra Hazard Stripes
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(271, 71, 26, 20);
+      ctx.clip();
+      ctx.strokeStyle = "#eab308";
+      ctx.lineWidth = 3;
+      for (let zx = 250; zx < 310; zx += 7) {
+        ctx.beginPath();
+        ctx.moveTo(zx, 70);
+        ctx.lineTo(zx + 20, 92);
+        ctx.stroke();
+      }
+      ctx.restore();
+      ctx.fillStyle = "#000000";
+      ctx.font = "bold 8px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("⚡", 284, 84);
+      ctx.restore();
+
+      // ── Campfire Firepit with 4 Benches (x: 430, y: 130) ──
+      // Cobblestone stone ring
+      for (let s = 0; s < 10; s++) {
+        const stoneAngle = (s * Math.PI * 2) / 10;
+        const stX = 430 + Math.cos(stoneAngle) * 22;
+        const stY = 130 + Math.sin(stoneAngle) * 22;
+        ctx.fillStyle = s % 2 === 0 ? "#64748b" : "#94a3b8";
+        ctx.beginPath();
+        ctx.arc(stX, stY, 5.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // Charcoal ash bed
+      ctx.fillStyle = "#1e293b";
+      ctx.beginPath();
+      ctx.arc(430, 130, 16, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Glowing hot embers
       const emberPulse = Math.sin(timeMs * 0.005) * 0.2 + 0.8;
       ctx.fillStyle = `rgba(220, 38, 38, ${emberPulse})`;
       ctx.beginPath();
-      ctx.ellipse(260, 310, 32, 6, 0, 0, Math.PI * 2);
+      ctx.arc(430, 130, 11, 0, Math.PI * 2);
       ctx.fill();
 
-      // Leaping animated fiery flame particles
-      const flameColors = ["#facc15", "#f97316", "#ef4444", "#fbbf24", "#ea580c"];
-      for (let f = 0; f < 7; f++) {
-        const fAngle = (f * Math.PI * 2) / 7 + timeMs * 0.004;
-        const fDist = Math.sin(timeMs * 0.008 + f) * 12 + 4;
-        const flameY = 308 - Math.sin(timeMs * 0.012 + f) * 14 - 6;
+      // Leaping animated flame particles
+      const flameColors = ["#facc15", "#f97316", "#ef4444", "#fbbf24"];
+      for (let f = 0; f < 5; f++) {
+        const fAngle = (f * Math.PI * 2) / 5 + timeMs * 0.003;
+        const fDist = Math.sin(timeMs * 0.008 + f) * 5 + 3;
+        const flameY = 130 - 3 - Math.sin(timeMs * 0.01 + f) * 8;
         ctx.fillStyle = flameColors[f % flameColors.length];
         ctx.beginPath();
-        ctx.arc(260 + Math.cos(fAngle) * (fDist * 0.6), flameY, 4.5, 0, Math.PI * 2);
+        ctx.arc(430 + Math.cos(fAngle) * fDist, flameY, 4, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      // Fireplace Birch Wood Firewood Logs
-      ctx.fillStyle = "#78350f";
-      ctx.fillRect(238, 304, 44, 7);
+      // 4 Rustic Wooden Bench Logs (North, South, West, East)
+      // North Bench
       ctx.fillStyle = "#92400e";
-      ctx.fillRect(242, 299, 36, 6);
-
-      // Carved Dark Oak Mantel Shelf
-      ctx.fillStyle = "#451a03";
       ctx.beginPath();
-      ctx.roundRect(182, 250, 156, 12, 3);
+      ctx.roundRect(405, 88, 50, 14, 4);
+      ctx.fill();
+      ctx.strokeStyle = "#78350f";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // South Bench
+      ctx.fillStyle = "#92400e";
+      ctx.beginPath();
+      ctx.roundRect(405, 158, 50, 14, 4);
+      ctx.fill();
+      ctx.strokeStyle = "#78350f";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // West Bench
+      ctx.fillStyle = "#92400e";
+      ctx.beginPath();
+      ctx.roundRect(382, 105, 14, 50, 4);
+      ctx.fill();
+      ctx.strokeStyle = "#78350f";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // East Bench
+      ctx.fillStyle = "#92400e";
+      ctx.beginPath();
+      ctx.roundRect(464, 105, 14, 50, 4);
+      ctx.fill();
+      ctx.strokeStyle = "#78350f";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // ── Circular Pink Cushion Lounge (x: 610, y: 130) ──
+      // Center round oak coffee table
+      ctx.fillStyle = "#b45309";
+      ctx.beginPath();
+      ctx.arc(610, 130, 15, 0, Math.PI * 2);
       ctx.fill();
       ctx.strokeStyle = "#78350f";
       ctx.lineWidth = 2;
       ctx.stroke();
+      ctx.fillStyle = "#38bdf8";
+      ctx.fillRect(607, 126, 3, 5);
+      ctx.fillRect(612, 128, 3, 5);
 
-      // Mantel Pine Garland & Candles
-      ctx.font = "11px sans-serif";
-      ctx.fillText("🌿🌿🌿", 228, 252);
-      ctx.fillText("🕯️", 195, 248);
-      ctx.fillText("🕯️", 310, 248);
+      // 4 Curved Plush Hot Pink Cushions
+      const cushionArcs = [
+        { start: -Math.PI * 0.75, end: -Math.PI * 0.25 }, // Top
+        { start: Math.PI * 0.25, end: Math.PI * 0.75 },   // Bottom
+        { start: Math.PI * 0.75, end: Math.PI * 1.25 },   // Left
+        { start: -Math.PI * 0.25, end: Math.PI * 0.25 },  // Right
+      ];
+      cushionArcs.forEach((cArc) => {
+        ctx.strokeStyle = "#be185d";
+        ctx.lineWidth = 14;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.arc(610, 130, 29, cArc.start + 0.15, cArc.end - 0.15);
+        ctx.stroke();
 
-      // 4 Hanging Christmas Stockings on the Mantel (🧦)
-      const stockingXs = [228, 248, 268, 288];
-      stockingXs.forEach((sx) => {
-        ctx.font = "14px sans-serif";
-        ctx.fillText("🧦", sx, 272);
+        ctx.strokeStyle = "#ec4899";
+        ctx.lineWidth = 10;
+        ctx.beginPath();
+        ctx.arc(610, 130, 29, cArc.start + 0.15, cArc.end - 0.15);
+        ctx.stroke();
       });
 
-      // 2 Cozy Fireside Velvet Wingback Armchairs
-      // Left Armchair
-      ctx.fillStyle = "#991b1b";
-      ctx.beginPath();
-      ctx.roundRect(148, 335, 26, 36, 6);
-      ctx.fill();
-      ctx.strokeStyle = "#b91c1c";
+      // ── DJ Sound Station & Acoustic Wave Speakers (x: 760, y: 130) ──
+      // Left speaker tower
+      ctx.fillStyle = "#18181b";
+      ctx.fillRect(706, 106, 22, 46);
+      ctx.strokeStyle = "#38bdf8";
       ctx.lineWidth = 1.5;
-      ctx.stroke();
-      ctx.fillStyle = "#fef08a";
-      ctx.fillRect(152, 342, 18, 22);
-
-      // Right Armchair
-      ctx.fillStyle = "#991b1b";
+      ctx.strokeRect(706, 106, 22, 46);
+      // Woofers
+      ctx.fillStyle = "#334155";
       ctx.beginPath();
-      ctx.roundRect(346, 335, 26, 36, 6);
+      ctx.arc(717, 120, 6, 0, Math.PI * 2);
+      ctx.arc(717, 138, 7, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = "#b91c1c";
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-      ctx.fillStyle = "#fef08a";
-      ctx.fillRect(350, 342, 18, 22);
 
-      // Fireplace Hearth Label
+      // Right speaker tower
+      ctx.fillStyle = "#18181b";
+      ctx.fillRect(792, 106, 22, 46);
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(792, 106, 22, 46);
+      ctx.fillStyle = "#334155";
+      ctx.beginPath();
+      ctx.arc(803, 120, 6, 0, Math.PI * 2);
+      ctx.arc(803, 138, 7, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Pulsing cyan acoustic sound rings radiating out
+      const soundPulse = (timeMs * 0.006) % 3;
+      ctx.strokeStyle = `rgba(6, 182, 212, ${0.8 - soundPulse * 0.25})`;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(717, 129, 14 + soundPulse * 10, -Math.PI * 0.6, Math.PI * 0.6);
+      ctx.arc(803, 129, 14 + soundPulse * 10, Math.PI * 0.4, Math.PI * 1.6);
+      ctx.stroke();
+
+      // DJ Console Table
+      ctx.fillStyle = "#09090b";
+      ctx.fillRect(734, 116, 52, 28);
+      ctx.strokeStyle = "#475569";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(734, 116, 52, 28);
+
+      // Twin Vinyl Platters
+      ctx.fillStyle = "#1e293b";
+      ctx.beginPath();
+      ctx.arc(746, 130, 8, 0, Math.PI * 2);
+      ctx.arc(774, 130, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#f43f5e";
+      ctx.beginPath();
+      ctx.arc(746, 130, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#06b6d4";
+      ctx.beginPath();
+      ctx.arc(774, 130, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // LED Mixer meters
+      ctx.fillStyle = "#22c55e";
+      ctx.fillRect(758, 122, 4, 3);
+      ctx.fillStyle = "#eab308";
+      ctx.fillRect(758, 127, 4, 3);
+      ctx.fillStyle = "#ef4444";
+      ctx.fillRect(758, 132, 4, 3);
+
+      // ── Victorian Streetlamps with Warm Glow ──
+      const streetlamps = [
+        { x: 95, y: 65 },
+        { x: 520, y: 65 },
+        { x: 830, y: 65 },
+      ];
+      streetlamps.forEach((lamp) => {
+        // Soft yellow halo
+        const haloGrad = ctx.createRadialGradient(lamp.x, lamp.y, 2, lamp.x, lamp.y, 28);
+        haloGrad.addColorStop(0, "rgba(254, 240, 138, 0.35)");
+        haloGrad.addColorStop(1, "rgba(254, 240, 138, 0)");
+        ctx.fillStyle = haloGrad;
+        ctx.beginPath();
+        ctx.arc(lamp.x, lamp.y, 28, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Cast iron post & lantern
+        ctx.fillStyle = "#1e293b";
+        ctx.fillRect(lamp.x - 2, lamp.y - 2, 4, 16);
+        ctx.fillRect(lamp.x - 5, lamp.y + 12, 10, 3);
+        // Lantern head
+        ctx.fillStyle = "#fef08a";
+        ctx.beginPath();
+        ctx.arc(lamp.x, lamp.y - 4, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#0f172a";
+        ctx.beginPath();
+        ctx.arc(lamp.x, lamp.y - 7, 6, Math.PI, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Potted Tropical Palms along park boundary
+      [ { x: 75, y: 195 }, { x: 840, y: 195 } ].forEach((plm) => {
+        ctx.font = "24px sans-serif";
+        ctx.fillText("🌴", plm.x - 12, plm.y);
+      });
+      ctx.restore();
+
+
+      // ── 3. FOUNTAIN ROOM (RIGHT WING, x: 875 to 1545, y: 50 to 520) ──
+      ctx.save();
+      // Checkered Sand / Beige Tile Floor
+      for (let tx = 875; tx < 1545; tx += 40) {
+        for (let ty = 50; ty < 520; ty += 40) {
+          const isAlt = ((tx - 875) / 40 + (ty - 50) / 40) % 2 === 0;
+          ctx.fillStyle = isAlt ? "#ded0b3" : "#ece2cc";
+          ctx.fillRect(tx, ty, 40, 40);
+          ctx.strokeStyle = "rgba(180, 160, 130, 0.3)";
+          ctx.lineWidth = 0.5;
+          ctx.strokeRect(tx, ty, 40, 40);
+        }
+      }
+
+      // Room Header Tag
       ctx.fillStyle = "#0f172a";
       ctx.beginPath();
-      ctx.roundRect(200, 396, 120, 18, 4);
+      ctx.roundRect(1110, 60, 200, 26, 8);
       ctx.fill();
-      ctx.strokeStyle = "#ea580c";
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 1.5;
       ctx.stroke();
-      ctx.fillStyle = "#fdba74";
-      ctx.font = "bold 9px monospace";
+      ctx.fillStyle = "#38bdf8";
+      ctx.font = "900 12px monospace";
       ctx.textAlign = "center";
-      ctx.fillText("🔥 Roaring Hearth", 260, 408);
+      ctx.fillText("📍 Fountain Room", 1210, 77);
 
-      ctx.restore();
+      // 3 Bubbling Water Fountains (in a row at x: 1060, 1200, 1340, y: 170)
+      const fountainXs = [1060, 1200, 1340];
+      const fountainY = 170;
+      const rippleT = timeMs * 0.004;
+
+      fountainXs.forEach((fX, idx) => {
+        // Outer carved marble ring
+        ctx.fillStyle = "#94a3b8";
+        ctx.beginPath();
+        ctx.arc(fX, fountainY, 30, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#cbd5e1";
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        // Azure water pool
+        ctx.fillStyle = "#0284c7";
+        ctx.beginPath();
+        ctx.arc(fX, fountainY, 24, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Concentric undulating water ripples
+        ctx.strokeStyle = "rgba(186, 230, 253, 0.8)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(fX, fountainY, 15 + Math.sin(rippleT + idx) * 4, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Center marble spout
+        ctx.fillStyle = "#f8fafc";
+        ctx.beginPath();
+        ctx.arc(fX, fountainY, 5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Water spray motes for 3 fountains
+      waterSprayRef.current.forEach((sp) => {
+        sp.x += sp.vx;
+        sp.y += sp.vy;
+        sp.life += 1;
+        if (sp.life > sp.maxLife) {
+          const chosenF = fountainXs[Math.floor(Math.random() * fountainXs.length)];
+          sp.x = chosenF + (Math.random() - 0.5) * 30;
+          sp.y = fountainY;
+          sp.vx = (Math.random() - 0.5) * 2;
+          sp.vy = -Math.random() * 2.8 - 1.2;
+          sp.life = 0;
+        }
+        ctx.fillStyle = `rgba(186, 230, 253, ${1 - sp.life / sp.maxLife})`;
+        ctx.beginPath();
+        ctx.arc(sp.x, sp.y, 2, 0, Math.PI * 2);
+        ctx.fill();
+      });
 
       // Long Executive Banquet Conference Table (x: 1040, y: 320, w: 330, h: 66)
       ctx.fillStyle = "#78350f";
@@ -1257,54 +1589,6 @@ export default function EchoSpacesWorld({
       ctx.textAlign = "center";
       ctx.fillText("⭐", 1460, 404);
 
-      // Holiday Gift Boxes / Presents under the Christmas Tree
-      // Red Present with Golden Ribbon
-      ctx.fillStyle = "#dc2626";
-      ctx.fillRect(1430, 476, 20, 18);
-      ctx.strokeStyle = "#991b1b";
-      ctx.lineWidth = 1;
-      ctx.strokeRect(1430, 476, 20, 18);
-      ctx.fillStyle = "#facc15";
-      ctx.fillRect(1438, 476, 4, 18);
-      ctx.fillRect(1430, 483, 20, 4);
-      ctx.font = "10px sans-serif";
-      ctx.fillText("🎀", 1440, 475);
-
-      // Royal Blue Present with Silver Ribbon
-      ctx.fillStyle = "#2563eb";
-      ctx.fillRect(1454, 474, 22, 20);
-      ctx.strokeStyle = "#1d4ed8";
-      ctx.lineWidth = 1;
-      ctx.strokeRect(1454, 474, 22, 20);
-      ctx.fillStyle = "#e0f2fe";
-      ctx.fillRect(1463, 474, 4, 20);
-      ctx.fillRect(1454, 482, 22, 4);
-      ctx.font = "10px sans-serif";
-      ctx.fillText("🎀", 1465, 473);
-
-      // Emerald Green Present with Golden Bow
-      ctx.fillStyle = "#15803d";
-      ctx.fillRect(1478, 480, 18, 16);
-      ctx.strokeStyle = "#166534";
-      ctx.lineWidth = 1;
-      ctx.strokeRect(1478, 480, 18, 16);
-      ctx.fillStyle = "#facc15";
-      ctx.fillRect(1485, 480, 4, 16);
-      ctx.fillRect(1478, 486, 18, 4);
-
-      // Christmas Tree Hover Wish Tag
-      ctx.fillStyle = "#0f172a";
-      ctx.beginPath();
-      ctx.roundRect(1395, 506, 130, 18, 4);
-      ctx.fill();
-      ctx.strokeStyle = "#eab308";
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      ctx.fillStyle = "#fef08a";
-      ctx.font = "bold 9px monospace";
-      ctx.textAlign = "center";
-      ctx.fillText("⭐ Christmas Tree", 1460, 518);
-
       // Green planter boxes along top wall
       for (let px = 900; px < 1520; px += 75) {
         ctx.fillStyle = "#334155";
@@ -1313,6 +1597,168 @@ export default function EchoSpacesWorld({
         ctx.fillText("🌿", px + 16, 58);
       }
       ctx.restore();
+
+      // ── 4. OPEN SOCIAL PARTY & TABLE GAMES FLOOR ──
+      ctx.save();
+      ctx.fillStyle = vibe === "SUNNY_DAYLIGHT" ? "#292524" : "#18181b";
+      ctx.fillRect(50, 275, 815, 245);
+      ctx.restore();
+
+      // ── 5. RETRO ARCADE LOUNGE FLOOR TAG (x: 320, y: 360) ──
+      ctx.save();
+      ctx.fillStyle = "rgba(244, 63, 94, 0.15)";
+      ctx.beginPath();
+      ctx.roundRect(310, 360, 200, 110, 10);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(244, 63, 94, 0.5)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = "#f43f5e";
+      ctx.font = "900 11px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("🕹️ Retro Arcade Lounge", 410, 460);
+      ctx.restore();
+
+      // Interactive Station Objects
+      INTERACTIVE_OBJECTS.forEach((obj) => {
+        ctx.save();
+        const { x, y, w, h, type, icon } = obj;
+        if (type === "chair") {
+          const isArcadeStool = obj.id.includes("arcade_stool");
+          ctx.fillStyle = isArcadeStool ? "#312e81" : "#334155";
+          ctx.beginPath();
+          ctx.roundRect(x, y, w, h, isArcadeStool ? 16 : 8);
+          ctx.fill();
+          ctx.strokeStyle = isArcadeStool ? "#818cf8" : "#64748b";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          if (isArcadeStool) {
+            ctx.fillStyle = "#818cf8";
+            ctx.beginPath();
+            ctx.arc(x + w / 2, y + h / 2, 4, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        } else if (type === "whiteboard") {
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(x, y, w, h);
+          ctx.strokeStyle = "#38bdf8";
+          ctx.lineWidth = 3.5;
+          ctx.strokeRect(x, y, w, h);
+        } else if (type === "piano") {
+          ctx.fillStyle = "#09090b";
+          ctx.fillRect(x, y, w, h);
+          ctx.strokeStyle = "#f43f5e";
+          ctx.lineWidth = 2.5;
+          ctx.strokeRect(x, y, w, h);
+          ctx.fillStyle = "#ffffff";
+          for (let k = 0; k < w - 10; k += 9) {
+            ctx.fillRect(x + 5 + k, y + h - 18, 7, 14);
+          }
+        } else if (type === "drums") {
+          ctx.fillStyle = "#18181b";
+          ctx.fillRect(x, y, w, h);
+          ctx.strokeStyle = "#f43f5e";
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x, y, w, h);
+        } else if (type === "arcade") {
+          // Retro arcade cabinet
+          ctx.fillStyle = "#1e1b4b";
+          ctx.beginPath();
+          ctx.roundRect(x, y, w, h, 6);
+          ctx.fill();
+          ctx.strokeStyle = "#818cf8";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          // Glowing Marquee
+          ctx.fillStyle = "#06b6d4";
+          ctx.fillRect(x + 4, y + 4, w - 8, 8);
+          ctx.fillStyle = "#000000";
+          ctx.font = "bold 6px monospace";
+          ctx.textAlign = "center";
+          ctx.fillText("ARCADE", x + w / 2, y + 10);
+
+          // CRT Screen (animated scanline glow)
+          const screenGlow = Math.sin(performance.now() * 0.005) * 0.2 + 0.8;
+          ctx.fillStyle = `rgba(6, 182, 212, ${screenGlow})`;
+          ctx.fillRect(x + 5, y + 14, w - 10, 16);
+
+          // Controls & Joystick
+          ctx.fillStyle = "#0f172a";
+          ctx.fillRect(x + 4, y + 32, w - 8, 10);
+          ctx.fillStyle = "#ef4444";
+          ctx.beginPath();
+          ctx.arc(x + 12, y + 36, 2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#eab308";
+          ctx.beginPath();
+          ctx.arc(x + 22, y + 36, 1.5, 0, Math.PI * 2);
+          ctx.arc(x + 28, y + 36, 1.5, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (type === "coffee") {
+          // Barista Espresso Counter
+          ctx.fillStyle = "#451a03";
+          ctx.beginPath();
+          ctx.roundRect(x, y + 12, w, h - 12, 4);
+          ctx.fill();
+          ctx.strokeStyle = "#78350f";
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+
+          // Espresso Machine & Chrome Steam Tower
+          ctx.fillStyle = "#94a3b8";
+          ctx.beginPath();
+          ctx.roundRect(x + 6, y + 2, w - 12, 16, 3);
+          ctx.fill();
+          ctx.fillStyle = "#334155";
+          ctx.fillRect(x + 10, y + 8, w - 20, 6);
+
+          // Rising steam curls
+          const sT = performance.now() * 0.004;
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(x + 14, y);
+          ctx.quadraticCurveTo(x + 12, y - 4, x + 14 + Math.sin(sT) * 2, y - 8);
+          ctx.stroke();
+        } else if (type === "jukebox") {
+          // Vintage Wurlitzer Arch Jukebox
+          ctx.fillStyle = "#7f1d1d";
+          ctx.beginPath();
+          ctx.roundRect(x, y, w, h, [16, 16, 4, 4]);
+          ctx.fill();
+          ctx.strokeStyle = "#e11d48";
+          ctx.lineWidth = 2.5;
+          ctx.stroke();
+
+          // Inner grill
+          ctx.fillStyle = "#18181b";
+          ctx.beginPath();
+          ctx.arc(x + w / 2, y + 20, 14, Math.PI, 0);
+          ctx.fill();
+
+          // Center vinyl record
+          ctx.fillStyle = "#000000";
+          ctx.beginPath();
+          ctx.arc(x + w / 2, y + 24, 8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#e11d48";
+          ctx.beginPath();
+          ctx.arc(x + w / 2, y + 24, 3, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (type === "podium") {
+          ctx.fillStyle = "#78350f";
+          ctx.beginPath();
+          ctx.roundRect(x + 4, y + 8, w - 8, h - 8, 4);
+          ctx.fill();
+          ctx.strokeStyle = "#b45309";
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+        ctx.font = "15px sans-serif";
+        ctx.fillText(icon, x + w / 2 - 8, y - 8);
+        ctx.restore();
+      });
 
       // ── RENDER NUMBERED BANQUET & KEYNOTE ROUND TABLES (Image 1, 3, 4, 5 Fidelity) ──
       NUMBERED_TABLES.forEach((tbl) => {
@@ -1375,39 +1821,132 @@ export default function EchoSpacesWorld({
         ctx.textBaseline = "middle";
         ctx.fillText(String(tbl.num), tbl.x, tbl.y);
 
-        // Center Game Table Centerpiece
-        const tableCenterpieces: Record<number, string> = {
-          1: "🎲",
-          2: "🃏",
-          3: "🍾",
-          4: "👑",
-          5: "✂️",
-          6: "🎤",
-        };
-        ctx.font = "14px sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText(tableCenterpieces[tbl.num] || "🎲", tbl.x, tbl.y - 20);
-
-        // Game Table Label Badge
-        ctx.fillStyle = "rgba(15, 23, 42, 0.9)";
-        ctx.beginPath();
-        ctx.roundRect(tbl.x - 68, tbl.y + tbl.r + 9, 136, 18, 4);
-        ctx.fill();
-        ctx.strokeStyle = "#eab308";
-        ctx.lineWidth = 1;
-        ctx.stroke();
-
-        ctx.fillStyle = "#fef08a";
-        ctx.font = "bold 9px monospace";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(tbl.label, tbl.x, tbl.y + tbl.r + 18);
+        // Center Floral or Snack Centerpiece
+        ctx.font = "11px sans-serif";
+        ctx.fillText("🪻", tbl.x, tbl.y - 20);
 
         ctx.restore();
       });
 
 
+      // ── RENDER MUSIC JAM STUDIO CHAIRS & INSTRUMENT BENCHES ──
+      MUSIC_JAM_CHAIRS.forEach((chair) => {
+        ctx.save();
+        const isSeatedHere = localAvatar.isSitting && localAvatar.sittingObjectId === chair.id;
 
+        // Shadow
+        ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+        ctx.beginPath();
+        ctx.ellipse(chair.x, chair.y + 6, 15, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (isSeatedHere) {
+          ctx.strokeStyle = "#f59e0b";
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.arc(chair.x, chair.y, 18, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        if (chair.id === "music_piano_bench") {
+          // Grand Synthesizer Piano Bench (Leather padded long stool)
+          ctx.fillStyle = isSeatedHere ? "#0f766e" : "#27272a";
+          ctx.beginPath();
+          ctx.roundRect(chair.x - 18, chair.y - 7, 36, 14, 4);
+          ctx.fill();
+          ctx.strokeStyle = isSeatedHere ? "#f59e0b" : "#f43f5e";
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+          // Buttons tufting
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(chair.x - 8, chair.y - 1, 2, 2);
+          ctx.fillRect(chair.x + 6, chair.y - 1, 2, 2);
+        } else if (chair.id === "music_drum_throne") {
+          // Drum Throne (Round swivel stool)
+          ctx.fillStyle = isSeatedHere ? "#0f766e" : "#18181b";
+          ctx.beginPath();
+          ctx.arc(chair.x, chair.y, 11, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = isSeatedHere ? "#f59e0b" : "#a1a1aa";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.fillStyle = "#38bdf8";
+          ctx.beginPath();
+          ctx.arc(chair.x, chair.y, 4, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          // Acoustic Jam Circle Chair
+          ctx.fillStyle = isSeatedHere ? "#0f766e" : "#78350f";
+          ctx.beginPath();
+          ctx.roundRect(chair.x - 11, chair.y - 11, 22, 22, 5);
+          ctx.fill();
+          ctx.strokeStyle = isSeatedHere ? "#f59e0b" : "#b45309";
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+          // Teal cushion center
+          ctx.fillStyle = isSeatedHere ? "#fef08a" : "#0284c7";
+          ctx.beginPath();
+          ctx.roundRect(chair.x - 7, chair.y - 7, 14, 14, 3);
+          ctx.fill();
+        }
+
+        ctx.restore();
+      });
+
+      // ── RENDER 4 COURTYARD MARBLE FOUNTAIN BENCHES ──
+      COURTYARD_BENCHES.forEach((bench) => {
+        ctx.save();
+        const isSeatedHere = localAvatar.isSitting && localAvatar.sittingObjectId === bench.id;
+
+        // Drop shadow
+        ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
+        ctx.beginPath();
+        const isHoriz = bench.faceDirection === "up" || bench.faceDirection === "down";
+        ctx.ellipse(bench.x, bench.y + 4, isHoriz ? 24 : 8, isHoriz ? 8 : 24, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (isSeatedHere) {
+          ctx.strokeStyle = "#f59e0b";
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.arc(bench.x, bench.y, 22, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        // Garden bench wood planks
+        ctx.fillStyle = isSeatedHere ? "#0f766e" : "#78350f";
+        ctx.beginPath();
+        if (isHoriz) {
+          ctx.roundRect(bench.x - 22, bench.y - 9, 44, 18, 4);
+        } else {
+          ctx.roundRect(bench.x - 9, bench.y - 22, 18, 44, 4);
+        }
+        ctx.fill();
+        ctx.strokeStyle = isSeatedHere ? "#f59e0b" : "#334155";
+        ctx.lineWidth = 1.8;
+        ctx.stroke();
+
+        // Bench Slats Detail
+        ctx.strokeStyle = "#451a03";
+        ctx.lineWidth = 1;
+        if (isHoriz) {
+          ctx.beginPath();
+          ctx.moveTo(bench.x - 20, bench.y - 3);
+          ctx.lineTo(bench.x + 20, bench.y - 3);
+          ctx.moveTo(bench.x - 20, bench.y + 3);
+          ctx.lineTo(bench.x + 20, bench.y + 3);
+          ctx.stroke();
+        } else {
+          ctx.beginPath();
+          ctx.moveTo(bench.x - 3, bench.y - 20);
+          ctx.lineTo(bench.x - 3, bench.y + 20);
+          ctx.moveTo(bench.x + 3, bench.y - 20);
+          ctx.lineTo(bench.x + 3, bench.y + 20);
+          ctx.stroke();
+        }
+
+        ctx.restore();
+      });
 
       // ── RENDER PLACED CUSTOM DECORATIONS (Build Mode Items) ──
       localDecorations.forEach((d) => {
@@ -2262,12 +2801,19 @@ export default function EchoSpacesWorld({
         />
       </div>
 
-      {/* Nearby Interaction Prompt Banner */}
+      {/* Nearby Interaction Prompt Banner (1-Click Sit & Play) */}
       {nearbyPrompt && (
-        <div className="absolute top-14 left-1/2 -translate-x-1/2 bg-black/90 backdrop-blur-md px-4 py-1.5 rounded-2xl border border-amber-400 text-amber-300 font-mono text-xs font-bold shadow-2xl animate-in fade-in zoom-in-95 flex items-center gap-2 z-30 pointer-events-auto">
-          <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-spin" />
+        <button
+          type="button"
+          onClick={triggerNearbyAction}
+          className="absolute top-14 left-1/2 -translate-x-1/2 bg-amber-400 hover:bg-amber-300 text-neutral-950 font-mono text-xs font-black px-4 py-2 rounded-2xl border-2 border-amber-200 shadow-2xl animate-in fade-in zoom-in-95 flex items-center gap-2 z-30 pointer-events-auto cursor-pointer active:scale-95 hover:scale-105 transition-all"
+        >
+          <Sparkles className="w-4 h-4 text-neutral-950 animate-bounce shrink-0" />
           <span>{nearbyPrompt}</span>
-        </div>
+          <span className="text-[10px] bg-black/20 text-neutral-950 px-2 py-0.5 rounded-full font-black ml-1">
+            Tap to Sit & Play
+          </span>
+        </button>
       )}
 
       {/* Private Rug Alert Banner */}

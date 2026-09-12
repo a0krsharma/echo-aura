@@ -4,7 +4,6 @@ import React, { useEffect, useState, useRef } from "react";
 import AgoraRTC, {
   type IAgoraRTCClient,
   type IMicrophoneAudioTrack,
-  type ILocalAudioTrack,
   type IRemoteAudioTrack,
 } from "agora-rtc-sdk-ng";
 import { useAuth } from "@/app/components/AuthProvider";
@@ -33,7 +32,7 @@ export default function SpatialVoiceManager({
   const [speakingUids, setSpeakingUids] = useState<Set<string>>(new Set());
 
   const clientRef = useRef<IAgoraRTCClient | null>(null);
-  const localTrackRef = useRef<IMicrophoneAudioTrack | ILocalAudioTrack | null>(null);
+  const localTrackRef = useRef<IMicrophoneAudioTrack | null>(null);
   const remoteTracksRef = useRef<Map<string, IRemoteAudioTrack>>(new Map());
   const sessionUidRef = useRef<number | null>(null);
 
