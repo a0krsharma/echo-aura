@@ -823,7 +823,13 @@ export default function DynamicSpaceWorldPage() {
 
   // Handle Object Interaction
   const handleInteractObject = (obj: InteractiveObject) => {
-    if (obj.type === "whiteboard") {
+    if (obj.id === "holiday_christmas_tree" || obj.type === "fountain") {
+      spacesSfx.playPartyFanfare();
+      handleSendSpeech("⭐ Made a holiday wish under the Christmas Tree! 🎄🎁");
+    } else if (obj.id === "cozy_fireplace" || obj.type === "coffee") {
+      handleToggleCoffee();
+      handleSendSpeech("🔥 Warming up by the roaring fireside hearth with hot cider! ☕");
+    } else if (obj.type === "whiteboard") {
       setWhiteboardModalOpen(true);
       spacesSfx.playSitPop();
     } else if (obj.type === "arcade") {
@@ -832,41 +838,6 @@ export default function DynamicSpaceWorldPage() {
     } else if (obj.type === "jukebox" || obj.id === "music_jukebox") {
       setJukeboxModalOpen(true);
       spacesSfx.playKeyNote(3);
-    } else if (obj.type === "coffee") {
-      handleToggleCoffee();
-    } else if (obj.type === "fountain") {
-      spacesSfx.playFountainSplash();
-      handleSendSpeech("🪙 Tossed a coin into the Echo Fountain!");
-    } else if (obj.type === "podium") {
-      const nextStage = !isPresentingOnStage;
-      setIsPresentingOnStage(nextStage);
-      spacesSfx.playPartyFanfare();
-      handleSendSpeech(
-        nextStage
-          ? "🎤 Stepped up to the Stage Microphone! Broadcasting live to the whole room!"
-          : "👋 Stepped down from the stage microphone."
-      );
-    } else if (obj.type === "piano" || obj.id === "music_piano") {
-      const nextSitting = !localAvatar.isSitting;
-      handleSit(nextSitting, nextSitting ? "music_piano_stool" : undefined);
-      if (nextSitting) {
-        handleMove(245, 825, "up", false);
-        spacesSfx.playKeyNote(1);
-        setTimeout(() => spacesSfx.playKeyNote(3), 120);
-        setTimeout(() => spacesSfx.playKeyNote(5), 240);
-        setTimeout(() => spacesSfx.playKeyNote(8), 360);
-        handleSendSpeech("🎹 Playing live Grand Synthesizer Piano at the Jam Studio!");
-      }
-    } else if (obj.type === "drums" || obj.id === "music_drums") {
-      const nextSitting = !localAvatar.isSitting;
-      handleSit(nextSitting, nextSitting ? "music_drum_stool" : undefined);
-      if (nextSitting) {
-        handleMove(375, 820, "up", false);
-        spacesSfx.playDrumPad("kick");
-        setTimeout(() => spacesSfx.playDrumPad("snare"), 140);
-        setTimeout(() => spacesSfx.playDrumPad("hihat"), 280);
-        handleSendSpeech("🥁 Jamming on the Drum Kit at the Music Academy!");
-      }
     }
   };
 

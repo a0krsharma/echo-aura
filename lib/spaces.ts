@@ -165,7 +165,7 @@ export const SPACE_VIBES: Record<SpaceVibe, SpaceVibeDef> = {
   },
 };
 
-export type SpaceZoneId = "music" | "courtyard";
+export type SpaceZoneId = "courtyard";
 
 export interface SpaceZoneDef {
   id: SpaceZoneId;
@@ -357,98 +357,63 @@ export interface SpaceSpotifySyncState {
 export const WORLD_WIDTH = 1600;
 export const WORLD_HEIGHT = 1200;
 
-// ── SPACE ZONES (Open Unified Floor) ──
+// ── SPACE ZONES (Single Unified Dinner Feast & Games Lounge) ──
 export const SPACES_ZONES: Record<SpaceZoneId, SpaceZoneDef> = {
-  music: {
-    id: "music",
-    name: "Music & DJ Stage",
-    category: "CREATIVE & AUDIO",
-    icon: "🎵",
-    color: "#f43f5e",
-    bounds: { x: 50, y: 650, w: 460, h: 500 },
-    description: "Live piano synthesizer, drum machine & DJ stage.",
-  },
   courtyard: {
     id: "courtyard",
-    name: "Main Party Floor",
-    category: "COMMUNITY LOUNGE",
-    icon: "⛲",
-    color: "#14b8a6",
+    name: "Dinner Feast & Games Lounge",
+    category: "HOLIDAY & PARTY",
+    icon: "🎄",
+    color: "#e11d48",
     bounds: { x: 40, y: 40, w: 1520, h: 1120 },
-    description: "Open party floor with tables, games, fountain & park.",
+    description: "Grand banquet dinner table with chairs, glowing Christmas tree, and party games.",
   },
 };
 
 // ── PRIVATE CONVERSATION RUGS ──
 export const PRIVATE_RUGS: PrivateRug[] = [
   {
-    id: "rug_music_greenroom",
-    name: "Backstage Band Lounge",
-    zoneId: "music",
-    x: 100,
-    y: 900,
-    w: 140,
-    h: 110,
-    color: "#be123c",
-    capacity: 4,
+    id: "rug_fireplace",
+    name: "Fireside Hearth Lounge",
+    zoneId: "courtyard",
+    x: 180,
+    y: 310,
+    w: 160,
+    h: 120,
+    color: "#b91c1c",
+    capacity: 6,
   },
 ];
 
 // ── INTERACTIVE OBJECTS ──
 export const INTERACTIVE_OBJECTS: InteractiveObject[] = [
-  // 🎵 Music Zone
   {
-    id: "music_piano",
-    zoneId: "music",
-    name: "Grand Synthesizer Piano",
-    icon: "🎹",
-    type: "piano",
-    x: 200,
-    y: 760,
-    w: 90,
-    h: 56,
-    prompt: "Press [E] to Play Grand Piano (Keys 1-8)",
-  },
-  {
-    id: "music_drums",
-    zoneId: "music",
-    name: "4-Pad Drum Machine",
-    icon: "🥁",
-    type: "drums",
-    x: 340,
-    y: 760,
-    w: 70,
-    h: 50,
-    prompt: "Press [E] to Jam on Drum Machine",
-  },
-  {
-    id: "music_jukebox",
-    zoneId: "music",
-    name: "Vintage Vinyl Jukebox",
-    icon: "📻",
-    type: "jukebox",
-    x: 130,
-    y: 920,
-    w: 50,
-    h: 50,
-    prompt: "Press [E] to Spin Jukebox Radio",
-  },
-  // ⛲ Courtyard
-  {
-    id: "courtyard_fountain",
+    id: "holiday_christmas_tree",
     zoneId: "courtyard",
-    name: "Echo Marble Fountain",
-    icon: "⛲",
+    name: "Holiday Christmas Tree",
+    icon: "🎄",
     type: "fountain",
-    x: 770,
-    y: 560,
+    x: 1460,
+    y: 435,
     w: 60,
-    h: 60,
-    prompt: "Press [E] to Toss Aura Coin (+5 Aura)",
+    h: 80,
+    prompt: "Press [E] to Make a Holiday Wish under Tree ⭐",
+  },
+  {
+    id: "cozy_fireplace",
+    zoneId: "courtyard",
+    name: "Roaring Fireplace Hearth",
+    icon: "🔥",
+    type: "coffee",
+    x: 230,
+    y: 340,
+    w: 80,
+    h: 50,
+    prompt: "Press [E] to Warm by the Fire (+Warm Cider)",
   },
 ];
 
-// ── ROOM DOORWAYS ──
+// ── ROOM DOORWAYS (None: Single Open Room) ──
 export interface SpaceDoorway {
   zoneId: SpaceZoneId;
   name: string;
@@ -461,34 +426,15 @@ export interface SpaceDoorway {
   spawnOutside: { x: number; y: number };
 }
 
-export const SPACE_DOORWAYS: SpaceDoorway[] = [
-  {
-    zoneId: "music",
-    name: "Music Studio Entrance",
-    x: 200,
-    y: 646,
-    w: 160,
-    h: 24,
-    orientation: "horizontal",
-    spawnInside: { x: 280, y: 720 },
-    spawnOutside: { x: 280, y: 600 },
-  },
-];
+export const SPACE_DOORWAYS: SpaceDoorway[] = [];
 
-// ── COLLISION WALLS (Outer Boundary + Music Room Only) ──
+// ── COLLISION WALLS (Outer Room Perimeter Only - 100% Open Space) ──
 export const COLLISION_BOXES: CollisionBox[] = [
   // Outer map boundary walls
   { x: 0, y: 0, w: WORLD_WIDTH, h: 40 },
   { x: 0, y: WORLD_HEIGHT - 40, w: WORLD_WIDTH, h: 40 },
   { x: 0, y: 0, w: 40, h: WORLD_HEIGHT },
   { x: WORLD_WIDTH - 40, y: 0, w: 40, h: WORLD_HEIGHT },
-
-  // Music Room Walls (Wide 160px Doorway at Top y: 650, x: 200-360)
-  { x: 50, y: 650, w: 150, h: 16 },
-  { x: 360, y: 650, w: 150, h: 16 },
-  { x: 50, y: 650, w: 16, h: 500 },
-  { x: 494, y: 650, w: 16, h: 500 },
-  { x: 50, y: 1134, w: 460, h: 16 },
 ];
 
 export function getZoneAtCoordinates(x: number, y: number): SpaceZoneId {
