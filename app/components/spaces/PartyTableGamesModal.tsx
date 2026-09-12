@@ -26,6 +26,7 @@ import {
   Flame as FireIcon,
 } from "lucide-react";
 import { PartyMusicBar } from "./PartyMusicBar";
+import { RealisticLudoBoard } from "./RealisticLudoBoard";
 import { partyMusicEngine, PARTY_PLAYLIST } from "@/lib/partyMusicEngine";
 import { addCash } from "@/lib/spacesEconomy";
 import {
@@ -58,6 +59,7 @@ interface PartyTableGamesModalProps {
   onOpenTeleparty?: () => void;
   spotifySyncState?: any;
   onUpdateSpotifySync?: (sync: any) => void;
+  onBroadcastSpeech?: (text: string) => void;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -139,6 +141,7 @@ export function PartyTableGamesModal({
   onOpenTeleparty,
   spotifySyncState,
   onUpdateSpotifySync,
+  onBroadcastSpeech,
 }: PartyTableGamesModalProps) {
   const [activeTab, setActiveTab] = useState<PartyGameTab>(initialTab);
 
@@ -181,18 +184,6 @@ export function PartyTableGamesModal({
     ];
   }, [localUserName, localUserAvatar, onlineParticipants]);
 
-  // ── 1. LUDO STATE ──────────────────────────────────────────
-  const [ludoDice, setLudoDice] = useState<number>(6);
-  const [isRollingDice, setIsRollingDice] = useState(false);
-  const [ludoTurnIndex, setLudoTurnIndex] = useState(0); // 0: Bottom, 1: Left, 2: Across, 3: Right
-  // 4 tokens per player: 0 = in yard, 1..51 = track, 52..57 = home corridor, 58 = HOME
-  const [tokens, setTokens] = useState<number[][]>([
-    [0, 0, 0, 0], // Player 0 (Red - You)
-    [0, 0, 0, 0], // Player 1 (Green)
-    [0, 0, 0, 0], // Player 2 (Yellow)
-    [0, 0, 0, 0], // Player 3 (Blue)
-  ]);
-  const [ludoLog, setLudoLog] = useState<string>("🎲 Roll a 6 to bring a token out of the yard!");
 
   // ── 2. SPIN THE BOTTLE STATE ────────────────────────────────
   const [bottleAngle, setBottleAngle] = useState(0);
@@ -247,77 +238,6 @@ export function PartyTableGamesModal({
 
   if (!isOpen) return null;
 
-  // ─────────────────────────────────────────────────────────────
-  // LUDO HANDLERS
-  // ─────────────────────────────────────────────────────────────
-  const handleRollLudoDice = () => {
-    if (isRollingDice) return;
-    setIsRollingDice(true);
-    spacesSfx.playFootstep();
-
-    let count = 0;
-    const interval = setInterval(() => {
-      setLudoDice(Math.floor(Math.random() * 6) + 1);
-      count++;
-      if (count >= 10) {
-        clearInterval(interval);
-        const finalValue = Math.floor(Math.random() * 6) + 1;
-        setLudoDice(finalValue);
-        setIsRollingDice(false);
-        spacesSfx.playSitPop();
-
-        // Check if player has movable tokens
-        const curTokens = tokens[ludoTurnIndex];
-        const canMoveAny = curTokens.some((t) => t > 0 || finalValue === 6);
-
-        if (!canMoveAny) {
-          setLudoLog(`Rolled ${finalValue}. No moves available! Next turn.`);
-          setTimeout(() => {
-            setLudoTurnIndex((prev) => (prev + 1) % 4);
-          }, 1000);
-        } else {
-          setLudoLog(`Rolled a ${finalValue}! Select a token to move.`);
-        }
-      }
-    }, 60);
-  };
-
-  const handleMoveToken = (tokenIdx: number) => {
-    const curTokens = [...tokens[ludoTurnIndex]];
-    const curPos = curTokens[tokenIdx];
-
-    if (curPos === 0 && ludoDice === 6) {
-      // Bring out to start
-      curTokens[tokenIdx] = 1;
-      spacesSfx.playSitPop();
-      setLudoLog(`Token moved out of the yard!`);
-    } else if (curPos > 0 && curPos + ludoDice <= 58) {
-      curTokens[tokenIdx] = curPos + ludoDice;
-      spacesSfx.playFootstep();
-      if (curTokens[tokenIdx] === 58) {
-        playGameVictory();
-        addCash(30, "Ludo Table Victory");
-        setLudoLog(`🏆 TOKEN REACHED HOME! Won $30 Cash!`);
-      } else {
-        setLudoLog(`Token advanced to step ${curTokens[tokenIdx]}!`);
-      }
-    } else {
-      return;
-    }
-
-    const nextTokens = [...tokens];
-    nextTokens[ludoTurnIndex] = curTokens;
-    setTokens(nextTokens);
-
-    // If not a 6, advance turn
-    if (ludoDice !== 6) {
-      setTimeout(() => {
-        setLudoTurnIndex((prev) => (prev + 1) % 4);
-      }, 700);
-    } else {
-      setLudoLog(`Rolled a 6! You get an extra roll!`);
-    }
-  };
 
   // ─────────────────────────────────────────────────────────────
   // SPIN THE BOTTLE HANDLERS
@@ -628,227 +548,13 @@ export function PartyTableGamesModal({
           {/* TAB 1: LUDO TABLE */}
           {/* ═══════════════════════════════════════════════════ */}
           {activeTab === "ludo" && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between bg-neutral-900/80 p-3 rounded-2xl border border-neutral-800">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">🎲</span>
-                  <div>
-                    <div className="text-xs font-black uppercase text-amber-400">
-                      Turn: @{seatedPlayers[ludoTurnIndex].name}
-                    </div>
-                    <div className="text-[11px] text-neutral-300">{ludoLog}</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1 text-xs font-mono font-bold text-amber-300">
-                    <Coins className="w-3.5 h-3.5 text-amber-400" />
-                    Prize: $30
-                  </div>
-
-                  <button
-                    onClick={handleRollLudoDice}
-                    disabled={isRollingDice}
-                    className={`px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 shadow-lg transition-all cursor-pointer ${
-                      isRollingDice
-                        ? "bg-neutral-700 text-neutral-400 cursor-not-allowed"
-                        : "bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-neutral-950 scale-105 shadow-amber-500/30"
-                    }`}
-                  >
-                    <Dices className={`w-4 h-4 ${isRollingDice ? "animate-spin" : ""}`} />
-                    <span>{isRollingDice ? "Rolling..." : `Roll Dice (${ludoDice})`}</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Seated Table View with Ludo Board in Center */}
-              <div className="relative max-w-lg mx-auto aspect-square bg-gradient-to-br from-neutral-900 to-neutral-950 border-2 border-neutral-700 rounded-3xl p-3 shadow-2xl flex flex-col justify-between">
-                {/* TOP PLAYER (Across) */}
-                <div className="flex justify-center items-center gap-2">
-                  <div
-                    className={`px-3 py-1.5 rounded-2xl flex items-center gap-2 border transition-all ${
-                      ludoTurnIndex === 2
-                        ? "bg-yellow-500/20 border-yellow-500 text-yellow-300 shadow-md scale-105"
-                        : "bg-neutral-900/80 border-neutral-800 text-neutral-400"
-                    }`}
-                  >
-                    {renderPlayerAvatar(seatedPlayers[2].avatar, "🌸", "w-7 h-7 text-sm")}
-                    <span className="text-xs font-bold">{seatedPlayers[2].name}</span>
-                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-yellow-500/30 text-yellow-200">
-                      Yellow
-                    </span>
-                  </div>
-                </div>
-
-                {/* MIDDLE ROW: Left Player, Ludo Grid, Right Player */}
-                <div className="flex items-center justify-between gap-2">
-                  {/* LEFT PLAYER */}
-                  <div
-                    className={`px-3 py-2 rounded-2xl flex flex-col items-center gap-1 border transition-all ${
-                      ludoTurnIndex === 1
-                        ? "bg-emerald-500/20 border-emerald-500 text-emerald-300 shadow-md scale-105"
-                        : "bg-neutral-900/80 border-neutral-800 text-neutral-400"
-                    }`}
-                  >
-                    {renderPlayerAvatar(seatedPlayers[1].avatar, "😎", "w-7 h-7 text-sm")}
-                    <span className="text-[11px] font-bold">{seatedPlayers[1].name}</span>
-                    <span className="text-[9px] font-mono px-1 py-0.5 rounded bg-emerald-500/30 text-emerald-200">
-                      Green
-                    </span>
-                  </div>
-
-                  {/* CENTER LUDO BOARD CANVAS */}
-                  <div className="relative w-64 h-64 sm:w-72 sm:h-72 bg-neutral-950 rounded-2xl border-2 border-neutral-800 p-2 grid grid-cols-3 grid-rows-3 gap-1 shadow-inner">
-                    {/* Top-Left: Green Yard */}
-                    <div className="bg-emerald-950/60 border border-emerald-500/40 rounded-xl p-2 flex flex-wrap items-center justify-center gap-2">
-                      <div className="text-[10px] font-bold text-emerald-400 w-full text-center">
-                        GREEN YARD
-                      </div>
-                      {tokens[1].map((pos, idx) => (
-                        <div
-                          key={idx}
-                          className={`w-6 h-6 rounded-full border flex items-center justify-center text-[10px] font-bold ${
-                            pos === 0
-                              ? "bg-emerald-500 border-emerald-200 text-white shadow"
-                              : "bg-emerald-900/30 border-dashed border-emerald-700 text-emerald-700"
-                          }`}
-                        >
-                          {pos === 0 ? "🟢" : "✓"}
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Top-Middle: Yellow Path */}
-                    <div className="bg-neutral-900/80 rounded-xl border border-neutral-800 flex flex-col justify-between p-1">
-                      <div className="text-[8px] font-mono text-center text-yellow-400">YELLOW PATH</div>
-                      <div className="flex justify-center text-xs">⭐</div>
-                    </div>
-
-                    {/* Top-Right: Yellow Yard */}
-                    <div className="bg-yellow-950/60 border border-yellow-500/40 rounded-xl p-2 flex flex-wrap items-center justify-center gap-2">
-                      <div className="text-[10px] font-bold text-yellow-400 w-full text-center">
-                        YELLOW YARD
-                      </div>
-                      {tokens[2].map((pos, idx) => (
-                        <div
-                          key={idx}
-                          className={`w-6 h-6 rounded-full border flex items-center justify-center text-[10px] font-bold ${
-                            pos === 0
-                              ? "bg-yellow-500 border-yellow-200 text-neutral-950 shadow"
-                              : "bg-yellow-900/30 border-dashed border-yellow-700 text-yellow-700"
-                          }`}
-                        >
-                          {pos === 0 ? "🟡" : "✓"}
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Mid-Left: Green Path */}
-                    <div className="bg-neutral-900/80 rounded-xl border border-neutral-800 flex items-center justify-between p-1">
-                      <div className="text-[8px] font-mono text-emerald-400">GREEN PATH</div>
-                      <div className="text-xs">⭐</div>
-                    </div>
-
-                    {/* CENTER TRIANGLE / HOME */}
-                    <div className="bg-gradient-to-br from-amber-500 via-rose-500 to-purple-600 rounded-xl border-2 border-white/20 flex flex-col items-center justify-center p-1 shadow-lg text-white">
-                      <Trophy className="w-6 h-6 text-amber-200 animate-bounce" />
-                      <div className="text-[9px] font-black uppercase tracking-wider">HOME</div>
-                      <div className="text-[10px] font-bold text-amber-200 mt-1">Dice: {ludoDice}</div>
-                    </div>
-
-                    {/* Mid-Right: Blue Path */}
-                    <div className="bg-neutral-900/80 rounded-xl border border-neutral-800 flex items-center justify-between p-1">
-                      <div className="text-xs">⭐</div>
-                      <div className="text-[8px] font-mono text-sky-400">BLUE PATH</div>
-                    </div>
-
-                    {/* Bottom-Left: Red Yard (YOUR YARD) */}
-                    <div className="bg-rose-950/60 border-2 border-rose-500/60 rounded-xl p-2 flex flex-wrap items-center justify-center gap-2">
-                      <div className="text-[10px] font-bold text-rose-300 w-full text-center">
-                        RED YARD (YOU)
-                      </div>
-                      {tokens[0].map((pos, idx) => {
-                        const canMove = (pos === 0 && ludoDice === 6) || pos > 0;
-                        return (
-                          <button
-                            key={idx}
-                            onClick={() => handleMoveToken(idx)}
-                            disabled={!canMove || ludoTurnIndex !== 0}
-                            className={`w-7 h-7 rounded-full border flex items-center justify-center text-xs font-bold transition-transform cursor-pointer ${
-                              pos === 0
-                                ? "bg-rose-600 border-rose-200 text-white shadow-lg"
-                                : pos >= 58
-                                ? "bg-amber-400 border-amber-200 text-neutral-950 shadow"
-                                : "bg-rose-500 border-white text-white"
-                            } ${canMove && ludoTurnIndex === 0 ? "scale-110 ring-2 ring-rose-400 animate-pulse" : ""}`}
-                            title={`Token ${idx + 1}: Step ${pos}`}
-                          >
-                            {pos >= 58 ? "🏆" : pos === 0 ? "🔴" : pos}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {/* Bottom-Middle: Red Path */}
-                    <div className="bg-neutral-900/80 rounded-xl border border-neutral-800 flex flex-col justify-between p-1">
-                      <div className="text-xs text-center">⭐</div>
-                      <div className="text-[8px] font-mono text-center text-rose-400">RED PATH</div>
-                    </div>
-
-                    {/* Bottom-Right: Blue Yard */}
-                    <div className="bg-sky-950/60 border border-sky-500/40 rounded-xl p-2 flex flex-wrap items-center justify-center gap-2">
-                      <div className="text-[10px] font-bold text-sky-400 w-full text-center">
-                        BLUE YARD
-                      </div>
-                      {tokens[3].map((pos, idx) => (
-                        <div
-                          key={idx}
-                          className={`w-6 h-6 rounded-full border flex items-center justify-center text-[10px] font-bold ${
-                            pos === 0
-                              ? "bg-sky-500 border-sky-200 text-white shadow"
-                              : "bg-sky-900/30 border-dashed border-sky-700 text-sky-700"
-                          }`}
-                        >
-                          {pos === 0 ? "🔵" : "✓"}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* RIGHT PLAYER */}
-                  <div
-                    className={`px-3 py-2 rounded-2xl flex flex-col items-center gap-1 border transition-all ${
-                      ludoTurnIndex === 3
-                        ? "bg-sky-500/20 border-sky-500 text-sky-300 shadow-md scale-105"
-                        : "bg-neutral-900/80 border-neutral-800 text-neutral-400"
-                    }`}
-                  >
-                    {renderPlayerAvatar(seatedPlayers[3].avatar, "⚡", "w-7 h-7 text-sm")}
-                    <span className="text-[11px] font-bold">{seatedPlayers[3].name}</span>
-                    <span className="text-[9px] font-mono px-1 py-0.5 rounded bg-sky-500/30 text-sky-200">
-                      Blue
-                    </span>
-                  </div>
-                </div>
-
-                {/* BOTTOM PLAYER (YOU) */}
-                <div className="flex justify-center items-center gap-2">
-                  <div
-                    className={`px-4 py-2 rounded-2xl flex items-center gap-2 border transition-all ${
-                      ludoTurnIndex === 0
-                        ? "bg-rose-500/20 border-rose-500 text-rose-300 shadow-lg scale-105 ring-2 ring-rose-500/40"
-                        : "bg-neutral-900/80 border-neutral-800 text-neutral-400"
-                    }`}
-                  >
-                    {renderPlayerAvatar(seatedPlayers[0].avatar, "👑", "w-7 h-7 text-sm")}
-                    <div>
-                      <div className="text-xs font-black text-white">{seatedPlayers[0].name} (You)</div>
-                      <div className="text-[10px] text-rose-300 font-mono">Red Team • Seated at Table</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <RealisticLudoBoard
+              localUserName={localUserName}
+              localUserAvatar={localUserAvatar}
+              onlineParticipants={onlineParticipants}
+              onBroadcastSpeech={onBroadcastSpeech}
+              spaceTitle={spaceTitle}
+            />
           )}
 
           {/* ═══════════════════════════════════════════════════ */}

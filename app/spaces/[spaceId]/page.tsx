@@ -2182,6 +2182,7 @@ export default function DynamicSpaceWorldPage() {
           updateSpaceDoc(spaceId, { spotifySyncState: sync });
           setSpace((prev) => ({ ...prev, spotifySyncState: sync }));
         }}
+        onBroadcastSpeech={handleSendSpeech}
       />
 
       {/* Frictionless Guest Auth Gate Modal */}
