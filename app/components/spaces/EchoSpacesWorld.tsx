@@ -164,36 +164,8 @@ export const ROUND_TABLE_CHAIRS: TableChairDef[] = NUMBERED_TABLES.flatMap((tbl)
   })
 );
 
-// 🎭 18 Concert & Festival Auditorium Velvet Chairs (3 Rows of 6 Seats facing the Center Stage)
-export const CONCERT_CHAIRS: TableChairDef[] = [
-  // Row A (Front VIP Row - y: 860)
-  ...[0, 1, 2, 3, 4, 5].map((i) => ({
-    id: `concert_chair_a_${i + 1}`,
-    name: `Concert VIP Seat A${i + 1}`,
-    tableName: "Concert Hall Auditorium",
-    x: 640 + i * 60,
-    y: 860,
-    faceDirection: "up" as const,
-  })),
-  // Row B (Middle Row - y: 930)
-  ...[0, 1, 2, 3, 4, 5].map((i) => ({
-    id: `concert_chair_b_${i + 1}`,
-    name: `Concert Center Seat B${i + 1}`,
-    tableName: "Concert Hall Auditorium",
-    x: 640 + i * 60,
-    y: 930,
-    faceDirection: "up" as const,
-  })),
-  // Row C (Balcony Tier Row - y: 1000)
-  ...[0, 1, 2, 3, 4, 5].map((i) => ({
-    id: `concert_chair_c_${i + 1}`,
-    name: `Concert Balcony Seat C${i + 1}`,
-    tableName: "Concert Hall Auditorium",
-    x: 640 + i * 60,
-    y: 1000,
-    faceDirection: "up" as const,
-  })),
-];
+// 🎭 Concert seats removed — single cohesive party room
+export const CONCERT_CHAIRS: TableChairDef[] = [];
 
 // 🎵 7 Music Studio Jam & Instrument Seating
 export const MUSIC_JAM_CHAIRS: TableChairDef[] = [
@@ -256,108 +228,8 @@ export const MUSIC_JAM_CHAIRS: TableChairDef[] = [
   },
 ];
 
-// 💼 12 Coworking Office Swivel Desks & Watercooler Lounge
-export const OFFICE_SEATS: TableChairDef[] = [
-  // Pod Alpha Swivel Chairs
-  {
-    id: "office_chair_alpha_1",
-    name: "Pod Alpha Swivel Desk 1",
-    tableName: "Pod Alpha Workstation",
-    x: 117,
-    y: 375,
-    faceDirection: "up",
-  },
-  {
-    id: "office_chair_alpha_2",
-    name: "Pod Alpha Swivel Desk 2",
-    tableName: "Pod Alpha Workstation",
-    x: 197,
-    y: 375,
-    faceDirection: "up",
-  },
-  {
-    id: "office_chair_alpha_3",
-    name: "Pod Alpha Swivel Desk 3",
-    tableName: "Pod Alpha Workstation",
-    x: 117,
-    y: 475,
-    faceDirection: "up",
-  },
-  {
-    id: "office_chair_alpha_4",
-    name: "Pod Alpha Swivel Desk 4",
-    tableName: "Pod Alpha Workstation",
-    x: 197,
-    y: 475,
-    faceDirection: "up",
-  },
-  // Strategy & Ops Pod Chairs
-  {
-    id: "office_chair_strat_1",
-    name: "Strategy Battlestation Chair 1",
-    tableName: "Strategy & Ops Pod",
-    x: 304,
-    y: 398,
-    faceDirection: "up",
-  },
-  {
-    id: "office_chair_strat_2",
-    name: "Strategy Battlestation Chair 2",
-    tableName: "Strategy & Ops Pod",
-    x: 369,
-    y: 398,
-    faceDirection: "up",
-  },
-  {
-    id: "office_chair_strat_3",
-    name: "Strategy Battlestation Chair 3",
-    tableName: "Strategy & Ops Pod",
-    x: 304,
-    y: 458,
-    faceDirection: "up",
-  },
-  {
-    id: "office_chair_strat_4",
-    name: "Strategy Battlestation Chair 4",
-    tableName: "Strategy & Ops Pod",
-    x: 369,
-    y: 458,
-    faceDirection: "up",
-  },
-  // Breakout Watercooler Couch Seats
-  {
-    id: "office_couch_seat_1",
-    name: "Watercooler Couch Seat 1",
-    tableName: "Breakout Watercooler Lounge",
-    x: 235,
-    y: 400,
-    faceDirection: "down",
-  },
-  {
-    id: "office_couch_seat_2",
-    name: "Watercooler Couch Seat 2",
-    tableName: "Breakout Watercooler Lounge",
-    x: 265,
-    y: 400,
-    faceDirection: "down",
-  },
-  {
-    id: "office_couch_seat_3",
-    name: "Watercooler Couch Seat 3",
-    tableName: "Breakout Watercooler Lounge",
-    x: 295,
-    y: 400,
-    faceDirection: "down",
-  },
-  {
-    id: "office_couch_seat_4",
-    name: "Watercooler Couch Seat 4",
-    tableName: "Breakout Watercooler Lounge",
-    x: 315,
-    y: 400,
-    faceDirection: "down",
-  },
-];
+// 💼 Office seats removed — single cohesive party room
+export const OFFICE_SEATS: TableChairDef[] = [];
 
 // ⛲ 4 Echo Marble Fountain Garden Benches
 export const COURTYARD_BENCHES: TableChairDef[] = [
@@ -398,9 +270,7 @@ export const COURTYARD_BENCHES: TableChairDef[] = [
 export const ALL_TABLE_CHAIRS: TableChairDef[] = [...BANQUET_CHAIRS, ...ROUND_TABLE_CHAIRS];
 export const ALL_WORLD_SEATS: TableChairDef[] = [
   ...ALL_TABLE_CHAIRS,
-  ...CONCERT_CHAIRS,
   ...MUSIC_JAM_CHAIRS,
-  ...OFFICE_SEATS,
   ...COURTYARD_BENCHES,
 ];
 
@@ -1933,147 +1803,10 @@ export default function EchoSpacesWorld({
       }
       ctx.restore();
 
-      // ── 4. FOUR LOWER OFFICE WORKSTATION PODS (x: 50 to 865, y: 275 to 520) ──
+      // ── 4. OPEN SOCIAL PARTY & TABLE GAMES FLOOR ──
       ctx.save();
-      // Floor base for lower office pods
-      ctx.fillStyle = vibe === "SUNNY_DAYLIGHT" ? "#3f3c39" : "#1f1d1b";
+      ctx.fillStyle = vibe === "SUNNY_DAYLIGHT" ? "#292524" : "#18181b";
       ctx.fillRect(50, 275, 815, 245);
-
-      // Pod 1 (x: 70 to 240): World Map Rug & Battlestations
-      ctx.fillStyle = "rgba(30, 58, 138, 0.4)";
-      ctx.beginPath();
-      ctx.ellipse(155, 395, 75, 55, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = "#1d4ed8";
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-      ctx.fillStyle = "#38bdf8";
-      ctx.font = "bold 10px monospace";
-      ctx.textAlign = "center";
-      ctx.fillText("🌍 Pod Alpha", 155, 398);
-
-      // 4 Desks for Pod 1
-      [ { x: 95, y: 340 }, { x: 175, y: 340 }, { x: 95, y: 440 }, { x: 175, y: 440 } ].forEach((d) => {
-        ctx.fillStyle = "#334155";
-        ctx.fillRect(d.x, d.y, 44, 24);
-        ctx.fillStyle = "#06b6d4";
-        ctx.fillRect(d.x + 8, d.y + 4, 14, 6);
-        ctx.fillRect(d.x + 24, d.y + 4, 14, 6);
-      });
-
-      // Pod 2 (x: 260 to 455): Strategy & Ops Pod
-      ctx.fillStyle = "rgba(16, 185, 129, 0.15)";
-      ctx.beginPath();
-      ctx.roundRect(260, 290, 195, 215, 12);
-      ctx.fill();
-      ctx.strokeStyle = "rgba(16, 185, 129, 0.5)";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      // Dark Green Wrap-Around Couch / Privacy Hedge
-      ctx.strokeStyle = "#047857";
-      ctx.lineWidth = 8;
-      ctx.lineCap = "round";
-      ctx.beginPath();
-      ctx.moveTo(270, 310);
-      ctx.lineTo(445, 310);
-      ctx.lineTo(445, 495);
-      ctx.stroke();
-
-      // Strategy & Ops Floor Label
-      ctx.fillStyle = "#10b981";
-      ctx.font = "900 13px monospace";
-      ctx.textAlign = "center";
-      ctx.fillText("Strategy & Ops", 355, 332);
-
-      // 6 Dual-monitor battlestations with swivel chairs
-      const stratDesks = [
-        { x: 280, y: 360 },
-        { x: 345, y: 360 },
-        { x: 280, y: 420 },
-        { x: 345, y: 420 },
-      ];
-      stratDesks.forEach((sd) => {
-        ctx.fillStyle = "#1e293b";
-        ctx.fillRect(sd.x, sd.y, 48, 26);
-        ctx.strokeStyle = "#10b981";
-        ctx.lineWidth = 1;
-        ctx.strokeRect(sd.x, sd.y, 48, 26);
-        // Dual illuminated screens
-        ctx.fillStyle = "#38bdf8";
-        ctx.fillRect(sd.x + 4, sd.y + 3, 18, 7);
-        ctx.fillRect(sd.x + 26, sd.y + 3, 18, 7);
-        // Swivel chair
-        ctx.fillStyle = "#0f172a";
-        ctx.beginPath();
-        ctx.arc(sd.x + 24, sd.y + 38, 8, 0, Math.PI * 2);
-        ctx.fill();
-      });
-
-      // Pod 3 (x: 475 to 655): Cherry Blossom Bonsai Pod
-      ctx.fillStyle = "rgba(244, 63, 94, 0.1)";
-      ctx.beginPath();
-      ctx.roundRect(475, 290, 180, 215, 12);
-      ctx.fill();
-      ctx.strokeStyle = "rgba(244, 63, 94, 0.4)";
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-
-      // Center Flowering Cherry Blossom Bonsai Tree
-      ctx.fillStyle = "#78350f";
-      ctx.fillRect(560, 395, 10, 16);
-      ctx.font = "28px sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText("🌸", 565, 395);
-
-      // Desks around sakura bonsai
-      [ { x: 490, y: 330 }, { x: 580, y: 330 }, { x: 490, y: 445 }, { x: 580, y: 445 } ].forEach((bd) => {
-        ctx.fillStyle = "#334155";
-        ctx.fillRect(bd.x, bd.y, 44, 24);
-        ctx.fillStyle = "#f43f5e";
-        ctx.fillRect(bd.x + 6, bd.y + 4, 14, 6);
-        ctx.fillRect(bd.x + 24, bd.y + 4, 14, 6);
-      });
-
-      // Pod 4 (x: 675 to 860): CW Balance Pod
-      ctx.fillStyle = "rgba(56, 189, 248, 0.12)";
-      ctx.beginPath();
-      ctx.roundRect(675, 290, 185, 215, 12);
-      ctx.fill();
-      ctx.strokeStyle = "rgba(56, 189, 248, 0.4)";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      // CW Balance Floor Label
-      ctx.fillStyle = "#38bdf8";
-      ctx.font = "900 13px monospace";
-      ctx.textAlign = "center";
-      ctx.fillText("CW Balance", 767, 332);
-
-      // Surfboard mounted on wall
-      ctx.save();
-      ctx.translate(830, 310);
-      ctx.rotate(Math.PI / 4);
-      ctx.fillStyle = "#06b6d4";
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 18, 5, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = "#facc15";
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(-18, 0);
-      ctx.lineTo(18, 0);
-      ctx.stroke();
-      ctx.restore();
-
-      // Desks for CW Balance
-      [ { x: 695, y: 360 }, { x: 775, y: 360 }, { x: 695, y: 430 }, { x: 775, y: 430 } ].forEach((cd) => {
-        ctx.fillStyle = "#1e293b";
-        ctx.fillRect(cd.x, cd.y, 48, 26);
-        ctx.fillStyle = "#ec4899";
-        ctx.fillRect(cd.x + 6, cd.y + 4, 16, 7);
-        ctx.fillRect(cd.x + 26, cd.y + 4, 16, 7);
-      });
       ctx.restore();
 
       // ── 5. RETRO ARCADE LOUNGE FLOOR TAG (x: 320, y: 360) ──
@@ -2300,56 +2033,6 @@ export default function EchoSpacesWorld({
         ctx.restore();
       });
 
-      // ── RENDER 18 CONCERT HALL AUDIENCE VELVET THEATER CHAIRS (Rows A, B, C) ──
-      CONCERT_CHAIRS.forEach((chair) => {
-        ctx.save();
-        const isSeatedHere = localAvatar.isSitting && localAvatar.sittingObjectId === chair.id;
-
-        // Soft drop shadow
-        ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
-        ctx.beginPath();
-        ctx.ellipse(chair.x, chair.y + 10, 18, 7, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Active Golden/Teal Halo if player is seated
-        if (isSeatedHere) {
-          ctx.strokeStyle = "#f59e0b";
-          ctx.lineWidth = 2.5;
-          ctx.beginPath();
-          ctx.arc(chair.x, chair.y, 22, 0, Math.PI * 2);
-          ctx.stroke();
-        }
-
-        // Velvet Chair Cushion Base
-        ctx.fillStyle = isSeatedHere ? "#0f766e" : "#881337";
-        ctx.beginPath();
-        ctx.roundRect(chair.x - 14, chair.y - 8, 28, 20, 6);
-        ctx.fill();
-        ctx.strokeStyle = isSeatedHere ? "#f59e0b" : "#be123c";
-        ctx.lineWidth = 1.8;
-        ctx.stroke();
-
-        // High Velvet Backrest (Facing Up towards Stage)
-        ctx.fillStyle = isSeatedHere ? "#115e59" : "#9f1239";
-        ctx.beginPath();
-        ctx.roundRect(chair.x - 13, chair.y + 4, 26, 8, 4);
-        ctx.fill();
-
-        // Polished Brass / Gold Armrests
-        ctx.fillStyle = "#ca8a04";
-        ctx.fillRect(chair.x - 16, chair.y - 6, 3, 14);
-        ctx.fillRect(chair.x + 13, chair.y - 6, 3, 14);
-
-        // Seat Number Tag (A1, A2... C6)
-        ctx.fillStyle = isSeatedHere ? "#fef08a" : "#fda4af";
-        ctx.font = "bold 8px monospace";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        const tag = chair.id.split("_").slice(-2).join("").toUpperCase();
-        ctx.fillText(tag, chair.x, chair.y - 1);
-
-        ctx.restore();
-      });
 
       // ── RENDER MUSIC JAM STUDIO CHAIRS & INSTRUMENT BENCHES ──
       MUSIC_JAM_CHAIRS.forEach((chair) => {
@@ -3448,58 +3131,6 @@ export default function EchoSpacesWorld({
         </button>
       </div>
 
-      {/* TOP RIGHT: Minimalist Fast-Travel Minimap Radar */}
-      <div className="hidden sm:block absolute top-3 right-3 z-30 bg-neutral-950/90 backdrop-blur-md p-2 rounded-2xl border border-neutral-800 shadow-2xl">
-        <div className="relative w-[140px] h-[100px] bg-neutral-900 rounded-lg overflow-hidden border border-neutral-800">
-          <button
-            onClick={() => onTeleport?.(400, 260)}
-            title="Office"
-            className="absolute top-[5%] left-[3%] w-[42%] h-[40%] bg-cyan-950/60 hover:bg-cyan-900 border border-cyan-500/40 rounded text-[7px] font-mono text-cyan-300 flex items-center justify-center cursor-pointer"
-          >
-            🏢
-          </button>
-          <button
-            onClick={() => onTeleport?.(1200, 260)}
-            title="Library"
-            className="absolute top-[5%] left-[55%] w-[42%] h-[40%] bg-purple-950/60 hover:bg-purple-900 border border-purple-500/40 rounded text-[7px] font-mono text-purple-300 flex items-center justify-center cursor-pointer"
-          >
-            📚
-          </button>
-          <button
-            onClick={() => onTeleport?.(260, 860)}
-            title="Music"
-            className="absolute top-[54%] left-[3%] w-[28%] h-[42%] bg-rose-950/60 hover:bg-rose-900 border border-rose-500/40 rounded text-[7px] font-mono text-rose-300 flex items-center justify-center cursor-pointer"
-          >
-            🎵
-          </button>
-          <button
-            onClick={() => onTeleport?.(800, 860)}
-            title="Concert"
-            className="absolute top-[54%] left-[35%] w-[30%] h-[42%] bg-amber-950/60 hover:bg-amber-900 border border-amber-500/40 rounded text-[7px] font-mono text-amber-300 flex items-center justify-center cursor-pointer"
-          >
-            🎤
-          </button>
-          <button
-            onClick={() => onTeleport?.(1320, 860)}
-            title="Debate"
-            className="absolute top-[54%] left-[69%] w-[28%] h-[42%] bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-500/40 rounded text-[7px] font-mono text-emerald-300 flex items-center justify-center cursor-pointer"
-          >
-            ⚖️
-          </button>
-          <button
-            onClick={() => onTeleport?.(800, 590)}
-            title="Courtyard Fountain"
-            className="absolute top-[45%] left-[46%] w-2.5 h-2.5 bg-cyan-400 rounded-full cursor-pointer hover:scale-150 transition-transform"
-          />
-          <div
-            className="absolute w-2 h-2 rounded-full bg-white border border-cyan-400 shadow-[0_0_8px_#38bdf8] -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-            style={{
-              left: `${(localAvatar.x / WORLD_WIDTH) * 100}%`,
-              top: `${(localAvatar.y / WORLD_HEIGHT) * 100}%`,
-            }}
-          />
-        </div>
-      </div>
 
       {/* BOTTOM DRAWER: SPACE DECORATION PALETTE (Build Mode) */}
       {isDecorateMode && (
@@ -3606,15 +3237,13 @@ export default function EchoSpacesWorld({
         const tableName = curSeat?.tableName || "Interactive Space";
         const isPiano = curSeat?.id.includes("piano");
         const isDrums = curSeat?.id.includes("drum");
-        const isConcert = curSeat?.id.includes("concert");
         const isCourtyard = curSeat?.id.includes("courtyard");
-        const isOffice = curSeat?.id.includes("office");
 
         return (
           <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-40 bg-neutral-950/95 border-2 border-amber-500/60 rounded-3xl px-4 py-2.5 shadow-[0_0_30px_rgba(245,158,11,0.25)] backdrop-blur-md flex items-center gap-3 animate-in fade-in slide-in-from-bottom-3 max-w-[95vw] overflow-x-auto custom-scrollbar pointer-events-auto">
             <div className="flex items-center gap-2 pr-3 border-r border-neutral-800 shrink-0">
               <span className="text-xl">
-                {isPiano ? "🎹" : isDrums ? "🥁" : isConcert ? "🎭" : isCourtyard ? "⛲" : isOffice ? "💼" : "🪑"}
+                {isPiano ? "🎹" : isDrums ? "🥁" : isCourtyard ? "⛲" : "🪑"}
               </span>
               <div>
                 <div className="text-[11px] font-black uppercase text-amber-400 font-mono">
@@ -3658,21 +3287,6 @@ export default function EchoSpacesWorld({
               </button>
             )}
 
-            {isConcert && (
-              <button
-                type="button"
-                onClick={() => {
-                  spacesSfx.playEmotePop();
-                  onSendSpeech("👏 Bravo! Standing ovation for the stage performance! 🎉");
-                  triggerEmote("👏");
-                }}
-                className="px-3 py-1.5 rounded-xl bg-rose-700 hover:bg-rose-600 text-white font-mono text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-md shrink-0"
-              >
-                <span>👏</span>
-                <span>Applaud Stage</span>
-              </button>
-            )}
-
             {isCourtyard && (
               <button
                 type="button"
@@ -3684,20 +3298,6 @@ export default function EchoSpacesWorld({
               >
                 <span>🪙</span>
                 <span>Toss Fountain Coin</span>
-              </button>
-            )}
-
-            {isOffice && (
-              <button
-                type="button"
-                onClick={() => {
-                  spacesSfx.playZoneChime();
-                  onSendSpeech("💼 Entered Deep Focus Coworking Mode. Let's build! 🚀");
-                }}
-                className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-md shrink-0"
-              >
-                <span>💼</span>
-                <span>Focus Cowork</span>
               </button>
             )}
 

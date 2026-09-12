@@ -426,7 +426,7 @@ function RoomsPageContent() {
                 </span>
               </div>
               <p className="text-xs text-neutral-300 font-sans">
-                Walk your avatar into <strong>Virtual Office</strong>, <strong>Quiet Library</strong>, <strong>Music Studio</strong>, <strong>Concert Hall</strong> & <strong>Debate Arena</strong> with 360° spatial proximity voice.
+                Walk your avatar into <strong>Party Game Lounge</strong> with 360° spatial proximity voice, live table games (Ludo & UNO) & synced Spotify music.
               </p>
             </div>
             <div className="px-3 py-2 bg-white text-black font-black text-xs uppercase tracking-wider rounded-lg shrink-0 group-hover:bg-cyan-300 transition-colors">

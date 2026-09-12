@@ -952,14 +952,48 @@ const KNOWN_MOCK_SPACE_IDS = new Set([
   "town_hall_clash",
 ]);
 
+export function isUnusedOrMockSpace(s: Partial<SpaceDoc>): boolean {
+  if (!s || !s.id) return true;
+  if (KNOWN_MOCK_SPACE_IDS.has(s.id)) return true;
+  const name = (s.name || "").toLowerCase();
+  const id = s.id.toLowerCase();
+  const desc = (s.description || "").toLowerCase();
+  if (
+    id.includes("concert") ||
+    id.includes("cowork") ||
+    id.includes("cospace") ||
+    id.includes("office") ||
+    id.includes("campus") ||
+    id.includes("library") ||
+    id.includes("debate") ||
+    name.includes("concert") ||
+    name.includes("co-space") ||
+    name.includes("cospace") ||
+    name.includes("cowork") ||
+    name.includes("virtual office") ||
+    name.includes("global campus") ||
+    name.includes("amphitheater") ||
+    name.includes("debate forum") ||
+    name.includes("polymath silent") ||
+    name.includes("team central hq") ||
+    name.includes("igniting creativity") ||
+    name.includes("fireside lodge") ||
+    name.includes("townhall") ||
+    desc.includes("keynote panel")
+  ) {
+    return true;
+  }
+  return false;
+}
+
 function getLocalSpacesCache(): SpaceDoc[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(LOCAL_SPACES_KEY);
     if (!raw) return [];
     const parsed: SpaceDoc[] = JSON.parse(raw);
-    // Automatically purge old mock/demo spaces from client cache
-    const cleaned = parsed.filter((s) => s && s.id && !KNOWN_MOCK_SPACE_IDS.has(s.id));
+    // Automatically purge old mock/demo and unused preset spaces from client cache
+    const cleaned = parsed.filter((s) => s && s.id && !isUnusedOrMockSpace(s));
     if (cleaned.length !== parsed.length) {
       localStorage.setItem(LOCAL_SPACES_KEY, JSON.stringify(cleaned));
     }
@@ -1004,7 +1038,7 @@ export async function createSpaceDoc(space: Omit<SpaceDoc, "id">): Promise<strin
 }
 
 export function subscribeToPublicSpaces(callback: (spaces: SpaceDoc[]) => void): () => void {
-  const localSpaces = getLocalSpacesCache().filter((s) => !KNOWN_MOCK_SPACE_IDS.has(s.id));
+  const localSpaces = getLocalSpacesCache().filter((s) => !isUnusedOrMockSpace(s));
   callback(localSpaces);
 
   try {
@@ -1017,10 +1051,13 @@ export function subscribeToPublicSpaces(callback: (spaces: SpaceDoc[]) => void):
         const now = Date.now();
         const firestoreDocs = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as SpaceDoc[];
 
-        // Filter expired spaces and any legacy mock spaces
+        // Filter expired spaces, legacy mock spaces and unused preset rooms like concert / co-space
         const valid = firestoreDocs.filter((s) => {
           if (!s.name) return false;
-          if (KNOWN_MOCK_SPACE_IDS.has(s.id)) return false;
+          if (isUnusedOrMockSpace(s)) {
+            deleteDoc(doc(db, SPACES_COLLECTION, s.id)).catch(() => {});
+            return false;
+          }
           if (s.expiresAt && s.expiresAt < now) {
             deleteDoc(doc(db, SPACES_COLLECTION, s.id)).catch(() => {});
             return false;
@@ -1032,7 +1069,7 @@ export function subscribeToPublicSpaces(callback: (spaces: SpaceDoc[]) => void):
         const combined: SpaceDoc[] = [];
 
         [...getLocalSpacesCache(), ...valid].forEach((s) => {
-          if (!seenIds.has(s.id) && !KNOWN_MOCK_SPACE_IDS.has(s.id)) {
+          if (!seenIds.has(s.id) && !isUnusedOrMockSpace(s)) {
             seenIds.add(s.id);
             combined.push(s);
           }

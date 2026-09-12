@@ -29,7 +29,6 @@ import {
   deleteSpaceDoc,
 } from "@/lib/spaces";
 import { spacesSfx } from "@/lib/spacesSfx";
-import CreateSpaceModal from "@/app/components/spaces/CreateSpaceModal";
 import AvatarStudioModal from "@/app/components/spaces/AvatarStudioModal";
 import {
   Sparkles,
@@ -57,42 +56,6 @@ const CATEGORIES = [
   { id: "WEBINAR", label: "Stage & Events", icon: "🎙️" },
 ];
 
-const STARTER_PRESETS = [
-  {
-    id: "game_lounge",
-    name: "Banquet Game Lounge",
-    icon: "🎲",
-    category: "ARCADE" as SpaceCategory,
-    vibe: "PARTY_CLUB" as SpaceVibe,
-    floorPlanType: "ballroom" as const,
-    desc: "Multiplayer table games: Ludo, UNO, Spin the Bottle & Rock Paper Scissors.",
-    tag: "Ludo & Party Games",
-    btnBg: "bg-pink-500 hover:bg-pink-400 text-black",
-  },
-  {
-    id: "spotify_beats",
-    name: "Spotify Beats & Co-Listen",
-    icon: "🎵",
-    category: "MUSIC" as SpaceCategory,
-    vibe: "SUNSET_LOFI" as SpaceVibe,
-    floorPlanType: "ballroom" as const,
-    desc: "Synced Spotify party radio & music co-listening with friends.",
-    tag: "Spotify Sync",
-    btnBg: "bg-emerald-500 hover:bg-emerald-400 text-black",
-  },
-  {
-    id: "cozy_hangout",
-    name: "Sukoon Cafe Lounge",
-    icon: "☕",
-    category: "PIAZZA" as SpaceCategory,
-    vibe: "SUKOON_ZEN" as SpaceVibe,
-    floorPlanType: "piazza_cafe" as const,
-    desc: "Cozy spatial lounge with proximity voice audio and relaxed seating.",
-    tag: "Voice Chat",
-    btnBg: "bg-cyan-500 hover:bg-cyan-400 text-black",
-  },
-];
-
 export default function SpacesLobbyPage() {
   const { user } = useAuth();
   const router = useRouter();
@@ -101,7 +64,6 @@ export default function SpacesLobbyPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const [createModalOpen, setCreateModalOpen] = useState(false);
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
   const [quickHosting, setQuickHosting] = useState<string | null>(null);
 
@@ -174,40 +136,6 @@ export default function SpacesLobbyPage() {
     } catch (e) {
       console.error("Failed to 1-click host space:", e);
       setStatusFeedback("Failed to host space. Please try again.");
-    } finally {
-      setQuickHosting(null);
-    }
-  };
-
-  // 1-Click Instant Host for Friends (Presets)
-  const handle1ClickQuickHost = async (preset: (typeof STARTER_PRESETS)[0]) => {
-    try {
-      setQuickHosting(preset.id);
-      spacesSfx.playKeyNote(4);
-      const hostHandle = user?.handle || "@HOST";
-      const hostUid = user?.uid || "guest_host";
-      const spaceName = `${hostHandle}'s ${preset.name}`;
-
-      const createdId = await createSpaceDoc({
-        name: spaceName,
-        category: preset.category,
-        vibe: preset.vibe,
-        hostUid,
-        hostHandle,
-        description: preset.desc,
-        participantCount: 1,
-        maxParticipants: 35,
-        isPublic: true,
-        expiresAt: Date.now() + 1000 * 60 * 60 * 24, // 24 hours
-        decorations: [],
-        createdAt: Date.now(),
-        floorPlanType: preset.floorPlanType || "ballroom",
-      });
-
-      spacesSfx.playZoneChime();
-      router.push(`/spaces/${createdId}`);
-    } catch (e) {
-      console.error("Failed to quick host space:", e);
     } finally {
       setQuickHosting(null);
     }
@@ -382,63 +310,7 @@ export default function SpacesLobbyPage() {
         </div>
       </div>
 
-      {/* 3. 1-Click Starter Presets */}
-      <div className="border-b border-neutral-900 bg-neutral-950/40 py-6 px-4 sm:px-6">
-        <div className="max-w-7xl mx-auto space-y-3">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-amber-400" />
-            <h2 className="text-xs font-mono font-black uppercase text-white tracking-wider">
-              Quick 1-Click Starter Spaces
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {STARTER_PRESETS.map((preset) => {
-              const isLaunching = quickHosting === preset.id;
-              return (
-                <div
-                  key={preset.id}
-                  className="p-4 rounded-3xl bg-neutral-950 border border-neutral-800 hover:border-neutral-700 transition-all flex flex-col justify-between group shadow-lg"
-                >
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-2xl">{preset.icon}</span>
-                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-neutral-900 border border-neutral-800 text-neutral-300">
-                        {preset.tag}
-                      </span>
-                    </div>
-                    <div>
-                      <h3 className="font-mono text-sm font-bold text-white group-hover:text-cyan-400 transition-colors">
-                        {preset.name}
-                      </h3>
-                      <p className="text-xs font-mono text-neutral-400 mt-1 leading-snug">
-                        {preset.desc}
-                      </p>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => handle1ClickQuickHost(preset)}
-                    disabled={!!quickHosting}
-                    className={`mt-4 w-full py-2.5 rounded-2xl font-mono text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md active:scale-95 disabled:opacity-50 ${preset.btnBg}`}
-                  >
-                    {isLaunching ? (
-                      <span className="animate-spin text-xs">⏳ Launching...</span>
-                    ) : (
-                      <>
-                        <Plus className="w-4 h-4" />
-                        <span>Launch & Invite Friends</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* 4. Live Active Spaces Directory */}
+      {/* 3. Live Active Spaces Directory */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
@@ -617,11 +489,6 @@ export default function SpacesLobbyPage() {
       </div>
 
       {/* Modals */}
-      <CreateSpaceModal
-        isOpen={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
-        onCreated={(id) => router.push(`/spaces/${id}`)}
-      />
 
       <AvatarStudioModal
         isOpen={avatarModalOpen}

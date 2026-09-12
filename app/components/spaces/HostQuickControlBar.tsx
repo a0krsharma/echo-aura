@@ -42,11 +42,10 @@ interface HostQuickControlBarProps {
 }
 
 const GATHER_POINTS = [
+  { name: "Party Game Tables", icon: "🎲", x: 800, y: 860 },
+  { name: "Banquet Dining Table", icon: "🍷", x: 1200, y: 350 },
+  { name: "Music Lounge", icon: "🎵", x: 260, y: 860 },
   { name: "Campfire Patio", icon: "🪵", x: 800, y: 150 },
-  { name: "Fountain Banquet Table", icon: "⛲", x: 1200, y: 350 },
-  { name: "Retro Pixel Arcade", icon: "🕹️", x: 410, y: 420 },
-  { name: "Concert Amphitheater", icon: "🎤", x: 800, y: 860 },
-  { name: "Espresso Coffee Bar", icon: "☕", x: 270, y: 240 },
 ];
 
 export default function HostQuickControlBar({

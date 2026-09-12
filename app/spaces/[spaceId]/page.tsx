@@ -31,7 +31,6 @@ import GatherWaveToast, { WaveInvitation } from "@/app/components/spaces/GatherW
 import GatherDirectDock from "@/app/components/spaces/GatherDirectDock";
 import InviteFriendsModal from "@/app/components/spaces/InviteFriendsModal";
 import HostEventModal from "@/app/components/spaces/HostEventModal";
-import MiniMapRadar from "@/app/components/spaces/MiniMapRadar";
 import PartyToolsModal from "@/app/components/spaces/PartyToolsModal";
 import AutoSeatingModal from "@/app/components/spaces/AutoSeatingModal";
 import SpaceCateringModal from "@/app/components/spaces/SpaceCateringModal";
@@ -1074,19 +1073,6 @@ export default function DynamicSpaceWorldPage() {
   const isHost = user?.uid === space.hostUid || space.hostUid === "guest_host" || space.hostUid === "echo_system";
   const activeZoneDef = SPACES_ZONES[localAvatar.activeZone];
 
-  // Room teleport presets (Matching Gather floor labels)
-  const ROOM_PRESETS = [
-    { name: "Fountain Room", icon: "⛲", x: 800, y: 560 },
-    { name: "Strategy & Ops", icon: "🏢", x: 270, y: 280 },
-    { name: "CW Balance", icon: "💻", x: 540, y: 280 },
-    { name: "Retro Pixel Arcade", icon: "🕹️", x: 410, y: 420 },
-    { name: "Silent Library", icon: "📚", x: 1200, y: 260 },
-    { name: "Music Jam Studio", icon: "🎵", x: 260, y: 860 },
-    { name: "Concert Amphitheater", icon: "🎤", x: 800, y: 860 },
-    { name: "Debate Arena", icon: "⚖️", x: 1320, y: 860 },
-    { name: "Campfire Patio", icon: "🪵", x: 800, y: 150 },
-  ];
-
   return (
     <div className="min-h-screen bg-black text-white flex flex-col justify-between selection:bg-cyan-500 selection:text-black overflow-hidden relative">
       {/* Screen-Wide Celebration Confetti Explosion */}
@@ -1641,12 +1627,6 @@ export default function DynamicSpaceWorldPage() {
         onTeleportTo={(x, y) => handleTeleport(x, y)}
       />
 
-      {/* Birds-Eye Radar Mini-Map Widget */}
-      <MiniMapRadar
-        localAvatar={localAvatar}
-        remoteAvatars={remoteAvatars}
-        onTeleport={handleTeleport}
-      />
 
 
       {/* Gather Bell Alert Toast */}
