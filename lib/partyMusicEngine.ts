@@ -164,6 +164,7 @@ class PartyMusicEngine {
   private beatInterval: any = null;
   private elapsedSeconds = 0;
   private skipVotes = new Set<string>();
+  private isExternalAudio = false;
   private listeners = new Set<(state: any) => void>();
 
   constructor() {
@@ -177,15 +178,16 @@ class PartyMusicEngine {
   }
 
   private getContext(): AudioContext | null {
-    if (typeof window === "undefined") return null;
-    if (!this.audioCtx) {
-      const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioCtxClass) {
-        this.audioCtx = new AudioCtxClass();
+    if (typeof window !== "undefined") {
+      if (!this.audioCtx) {
+        const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioCtxClass) {
+          this.audioCtx = new AudioCtxClass();
+        }
       }
-    }
-    if (this.audioCtx && this.audioCtx.state === "suspended") {
-      this.audioCtx.resume().catch(() => {});
+      if (this.audioCtx && this.audioCtx.state === "suspended") {
+        this.audioCtx.resume().catch(() => {});
+      }
     }
     return this.audioCtx;
   }
@@ -197,12 +199,23 @@ class PartyMusicEngine {
       track,
       trackIndex: this.currentTrackIndex,
       isPlaying: this.isPlaying,
+      isExternalAudio: this.isExternalAudio,
       volume: this.volume,
       elapsedSeconds: this.elapsedSeconds,
       progress,
       skipVotesCount: this.skipVotes.size,
       playlist: PARTY_PLAYLIST,
     };
+  }
+
+  public setExternalAudio(isExternal: boolean) {
+    this.isExternalAudio = isExternal;
+    if (isExternal) {
+      this.stopAudioSynthesis();
+    } else if (this.isPlaying) {
+      this.startAudioSynthesis();
+    }
+    this.notify();
   }
 
   public subscribe(cb: (state: any) => void) {
@@ -231,10 +244,18 @@ class PartyMusicEngine {
       this.currentTrackIndex = index;
       this.elapsedSeconds = 0;
       this.skipVotes.clear();
+      // If user manually selects a non-Spotify party track, resume internal audio
+      if (!PARTY_PLAYLIST[index].album.includes("Spotify Live")) {
+        this.isExternalAudio = false;
+      }
     }
 
     this.isPlaying = true;
-    this.startAudioSynthesis();
+    if (!this.isExternalAudio) {
+      this.startAudioSynthesis();
+    } else {
+      this.stopAudioSynthesis();
+    }
 
     if (this.trackTimer) clearInterval(this.trackTimer);
     this.trackTimer = setInterval(() => {
@@ -264,6 +285,7 @@ class PartyMusicEngine {
     this.currentTrackIndex = (this.currentTrackIndex + 1) % PARTY_PLAYLIST.length;
     this.elapsedSeconds = 0;
     this.skipVotes.clear();
+    this.isExternalAudio = false;
     if (this.isPlaying) {
       this.play();
     } else {
@@ -275,6 +297,7 @@ class PartyMusicEngine {
     this.currentTrackIndex = (this.currentTrackIndex - 1 + PARTY_PLAYLIST.length) % PARTY_PLAYLIST.length;
     this.elapsedSeconds = 0;
     this.skipVotes.clear();
+    this.isExternalAudio = false;
     if (this.isPlaying) {
       this.play();
     } else {
@@ -290,11 +313,17 @@ class PartyMusicEngine {
     durationSeconds?: number;
     coverArt?: string;
   }) {
+    this.isExternalAudio = true;
+    this.stopAudioSynthesis();
+
     const existingIdx = PARTY_PLAYLIST.findIndex(
       (t) => t.id === track.id || t.title.toLowerCase() === track.title.toLowerCase()
     );
     if (existingIdx !== -1) {
-      this.play(existingIdx);
+      this.currentTrackIndex = existingIdx;
+      this.elapsedSeconds = 0;
+      this.isPlaying = true;
+      this.notify();
     } else {
       const newTrack: PartyTrack = {
         id: track.id,
@@ -308,7 +337,10 @@ class PartyMusicEngine {
         vibe: "Spotify Live Room Sync",
       };
       PARTY_PLAYLIST.unshift(newTrack);
-      this.play(0);
+      this.currentTrackIndex = 0;
+      this.elapsedSeconds = 0;
+      this.isPlaying = true;
+      this.notify();
     }
   }
 

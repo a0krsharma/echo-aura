@@ -51,6 +51,8 @@ interface UnoGameModalProps {
   localUserAvatar?: string;
   onlineParticipants: Array<{ uid: string; displayName: string; photoURL?: string }>;
   onOpenTeleparty?: () => void;
+  spotifySyncState?: any;
+  onUpdateSpotifySync?: (sync: any) => void;
 }
 
 const COLOR_MAP: Record<CardColor, { bg: string; border: string; text: string; shadow: string }> = {
@@ -119,6 +121,8 @@ export function UnoGameModal({
   localUserAvatar,
   onlineParticipants,
   onOpenTeleparty,
+  spotifySyncState,
+  onUpdateSpotifySync,
 }: UnoGameModalProps) {
   const [deck, setDeck] = useState<UnoCard[]>([]);
   const [discardPile, setDiscardPile] = useState<UnoCard[]>([]);
@@ -476,7 +480,13 @@ export function UnoGameModal({
 
         {/* Synchronized Host Party Music Bar (Seamless Spotify Player) */}
         <div className="px-4 py-2 bg-slate-900/40 border-b border-slate-800/80">
-          <PartyMusicBar userHandle={localUserName} compact={true} onOpenTeleparty={onOpenTeleparty} />
+          <PartyMusicBar
+            userHandle={localUserName}
+            compact={true}
+            onOpenTeleparty={onOpenTeleparty}
+            spotifySyncState={spotifySyncState}
+            onUpdateSpotifySync={onUpdateSpotifySync}
+          />
         </div>
 
         {/* Game Arena / Table Canvas */}

@@ -56,6 +56,8 @@ interface PartyTableGamesModalProps {
   initialTab?: PartyGameTab;
   onOpenUno?: () => void;
   onOpenTeleparty?: () => void;
+  spotifySyncState?: any;
+  onUpdateSpotifySync?: (sync: any) => void;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -135,6 +137,8 @@ export function PartyTableGamesModal({
   initialTab = "ludo",
   onOpenUno,
   onOpenTeleparty,
+  spotifySyncState,
+  onUpdateSpotifySync,
 }: PartyTableGamesModalProps) {
   const [activeTab, setActiveTab] = useState<PartyGameTab>(initialTab);
 
@@ -527,7 +531,13 @@ export function PartyTableGamesModal({
           </div>
 
           {/* Embedded Synced Party Music Bar */}
-          <PartyMusicBar userHandle={localUserName} compact={false} onOpenTeleparty={onOpenTeleparty} />
+          <PartyMusicBar
+            userHandle={localUserName}
+            compact={false}
+            onOpenTeleparty={onOpenTeleparty}
+            spotifySyncState={spotifySyncState}
+            onUpdateSpotifySync={onUpdateSpotifySync}
+          />
         </div>
 
         {/* NAVIGATION TABS: 6 Games */}

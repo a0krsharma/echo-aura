@@ -73,6 +73,7 @@ import {
 } from "@/lib/spaces";
 import { partyMusicEngine } from "@/lib/partyMusicEngine";
 import { spacesSfx } from "@/lib/spacesSfx";
+import { handleSpotifyCallback } from "@/lib/spotify";
 import {
   ArrowLeft,
   Users,
@@ -450,12 +451,29 @@ export default function DynamicSpaceWorldPage() {
     } catch (e) {}
   }, []);
 
+  // Handle Spotify OAuth Callback if redirected with ?code=
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const searchParams = new URLSearchParams(window.location.search);
+    const code = searchParams.get("code");
+    if (code) {
+      handleSpotifyCallback(code).then((success) => {
+        if (success) {
+          setWelcomeToast("🟢 Spotify co-listening authenticated successfully!");
+          setTimeout(() => setWelcomeToast(null), 4000);
+          const cleanUrl = window.location.pathname;
+          window.history.replaceState({}, document.title, cleanUrl);
+        }
+      });
+    }
+  }, []);
+
   // Real-time Space Doc Live Sync from Firestore (with automatic Spotify sync across participants)
   useEffect(() => {
     const unsub = subscribeToSpaceDoc(spaceId, (loaded) => {
       if (loaded) {
         setSpace(loaded);
-        if (loaded.spotifySyncState && loaded.spotifySyncState.isPlaying) {
+        if (loaded.spotifySyncState && loaded.spotifySyncState.isPlaying && loaded.spotifySyncState.trackId) {
           // Play matching song for all room participants
           partyMusicEngine.playSpotifyTrack({
             id: loaded.spotifySyncState.trackId,
@@ -464,6 +482,8 @@ export default function DynamicSpaceWorldPage() {
             coverArt: loaded.spotifySyncState.albumArt || "🟢",
             bpm: 128,
           });
+          // Auto-reveal the party music bar so all participants see the live Spotify player and hear the song!
+          setPartyMusicOpen(true);
         }
       }
       setLoading(false);
@@ -1223,14 +1243,25 @@ export default function DynamicSpaceWorldPage() {
               setPartyMusicOpen((v) => !v);
             }}
             className={`px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0 ${
-              partyMusicOpen
-                ? "border-pink-500 bg-pink-950/60 text-pink-300 shadow-[0_0_12px_rgba(236,72,153,0.3)] animate-pulse"
+              space.spotifySyncState?.isPlaying
+                ? "border-emerald-500 bg-emerald-950/70 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.3)] animate-pulse"
+                : partyMusicOpen
+                ? "border-pink-500 bg-pink-950/60 text-pink-300 shadow-[0_0_12px_rgba(236,72,153,0.3)]"
                 : "border-pink-500/30 bg-neutral-900/90 text-pink-300 hover:bg-neutral-800"
             }`}
             title="Toggle Synchronized Party Music Bar (Spotify / Party Beats)"
           >
-            <span>🎵</span>
-            <span className="hidden sm:inline">Music</span>
+            {space.spotifySyncState?.isPlaying ? (
+              <span className="flex items-center gap-1.5 text-emerald-300">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
+                <span>Spotify</span>
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5">
+                <span>🎵</span>
+                <span className="hidden sm:inline">Music</span>
+              </span>
+            )}
           </button>
 
           {/* 2. Hospitality Hub Dropdown (Feast, Seating, Gifting, Cake Ceremony) - Desktop */}
@@ -1697,6 +1728,23 @@ export default function DynamicSpaceWorldPage() {
         </div>
       )}
 
+      {/* Floating Spotify Mini-Pill when music is minimized */}
+      {space.spotifySyncState?.isPlaying && space.spotifySyncState?.trackId && !partyMusicOpen && (
+        <div
+          onClick={() => setPartyMusicOpen(true)}
+          className="fixed top-14 left-1/2 -translate-x-1/2 z-30 px-3.5 py-1.5 rounded-full bg-neutral-950/90 border border-emerald-500/50 text-emerald-300 font-mono text-xs shadow-xl flex items-center gap-2 cursor-pointer hover:bg-neutral-900 transition backdrop-blur-md animate-in slide-in-from-top-2 max-w-[92vw]"
+        >
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+          <span className="font-bold text-white shrink-0">DJ @{space.spotifySyncState.djHandle || "Host"}:</span>
+          <span className="truncate text-emerald-200">
+            {space.spotifySyncState.trackName} - {space.spotifySyncState.artistName}
+          </span>
+          <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30 font-bold shrink-0">
+            Open Player
+          </span>
+        </div>
+      )}
+
       {/* 3. Main 2D Spatial Canvas Viewport (Fullscreen Immersive) */}
       <main className="flex-1 relative w-full h-full overflow-hidden">
         <EchoSpacesWorld
@@ -2101,6 +2149,11 @@ export default function DynamicSpaceWorldPage() {
           photoURL: r.avatarUrl,
         }))}
         onOpenTeleparty={() => setTelepartyModalOpen(true)}
+        spotifySyncState={space.spotifySyncState}
+        onUpdateSpotifySync={(sync) => {
+          updateSpaceDoc(spaceId, { spotifySyncState: sync });
+          setSpace((prev) => ({ ...prev, spotifySyncState: sync }));
+        }}
       />
 
       {/* Banquet Table Games Lounge (Ludo, Spin the Bottle, RPS, Antakshari, Raja Mantri, UNO) */}
@@ -2124,6 +2177,11 @@ export default function DynamicSpaceWorldPage() {
           setUnoModalOpen(true);
         }}
         onOpenTeleparty={() => setTelepartyModalOpen(true)}
+        spotifySyncState={space.spotifySyncState}
+        onUpdateSpotifySync={(sync) => {
+          updateSpaceDoc(spaceId, { spotifySyncState: sync });
+          setSpace((prev) => ({ ...prev, spotifySyncState: sync }));
+        }}
       />
 
       {/* Frictionless Guest Auth Gate Modal */}
