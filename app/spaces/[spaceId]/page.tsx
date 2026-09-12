@@ -12,7 +12,7 @@
  * - Right Slide-out Drawer Panel (Room Chat & Participants Directory)
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/app/components/AuthProvider";
@@ -67,6 +67,12 @@ import {
   getSpaceDoc,
   updateSpaceDoc,
   subscribeToSpaceDoc,
+  subscribeToSpaceParticipants,
+  updateSpaceParticipant,
+  removeSpaceParticipant,
+  subscribeToSpaceTableGame,
+  updateSpaceTableGame,
+  SpaceTableGameLiveState,
   SpaceSpotifySyncState,
   getZoneAtCoordinates,
   getPrivateRugAtCoordinates,
@@ -398,10 +404,24 @@ export default function DynamicSpaceWorldPage() {
     isGhost: false,
   });
 
+  // Stable unique UID for session (guests receive a unique guest ID so multiple guests never collide)
+  const [effectiveUid, setEffectiveUid] = useState<string>(() => {
+    if (user?.uid) return user.uid;
+    if (typeof window !== "undefined") {
+      let saved = sessionStorage.getItem("echo_space_guest_uid");
+      if (!saved) {
+        saved = `guest_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+        sessionStorage.setItem("echo_space_guest_uid", saved);
+      }
+      return saved;
+    }
+    return `guest_${Math.random().toString(36).slice(2, 8)}`;
+  });
+
   // Local Avatar State
   const [localAvatar, setLocalAvatar] = useState<SpatialAvatar>({
-    uid: user?.uid || "guest_player",
-    handle: user?.handle || "@EXPLORER",
+    uid: user?.uid || effectiveUid,
+    handle: user?.handle || `@Guest_${effectiveUid.slice(-4).toUpperCase()}`,
     avatarUrl: user?.photoUrl || user?.photoURL,
     x: 800,
     y: 540,
@@ -420,6 +440,14 @@ export default function DynamicSpaceWorldPage() {
   // Remote Avatars (Real live users only - zero fake bots)
   const [remoteAvatars, setRemoteAvatars] = useState<SpatialAvatar[]>([]);
   const [copiedLink, setCopiedLink] = useState(false);
+
+  // Live Table Game State synced from Firestore
+  const [liveTableGame, setLiveTableGame] = useState<SpaceTableGameLiveState | null>(null);
+  const [tableGameInviteToast, setTableGameInviteToast] = useState<{
+    hostName: string;
+    tab: PartyGameTab;
+    text: string;
+  } | null>(null);
 
   // Load avatar config from localStorage
   useEffect(() => {
@@ -450,6 +478,19 @@ export default function DynamicSpaceWorldPage() {
       }
     } catch (e) {}
   }, []);
+
+  // Sync user profile updates & distinct UID
+  useEffect(() => {
+    if (user?.uid) {
+      setEffectiveUid(user.uid);
+      setLocalAvatar((prev) => ({
+        ...prev,
+        uid: user.uid,
+        handle: user.handle || prev.handle,
+        avatarUrl: user.photoUrl || user.photoURL || prev.avatarUrl,
+      }));
+    }
+  }, [user]);
 
   // Handle Spotify OAuth Callback if redirected with ?code=
   useEffect(() => {
@@ -493,17 +534,112 @@ export default function DynamicSpaceWorldPage() {
     };
   }, [spaceId]);
 
-  // Sync user profile updates
+  // Ensure default spaces or newly visited spaces are seeded in Firestore for multi-user sync
   useEffect(() => {
-    if (user) {
-      setLocalAvatar((prev) => ({
-        ...prev,
-        uid: user.uid,
-        handle: user.handle || prev.handle,
-        avatarUrl: user.photoUrl || user.photoURL || prev.avatarUrl,
-      }));
+    if (space && space.id) {
+      updateSpaceDoc(space.id, {
+        name: space.name,
+        category: space.category,
+        vibe: space.vibe,
+      });
     }
-  }, [user]);
+  }, [space?.id]);
+
+  // ── 👥 REAL-TIME PARTICIPANT SPATIAL PRESENCE & HEARTBEAT ──────
+  // 1. Subscribe to live participants in this space
+  useEffect(() => {
+    if (!spaceId || !effectiveUid) return;
+
+    const unsub = subscribeToSpaceParticipants(spaceId, (participants) => {
+      // Filter out local user
+      const others = participants.filter((p) => p.uid !== effectiveUid);
+      setRemoteAvatars(others);
+    });
+
+    return () => {
+      unsub();
+    };
+  }, [spaceId, effectiveUid]);
+
+  // 2. Broadcast local avatar presence with smooth movement throttling
+  const lastBroadcastRef = useRef<number>(0);
+  const localAvatarRef = useRef(localAvatar);
+  localAvatarRef.current = localAvatar;
+
+  const broadcastLocalAvatar = useCallback((immediate: boolean = false) => {
+    if (!spaceId || !effectiveUid) return;
+    const now = Date.now();
+    if (!immediate && now - lastBroadcastRef.current < 120) return; // 120ms throttle during continuous movement
+    lastBroadcastRef.current = now;
+
+    updateSpaceParticipant(spaceId, {
+      ...localAvatarRef.current,
+      uid: effectiveUid,
+      lastUpdated: now,
+    });
+  }, [spaceId, effectiveUid]);
+
+  // Broadcast when local avatar moves or updates state
+  useEffect(() => {
+    broadcastLocalAvatar(false);
+  }, [
+    localAvatar.x,
+    localAvatar.y,
+    localAvatar.direction,
+    localAvatar.isMoving,
+    localAvatar.isSitting,
+    localAvatar.activeZone,
+    localAvatar.activeRugId,
+    localAvatar.isHandRaised,
+    localAvatar.hasCoffee,
+    localAvatar.statusText,
+    localAvatar.speechBubble,
+    broadcastLocalAvatar,
+  ]);
+
+  // Periodic heartbeat every 4 seconds + cleanup on page exit
+  useEffect(() => {
+    if (!spaceId || !effectiveUid) return;
+
+    // Send initial join presence immediately
+    broadcastLocalAvatar(true);
+
+    const interval = setInterval(() => {
+      broadcastLocalAvatar(true);
+    }, 4000);
+
+    const handleBeforeUnload = () => {
+      removeSpaceParticipant(spaceId, effectiveUid);
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      removeSpaceParticipant(spaceId, effectiveUid);
+    };
+  }, [spaceId, effectiveUid, broadcastLocalAvatar]);
+
+  // ── 🎲 REAL-TIME TABLE GAME MULTIPLAYER SYNC ─────────────────
+  useEffect(() => {
+    if (!spaceId) return;
+
+    const unsub = subscribeToSpaceTableGame(spaceId, (incoming) => {
+      if (incoming) {
+        setLiveTableGame(incoming);
+        // Show join prompt banner if someone else opened the table or took an action
+        if (incoming.isOpen && incoming.hostUid !== effectiveUid && !partyTableGamesOpen) {
+          setTableGameInviteToast({
+            hostName: incoming.hostName,
+            tab: incoming.activeTab,
+            text: incoming.lastActionText || `Live ${incoming.activeTab.toUpperCase()} Table in progress!`,
+          });
+        }
+      }
+    });
+
+    return () => unsub();
+  }, [spaceId, effectiveUid, partyTableGamesOpen]);
 
   // Direct Invite & Event Link Auto-Join Handler (e.g. ?party=bday or ?event=birthday)
   useEffect(() => {
@@ -1745,6 +1881,27 @@ export default function DynamicSpaceWorldPage() {
         </div>
       )}
 
+      {/* Floating Table Games Activity Banner (Join live games with friends) */}
+      {tableGameInviteToast && !partyTableGamesOpen && (
+        <div
+          onClick={() => {
+            setPartyTableGameTab(tableGameInviteToast.tab);
+            setPartyTableGamesOpen(true);
+            setTableGameInviteToast(null);
+          }}
+          className="fixed top-24 left-1/2 -translate-x-1/2 z-30 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-purple-900/90 via-pink-900/90 to-rose-900/90 border border-pink-500/60 text-white font-mono text-xs shadow-2xl flex items-center gap-2 cursor-pointer hover:scale-105 transition backdrop-blur-md animate-bounce max-w-[92vw]"
+        >
+          <span className="text-sm shrink-0">🎲</span>
+          <span className="font-bold text-pink-300 shrink-0">@{tableGameInviteToast.hostName}:</span>
+          <span className="truncate text-pink-100 font-sans text-[11px]">
+            {tableGameInviteToast.text}
+          </span>
+          <span className="text-[9px] bg-pink-500 text-white px-2 py-0.5 rounded-full font-bold uppercase tracking-wider shrink-0 shadow">
+            Join Table 🪑
+          </span>
+        </div>
+      )}
+
       {/* 3. Main 2D Spatial Canvas Viewport (Fullscreen Immersive) */}
       <main className="flex-1 relative w-full h-full overflow-hidden">
         <EchoSpacesWorld
@@ -2183,6 +2340,14 @@ export default function DynamicSpaceWorldPage() {
           setSpace((prev) => ({ ...prev, spotifySyncState: sync }));
         }}
         onBroadcastSpeech={handleSendSpeech}
+        liveTableState={liveTableGame}
+        onUpdateTableGame={(updates) => {
+          updateSpaceTableGame(spaceId, {
+            ...updates,
+            hostUid: effectiveUid,
+            hostName: localAvatar.handle,
+          });
+        }}
       />
 
       {/* Frictionless Guest Auth Gate Modal */}

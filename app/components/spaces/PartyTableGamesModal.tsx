@@ -31,6 +31,7 @@ import { PartyMusicBar } from "./PartyMusicBar";
 import { RealisticLudoBoard } from "./RealisticLudoBoard";
 import { partyMusicEngine, PARTY_PLAYLIST } from "@/lib/partyMusicEngine";
 import { addCash } from "@/lib/spacesEconomy";
+import { SpaceTableGameLiveState } from "@/lib/spaces";
 import {
   spacesSfx,
   playGameVictory,
@@ -62,6 +63,8 @@ interface PartyTableGamesModalProps {
   spotifySyncState?: any;
   onUpdateSpotifySync?: (sync: any) => void;
   onBroadcastSpeech?: (text: string) => void;
+  liveTableState?: SpaceTableGameLiveState | null;
+  onUpdateTableGame?: (updates: Partial<SpaceTableGameLiveState>) => void;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -144,6 +147,8 @@ export function PartyTableGamesModal({
   spotifySyncState,
   onUpdateSpotifySync,
   onBroadcastSpeech,
+  liveTableState,
+  onUpdateTableGame,
 }: PartyTableGamesModalProps) {
   const [activeTab, setActiveTab] = useState<PartyGameTab>(initialTab);
   const [musicBarExpanded, setMusicBarExpanded] = useState(false);
@@ -234,6 +239,52 @@ export function PartyTableGamesModal({
   });
   const [bluffToast, setBluffToast] = useState<{ speaker: string; text: string } | null>(null);
 
+  // Synchronize incoming live table state from other room participants
+  useEffect(() => {
+    if (!liveTableState) return;
+
+    if (liveTableState.activeTab && liveTableState.activeTab !== activeTab) {
+      setActiveTab(liveTableState.activeTab);
+    }
+
+    if (liveTableState.bottleAngle !== undefined) {
+      setBottleAngle(liveTableState.bottleAngle);
+      setIsSpinningBottle(!!liveTableState.isSpinningBottle);
+      if (liveTableState.bottleTargetName) {
+        const found = seatedPlayers.find((p) => p.name === liveTableState.bottleTargetName) || null;
+        setSelectedBottleTarget(found);
+      }
+      if (liveTableState.bottlePromptType !== undefined) {
+        setCurrentPromptType(liveTableState.bottlePromptType);
+        setCurrentPromptText(liveTableState.bottlePromptText || "");
+      }
+    }
+
+    if (liveTableState.antakshariChain && liveTableState.antakshariChain.length > antakshariChain.length) {
+      setAntakshariChain(liveTableState.antakshariChain);
+      if (liveTableState.antakshariLetter) {
+        setAntakshariLetter(liveTableState.antakshariLetter);
+      }
+    }
+
+    if (liveTableState.royalChits && liveTableState.royalChits.length > 0) {
+      setRoyalChits(liveTableState.royalChits);
+      if (liveTableState.chitsRevealed !== undefined) setChitsRevealed(liveTableState.chitsRevealed);
+      if (liveTableState.roundResultText !== undefined) setRoundResultText(liveTableState.roundResultText);
+      if (liveTableState.royalScores) setRoyalScores(liveTableState.royalScores);
+      if (liveTableState.bluffToast) setBluffToast(liveTableState.bluffToast);
+    }
+  }, [liveTableState, activeTab, antakshariChain.length, seatedPlayers]);
+
+  const handleSelectTab = (tab: PartyGameTab) => {
+    setActiveTab(tab);
+    onUpdateTableGame?.({
+      activeTab: tab,
+      isOpen: true,
+      lastActionText: `@${localUserName} opened the ${tab.toUpperCase()} Table!`,
+    });
+  };
+
   // Keep music synced
   useEffect(() => {
     // If music is paused when opening game table, give a subtle ambient party sound
@@ -263,6 +314,14 @@ export function PartyTableGamesModal({
 
     setBottleAngle(finalDegree);
 
+    onUpdateTableGame?.({
+      activeTab: "bottle",
+      isOpen: true,
+      isSpinningBottle: true,
+      bottleAngle: finalDegree,
+      lastActionText: `@${localUserName} spun the bottle!`,
+    });
+
     setTimeout(() => {
       setIsSpinningBottle(false);
       const chosenPlayer = seatedPlayers[targetIdx];
@@ -276,6 +335,17 @@ export function PartyTableGamesModal({
       const randomPrompt = cards[Math.floor(Math.random() * cards.length)];
       setCurrentPromptType(type);
       setCurrentPromptText(randomPrompt);
+
+      onUpdateTableGame?.({
+        activeTab: "bottle",
+        isOpen: true,
+        isSpinningBottle: false,
+        bottleAngle: finalDegree,
+        bottleTargetName: chosenPlayer.name,
+        bottlePromptType: type,
+        bottlePromptText: randomPrompt,
+        lastActionText: `Bottle pointed at @${chosenPlayer.name}! [${type.toUpperCase()}]`,
+      });
     }, 3200);
   };
 
@@ -312,10 +382,10 @@ export function PartyTableGamesModal({
             (choice === "paper" && oppChoice === "rock") ||
             (choice === "scissors" && oppChoice === "paper")
           ) {
-            setRpsResult(`🎉 You Won! ${choice} beats ${oppChoice}! +$15 Cash`);
+            setRpsResult(`🎉 Victory! ${choice} beats ${oppChoice}! (+20 Aura)`);
             setRpsScore((s) => ({ ...s, you: s.you + 1 }));
-            playCashRegister();
-            addCash(15, "RPS Clash Victory");
+            playGameVictory();
+            addCash(20, "RPS Victory");
           } else {
             setRpsResult(`😅 Opponent Won! ${oppChoice} beats ${choice}!`);
             setRpsScore((s) => ({ ...s, opponent: s.opponent + 1 }));
@@ -342,21 +412,30 @@ export function PartyTableGamesModal({
       ? lastChar
       : ANTAKSHARI_LETTERS[Math.floor(Math.random() * ANTAKSHARI_LETTERS.length)];
 
-    setAntakshariChain((prev) => [
+    const updatedChain = [
       {
         singer: localUserName,
         song,
         letter: antakshariLetter,
         nextLetter: nextL,
       },
-      ...prev,
-    ]);
+      ...antakshariChain,
+    ];
 
+    setAntakshariChain(updatedChain);
     setAntakshariLetter(nextL);
     setSingInput("");
     spacesSfx.playPianoNote(5);
     playCashRegister();
     addCash(10, "Antakshari Song Added");
+
+    onUpdateTableGame?.({
+      activeTab: "antakshari",
+      isOpen: true,
+      antakshariLetter: nextL,
+      antakshariChain: updatedChain,
+      lastActionText: `@${localUserName} sang "${song}"! Next: [${nextL}]`,
+    });
   };
 
   const handleCheer = (emoji: string, sound: () => void) => {
@@ -379,6 +458,16 @@ export function PartyTableGamesModal({
     setRoundResultText(null);
     setBluffToast(null);
     spacesSfx.playSitPop();
+
+    onUpdateTableGame?.({
+      activeTab: "raja_mantri",
+      isOpen: true,
+      royalChits: shuffled,
+      chitsRevealed: false,
+      roundResultText: null,
+      bluffToast: null,
+      lastActionText: `@${localUserName} shuffled new royal chits!`,
+    });
   };
 
   const handleRevealMyChit = () => {
@@ -405,6 +494,11 @@ export function PartyTableGamesModal({
     onBroadcastSpeech?.(`🗣️ @${localUserName}: "${phrase}"`);
     spacesSfx.playKeyNote(5);
     setTimeout(() => setBluffToast(null), 3500);
+
+    onUpdateTableGame?.({
+      bluffToast: { speaker: localUserName, text: phrase },
+      lastActionText: `@${localUserName}: "${phrase}"`,
+    });
   };
 
   const handleSipahiGuess = (guessedPlayerName: string) => {
@@ -420,34 +514,42 @@ export function PartyTableGamesModal({
     const rajaPlayer = seatedPlayers[rajaIdx];
     const mantriPlayer = seatedPlayers[mantriIdx];
 
+    let result = "";
+    let nextScores = { ...royalScores };
+
     if (guessedPlayerName === chorPlayer.name) {
       // Sipahi guessed correctly!
-      setRoundResultText(
-        `🎉 SHABASH SIPAHI! @${sipahiPlayer.name} (Sipahi) caught the real Chor (@${chorPlayer.name})! Sipahi earns 500 pts!`
-      );
+      result = `🎉 SHABASH SIPAHI! @${sipahiPlayer.name} (Sipahi) caught the real Chor (@${chorPlayer.name})! Sipahi earns 500 pts!`;
       playGameVictory();
       addCash(25, "Sipahi Caught The Chor");
-      setRoyalScores((prev) => ({
-        ...prev,
-        [rajaPlayer.name]: (prev[rajaPlayer.name] || 0) + 1000,
-        [mantriPlayer.name]: (prev[mantriPlayer.name] || 0) + 800,
-        [sipahiPlayer.name]: (prev[sipahiPlayer.name] || 0) + 500,
-        [chorPlayer.name]: prev[chorPlayer.name] || 0,
-      }));
+      nextScores = {
+        ...royalScores,
+        [rajaPlayer.name]: (royalScores[rajaPlayer.name] || 0) + 1000,
+        [mantriPlayer.name]: (royalScores[mantriPlayer.name] || 0) + 800,
+        [sipahiPlayer.name]: (royalScores[sipahiPlayer.name] || 0) + 500,
+        [chorPlayer.name]: royalScores[chorPlayer.name] || 0,
+      };
     } else {
       // Sipahi guessed wrong! Chor escapes and steals the Sipahi's 500 points!
-      setRoundResultText(
-        `🚨 DHOKA! @${sipahiPlayer.name} accused the wrong person! @${chorPlayer.name} was the real Chor and STOLE the Sipahi's 500 points!`
-      );
+      result = `🚨 DHOKA! @${sipahiPlayer.name} accused the wrong person! @${chorPlayer.name} was the real Chor and STOLE the Sipahi's 500 points!`;
       spacesSfx.playGavelStrike();
-      setRoyalScores((prev) => ({
-        ...prev,
-        [rajaPlayer.name]: (prev[rajaPlayer.name] || 0) + 1000,
-        [mantriPlayer.name]: (prev[mantriPlayer.name] || 0) + 800,
-        [sipahiPlayer.name]: prev[sipahiPlayer.name] || 0,
-        [chorPlayer.name]: (prev[chorPlayer.name] || 0) + 500,
-      }));
+      nextScores = {
+        ...royalScores,
+        [rajaPlayer.name]: (royalScores[rajaPlayer.name] || 0) + 1000,
+        [mantriPlayer.name]: (royalScores[mantriPlayer.name] || 0) + 800,
+        [sipahiPlayer.name]: royalScores[sipahiPlayer.name] || 0,
+        [chorPlayer.name]: (royalScores[chorPlayer.name] || 0) + 500,
+      };
     }
+
+    setRoundResultText(result);
+    setRoyalScores(nextScores);
+
+    onUpdateTableGame?.({
+      roundResultText: result,
+      royalScores: nextScores,
+      lastActionText: result,
+    });
   };
 
   return (
@@ -541,7 +643,7 @@ export function PartyTableGamesModal({
         {/* NAVIGATION TABS: 6 Games */}
         <div className="flex items-center gap-1 px-3 py-2 bg-neutral-900/50 border-b border-neutral-800 overflow-x-auto custom-scrollbar shrink-0">
           <button
-            onClick={() => setActiveTab("ludo")}
+            onClick={() => handleSelectTab("ludo")}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 ${
               activeTab === "ludo"
                 ? "bg-amber-500 text-neutral-950 shadow-md shadow-amber-500/20 scale-105"
@@ -553,7 +655,7 @@ export function PartyTableGamesModal({
           </button>
 
           <button
-            onClick={() => setActiveTab("bottle")}
+            onClick={() => handleSelectTab("bottle")}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 ${
               activeTab === "bottle"
                 ? "bg-rose-500 text-white shadow-md shadow-rose-500/20 scale-105"
@@ -565,7 +667,7 @@ export function PartyTableGamesModal({
           </button>
 
           <button
-            onClick={() => setActiveTab("rps")}
+            onClick={() => handleSelectTab("rps")}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 ${
               activeTab === "rps"
                 ? "bg-sky-500 text-white shadow-md shadow-sky-500/20 scale-105"
@@ -577,7 +679,7 @@ export function PartyTableGamesModal({
           </button>
 
           <button
-            onClick={() => setActiveTab("antakshari")}
+            onClick={() => handleSelectTab("antakshari")}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 ${
               activeTab === "antakshari"
                 ? "bg-emerald-500 text-neutral-950 shadow-md shadow-emerald-500/20 scale-105"
@@ -589,7 +691,7 @@ export function PartyTableGamesModal({
           </button>
 
           <button
-            onClick={() => setActiveTab("raja_mantri")}
+            onClick={() => handleSelectTab("raja_mantri")}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 ${
               activeTab === "raja_mantri"
                 ? "bg-purple-500 text-white shadow-md shadow-purple-500/20 scale-105"

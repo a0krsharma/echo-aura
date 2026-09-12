@@ -1248,7 +1248,8 @@ export async function updateSpaceDoc(spaceId: string, updates: Partial<SpaceDoc>
 
   try {
     const db = getFirebaseDb();
-    await updateDoc(doc(db, SPACES_COLLECTION, spaceId), updates);
+    // Using setDoc with merge:true ensures default and new spaces exist in Firestore
+    await setDoc(doc(db, SPACES_COLLECTION, spaceId), updates, { merge: true });
   } catch (err: any) {
     if (err?.code === "permission-denied" || err?.message?.includes("permissions")) {
       // Clean guest mode fallback
@@ -1297,3 +1298,146 @@ export function subscribeToSpaceDoc(
     return () => {};
   }
 }
+
+// ── REAL-TIME PARTICIPANT SPATIAL PRESENCE ────────────────────
+
+export function subscribeToSpaceParticipants(
+  spaceId: string,
+  callback: (participants: SpatialAvatar[]) => void
+): () => void {
+  if (!spaceId) return () => {};
+  try {
+    const db = getFirebaseDb();
+    const participantsCol = collection(db, SPACES_COLLECTION, spaceId, "participants");
+    const unsub = onSnapshot(
+      participantsCol,
+      (snap) => {
+        const now = Date.now();
+        const active: SpatialAvatar[] = [];
+        snap.docs.forEach((d) => {
+          const data = d.data() as SpatialAvatar;
+          // Disregard heartbeats older than 30s (user closed tab / disconnected)
+          if (data && (!data.lastUpdated || now - data.lastUpdated < 30000)) {
+            active.push({ ...data, uid: d.id });
+          }
+        });
+        callback(active);
+      },
+      (err) => {
+        console.warn("[subscribeToSpaceParticipants] Snapshot error:", err);
+      }
+    );
+    return unsub;
+  } catch (err) {
+    console.warn("[subscribeToSpaceParticipants] Setup error:", err);
+    return () => {};
+  }
+}
+
+export async function updateSpaceParticipant(
+  spaceId: string,
+  avatar: SpatialAvatar
+): Promise<void> {
+  if (!spaceId || !avatar?.uid) return;
+  try {
+    const db = getFirebaseDb();
+    const partRef = doc(db, SPACES_COLLECTION, spaceId, "participants", avatar.uid);
+    // Strip undefined fields to ensure clean Firestore serialization
+    const cleanAvatar = JSON.parse(JSON.stringify(avatar));
+    await setDoc(partRef, cleanAvatar, { merge: true });
+  } catch (err) {
+    // Silent fallback
+  }
+}
+
+export async function removeSpaceParticipant(
+  spaceId: string,
+  uid: string
+): Promise<void> {
+  if (!spaceId || !uid) return;
+  try {
+    const db = getFirebaseDb();
+    const partRef = doc(db, SPACES_COLLECTION, spaceId, "participants", uid);
+    await deleteDoc(partRef);
+  } catch (err) {
+    // Silent fallback
+  }
+}
+
+// ── REAL-TIME PARTY TABLE GAME SYNC ──────────────────────────
+
+export interface SpaceTableGameLiveState {
+  activeTab: "ludo" | "bottle" | "rps" | "antakshari" | "raja_mantri" | "uno";
+  isOpen: boolean;
+  hostUid: string;
+  hostName: string;
+  updatedAt: number;
+  lastActionText?: string;
+  // Ludo sync
+  ludoCurrentTurn?: "red" | "green" | "yellow" | "blue";
+  ludoDiceValue?: number;
+  ludoTurnTimer?: number;
+  // Bottle sync
+  bottleAngle?: number;
+  isSpinningBottle?: boolean;
+  bottleTargetName?: string;
+  bottlePromptType?: "truth" | "dare" | null;
+  bottlePromptText?: string;
+  // Antakshari sync
+  antakshariLetter?: string;
+  antakshariChain?: Array<{ singer: string; song: string; letter: string; nextLetter: string }>;
+  // Raja Mantri sync
+  royalChits?: Array<"raja" | "mantri" | "chor" | "sipahi">;
+  chitsRevealed?: boolean;
+  roundResultText?: string | null;
+  royalScores?: Record<string, number>;
+  bluffToast?: { speaker: string; text: string } | null;
+  // Seated players mapping
+  seatedPlayers?: Array<{ id: string; name: string; avatar: string; isBot: boolean; position: string; color: string }>;
+}
+
+export function subscribeToSpaceTableGame(
+  spaceId: string,
+  callback: (gameState: SpaceTableGameLiveState | null) => void
+): () => void {
+  if (!spaceId) return () => {};
+  try {
+    const db = getFirebaseDb();
+    const gameDocRef = doc(db, SPACES_COLLECTION, spaceId, "tableGame", "live");
+    const unsub = onSnapshot(
+      gameDocRef,
+      (snap) => {
+        if (snap.exists()) {
+          callback(snap.data() as SpaceTableGameLiveState);
+        } else {
+          callback(null);
+        }
+      },
+      (err) => {
+        console.warn("[subscribeToSpaceTableGame] Error:", err);
+      }
+    );
+    return unsub;
+  } catch (err) {
+    return () => {};
+  }
+}
+
+export async function updateSpaceTableGame(
+  spaceId: string,
+  updates: Partial<SpaceTableGameLiveState>
+): Promise<void> {
+  if (!spaceId) return;
+  try {
+    const db = getFirebaseDb();
+    const gameDocRef = doc(db, SPACES_COLLECTION, spaceId, "tableGame", "live");
+    const cleanUpdates = JSON.parse(JSON.stringify({
+      ...updates,
+      updatedAt: Date.now(),
+    }));
+    await setDoc(gameDocRef, cleanUpdates, { merge: true });
+  } catch (err) {
+    // Silent fallback
+  }
+}
+
