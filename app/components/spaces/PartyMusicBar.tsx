@@ -190,6 +190,8 @@ export function PartyMusicBar({
   const [spotifyResults, setSpotifyResults] = useState<any[]>([]);
   const [isSearchingSpotify, setIsSearchingSpotify] = useState(false);
   const [customSpotifyUrl, setCustomSpotifyUrl] = useState("");
+  const [spotifyStatusMsg, setSpotifyStatusMsg] = useState<string | null>(null);
+  const [inSpaceBeatsActive, setInSpaceBeatsActive] = useState(false);
 
   useEffect(() => {
     setSpotifyToken(getSpotifyToken());
@@ -215,7 +217,17 @@ export function PartyMusicBar({
       // If user has authorized their Spotify account, sync playback on their active device
       if (spotifyToken && spotifySyncState.trackUri) {
         const elapsed = Math.max(0, Date.now() - (spotifySyncState.startedAt || Date.now()));
-        playSpotifyTrack(spotifySyncState.trackUri, elapsed).catch(() => {});
+        playSpotifyTrack(spotifySyncState.trackUri, elapsed)
+          .then((res) => {
+            if (!res.success) {
+              setSpotifyStatusMsg(res.message || "Spotify playback requires Premium or active app");
+            } else {
+              setSpotifyStatusMsg(null);
+            }
+          })
+          .catch(() => {});
+      } else if (!spotifyToken) {
+        setSpotifyStatusMsg("Spotify account not linked. Tap Play on the player below, or link Spotify.");
       }
     } else if (spotifySyncState && !spotifySyncState.isPlaying) {
       if (spotifyToken) {
@@ -261,7 +273,17 @@ export function PartyMusicBar({
 
     // 3. Control user's native Spotify player if connected
     if (spotifyToken) {
-      playSpotifyTrack(trackUri, 0).catch(() => {});
+      playSpotifyTrack(trackUri, 0)
+        .then((res) => {
+          if (!res.success) {
+            setSpotifyStatusMsg(res.message || "Spotify playback failed");
+          } else {
+            setSpotifyStatusMsg(null);
+          }
+        })
+        .catch(() => {});
+    } else {
+      setSpotifyStatusMsg("Connect your Spotify account to auto-control playback across devices.");
     }
 
     setSpotifyModalOpen(false);
@@ -684,7 +706,7 @@ export function PartyMusicBar({
             </div>
           </div>
           <iframe
-            src={`https://open.spotify.com/embed/track/${spotifySyncState?.trackId}?utm_source=generator&theme=0&autoplay=1`}
+            src={`https://open.spotify.com/embed/track/${spotifySyncState?.trackId}?utm_source=generator&theme=0`}
             width="100%"
             height="80"
             frameBorder="0"
@@ -692,6 +714,56 @@ export function PartyMusicBar({
             loading="lazy"
             className="w-full bg-black block"
           />
+
+          {/* Guidance Banner & In-Space Audio Fallback */}
+          <div className="px-3 py-2 bg-neutral-900/95 border-t border-neutral-800 flex flex-col gap-2">
+            <div className="flex items-start gap-2 text-[11px] text-amber-300">
+              <span className="text-xs">💡</span>
+              <div className="flex-1">
+                <span className="font-semibold text-neutral-200">
+                  {spotifyStatusMsg || "Click ▶️ Play on the player above to start Spotify audio in your browser."}
+                </span>
+                <div className="text-[10px] text-neutral-400 mt-0.5">
+                  Spotify API requires Spotify Premium to start audio automatically on other apps. You can also listen via In-Space Beats below!
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-2 pt-1 border-t border-neutral-800/80">
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !inSpaceBeatsActive;
+                  setInSpaceBeatsActive(next);
+                  partyMusicEngine.setExternalAudio(!next);
+                  setSkipToast(
+                    next
+                      ? "🔊 In-Space Beats Active! Playing procedural audio in sync for all guests."
+                      : "🔇 In-Space Beats Muted. Listening via Spotify player only."
+                  );
+                  setTimeout(() => setSkipToast(null), 3500);
+                }}
+                className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                  inSpaceBeatsActive
+                    ? "bg-emerald-500 text-neutral-950 shadow-sm"
+                    : "bg-emerald-950/70 hover:bg-emerald-900/90 text-emerald-300 border border-emerald-500/40"
+                }`}
+              >
+                <span>{inSpaceBeatsActive ? "🔊 In-Space Beats: ON" : "🎧 Play In-Space Beats (All Hear)"}</span>
+              </button>
+
+              <div className="flex items-center gap-1.5">
+                <a
+                  href={`spotify:track:${spotifySyncState?.trackId}`}
+                  className="px-2 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-[11px] font-mono transition flex items-center gap-1"
+                  title="Open in Spotify Desktop / Mobile App"
+                >
+                  <span>Open Spotify App</span>
+                  <ExternalLink className="w-2.5 h-2.5 text-neutral-400" />
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

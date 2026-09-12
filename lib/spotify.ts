@@ -232,13 +232,44 @@ export async function searchSpotifyTracks(query: string): Promise<any[]> {
   }
 }
 
+export interface SpotifyPlaybackResult {
+  success: boolean;
+  status?: number;
+  reason?: "PREMIUM_REQUIRED" | "NO_ACTIVE_DEVICE" | "AUTH_EXPIRED" | "UNKNOWN";
+  message?: string;
+}
+
 // ── Spotify Web API Playback Controls ──────────────────────────────────────
-export async function playSpotifyTrack(trackUri: string, positionMs = 0): Promise<boolean> {
+export async function playSpotifyTrack(trackUri: string, positionMs = 0): Promise<SpotifyPlaybackResult> {
   const token = getSpotifyToken();
-  if (!token) return false;
+  if (!token) {
+    return { success: false, reason: "AUTH_EXPIRED", message: "Spotify token missing or expired" };
+  }
 
   try {
-    const res = await fetch("https://api.spotify.com/v1/me/player/play", {
+    // 1. Check for available Spotify devices (Desktop, Mobile, Web)
+    let targetDeviceId: string | undefined;
+    try {
+      const devRes = await fetch("https://api.spotify.com/v1/me/player/devices", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (devRes.ok) {
+        const devData = await devRes.json();
+        const devices = devData.devices || [];
+        const activeDev = devices.find((d: any) => d.is_active);
+        if (activeDev) {
+          targetDeviceId = activeDev.id;
+        } else if (devices.length > 0) {
+          targetDeviceId = devices[0].id;
+        }
+      }
+    } catch {}
+
+    const playUrl = targetDeviceId
+      ? `https://api.spotify.com/v1/me/player/play?device_id=${encodeURIComponent(targetDeviceId)}`
+      : "https://api.spotify.com/v1/me/player/play";
+
+    const res = await fetch(playUrl, {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -250,10 +281,44 @@ export async function playSpotifyTrack(trackUri: string, positionMs = 0): Promis
       }),
     });
 
-    return res.status === 204;
-  } catch (error) {
-    console.error("[Spotify Playback Error]:", error);
-    return false;
+    if (res.status === 204) {
+      return { success: true, status: 204 };
+    }
+
+    if (res.status === 403) {
+      const errorJson = await res.json().catch(() => ({}));
+      const msg = errorJson?.error?.message || "Player command failed: Premium required";
+      console.warn("[Spotify Web API] 403 Forbidden:", msg);
+      return {
+        success: false,
+        status: 403,
+        reason: "PREMIUM_REQUIRED",
+        message: "Spotify Web API requires Spotify Premium to control playback automatically.",
+      };
+    }
+
+    if (res.status === 404) {
+      return {
+        success: false,
+        status: 404,
+        reason: "NO_ACTIVE_DEVICE",
+        message: "No active Spotify player found. Please open Spotify on your PC or phone.",
+      };
+    }
+
+    return {
+      success: false,
+      status: res.status,
+      reason: "UNKNOWN",
+      message: `Spotify returned status ${res.status}`,
+    };
+  } catch (error: any) {
+    console.warn("[Spotify Playback Error]:", error);
+    return {
+      success: false,
+      reason: "UNKNOWN",
+      message: error?.message || "Failed to communicate with Spotify",
+    };
   }
 }
 
