@@ -51,7 +51,7 @@ export default function PersistentRoomDock() {
   return (
     <aside
       aria-label="Active Live Audio Stream"
-      className="fixed bottom-16 md:bottom-4 left-0 right-0 z-40 px-3 font-mono animate-slide-up select-none pointer-events-auto"
+      className="fixed bottom-[68px] md:bottom-4 left-0 right-0 z-40 px-3 font-mono animate-slide-up select-none pointer-events-auto"
     >
       <div
         onClick={handleExpand}

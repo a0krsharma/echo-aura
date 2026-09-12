@@ -727,14 +727,8 @@ export default function EchoSpacesWorld({
     };
   };
 
-  // 4. Click-to-Move or Place/Remove Decoration Handler
-  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const clickScreenX = e.clientX - rect.left;
-    const clickScreenY = e.clientY - rect.top;
-
+  // 4. Click/Touch-to-Move or Place/Remove Decoration Handler
+  const processPointerClick = (clickScreenX: number, clickScreenY: number) => {
     const camX = cameraRef.current.x;
     const camY = cameraRef.current.y;
     const worldClickX = Math.max(40, Math.min(WORLD_WIDTH - 40, (clickScreenX - viewportDim.w / 2) / zoom + camX));
@@ -884,6 +878,80 @@ export default function EchoSpacesWorld({
 
     clickTargetRef.current = { x: worldClickX, y: worldClickY, time: Date.now() };
     spacesSfx.playFootstep();
+  };
+
+  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    processPointerClick(e.clientX - rect.left, e.clientY - rect.top);
+  };
+
+  const handleCanvasTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (e.touches.length === 0) return;
+    const touch = e.touches[0];
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    processPointerClick(touch.clientX - rect.left, touch.clientY - rect.top);
+  };
+
+  const handleMobileDpadStep = (dir: "up" | "down" | "left" | "right") => {
+    const step = 45;
+    let nextX = localAvatar.x;
+    let nextY = localAvatar.y;
+    if (dir === "up") nextY -= step;
+    if (dir === "down") nextY += step;
+    if (dir === "left") nextX -= step;
+    if (dir === "right") nextX += step;
+
+    nextX = Math.max(40, Math.min(WORLD_WIDTH - 40, nextX));
+    nextY = Math.max(40, Math.min(WORLD_HEIGHT - 40, nextY));
+
+    if (checkCollision(nextX, nextY)) {
+      spacesSfx.playFootstep();
+      return;
+    }
+
+    if (localAvatar.isSitting) {
+      onSit(false);
+    }
+
+    onMove(nextX, nextY, dir, true);
+    spacesSfx.playFootstep();
+
+    setTimeout(() => {
+      onMove(nextX, nextY, dir, false);
+    }, 180);
+  };
+
+  const handleMobileSitToggle = () => {
+    if (localAvatar.isSitting) {
+      onSit(false);
+      spacesSfx.playSitPop();
+      onSendSpeech("🚶 Stood up");
+      return;
+    }
+
+    // Find closest chair within 90px
+    let closest: TableChairDef | null = null;
+    let minDist = 90;
+    for (const chair of ALL_WORLD_SEATS) {
+      const dist = Math.hypot(localAvatar.x - chair.x, localAvatar.y - chair.y);
+      if (dist < minDist) {
+        minDist = dist;
+        closest = chair;
+      }
+    }
+
+    if (closest) {
+      onMove(closest.x, closest.y, closest.faceDirection, false);
+      onSit(true, closest.id);
+      spacesSfx.playSitPop();
+      onSendSpeech(`🪑 Seated at ${closest.name}!`);
+    } else {
+      onSendSpeech("⚠️ Walk closer to a chair or table to sit!");
+    }
   };
 
   // 5. 60 FPS Render Engine Loop
@@ -3224,7 +3292,7 @@ export default function EchoSpacesWorld({
     <div
       ref={containerRef}
       className={`relative w-full bg-black rounded-3xl overflow-hidden border border-neutral-800 shadow-2xl select-none transition-all ${
-        isFullscreen ? "fixed inset-0 z-50 rounded-none h-screen w-screen border-none" : "h-[680px]"
+        isFullscreen ? "fixed inset-0 z-50 rounded-none h-screen w-screen border-none" : "h-[calc(100dvh-54px)] md:h-[680px] lg:h-[720px]"
       }`}
     >
       {/* 60 FPS HTML5 Canvas */}
@@ -3234,8 +3302,68 @@ export default function EchoSpacesWorld({
         height={viewportDim.h}
         onClick={handleCanvasClick}
         onMouseMove={handleCanvasMouseMove}
+        onTouchStart={handleCanvasTouchStart}
         className="w-full h-full cursor-crosshair touch-none"
       />
+
+      {/* 📱 MOBILE SMARTPHONE VIRTUAL D-PAD & SIT CONTROLS */}
+      <div className="md:hidden absolute bottom-20 left-3 z-40 pointer-events-auto select-none">
+        <div className="grid grid-cols-3 gap-1 w-28 h-28 bg-black/75 backdrop-blur-md p-1.5 rounded-2xl border border-white/20 shadow-2xl">
+          <div />
+          <button
+            type="button"
+            onClick={() => handleMobileDpadStep("up")}
+            className="flex items-center justify-center rounded-xl bg-neutral-800/90 active:bg-cyan-500 active:text-black text-white font-black text-xs transition-colors shadow"
+            aria-label="Walk Up"
+          >
+            ▲
+          </button>
+          <div />
+
+          <button
+            type="button"
+            onClick={() => handleMobileDpadStep("left")}
+            className="flex items-center justify-center rounded-xl bg-neutral-800/90 active:bg-cyan-500 active:text-black text-white font-black text-xs transition-colors shadow"
+            aria-label="Walk Left"
+          >
+            ◀
+          </button>
+
+          <button
+            type="button"
+            onClick={handleMobileSitToggle}
+            className={`flex items-center justify-center rounded-xl text-xs font-bold transition-all shadow ${
+              localAvatar.isSitting
+                ? "bg-amber-500 text-black animate-pulse"
+                : "bg-neutral-900 border border-white/25 text-neutral-200"
+            }`}
+            title={localAvatar.isSitting ? "Stand Up" : "Sit on Nearby Chair"}
+            aria-label="Sit or Stand"
+          >
+            🪑
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleMobileDpadStep("right")}
+            className="flex items-center justify-center rounded-xl bg-neutral-800/90 active:bg-cyan-500 active:text-black text-white font-black text-xs transition-colors shadow"
+            aria-label="Walk Right"
+          >
+            ▶
+          </button>
+
+          <div />
+          <button
+            type="button"
+            onClick={() => handleMobileDpadStep("down")}
+            className="flex items-center justify-center rounded-xl bg-neutral-800/90 active:bg-cyan-500 active:text-black text-white font-black text-xs transition-colors shadow"
+            aria-label="Walk Down"
+          >
+            ▼
+          </button>
+          <div />
+        </div>
+      </div>
 
       {/* TOP CENTER: Gather Proximity Attendees Floating Bar */}
       <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 max-w-md w-full px-2 pointer-events-none flex justify-center">

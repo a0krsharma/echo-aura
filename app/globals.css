@@ -131,11 +131,16 @@
   --space-xl:        32px;
 }
 
-html, body {
+html {
   height: 100%;
   background: var(--bg);
   color: var(--fg);
-  overscroll-behavior: none;
+}
+body {
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  overscroll-behavior-x: none;
 }
 
 /* Both mobile and desktop scroll normally.
@@ -339,7 +344,7 @@ button, a, [role="button"], input, select, textarea {
 /* ── FAB (Floating Action Button) ───────────────────────────── */
 .fab {
   position: fixed;
-  bottom: calc(64px + 20px); /* above bottom nav */
+  bottom: calc(68px + 20px + env(safe-area-inset-bottom, 0px)); /* above bottom nav + safe area */
   right: 20px;
   z-index: 60;
   width: 52px;

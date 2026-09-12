@@ -25,7 +25,6 @@ import { subscribeToNotifications, markNotificationRead, subscribeToUnreadCount,
 import {
   Loader2,
   Menu,
-  X,
   Radio,
   Compass,
   Swords,
@@ -34,15 +33,11 @@ import {
   MessageSquare,
   Bell,
   User,
-  Terminal,
   LogOut,
   Mic2,
   Waves,
   Headphones,
-  Cpu,
-  Sparkles,
   Gamepad2,
-  ShoppingCart,
 } from "lucide-react";
 
 // ─── Inner shell (needs AuthProvider above it) ───────────────────
@@ -307,7 +302,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
         className={`${
           pathname.startsWith("/spaces/")
             ? "w-full"
-            : `md:ml-52 ${
+            : `md:ml-56 ${
                 pathname.startsWith("/room/") ||
                 pathname.startsWith("/wire") ||
                 pathname.startsWith("/spaces")
@@ -331,7 +326,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
         !pathname.startsWith("/stage") &&
         !pathname.startsWith("/wire") &&
         !pathname.startsWith("/spaces") && (
-        <div className="fixed bottom-36 md:bottom-20 right-4 md:right-6 z-40 flex flex-col items-end gap-2.5">
+        <div className="fixed bottom-[140px] md:bottom-20 right-4 md:right-6 z-40 flex flex-col items-end gap-2.5">
           {/* Echo Club Launcher Icon */}
           <Link
             href="/arcade"
@@ -357,7 +352,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
         !pathname.startsWith("/spaces") && (
         <Link
           href="/wire"
-          className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-40 bg-white text-black hover:bg-neutral-200 border border-neutral-800 p-3.5 rounded-full shadow-2xl transition-all duration-200 hover:scale-110 flex items-center justify-center gap-2 group cursor-pointer"
+          className="fixed bottom-[84px] md:bottom-6 right-4 md:right-6 z-40 bg-white text-black hover:bg-neutral-200 border border-neutral-800 p-3.5 rounded-full shadow-2xl transition-all duration-200 hover:scale-110 flex items-center justify-center gap-2 group cursor-pointer"
           title="Open Wire Direct Messages"
         >
           <MessageSquare className="w-5 h-5 fill-black text-black" />

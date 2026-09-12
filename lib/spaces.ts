@@ -343,6 +343,20 @@ export interface SpaceDoc {
   tableCount?: number;
   activeTableCount?: number;
   coverImage?: string;
+  spotifySyncState?: SpaceSpotifySyncState | null;
+}
+
+export interface SpaceSpotifySyncState {
+  trackId: string;
+  trackUri: string;
+  trackName: string;
+  artistName: string;
+  albumArt?: string;
+  durationMs: number;
+  progressMs: number;
+  isPlaying: boolean;
+  startedAt: number;
+  djHandle: string;
 }
 
 // ── WORLD MAP DIMENSIONS ──
@@ -1250,5 +1264,36 @@ export async function deleteSpaceDoc(spaceId: string): Promise<void> {
     await deleteDoc(doc(db, SPACES_COLLECTION, spaceId));
   } catch (err) {
     console.warn("[deleteSpaceDoc] Error deleting space:", err);
+  }
+}
+
+export function subscribeToSpaceDoc(
+  spaceId: string,
+  callback: (space: SpaceDoc | null) => void
+): () => void {
+  try {
+    const db = getFirebaseDb();
+    const unsub = onSnapshot(
+      doc(db, SPACES_COLLECTION, spaceId),
+      (snap) => {
+        if (snap.exists()) {
+          const data = { id: snap.id, ...snap.data() } as SpaceDoc;
+          callback(data);
+        } else {
+          const fallback = DEFAULT_SPACES.find((s) => s.id === spaceId) || null;
+          callback(fallback);
+        }
+      },
+      (err) => {
+        console.warn("[subscribeToSpaceDoc] Live snapshot fallback to cache:", err);
+        const fallback = DEFAULT_SPACES.find((s) => s.id === spaceId) || null;
+        callback(fallback);
+      }
+    );
+    return unsub;
+  } catch (err) {
+    const fallback = DEFAULT_SPACES.find((s) => s.id === spaceId) || null;
+    callback(fallback);
+    return () => {};
   }
 }

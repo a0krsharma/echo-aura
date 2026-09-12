@@ -1,87 +1,83 @@
-// Echo Service Worker for Offline Support
-const CACHE_NAME = 'echo-v3';
-const urlsToCache = [
-  '/',
-  '/rooms',
-  '/studio',
-  '/profile',
-  '/notifications',
-  '/search',
-  '/waves',
-  '/clash',
-  '/radar',
-  '/wire',
-  '/terminal',
-  '/manifest.json'
+// Echo Service Worker for Offline Support — Network-First Strategy
+const CACHE_NAME = 'echo-v4';
+const STATIC_ASSETS = [
+  '/manifest.json',
 ];
 
-// Install event - cache assets & skipWaiting
+// Install event - cache static assets & skipWaiting
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('[Service Worker] Caching app shell');
-        return cache.addAll(urlsToCache);
+        console.log('[Service Worker] Caching static assets');
+        return cache.addAll(STATIC_ASSETS);
       })
   );
 });
 
-// Fetch event - serve from cache, fall back to network
+// Fetch event — Network-First for navigation, Cache-First for static assets
 self.addEventListener('fetch', (event) => {
-  // Skip non-HTTP requests (chrome-extension, data:, etc.)
-  if (!event.request.url.startsWith('http')) {
-    return;
-  }
+  // Skip non-HTTP requests
+  if (!event.request.url.startsWith('http')) return;
 
-  // Skip Cloudinary, Agora telemetry, external analytics, and non-GET requests
+  // Skip external services and non-GET requests
   if (
     event.request.method !== 'GET' ||
     event.request.url.includes('cloudinary.com') ||
     event.request.url.includes('agora.io') ||
     event.request.url.includes('statscollector') ||
-    event.request.url.includes('sd-rtn.com')
+    event.request.url.includes('sd-rtn.com') ||
+    event.request.url.includes('googleapis.com') ||
+    event.request.url.includes('firestore.googleapis.com')
   ) {
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Cache hit - return response
-        if (response) {
+  // Navigation requests (HTML pages) — ALWAYS Network-First
+  if (event.request.mode === 'navigate' || event.request.headers.get('accept')?.includes('text/html')) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          // Cache the fresh response for offline fallback
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseClone);
+          }).catch(() => {});
           return response;
-        }
-
-        // Clone the request
-        const fetchRequest = event.request.clone();
-
-        return fetch(fetchRequest)
-          .then((response) => {
-            // Check if valid response
-            if (!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
-            }
-
-            // Clone the response
-            const responseToCache = response.clone();
-
-            caches.open(CACHE_NAME)
-              .then((cache) => {
-                cache.put(event.request, responseToCache);
-              })
-              .catch(() => {});
-
-            return response;
-          })
-          .catch(() => {
-            return new Response('Network error occurred', {
-              status: 503,
-              statusText: 'Service Unavailable',
-              headers: new Headers({ 'Content-Type': 'text/plain' }),
+        })
+        .catch(() => {
+          // Offline: serve from cache
+          return caches.match(event.request).then((cached) => {
+            return cached || caches.match('/').then((root) => {
+              return root || new Response('Offline — Check your connection', {
+                status: 503,
+                headers: { 'Content-Type': 'text/plain' },
+              });
             });
           });
-      })
+        })
+    );
+    return;
+  }
+
+  // Static assets (JS, CSS, images, fonts) — Stale-While-Revalidate
+  event.respondWith(
+    caches.match(event.request).then((cached) => {
+      const fetchPromise = fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseClone);
+            }).catch(() => {});
+          }
+          return response;
+        })
+        .catch(() => cached);
+
+      return cached || fetchPromise;
+    })
   );
 });
 
@@ -104,7 +100,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Notification click event - focus or open window to target URL
+// Notification click event
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const targetUrl = (event.notification.data && event.notification.data.url) ? event.notification.data.url : '/';

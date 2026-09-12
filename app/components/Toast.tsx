@@ -114,7 +114,7 @@ export function Toast({ notification, onClose, duration = 5000 }: ToastProps) {
   return (
     <div
       onClick={handleClick}
-      className={`fixed top-4 right-4 z-50 max-w-sm w-full bg-black border border-white p-4 shadow-2xl transition-all duration-300 cursor-pointer font-mono ${
+      className={`max-w-[calc(100vw-2rem)] sm:max-w-sm w-full bg-black border border-white p-4 shadow-2xl transition-all duration-300 cursor-pointer font-mono ${
         isVisible ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"
       }`}
     >

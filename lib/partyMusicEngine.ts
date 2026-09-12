@@ -282,6 +282,36 @@ class PartyMusicEngine {
     }
   }
 
+  public playSpotifyTrack(track: {
+    id: string;
+    title: string;
+    artist: string;
+    bpm?: number;
+    durationSeconds?: number;
+    coverArt?: string;
+  }) {
+    const existingIdx = PARTY_PLAYLIST.findIndex(
+      (t) => t.id === track.id || t.title.toLowerCase() === track.title.toLowerCase()
+    );
+    if (existingIdx !== -1) {
+      this.play(existingIdx);
+    } else {
+      const newTrack: PartyTrack = {
+        id: track.id,
+        title: track.title,
+        artist: track.artist,
+        album: "Spotify Live Room Sync",
+        genre: "edm",
+        coverArt: track.coverArt || "🟢",
+        bpm: track.bpm || 128,
+        durationSeconds: track.durationSeconds || 195,
+        vibe: "Spotify Live Room Sync",
+      };
+      PARTY_PLAYLIST.unshift(newTrack);
+      this.play(0);
+    }
+  }
+
   public voteToSkip(userHandle: string): { skipped: boolean; message: string } {
     this.skipVotes.add(userHandle);
     // Instant skip for party flow or 2 votes

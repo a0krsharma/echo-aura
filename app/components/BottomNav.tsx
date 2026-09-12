@@ -33,13 +33,13 @@ export default function BottomNav() {
     { href: "/",        icon: Radio,  label: "FEED",      isCenter: false },
     { href: "/waves",   icon: Waves,  label: "WAVES",     isCenter: false },
     { href: "/studio",  icon: Mic2,   label: "RECORD",    isCenter: true  },
-    { href: "/arcade",  icon: Users,  label: "CLUB",      isCenter: false },
+    { href: "/rooms",   icon: Users,  label: "ROOMS",     isCenter: false },
     { href: "/clash",   icon: Swords, label: "STAGE",     isCenter: false },
   ] as const;
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 w-full bg-black/95 backdrop-blur-md border-t border-neutral-900 z-40 pb-safe">
-      <div className="flex items-center justify-around h-16 max-w-md mx-auto px-2">
+    <nav className="md:hidden fixed bottom-0 left-0 w-full bg-black/95 backdrop-blur-md border-t border-neutral-900 z-40 pb-safe" style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}>
+      <div className="flex items-center justify-around h-[68px] max-w-md mx-auto px-2">
         {navItems.map((item) => {
           const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
           const Icon     = item.icon;

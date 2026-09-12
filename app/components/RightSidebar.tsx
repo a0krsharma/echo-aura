@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { collection, query, orderBy, limit, getDocs } from "firebase/firestore";
-import { getFirebaseDb } from "@/lib/firebase";
 import { subscribeToClashes, type ClashItem } from "@/lib/clashes";
 import { subscribeToUnreadCount } from "@/lib/notifications";
 import { EchoUser } from "@/lib/userDoc";
@@ -12,21 +10,10 @@ import { useAuth } from "@/app/components/AuthProvider";
 
 export function RightSidebar() {
   const { user } = useAuth();
-  const [topUsers, setTopUsers] = useState<EchoUser[]>([]);
   const [liveClashes, setLiveClashes] = useState<ClashItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    async function fetchTopUsers() {
-      try {
-        const db = getFirebaseDb();
-        const snap = await getDocs(query(collection(db, "users"), orderBy("auraScore", "desc"), limit(3)));
-        const list: EchoUser[] = snap.docs.map((d) => d.data() as EchoUser);
-        setTopUsers(list);
-      } catch {}
-    }
-    fetchTopUsers();
-
     const unsub = subscribeToClashes((clashes) => {
       setLiveClashes(clashes.slice(0, 3));
     });

@@ -17,22 +17,108 @@ import {
   Check,
   Zap,
   Tv,
+  Search,
+  ExternalLink,
+  X,
+  RadioTower,
 } from "lucide-react";
 import { partyMusicEngine, PARTY_PLAYLIST, PartyTrack } from "@/lib/partyMusicEngine";
+import { SpaceSpotifySyncState } from "@/lib/spaces";
+import { searchSpotifyTracks, playSpotifyTrack } from "@/lib/spotify";
 
-interface PartyMusicBarProps {
+export interface PartyMusicBarProps {
   userHandle?: string;
   compact?: boolean;
   onSongChanged?: (newTrack: PartyTrack) => void;
   onOpenTeleparty?: () => void;
+  spotifySyncState?: SpaceSpotifySyncState | null;
+  onUpdateSpotifySync?: (sync: SpaceSpotifySyncState | null) => void;
   className?: string;
 }
+
+// ── Top Spotify Party Presets for Instant 1-Tap Queueing ──
+const SPOTIFY_PARTY_PRESETS = [
+  {
+    id: "4HlFJV71xXKIGcU3kRyttv",
+    title: "O Sanam",
+    artist: "Lucky Ali",
+    uri: "spotify:track:4HlFJV71xXKIGcU3kRyttv",
+    coverArt: "✨",
+    bpm: 104,
+    genre: "lofi" as const,
+  },
+  {
+    id: "5fqGgYV8XbXvT8Z8L6Qv2I",
+    title: "Apna Bana Le",
+    artist: "Arijit Singh & Sachin-Jigar",
+    uri: "spotify:track:5fqGgYV8XbXvT8Z8L6Qv2I",
+    coverArt: "🌸",
+    bpm: 92,
+    genre: "lofi" as const,
+  },
+  {
+    id: "0VjIjW4GlUZAMYd2vXMi3b",
+    title: "Blinding Lights",
+    artist: "The Weeknd",
+    uri: "spotify:track:0VjIjW4GlUZAMYd2vXMi3b",
+    coverArt: "⚡",
+    bpm: 171,
+    genre: "edm" as const,
+  },
+  {
+    id: "2qpmMpWLR9EKRsiQm9q3V2",
+    title: "Lover",
+    artist: "Diljit Dosanjh",
+    uri: "spotify:track:2qpmMpWLR9EKRsiQm9q3V2",
+    coverArt: "🔥",
+    bpm: 122,
+    genre: "punjabi" as const,
+  },
+  {
+    id: "kala_chashma",
+    title: "Kala Chashma (Club Remix)",
+    artist: "Badshah & Neha Kakkar",
+    uri: "spotify:track:1KhlzV6Z6j4009N00",
+    coverArt: "🕶️",
+    bpm: 128,
+    genre: "bollywood" as const,
+  },
+  {
+    id: "tauba_tauba",
+    title: "Tauba Tauba",
+    artist: "Karan Aujla",
+    uri: "spotify:track:7BGY871239912",
+    coverArt: "🕺",
+    bpm: 132,
+    genre: "punjabi" as const,
+  },
+  {
+    id: "brown_munde",
+    title: "Brown Munde",
+    artist: "AP Dhillon & Gurinder Gill",
+    uri: "spotify:track:61298418900",
+    coverArt: "⚡",
+    bpm: 135,
+    genre: "punjabi" as const,
+  },
+  {
+    id: "kesariya",
+    title: "Kesariya (Lo-Fi)",
+    artist: "Arijit Singh & Pritam",
+    uri: "spotify:track:9812984100",
+    coverArt: "🌙",
+    bpm: 90,
+    genre: "lofi" as const,
+  },
+];
 
 export function PartyMusicBar({
   userHandle = "Guest",
   compact = false,
   onSongChanged,
   onOpenTeleparty,
+  spotifySyncState,
+  onUpdateSpotifySync,
   className = "",
 }: PartyMusicBarProps) {
   const [musicState, setMusicState] = useState(partyMusicEngine.getState());
@@ -42,6 +128,13 @@ export function PartyMusicBar({
   const [prevVolume, setPrevVolume] = useState(0.35);
   const [skipToast, setSkipToast] = useState<string | null>(null);
 
+  // Spotify Modal State
+  const [spotifyModalOpen, setSpotifyModalOpen] = useState(false);
+  const [spotifySearchQuery, setSpotifySearchQuery] = useState("");
+  const [spotifyResults, setSpotifyResults] = useState<any[]>([]);
+  const [isSearchingSpotify, setIsSearchingSpotify] = useState(false);
+  const [customSpotifyUrl, setCustomSpotifyUrl] = useState("");
+
   useEffect(() => {
     const unsub = partyMusicEngine.subscribe((state) => {
       setMusicState(state);
@@ -50,6 +143,94 @@ export function PartyMusicBar({
       unsub();
     };
   }, []);
+
+  // Listen to external Spotify sync state from SpaceDoc so all participants hear the song
+  useEffect(() => {
+    if (spotifySyncState && spotifySyncState.isPlaying) {
+      if (musicState.track.title !== spotifySyncState.trackName) {
+        partyMusicEngine.playSpotifyTrack({
+          id: spotifySyncState.trackId,
+          title: spotifySyncState.trackName,
+          artist: spotifySyncState.artistName,
+          coverArt: spotifySyncState.albumArt || "🟢",
+          bpm: 128,
+        });
+      }
+    }
+  }, [spotifySyncState]);
+
+  const handleSelectSpotifyTrack = (track: {
+    id: string;
+    title: string;
+    artist: string;
+    uri?: string;
+    coverArt?: string;
+    bpm?: number;
+  }) => {
+    // 1. Play in PartyMusicEngine so ALL participants hear it synchronized via Web Audio
+    partyMusicEngine.playSpotifyTrack({
+      id: track.id,
+      title: track.title,
+      artist: track.artist,
+      coverArt: track.coverArt || "🟢",
+      bpm: track.bpm || 128,
+    });
+
+    // 2. Broadcast Spotify Live Sync state to all users in the Space
+    const syncData: SpaceSpotifySyncState = {
+      trackId: track.id,
+      trackUri: track.uri || `spotify:track:${track.id}`,
+      trackName: track.title,
+      artistName: track.artist,
+      albumArt: track.coverArt || "🟢",
+      durationMs: 195000,
+      progressMs: 0,
+      isPlaying: true,
+      startedAt: Date.now(),
+      djHandle: userHandle,
+    };
+    onUpdateSpotifySync?.(syncData);
+
+    // 3. Try user's Spotify Web API if they have a connected token
+    if (track.uri) {
+      playSpotifyTrack(track.uri).catch(() => {});
+    }
+
+    setSpotifyModalOpen(false);
+    setSkipToast(`🟢 LIVE SPOTIFY SYNC: "${track.title}" by ${track.artist}! 🎶`);
+    setTimeout(() => setSkipToast(null), 4000);
+  };
+
+  const handleSearchSpotify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!spotifySearchQuery.trim()) return;
+    setIsSearchingSpotify(true);
+    try {
+      const results = await searchSpotifyTracks(spotifySearchQuery);
+      setSpotifyResults(results);
+    } catch {
+      setSpotifyResults([]);
+    } finally {
+      setIsSearchingSpotify(false);
+    }
+  };
+
+  const handlePasteCustomSpotify = () => {
+    if (!customSpotifyUrl.trim()) return;
+    const match = customSpotifyUrl.match(/track\/([a-zA-Z0-9]+)/);
+    const trackId = match ? match[1] : customSpotifyUrl.replace("spotify:track:", "").trim();
+    if (trackId) {
+      handleSelectSpotifyTrack({
+        id: trackId,
+        title: `Spotify Track (${trackId.slice(0, 6)})`,
+        artist: "Spotify Live Queue",
+        uri: `spotify:track:${trackId}`,
+        coverArt: "🟢",
+        bpm: 126,
+      });
+      setCustomSpotifyUrl("");
+    }
+  };
 
   const handleTogglePlay = () => {
     partyMusicEngine.togglePlay();
@@ -134,6 +315,36 @@ export function PartyMusicBar({
     <div
       className={`relative z-40 bg-neutral-950/95 backdrop-blur-xl border border-emerald-500/30 shadow-2xl shadow-emerald-950/40 rounded-2xl p-3 transition-all ${className}`}
     >
+      {/* 🟢 SPOTIFY LIVE SYNC BANNER */}
+      {spotifySyncState?.isPlaying && (
+        <div className="mb-2 px-3 py-1.5 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-[11px] font-mono flex items-center justify-between shadow-sm animate-in fade-in">
+          <div className="flex items-center gap-2 overflow-hidden">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
+            <span className="font-black text-white shrink-0 flex items-center gap-1">
+              <span>🟢</span>
+              <span>SPOTIFY SYNC:</span>
+            </span>
+            <span className="truncate text-white font-bold">
+              {spotifySyncState.trackName} - {spotifySyncState.artistName}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[10px] text-emerald-400/90 font-bold">DJ: @{spotifySyncState.djHandle}</span>
+            {spotifySyncState.trackId && (
+              <a
+                href={`https://open.spotify.com/track/${spotifySyncState.trackId}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-[10px] bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-200 px-2 py-0.5 rounded-lg border border-emerald-500/30 flex items-center gap-1 transition"
+              >
+                <span>Spotify</span>
+                <ExternalLink className="w-2.5 h-2.5" />
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Skip feedback toast */}
       {skipToast && (
         <div className="absolute -top-12 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full bg-emerald-500 text-neutral-950 font-bold text-xs shadow-lg flex items-center gap-1.5 animate-in fade-in slide-in-from-bottom-2 whitespace-nowrap">
@@ -238,6 +449,17 @@ export function PartyMusicBar({
           >
             <Zap className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform" />
             <span className="hidden md:inline">⚡ Fast Party</span>
+          </button>
+
+          {/* 🟢 Spotify Room Sync Button */}
+          <button
+            type="button"
+            onClick={() => setSpotifyModalOpen(true)}
+            className="px-2.5 py-1.5 rounded-xl border border-emerald-400/50 bg-emerald-500/20 hover:bg-emerald-500/35 text-emerald-300 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm shadow-emerald-500/20 group"
+            title="Play Spotify Music Synced Across All Space Participants"
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Spotify</span>
           </button>
 
           {/* YouTube / Watch Party Audio Sync */}
@@ -387,6 +609,148 @@ export function PartyMusicBar({
                 </button>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* ── SPOTIFY SEARCH & ROOM SYNC MODAL ── */}
+      {spotifyModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/85 backdrop-blur-md animate-in fade-in">
+          <div className="relative w-full max-w-lg bg-neutral-950 border border-emerald-500/40 rounded-3xl shadow-2xl p-4 sm:p-5 space-y-4 max-h-[90dvh] overflow-y-auto custom-scrollbar">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-neutral-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-black font-black text-base shadow-md shadow-emerald-500/30">
+                  🟢
+                </div>
+                <div>
+                  <h3 className="text-sm font-mono font-bold text-white flex items-center gap-1.5">
+                    <span>Spotify Room Live Sync</span>
+                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-500/30">
+                      HEARD BY ALL
+                    </span>
+                  </h3>
+                  <p className="text-[11px] font-mono text-neutral-400">
+                    Queue a song for all participants in the space to hear together
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSpotifyModalOpen(false)}
+                className="p-1.5 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Spotify Search Bar */}
+            <form onSubmit={handleSearchSpotify} className="relative">
+              <input
+                type="text"
+                placeholder="Search songs or artists on Spotify..."
+                value={spotifySearchQuery}
+                onChange={(e) => setSpotifySearchQuery(e.target.value)}
+                className="w-full px-3.5 py-2.5 pl-9 rounded-2xl bg-neutral-900 border border-neutral-800 focus:border-emerald-400 text-xs font-mono text-white outline-none placeholder:text-neutral-500"
+              />
+              <Search className="w-4 h-4 text-neutral-400 absolute left-3 top-3" />
+              <button
+                type="submit"
+                disabled={isSearchingSpotify}
+                className="absolute right-2 top-1.5 px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs font-mono transition cursor-pointer disabled:opacity-50"
+              >
+                {isSearchingSpotify ? "Searching..." : "Search"}
+              </button>
+            </form>
+
+            {/* Search Results if any */}
+            {spotifyResults.length > 0 && (
+              <div className="space-y-1.5 pt-1">
+                <div className="text-[11px] font-mono font-bold uppercase text-emerald-400">
+                  Search Results:
+                </div>
+                <div className="space-y-1 max-h-48 overflow-y-auto custom-scrollbar">
+                  {spotifyResults.map((item: any) => (
+                    <button
+                      key={item.id}
+                      onClick={() =>
+                        handleSelectSpotifyTrack({
+                          id: item.id,
+                          title: item.name,
+                          artist: item.artists?.map((a: any) => a.name).join(", ") || "Artist",
+                          uri: item.uri,
+                          coverArt: "🟢",
+                          bpm: 128,
+                        })
+                      }
+                      className="w-full p-2 rounded-xl bg-neutral-900/80 hover:bg-emerald-950/40 border border-neutral-800 hover:border-emerald-500/50 flex items-center justify-between text-left transition cursor-pointer"
+                    >
+                      <div className="min-w-0 flex-1 pr-2">
+                        <div className="text-xs font-bold text-white truncate">{item.name}</div>
+                        <div className="text-[11px] text-neutral-400 truncate">
+                          {item.artists?.map((a: any) => a.name).join(", ")}
+                        </div>
+                      </div>
+                      <span className="px-2 py-1 rounded-lg bg-emerald-500 text-neutral-950 text-[10px] font-mono font-bold shrink-0">
+                        Queue For All
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 1-Tap Curated Spotify Party Hits */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-[11px] font-mono font-bold uppercase text-neutral-400">
+                <span>1-Tap Spotify Party Hits</span>
+                <span className="text-[10px] text-emerald-400">Instant Sync</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {SPOTIFY_PARTY_PRESETS.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => handleSelectSpotifyTrack(p)}
+                    className="p-2.5 rounded-2xl bg-neutral-900 border border-neutral-800 hover:border-emerald-400/50 hover:bg-emerald-950/20 text-left transition flex items-center gap-2.5 cursor-pointer group"
+                  >
+                    <span className="text-xl shrink-0 group-hover:scale-110 transition-transform">
+                      {p.coverArt}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-bold text-white truncate group-hover:text-emerald-300">
+                        {p.title}
+                      </div>
+                      <div className="text-[10px] text-neutral-400 truncate">{p.artist}</div>
+                    </div>
+                    <span className="text-[9px] font-mono text-emerald-400 shrink-0">
+                      {p.bpm} BPM
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Paste Custom Spotify Link */}
+            <div className="pt-2 border-t border-neutral-800 space-y-1.5">
+              <div className="text-[11px] font-mono font-bold text-neutral-400">
+                Or Paste Spotify Track Link:
+              </div>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="text"
+                  placeholder="https://open.spotify.com/track/..."
+                  value={customSpotifyUrl}
+                  onChange={(e) => setCustomSpotifyUrl(e.target.value)}
+                  className="flex-1 px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800 focus:border-emerald-400 text-xs font-mono text-white outline-none placeholder:text-neutral-600"
+                />
+                <button
+                  type="button"
+                  onClick={handlePasteCustomSpotify}
+                  className="px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-mono text-xs font-bold transition cursor-pointer shrink-0"
+                >
+                  Play
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

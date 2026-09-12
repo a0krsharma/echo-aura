@@ -7,22 +7,11 @@ import {
   Compass,
   Mic2,
   Swords,
-  Search,
-  MessageSquare,
-  Bell,
-  User,
-  Terminal,
   LogOut,
   Waves,
   Users,
   Flame,
   Headphones,
-  Cpu,
-  Sparkles,
-  Gamepad2,
-  ShoppingCart,
-  Trophy,
-  Bot,
 } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
 import { getStreak } from "@/lib/userDoc";

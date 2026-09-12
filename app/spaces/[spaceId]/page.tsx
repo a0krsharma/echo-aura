@@ -44,6 +44,7 @@ import { StagePresentationBar } from "@/app/components/spaces/StagePresentationB
 import { EventSocialPanel, EventPanelTab } from "@/app/components/spaces/EventSocialPanel";
 import TelepartyWatchModal, { TelepartySyncState } from "@/app/components/spaces/TelepartyWatchModal";
 import HostRoomControlsModal from "@/app/components/spaces/HostRoomControlsModal";
+import { PartyMusicBar } from "@/app/components/spaces/PartyMusicBar";
 import {
   getWalletState,
   canClaimDailyReward,
@@ -65,9 +66,12 @@ import {
   SPACES_ZONES,
   getSpaceDoc,
   updateSpaceDoc,
+  subscribeToSpaceDoc,
+  SpaceSpotifySyncState,
   getZoneAtCoordinates,
   getPrivateRugAtCoordinates,
 } from "@/lib/spaces";
+import { partyMusicEngine } from "@/lib/partyMusicEngine";
 import { spacesSfx } from "@/lib/spacesSfx";
 import {
   ArrowLeft,
@@ -99,6 +103,8 @@ import {
   HelpCircle,
   BarChart2,
   Radio,
+  Music,
+  MoreHorizontal,
 } from "lucide-react";
 
 export default function DynamicSpaceWorldPage() {
@@ -150,6 +156,8 @@ export default function DynamicSpaceWorldPage() {
   const [activitiesDropdownOpen, setActivitiesDropdownOpen] = useState(false);
   const [hospitalityDropdownOpen, setHospitalityDropdownOpen] = useState(false);
   const [hostHubDropdownOpen, setHostHubDropdownOpen] = useState(false);
+  const [partyMusicOpen, setPartyMusicOpen] = useState(false);
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
 
   // Modals
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
@@ -442,18 +450,26 @@ export default function DynamicSpaceWorldPage() {
     } catch (e) {}
   }, []);
 
-  // Fetch Space Doc from Firestore
+  // Real-time Space Doc Live Sync from Firestore (with automatic Spotify sync across participants)
   useEffect(() => {
-    let isMounted = true;
-    getSpaceDoc(spaceId).then((loaded) => {
-      if (!isMounted) return;
+    const unsub = subscribeToSpaceDoc(spaceId, (loaded) => {
       if (loaded) {
         setSpace(loaded);
+        if (loaded.spotifySyncState && loaded.spotifySyncState.isPlaying) {
+          // Play matching song for all room participants
+          partyMusicEngine.playSpotifyTrack({
+            id: loaded.spotifySyncState.trackId,
+            title: loaded.spotifySyncState.trackName,
+            artist: loaded.spotifySyncState.artistName,
+            coverArt: loaded.spotifySyncState.albumArt || "🟢",
+            bpm: 128,
+          });
+        }
       }
       setLoading(false);
     });
     return () => {
-      isMounted = false;
+      unsub();
     };
   }, [spaceId]);
 
@@ -1199,8 +1215,26 @@ export default function DynamicSpaceWorldPage() {
             )}
           </div>
 
-          {/* 2. Hospitality Hub Dropdown (Feast, Seating, Gifting, Cake Ceremony) */}
-          <div className="relative">
+          {/* 🎵 Party Music Bar Toggle */}
+          <button
+            type="button"
+            onClick={() => {
+              spacesSfx.playKeyNote(2);
+              setPartyMusicOpen((v) => !v);
+            }}
+            className={`px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0 ${
+              partyMusicOpen
+                ? "border-pink-500 bg-pink-950/60 text-pink-300 shadow-[0_0_12px_rgba(236,72,153,0.3)] animate-pulse"
+                : "border-pink-500/30 bg-neutral-900/90 text-pink-300 hover:bg-neutral-800"
+            }`}
+            title="Toggle Synchronized Party Music Bar (Spotify / Party Beats)"
+          >
+            <span>🎵</span>
+            <span className="hidden sm:inline">Music</span>
+          </button>
+
+          {/* 2. Hospitality Hub Dropdown (Feast, Seating, Gifting, Cake Ceremony) - Desktop */}
+          <div className="relative hidden md:block">
             <button
               type="button"
               onClick={() => {
@@ -1305,14 +1339,14 @@ export default function DynamicSpaceWorldPage() {
             )}
           </div>
 
-          {/* 3. Stage Toggle (Webinar/Stage Presenter Dock) */}
+          {/* 3. Stage Toggle (Webinar/Stage Presenter Dock) - Desktop */}
           <button
             type="button"
             onClick={() => {
               spacesSfx.playKeyNote(4);
               setIsStageActive(!isStageActive);
             }}
-            className={`px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer ${
+            className={`hidden md:flex px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-mono font-bold items-center gap-1.5 shadow-sm transition-all cursor-pointer ${
               isStageActive
                 ? "border-rose-500/50 bg-rose-950/40 text-rose-300"
                 : "border-neutral-800 bg-neutral-900/80 text-neutral-400 hover:text-white"
@@ -1320,19 +1354,109 @@ export default function DynamicSpaceWorldPage() {
             title="Toggle Stage Presenters Dock"
           >
             <Radio className="w-3.5 h-3.5 text-rose-400" />
-            <span className="hidden sm:inline">Stage</span>
+            <span>Stage</span>
           </button>
 
-          {/* 4. Walk to Desk Shortcut */}
+          {/* 4. Walk to Desk Shortcut - Desktop */}
           <button
             type="button"
             onClick={handleWalkToDesk}
-            className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-cyan-400 text-neutral-300 hover:text-cyan-300 text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
+            className="hidden md:flex p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-cyan-400 text-neutral-300 hover:text-cyan-300 text-xs font-mono font-bold items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
             title="Automatically walk to your workstation desk"
           >
             <Laptop className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="hidden sm:inline">Desk</span>
+            <span>Desk</span>
           </button>
+
+          {/* 5. Mobile Quick "..." More Menu (Hospitality, Stage, Desk, Vibe) */}
+          <div className="relative md:hidden">
+            <button
+              type="button"
+              onClick={() => {
+                spacesSfx.playKeyNote(1);
+                setMobileMoreOpen((v) => !v);
+              }}
+              className={`p-1.5 rounded-xl border text-xs font-mono font-bold flex items-center transition-all cursor-pointer ${
+                mobileMoreOpen
+                  ? "border-cyan-400 bg-cyan-950/50 text-cyan-300"
+                  : "border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white"
+              }`}
+              title="More Space Features"
+            >
+              <MoreHorizontal className="w-4 h-4" />
+            </button>
+
+            {mobileMoreOpen && (
+              <div className="absolute top-10 right-0 w-56 bg-neutral-950 border border-neutral-800 rounded-2xl shadow-2xl p-1.5 space-y-1 z-50 animate-in zoom-in-95">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCateringModalOpen(true);
+                    setMobileMoreOpen(false);
+                  }}
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors"
+                >
+                  <span>🫓</span>
+                  <span>Gourmet Catering</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSeatingModalOpen(true);
+                    setMobileMoreOpen(false);
+                  }}
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors"
+                >
+                  <span>🪑</span>
+                  <span>Auto-Seating</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleServeCake();
+                    setMobileMoreOpen(false);
+                  }}
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors"
+                >
+                  <span>🎂</span>
+                  <span>Cake Ceremony</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsStageActive(!isStageActive);
+                    setMobileMoreOpen(false);
+                  }}
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors"
+                >
+                  <span>🎤</span>
+                  <span>{isStageActive ? "Hide Stage" : "Show Stage"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleWalkToDesk();
+                    setMobileMoreOpen(false);
+                  }}
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors"
+                >
+                  <span>💻</span>
+                  <span>Walk to Desk</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHostEventModalOpen(true);
+                    setMobileMoreOpen(false);
+                  }}
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-mono flex items-center gap-2 hover:bg-neutral-900 text-neutral-300 hover:text-white transition-colors"
+                >
+                  <span>👑</span>
+                  <span>Host & Theme Vibe</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Right: Host Hub, Invite, Cash Wallet, Voice & Profile */}
@@ -1555,6 +1679,22 @@ export default function DynamicSpaceWorldPage() {
           activeScreenStream={activeScreenStream}
           onOpenMap={() => setActivityMapOpen(true)}
         />
+      )}
+
+      {/* 🎵 Synchronized Space Party Music Bar (Spotify & Continuous Bollywood/Punjabi/EDM/LoFi) */}
+      {partyMusicOpen && (
+        <div className="relative z-30 px-2 sm:px-4 py-1.5 bg-neutral-950/95 border-b border-pink-500/30 shadow-2xl backdrop-blur-xl animate-in slide-in-from-top-2">
+          <PartyMusicBar
+            userHandle={localAvatar.handle}
+            compact={false}
+            spotifySyncState={space.spotifySyncState}
+            onUpdateSpotifySync={(sync) => {
+              updateSpaceDoc(spaceId, { spotifySyncState: sync });
+              setSpace((prev) => ({ ...prev, spotifySyncState: sync }));
+            }}
+            onOpenTeleparty={() => setTelepartyModalOpen(true)}
+          />
+        </div>
       )}
 
       {/* 3. Main 2D Spatial Canvas Viewport (Fullscreen Immersive) */}

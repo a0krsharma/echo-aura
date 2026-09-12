@@ -137,7 +137,7 @@ export default function GatherBottomDock({
   return (
     <>
       {/* ── TOP-CENTER GATHER APP TABS (Images 1, 2, 3) ── */}
-      <div className="fixed top-14 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 bg-neutral-950/90 backdrop-blur-md p-1.5 rounded-2xl border border-neutral-800 shadow-xl select-none">
+      <div className="hidden sm:flex fixed top-14 left-1/2 -translate-x-1/2 z-30 items-center gap-1 bg-neutral-950/90 backdrop-blur-md p-1.5 rounded-2xl border border-neutral-800 shadow-xl select-none">
         {/* Meetings Tab (Image 1) */}
         <button
           type="button"
@@ -177,7 +177,7 @@ export default function GatherBottomDock({
       </div>
 
       {/* ── 1. BOTTOM-LEFT FLOATING GATHER PILL ── */}
-      <div className="fixed bottom-4 left-4 z-40 flex items-center bg-neutral-950/95 backdrop-blur-xl border border-neutral-800 rounded-2xl shadow-2xl p-1.5 gap-2 select-none animate-in fade-in slide-in-from-bottom-2">
+      <div className="hidden md:flex fixed bottom-4 left-4 z-40 items-center bg-neutral-950/95 backdrop-blur-xl border border-neutral-800 rounded-2xl shadow-2xl p-1.5 gap-2 select-none animate-in fade-in slide-in-from-bottom-2">
         {/* Gather Icon Badge */}
         <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-black shadow-md">
           🍇
@@ -418,8 +418,8 @@ export default function GatherBottomDock({
         </div>
       </div>
 
-      {/* ── 2. BOTTOM-RIGHT FLOATING TOOLBAR ── */}
-      <div className="fixed bottom-4 right-4 z-40 flex items-center bg-neutral-950/95 backdrop-blur-xl border border-neutral-800 rounded-2xl shadow-2xl p-1.5 gap-1.5 select-none animate-in fade-in slide-in-from-bottom-2">
+      {/* ── 2. BOTTOM-RIGHT FLOATING TOOLBAR (Desktop) ── */}
+      <div className="hidden md:flex fixed bottom-4 right-4 z-40 items-center bg-neutral-950/95 backdrop-blur-xl border border-neutral-800 rounded-2xl shadow-2xl p-1.5 gap-1.5 select-none animate-in fade-in slide-in-from-bottom-2">
         {/* Hammer / Build Tool (Furniture Decorator) */}
         <button
           type="button"
@@ -498,6 +498,100 @@ export default function GatherBottomDock({
             <span className="hidden sm:inline">Invite</span>
           </button>
         )}
+      </div>
+
+      {/* ── 3. MOBILE UNIFIED BOTTOM BAR (md:hidden) ── */}
+      <div className="md:hidden fixed bottom-3 left-1/2 -translate-x-1/2 z-40 flex items-center bg-neutral-950/95 backdrop-blur-xl border border-neutral-800 rounded-2xl shadow-2xl p-1.5 gap-1.5 select-none animate-in fade-in max-w-[96vw] overflow-x-auto no-scrollbar">
+        {/* Mic Toggle */}
+        <button
+          type="button"
+          onClick={toggleMic}
+          className={`p-2 rounded-xl text-xs font-mono transition-all cursor-pointer ${
+            isMicMuted
+              ? "bg-rose-950/80 border border-rose-500/50 text-rose-300"
+              : "bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 animate-pulse"
+          }`}
+          title={isMicMuted ? "Unmute Mic" : "Mute Mic"}
+        >
+          {isMicMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+        </button>
+
+        {/* Video Toggle */}
+        <button
+          type="button"
+          onClick={toggleVideo}
+          className={`p-2 rounded-xl text-xs font-mono transition-all cursor-pointer ${
+            isVideoOff
+              ? "bg-neutral-900 border border-neutral-800 text-neutral-400"
+              : "bg-cyan-950/80 border border-cyan-500/50 text-cyan-300"
+          }`}
+          title={isVideoOff ? "Turn on Video" : "Turn off Video"}
+        >
+          {isVideoOff ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4" />}
+        </button>
+
+        {/* Quick Emote */}
+        <button
+          type="button"
+          onClick={() => onSendEmote("🎉")}
+          className="p-2 rounded-xl bg-neutral-900 border border-neutral-800 text-xs font-mono hover:scale-110 active:scale-95 transition-all cursor-pointer"
+          title="Send Party Emote"
+        >
+          🎉
+        </button>
+
+        {/* Hand Raise */}
+        <button
+          type="button"
+          onClick={onToggleHandRaise}
+          className={`p-2 rounded-xl text-xs font-mono transition-all cursor-pointer ${
+            localAvatar.isHandRaised
+              ? "bg-amber-950/80 border border-amber-500/50 text-amber-300 animate-pulse"
+              : "bg-neutral-900 border border-neutral-800 text-neutral-400"
+          }`}
+          title="Raise Hand"
+        >
+          <Hand className="w-4 h-4" />
+        </button>
+
+        {/* Arcade */}
+        <button
+          type="button"
+          onClick={onOpenArcade}
+          className="p-2 rounded-xl text-neutral-400 hover:text-cyan-400 bg-neutral-900 border border-neutral-800 transition-all cursor-pointer"
+          title="Play Space Arcade"
+        >
+          <Gamepad2 className="w-4 h-4" />
+        </button>
+
+        {/* Chat Drawer Toggle */}
+        <button
+          type="button"
+          onClick={() => onToggleRightDrawer("chat")}
+          className={`p-2 rounded-xl text-xs font-mono transition-all cursor-pointer flex items-center gap-1 ${
+            isRightDrawerOpen && rightDrawerTab === "chat"
+              ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
+              : "bg-neutral-900 border border-neutral-800 text-neutral-400"
+          }`}
+          title="Open Chat"
+        >
+          <MessageSquare className="w-4 h-4" />
+        </button>
+
+        {/* Participants Drawer Toggle */}
+        <button
+          type="button"
+          onClick={() => onToggleRightDrawer("participants")}
+          className={`px-2 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1 ${
+            isRightDrawerOpen && rightDrawerTab === "participants"
+              ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
+              : "bg-neutral-900 border border-neutral-800 text-neutral-300"
+          }`}
+          title="View Participants"
+        >
+          <Users className="w-3.5 h-3.5 text-cyan-400" />
+          <span className="text-[11px]">{participantCount}</span>
+        </button>
       </div>
     </>
   );

@@ -3,12 +3,12 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import {
-  Flame, Mic2, Share, Share2, Repeat2,
-  Loader2, Send, Trash2, ChevronDown, ChevronUp,
+  Mic2, Share, Repeat2,
+  Loader2, Send, Trash2,
   Heart, AtSign, Music,
-  Bot, Sparkles, Bookmark, BarChart2,
+  Bookmark, BarChart2,
   Play, Pause, RotateCcw, RotateCw, Check, Plus,
-  MessageCircle, Volume2, Sparkle, Radio
+  MessageCircle, Sparkle, Radio
 } from "lucide-react";
 import { useAuth } from "@/app/components/AuthProvider";
 import {
@@ -26,7 +26,6 @@ import { createNotification } from "@/lib/notifications";
 import { followUser, unfollowUser, subscribeToFollowing } from "@/lib/follows";
 import { audioManager } from "@/lib/audioManager";
 import { subscribeToPostComments, createComment, toggleLikeComment, deleteComment, type CommentItem } from "@/lib/comments";
-import { SOUND_CATALOG } from "@/lib/soundCatalog";
 import { soundSynth } from "@/lib/soundSynthesizer";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -150,6 +149,8 @@ function Waveform({ playing, small, audioRef }: { playing: boolean; small?: bool
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const animationFrameRef = useRef<number | null>(null);
 
+  const frameCounterRef = useRef(0);
+
   useEffect(() => {
     if (!audioRef?.current || !playing) {
       if (animationFrameRef.current) {
@@ -160,6 +161,11 @@ function Waveform({ playing, small, audioRef }: { playing: boolean; small?: bool
     }
 
     const audio = audioRef.current;
+    
+    // Ensure CORS-safe audio for Web Audio API
+    if (!audio.crossOrigin) {
+      audio.crossOrigin = "anonymous";
+    }
     
     if (!audioContextRef.current) {
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -181,7 +187,8 @@ function Waveform({ playing, small, audioRef }: { playing: boolean; small?: bool
         sourceRef.current.connect(analyserRef.current);
         analyserRef.current.connect(audioContext.destination);
       } catch (error) {
-        // Source already connected, ignore
+        // Source already connected or CORS blocked — fall back to CSS animation
+        return;
       }
     }
     
@@ -192,6 +199,13 @@ function Waveform({ playing, small, audioRef }: { playing: boolean; small?: bool
 
     const updateWaveform = () => {
       if (!analyserRef.current) return;
+      
+      // Throttle to ~15fps (every 4th frame) to prevent 60fps React re-renders
+      frameCounterRef.current++;
+      if (frameCounterRef.current % 4 !== 0) {
+        animationFrameRef.current = requestAnimationFrame(updateWaveform);
+        return;
+      }
       
       analyser.getByteFrequencyData(dataArray);
       
@@ -206,6 +220,7 @@ function Waveform({ playing, small, audioRef }: { playing: boolean; small?: bool
       animationFrameRef.current = requestAnimationFrame(updateWaveform);
     };
 
+    frameCounterRef.current = 0;
     updateWaveform();
 
     return () => {
@@ -507,7 +522,7 @@ function AudioPlayer({ audioUrl, fallbackDurationSec, isActive, onPlayToggle, sm
               setCurrent(val);
             }
           }}
-          className="w-full h-1 bg-neutral-850 hover:bg-neutral-800 rounded-full appearance-none cursor-pointer accent-white transition-all focus:outline-none"
+          className="w-full h-2 bg-neutral-800 hover:bg-neutral-700 rounded-full appearance-none cursor-pointer accent-white transition-all focus:outline-none"
           title="Slide to seek audio"
         />
       </div>
@@ -1280,7 +1295,9 @@ function PostCard({
             </span>
           </button>
         ) : (
-          <div className="w-6" />
+          <button type="button" disabled className="group flex items-center gap-1.5 p-1.5 rounded-full invisible" aria-hidden="true">
+            <Repeat2 className="w-4 h-4" />
+          </button>
         )}
 
         {/* 4. Pulse (Like) */}
@@ -1588,7 +1605,7 @@ export default function HomeFeedPage() {
     <div className="min-h-screen bg-black text-white pb-28 md:pb-16 flex flex-col font-sans selection:bg-neutral-800">
       
       {/* ── World-Class Sticky Header with Segment Control (Twitter / X Style) ── */}
-      <header className="sticky top-0 z-40 w-full bg-black/85 backdrop-blur-md border-b border-neutral-900">
+      <header className="sticky top-[49px] md:top-0 z-30 w-full bg-black/85 backdrop-blur-md border-b border-neutral-900">
         <div className="max-w-2xl mx-auto px-4 flex items-center justify-between h-14">
           
           {/* Feed Tabs: For You, Following, Bookmarks */}

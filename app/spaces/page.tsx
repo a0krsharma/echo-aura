@@ -197,7 +197,7 @@ export default function SpacesLobbyPage() {
     DEFAULT_SPACES[0];
 
   return (
-    <div className="min-h-screen bg-black text-white selection:bg-cyan-500 selection:text-black">
+    <div className="min-h-screen bg-black text-white selection:bg-cyan-500 selection:text-black pb-28 md:pb-12">
       {/* 1. Top Meta Bar */}
       <div className="border-b border-neutral-900 bg-neutral-950/80 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
