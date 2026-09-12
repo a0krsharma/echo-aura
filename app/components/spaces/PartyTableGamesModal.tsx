@@ -24,6 +24,8 @@ import {
   Send,
   Radio,
   Flame as FireIcon,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { PartyMusicBar } from "./PartyMusicBar";
 import { RealisticLudoBoard } from "./RealisticLudoBoard";
@@ -144,6 +146,7 @@ export function PartyTableGamesModal({
   onBroadcastSpeech,
 }: PartyTableGamesModalProps) {
   const [activeTab, setActiveTab] = useState<PartyGameTab>(initialTab);
+  const [musicBarExpanded, setMusicBarExpanded] = useState(false);
 
   // 4 Seated Players Setup
   const seatedPlayers: SeatedPlayer[] = useMemo(() => {
@@ -221,7 +224,7 @@ export function PartyTableGamesModal({
   const [royalChits, setRoyalChits] = useState<Role[]>(["raja", "mantri", "chor", "sipahi"]);
   const [chitsRevealed, setChitsRevealed] = useState(false);
   const [myRole, setMyRole] = useState<Role | null>(null);
-  const [mantriGuess, setMantriGuess] = useState<string | null>(null);
+  const [sipahiGuess, setSipahiGuess] = useState<string | null>(null);
   const [roundResultText, setRoundResultText] = useState<string | null>(null);
   const [royalScores, setRoyalScores] = useState<Record<string, number>>({
     [seatedPlayers[0].name]: 0,
@@ -229,6 +232,7 @@ export function PartyTableGamesModal({
     [seatedPlayers[2].name]: 0,
     [seatedPlayers[3].name]: 0,
   });
+  const [bluffToast, setBluffToast] = useState<{ speaker: string; text: string } | null>(null);
 
   // Keep music synced
   useEffect(() => {
@@ -371,50 +375,77 @@ export function PartyTableGamesModal({
     setRoyalChits(shuffled);
     setMyRole(shuffled[0]); // bottom player is index 0
     setChitsRevealed(false);
-    setMantriGuess(null);
+    setSipahiGuess(null);
     setRoundResultText(null);
+    setBluffToast(null);
     spacesSfx.playSitPop();
   };
 
   const handleRevealMyChit = () => {
     setChitsRevealed(true);
     spacesSfx.playZoneChime();
+
+    // If local player is NOT the Sipahi, and Sipahi is an AI bot, bot will ponder while hearing mic and guess after 5s
+    const sipahiIdx = royalChits.indexOf("sipahi");
+    if (sipahiIdx !== 0 && seatedPlayers[sipahiIdx].isBot) {
+      setTimeout(() => {
+        const suspects = seatedPlayers.filter(
+          (_, idx) => royalChits[idx] !== "raja" && royalChits[idx] !== "mantri" && idx !== sipahiIdx
+        );
+        const randomSuspect =
+          suspects[Math.floor(Math.random() * suspects.length)] ||
+          seatedPlayers[royalChits.indexOf("chor")];
+        handleSipahiGuess(randomSuspect.name);
+      }, 5000);
+    }
   };
 
-  const handleGuessChor = (guessedPlayerName: string) => {
-    setMantriGuess(guessedPlayerName);
+  const handleSendBluff = (phrase: string) => {
+    setBluffToast({ speaker: localUserName, text: phrase });
+    onBroadcastSpeech?.(`🗣️ @${localUserName}: "${phrase}"`);
+    spacesSfx.playKeyNote(5);
+    setTimeout(() => setBluffToast(null), 3500);
+  };
 
-    // Find who actually has "chor"
+  const handleSipahiGuess = (guessedPlayerName: string) => {
+    setSipahiGuess(guessedPlayerName);
+
     const chorIdx = royalChits.indexOf("chor");
+    const sipahiIdx = royalChits.indexOf("sipahi");
+    const rajaIdx = royalChits.indexOf("raja");
+    const mantriIdx = royalChits.indexOf("mantri");
+
     const chorPlayer = seatedPlayers[chorIdx];
+    const sipahiPlayer = seatedPlayers[sipahiIdx];
+    const rajaPlayer = seatedPlayers[rajaIdx];
+    const mantriPlayer = seatedPlayers[mantriIdx];
 
     if (guessedPlayerName === chorPlayer.name) {
-      // Correct!
-      setRoundResultText(`🎉 SHABASH! Mantri correctly caught the Chor (@${chorPlayer.name})!`);
+      // Sipahi guessed correctly!
+      setRoundResultText(
+        `🎉 SHABASH SIPAHI! @${sipahiPlayer.name} (Sipahi) caught the real Chor (@${chorPlayer.name})! Sipahi earns 500 pts!`
+      );
       playGameVictory();
-      addCash(25, "Raja Mantri Chor Catch");
+      addCash(25, "Sipahi Caught The Chor");
       setRoyalScores((prev) => ({
         ...prev,
-        [seatedPlayers[royalChits.indexOf("raja")].name]:
-          (prev[seatedPlayers[royalChits.indexOf("raja")].name] || 0) + 1000,
-        [seatedPlayers[royalChits.indexOf("mantri")].name]:
-          (prev[seatedPlayers[royalChits.indexOf("mantri")].name] || 0) + 800,
-        [seatedPlayers[royalChits.indexOf("sipahi")].name]:
-          (prev[seatedPlayers[royalChits.indexOf("sipahi")].name] || 0) + 500,
+        [rajaPlayer.name]: (prev[rajaPlayer.name] || 0) + 1000,
+        [mantriPlayer.name]: (prev[mantriPlayer.name] || 0) + 800,
+        [sipahiPlayer.name]: (prev[sipahiPlayer.name] || 0) + 500,
+        [chorPlayer.name]: prev[chorPlayer.name] || 0,
       }));
     } else {
-      // Wrong guess! Chor steals points
+      // Sipahi guessed wrong! Chor escapes and steals the Sipahi's 500 points!
       setRoundResultText(
-        `🚨 DHOKA! Wrong guess! @${chorPlayer.name} was the real Chor and stole the 800 points!`
+        `🚨 DHOKA! @${sipahiPlayer.name} accused the wrong person! @${chorPlayer.name} was the real Chor and STOLE the Sipahi's 500 points!`
       );
-      spacesSfx.playSitPop();
+      spacesSfx.playGavelStrike();
       setRoyalScores((prev) => ({
         ...prev,
-        [seatedPlayers[royalChits.indexOf("raja")].name]:
-          (prev[seatedPlayers[royalChits.indexOf("raja")].name] || 0) + 1000,
-        [seatedPlayers[royalChits.indexOf("sipahi")].name]:
-          (prev[seatedPlayers[royalChits.indexOf("sipahi")].name] || 0) + 500,
-        [chorPlayer.name]: (prev[chorPlayer.name] || 0) + 800,
+        [rajaPlayer.name]: (prev[rajaPlayer.name] || 0) + 1000,
+        [mantriPlayer.name]: (prev[mantriPlayer.name] || 0) + 800,
+        [sipahiPlayer.name]: prev[sipahiPlayer.name] || 0,
+        [chorPlayer.name]: (prev[chorPlayer.name] || 0) + 500,
       }));
     }
   };
@@ -450,14 +481,61 @@ export function PartyTableGamesModal({
             </button>
           </div>
 
-          {/* Embedded Synced Party Music Bar */}
-          <PartyMusicBar
-            userHandle={localUserName}
-            compact={false}
-            onOpenTeleparty={onOpenTeleparty}
-            spotifySyncState={spotifySyncState}
-            onUpdateSpotifySync={onUpdateSpotifySync}
-          />
+          {/* Collapsible Party Music Bar (Saves gameplay space for board games) */}
+          <div className="mt-1">
+            {!musicBarExpanded ? (
+              <div className="px-3 py-1.5 rounded-xl bg-neutral-900/90 border border-neutral-800 flex items-center justify-between text-xs gap-2 shadow-xs">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-sm animate-pulse">🎵</span>
+                  <div className="truncate flex items-center gap-1.5">
+                    <span className="font-bold text-white text-xs truncate">
+                      {spotifySyncState?.isPlaying
+                        ? `Spotify: ${spotifySyncState.trackName}`
+                        : "Echo Party Music"}
+                    </span>
+                    <span className="text-[10px] text-emerald-400 font-mono hidden sm:inline">
+                      {spotifySyncState?.isPlaying
+                        ? `• DJ @${spotifySyncState.djHandle}`
+                        : "• Synced In-Space Audio"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setMusicBarExpanded(true)}
+                    className="px-2.5 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white text-[10px] font-mono flex items-center gap-1 border border-neutral-700 transition cursor-pointer"
+                    title="Open Full Music Controls & Spotify Player"
+                  >
+                    <span>Music Player</span>
+                    <ChevronDown className="w-3 h-3 text-amber-400" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-1 bg-neutral-900/95 rounded-2xl p-2.5 border border-neutral-800 shadow-xl">
+                <div className="flex items-center justify-between px-1 text-[10px] text-neutral-400 font-mono pb-1 border-b border-neutral-800/60">
+                  <span className="text-emerald-400 font-bold">LIVE PARTY MUSIC & SPOTIFY</span>
+                  <button
+                    type="button"
+                    onClick={() => setMusicBarExpanded(false)}
+                    className="text-amber-400 hover:text-amber-300 font-bold flex items-center gap-0.5 cursor-pointer bg-neutral-800 px-2 py-0.5 rounded-md border border-neutral-700"
+                  >
+                    <span>Hide Player (Full Game View)</span>
+                    <ChevronUp className="w-3 h-3" />
+                  </button>
+                </div>
+                <PartyMusicBar
+                  userHandle={localUserName}
+                  compact={false}
+                  onOpenTeleparty={onOpenTeleparty}
+                  spotifySyncState={spotifySyncState}
+                  onUpdateSpotifySync={onUpdateSpotifySync}
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         {/* NAVIGATION TABS: 6 Games */}
@@ -985,10 +1063,13 @@ export function PartyTableGamesModal({
                 {seatedPlayers.map((player, idx) => {
                   const role = royalChits[idx];
                   const isYou = idx === 0;
+                  const isRaja = role === "raja";
+                  const isMantri = role === "mantri";
+
                   return (
                     <div
                       key={player.id}
-                      className="bg-neutral-900 border border-neutral-800 rounded-2xl p-3 flex flex-col items-center justify-between text-center min-h-[140px]"
+                      className="bg-neutral-900 border border-neutral-800 rounded-2xl p-3 flex flex-col items-center justify-between text-center min-h-[145px] shadow-sm"
                     >
                       {renderPlayerAvatar(player.avatar, "👑", "w-8 h-8 text-sm")}
                       <div className="text-xs font-bold text-neutral-200 truncate w-full">
@@ -998,7 +1079,7 @@ export function PartyTableGamesModal({
                       {/* Chit Display */}
                       {isYou ? (
                         chitsRevealed ? (
-                          <div className="w-full py-2 rounded-xl bg-purple-500/20 border border-purple-500/40 text-purple-200 text-xs font-black uppercase animate-in zoom-in-95">
+                          <div className="w-full py-2 rounded-xl bg-purple-500/20 border border-purple-500/40 text-purple-200 text-xs font-black uppercase animate-in zoom-in-95 shadow-inner">
                             {myRole === "raja" && "👑 Raja (1000)"}
                             {myRole === "mantri" && "📜 Mantri (800)"}
                             {myRole === "sipahi" && "⚔️ Sipahi (500)"}
@@ -1013,8 +1094,20 @@ export function PartyTableGamesModal({
                           </button>
                         )
                       ) : (
-                        <div className="w-full py-2 rounded-xl bg-neutral-950 border border-dashed border-neutral-700 text-neutral-500 text-xs font-mono">
-                          {roundResultText ? role.toUpperCase() : "Folded Chit 📜"}
+                        <div className="w-full py-2 rounded-xl bg-neutral-950 border border-dashed border-neutral-700 text-neutral-400 text-xs font-mono">
+                          {roundResultText
+                            ? role === "raja"
+                              ? "👑 RAJA (1000)"
+                              : role === "mantri"
+                              ? "📜 MANTRI (800)"
+                              : role === "sipahi"
+                              ? "⚔️ SIPAHI (500)"
+                              : "🦹 CHOR (0)"
+                            : chitsRevealed && isRaja
+                            ? "👑 RAJA (1000)"
+                            : chitsRevealed && isMantri
+                            ? "📜 MANTRI (800)"
+                            : "Folded Chit 📜"}
                         </div>
                       )}
 
@@ -1026,43 +1119,110 @@ export function PartyTableGamesModal({
                 })}
               </div>
 
-              {/* Guess Phase: Mantri asks "Mera Mantri Kaun?!" */}
+              {/* Phase 2: Sipahi Identifies The Chor with Live Mic Distractions */}
               {chitsRevealed && !roundResultText && (
                 <div className="bg-neutral-900 border border-purple-500/30 rounded-2xl p-4 shadow-xl space-y-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl">👑</span>
-                    <div>
-                      <div className="text-xs font-black uppercase text-amber-400">
-                        Raja Announced: "Mera Mantri Kaun?!"
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-2 border-b border-neutral-800">
+                    <div className="flex items-center gap-2">
+                      <Shield className="w-5 h-5 text-sky-400 animate-pulse" />
+                      <div>
+                        <div className="text-xs font-black uppercase text-sky-300">
+                          Sipahi's Mission: Identify & Catch The Chor!
+                        </div>
+                        <div className="text-[11px] text-neutral-300">
+                          Raja ordered: "Sipahi ji, Chor ko pakdo!" • Only the Sipahi can make the guess.
+                        </div>
                       </div>
-                      <div className="text-xs text-neutral-300">
-                        Mantri must now guess who is the <strong className="text-rose-400">CHOR</strong> between the two secret players!
-                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-amber-300 bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/30">
+                      <Mic className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
+                      <span>MIC DISTRACTION LIVE</span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 pt-1">
-                    <span className="text-xs font-bold text-neutral-400">Click to accuse Chor:</span>
-                    {seatedPlayers.slice(1).map((p) => (
-                      <button
-                        key={p.id}
-                        onClick={() => handleGuessChor(p.name)}
-                        className="px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 text-xs font-bold transition-all cursor-pointer hover:scale-105"
-                      >
-                        🦹 Accuse @{p.name}
-                      </button>
-                    ))}
+                  {/* Live Distraction Speech Bubble */}
+                  {bluffToast && (
+                    <div className="p-2.5 rounded-xl bg-neutral-800 border border-neutral-700 text-xs text-white flex items-center gap-2 animate-bounce shadow-md">
+                      <span className="text-lg">🗣️</span>
+                      <div>
+                        <span className="font-bold text-amber-300">@{bluffToast.speaker}: </span>
+                        <span className="italic">"{bluffToast.text}"</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Distraction Bluff Buttons for All Players */}
+                  <div className="space-y-1.5">
+                    <div className="text-[10px] font-bold text-neutral-400 uppercase font-mono">
+                      🎙️ Distract the Sipahi (Speak on mic or tap quick bluffs):
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {[
+                        "Main Chor nahi hoon bhai! 😇",
+                        "Check his face, 100% chor hai! 👀",
+                        "Maine kuch nahi churaya Huzoor! 🤫",
+                        "Dekho wo darr raha hai! 🏃",
+                        "Chor udhar baitha hai! 🎭",
+                      ].map((phrase, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => handleSendBluff(phrase)}
+                          className="px-2.5 py-1 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-[11px] text-neutral-200 hover:text-white transition cursor-pointer"
+                        >
+                          {phrase}
+                        </button>
+                      ))}
+                    </div>
                   </div>
+
+                  {/* Guessing Action: ONLY SIPAHI GUESSES */}
+                  {myRole === "sipahi" ? (
+                    <div className="pt-2.5 border-t border-neutral-800 space-y-2">
+                      <div className="text-xs font-bold text-rose-400 flex items-center gap-1">
+                        <span>⚔️ YOU ARE THE SIPAHI! Who is the Chor?</span>
+                        <span className="text-[10px] text-neutral-400 font-normal">
+                          (Wrong guess lets the Chor steal your 500 pts!)
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {seatedPlayers
+                          .filter((_, pIdx) => pIdx !== 0 && royalChits[pIdx] !== "raja" && royalChits[pIdx] !== "mantri")
+                          .map((p) => (
+                            <button
+                              key={p.id}
+                              onClick={() => handleSipahiGuess(p.name)}
+                              className="px-4 py-2 rounded-xl bg-gradient-to-r from-rose-600 to-red-700 hover:from-rose-500 hover:to-red-600 text-white font-black text-xs shadow-lg transition-all cursor-pointer hover:scale-105 flex items-center gap-1.5"
+                            >
+                              <span>🦹 Accuse @{p.name}</span>
+                            </button>
+                          ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="pt-2.5 border-t border-neutral-800 flex items-center justify-between text-xs font-mono text-neutral-400">
+                      <div className="flex items-center gap-1.5">
+                        <span className="animate-spin text-sm">⏳</span>
+                        <span>
+                          @{seatedPlayers[royalChits.indexOf("sipahi")].name} (Sipahi) is analyzing voices to find the Chor...
+                        </span>
+                      </div>
+                      <span className="text-amber-400 text-[10px] font-bold">
+                        Keep distracting on mic! 🗣️
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
 
               {/* Round Result Announcement */}
               {roundResultText && (
-                <div className="p-4 rounded-2xl bg-neutral-950 border border-amber-500/50 text-center space-y-2 animate-in zoom-in-95">
+                <div className="p-4 rounded-2xl bg-neutral-950 border border-amber-500/50 text-center space-y-2 animate-in zoom-in-95 shadow-2xl">
                   <div className="text-sm font-black text-amber-300">{roundResultText}</div>
                   <button
                     onClick={handleStartRoyalChits}
-                    className="px-4 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition-all cursor-pointer"
+                    className="px-5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg transition-all cursor-pointer hover:scale-105"
                   >
                     Play Next Round 📜
                   </button>
