@@ -1,27 +1,10 @@
 "use client";
 
-/**
- * app/spaces/page.tsx
- * ─────────────────────────────────────────────────────
- * Echo Spaces: World-Class Social-Virtual Event & Hangout Hub
- * (Inspired by Remo, Gather, Topia):
- * - Live Event Discovery: See WHAT is being hosted and WHO is hosting
- * - Hero Live Stage Spotlight (Igniting Creativity Keynote & Abhishek's Birthday Party)
- * - Stage speakers preview tiles with speaking halos
- * - Numbered table social clusters (Tables 1-12)
- * - Category filters according to user needs:
- *   🎓 Webinars & Keynotes, 🎂 Birthday Bashes, 🍷 Dinners & Galas,
- *   💼 Co-Work & Strategy, ☕ Piazza & Cafe, 📚 Study, 🕹️ Game Nights
- * - 1-Click instant entry with zero-friction guest access
- */
-
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/components/AuthProvider";
 import {
-  SpaceCategory,
-  SpaceVibe,
   SpaceDoc,
   AvatarConfig,
   subscribeToPublicSpaces,
@@ -31,8 +14,6 @@ import {
 import { spacesSfx } from "@/lib/spacesSfx";
 import AvatarStudioModal from "@/app/components/spaces/AvatarStudioModal";
 import {
-  Sparkles,
-  Plus,
   Users,
   Search,
   Compass,
@@ -48,20 +29,11 @@ import {
   Zap,
 } from "lucide-react";
 
-const CATEGORIES = [
-  { id: "ALL", label: "All Spaces", icon: "🌐" },
-  { id: "ARCADE", label: "Games & Ludo", icon: "🎲" },
-  { id: "MUSIC", label: "Spotify & Music", icon: "🎵" },
-  { id: "PIAZZA", label: "Cafe & Chat", icon: "☕" },
-  { id: "WEBINAR", label: "Stage & Events", icon: "🎙️" },
-];
-
 export default function SpacesLobbyPage() {
   const { user } = useAuth();
   const router = useRouter();
 
   const [spaces, setSpaces] = useState<SpaceDoc[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
 
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
@@ -178,7 +150,6 @@ export default function SpacesLobbyPage() {
 
   // Filter spaces
   const filteredSpaces = spaces.filter((s) => {
-    if (selectedCategory !== "ALL" && s.category !== selectedCategory) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       const matchName = s.name?.toLowerCase().includes(q);
@@ -232,20 +203,6 @@ export default function SpacesLobbyPage() {
               <span className="hidden sm:inline">AVATAR STUDIO</span>
             </button>
 
-            <button
-              onClick={() => handle1ClickInstantHost()}
-              disabled={!!quickHosting}
-              className="px-4 py-2 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-black text-xs font-mono font-bold flex items-center gap-1.5 active:scale-95 transition-all shadow-lg shadow-cyan-500/20 cursor-pointer disabled:opacity-50"
-            >
-              {quickHosting === "instant_host" ? (
-                <span className="animate-spin text-xs">⏳ Launching...</span>
-              ) : (
-                <>
-                  <Zap className="w-4 h-4 text-black" />
-                  <span>1-CLICK HOST A SPACE</span>
-                </>
-              )}
-            </button>
           </div>
         </div>
       </div>
@@ -326,26 +283,6 @@ export default function SpacesLobbyPage() {
               />
             </div>
 
-            {/* Category Pills */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
-              {CATEGORIES.map((cat) => {
-                const isSelected = selectedCategory === cat.id;
-                return (
-                  <button
-                    key={cat.id}
-                    onClick={() => setSelectedCategory(cat.id)}
-                    className={`px-3.5 py-1.5 rounded-xl border text-xs font-mono flex items-center gap-1.5 transition-all cursor-pointer shrink-0 ${
-                      isSelected
-                        ? "border-cyan-400 bg-cyan-950/50 text-white font-bold"
-                        : "border-neutral-800 bg-neutral-950 text-neutral-400 hover:text-white"
-                    }`}
-                  >
-                    <span>{cat.icon}</span>
-                    <span>{cat.label}</span>
-                  </button>
-                );
-              })}
-            </div>
           </div>
         </div>
 
@@ -437,7 +374,7 @@ export default function SpacesLobbyPage() {
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <span>{space.hostHandle?.slice(1, 3).toUpperCase() || "HO"}</span>
+                            <span>{(space.hostHandle?.replace(/^@/, "").slice(0, 2) || "HO").toUpperCase()}</span>
                           )}
                         </div>
                         <div>
@@ -447,8 +384,8 @@ export default function SpacesLobbyPage() {
                               Host
                             </span>
                           </div>
-                          <div className="text-[10px] font-mono text-neutral-400">
-                            Table Games & Mic Active
+                          <div className="text-[10px] font-mono text-neutral-400 truncate max-w-[140px]">
+                            {space.description || space.vibe || "Live Space"}
                           </div>
                         </div>
                       </div>

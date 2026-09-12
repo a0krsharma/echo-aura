@@ -11,16 +11,10 @@ import {
   doc,
   setDoc,
   getDoc,
-  getDocs,
   deleteDoc,
-  updateDoc,
   query,
-  where,
-  orderBy,
   limit,
   onSnapshot,
-  serverTimestamp,
-  Timestamp,
 } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 
@@ -171,7 +165,7 @@ export const SPACE_VIBES: Record<SpaceVibe, SpaceVibeDef> = {
   },
 };
 
-export type SpaceZoneId = "office" | "library" | "music" | "concert" | "debate" | "courtyard";
+export type SpaceZoneId = "music" | "courtyard";
 
 export interface SpaceZoneDef {
   id: SpaceZoneId;
@@ -363,101 +357,30 @@ export interface SpaceSpotifySyncState {
 export const WORLD_WIDTH = 1600;
 export const WORLD_HEIGHT = 1200;
 
-// ── 5 THEMATIC ZONES DEFINITIONS ──
+// ── SPACE ZONES (Open Unified Floor) ──
 export const SPACES_ZONES: Record<SpaceZoneId, SpaceZoneDef> = {
-  office: {
-    id: "office",
-    name: "Virtual Coworking Office",
-    category: "PRODUCTIVITY",
-    icon: "🏢",
-    color: "#38bdf8",
-    bounds: { x: 50, y: 50, w: 680, h: 480 },
-    description: "Desks, conference table, whiteboard & private meeting rugs.",
-  },
-  library: {
-    id: "library",
-    name: "Silent Sanctuary Library",
-    category: "FOCUS & STUDY",
-    icon: "📚",
-    color: "#a78bfa",
-    bounds: { x: 870, y: 50, w: 680, h: 480 },
-    description: "Whisper sanctuary with 25/5 Pomodoro timer, lofi rain & cozy armchairs.",
-  },
   music: {
     id: "music",
-    name: "Music Academy & Jam Studio",
+    name: "Music & DJ Stage",
     category: "CREATIVE & AUDIO",
     icon: "🎵",
     color: "#f43f5e",
     bounds: { x: 50, y: 650, w: 460, h: 500 },
-    description: "Live 8-key piano synthesizer, 4-pad drum machine & acoustic jam floor.",
-  },
-  concert: {
-    id: "concert",
-    name: "Concert Hall & Festival Stage",
-    category: "ENTERTAINMENT",
-    icon: "🎤",
-    color: "#eab308",
-    bounds: { x: 550, y: 650, w: 500, h: 500 },
-    description: "Raised performance stage, stage broadcaster mic & audience dance floor.",
-    broadcastPoint: { x: 800, y: 730 },
-  },
-  debate: {
-    id: "debate",
-    name: "Town Hall Debate Arena",
-    category: "SPEECH & POLITICS",
-    icon: "⚖️",
-    color: "#10b981",
-    bounds: { x: 1090, y: 650, w: 460, h: 500 },
-    description: "Proposition & Opposition podiums, Judge gavel & real-time audience voting.",
-    broadcastPoint: { x: 1320, y: 730 },
+    description: "Live piano synthesizer, drum machine & DJ stage.",
   },
   courtyard: {
     id: "courtyard",
-    name: "Fountain Room & Courtyard",
+    name: "Main Party Floor",
     category: "COMMUNITY LOUNGE",
     icon: "⛲",
     color: "#14b8a6",
-    bounds: { x: 700, y: 480, w: 200, h: 220 },
-    description: "Open air atrium connecting all wings with marble fountains, banquet table and park benches.",
+    bounds: { x: 40, y: 40, w: 1520, h: 1120 },
+    description: "Open party floor with tables, games, fountain & park.",
   },
 };
 
-// ── PRIVATE CONVERSATION RUGS (Gather.town Style) ──
+// ── PRIVATE CONVERSATION RUGS ──
 export const PRIVATE_RUGS: PrivateRug[] = [
-  {
-    id: "rug_office_meeting_1",
-    name: "Office Sync Pod Alpha",
-    zoneId: "office",
-    x: 460,
-    y: 200,
-    w: 160,
-    h: 120,
-    color: "#0284c7",
-    capacity: 4,
-  },
-  {
-    id: "rug_office_lounge",
-    name: "Watercooler Coffee Circle",
-    zoneId: "office",
-    x: 180,
-    y: 350,
-    w: 180,
-    h: 110,
-    color: "#0369a1",
-    capacity: 6,
-  },
-  {
-    id: "rug_library_nook",
-    name: "Private Study Alcove",
-    zoneId: "library",
-    x: 950,
-    y: 340,
-    w: 150,
-    h: 110,
-    color: "#7e22ce",
-    capacity: 3,
-  },
   {
     id: "rug_music_greenroom",
     name: "Backstage Band Lounge",
@@ -469,193 +392,11 @@ export const PRIVATE_RUGS: PrivateRug[] = [
     color: "#be123c",
     capacity: 4,
   },
-  {
-    id: "rug_debate_caucus",
-    name: "Jury Caucus Table",
-    zoneId: "debate",
-    x: 1150,
-    y: 900,
-    w: 160,
-    h: 110,
-    color: "#047857",
-    capacity: 5,
-  },
-  {
-    id: "rug_office_arcade",
-    name: "Arcade Gaming Lounge",
-    zoneId: "office",
-    x: 320,
-    y: 350,
-    w: 180,
-    h: 120,
-    color: "#818cf8",
-    capacity: 4,
-  },
 ];
 
-// ── INTERACTIVE OBJECTS ACROSS ROOMS ──
+// ── INTERACTIVE OBJECTS ──
 export const INTERACTIVE_OBJECTS: InteractiveObject[] = [
-  // 🏢 Virtual Office
-  {
-    id: "office_desk_1",
-    zoneId: "office",
-    name: "Workstation Alpha",
-    icon: "🪑",
-    type: "chair",
-    x: 140,
-    y: 180,
-    w: 36,
-    h: 36,
-    prompt: "Press [E] to Sit at Desk Alpha",
-  },
-  {
-    id: "office_desk_2",
-    zoneId: "office",
-    name: "Workstation Beta",
-    icon: "🪑",
-    type: "chair",
-    x: 230,
-    y: 180,
-    w: 36,
-    h: 36,
-    prompt: "Press [E] to Sit at Desk Beta",
-  },
-  {
-    id: "office_desk_3",
-    zoneId: "office",
-    name: "Workstation Gamma",
-    icon: "🪑",
-    type: "chair",
-    x: 320,
-    y: 180,
-    w: 36,
-    h: 36,
-    prompt: "Press [E] to Sit at Desk Gamma",
-  },
-  {
-    id: "office_whiteboard",
-    zoneId: "office",
-    name: "Team Conference Whiteboard",
-    icon: "📋",
-    type: "whiteboard",
-    x: 480,
-    y: 120,
-    w: 120,
-    h: 48,
-    prompt: "Press [E] to Open Whiteboard & Scratchpad",
-  },
-  {
-    id: "office_couch",
-    zoneId: "office",
-    name: "Breakout Watercooler Couch",
-    icon: "🛋️",
-    type: "chair",
-    x: 220,
-    y: 380,
-    w: 100,
-    h: 40,
-    prompt: "Press [E] to Relax on Couch",
-  },
-  {
-    id: "office_coffee_bar",
-    zoneId: "office",
-    name: "Barista Espresso Machine",
-    icon: "☕",
-    type: "coffee",
-    x: 100,
-    y: 380,
-    w: 48,
-    h: 40,
-    prompt: "Press [E] to Brew Fresh Espresso (+Coffee Mug)",
-  },
-  {
-    id: "office_arcade_cabinet",
-    zoneId: "office",
-    name: "Arcade Gaming Station",
-    icon: "🕹️",
-    type: "arcade",
-    x: 340,
-    y: 375,
-    w: 44,
-    h: 48,
-    prompt: "Press [E] to Open Arcade Lounge (Play 20+ Games with Friends)",
-  },
-  {
-    id: "office_arcade_stool_1",
-    zoneId: "office",
-    name: "Arcade Gaming Stool 1",
-    icon: "🪑",
-    type: "chair",
-    x: 400,
-    y: 382,
-    w: 34,
-    h: 34,
-    prompt: "Press [E] to Sit at Arcade Station (Play with Friends)",
-  },
-  {
-    id: "office_arcade_stool_2",
-    zoneId: "office",
-    name: "Arcade Gaming Stool 2",
-    icon: "🪑",
-    type: "chair",
-    x: 445,
-    y: 382,
-    w: 34,
-    h: 34,
-    prompt: "Press [E] to Sit at Arcade Station (Play with Friends)",
-  },
-
-  // 📚 Quiet Sanctuary Library
-  {
-    id: "library_pomodoro",
-    zoneId: "library",
-    name: "Sanctuary Focus Altar",
-    icon: "⏱️",
-    type: "pomodoro",
-    x: 1200,
-    y: 140,
-    w: 64,
-    h: 48,
-    prompt: "Press [E] for 25-Min Focus Pomodoro (+50 Aura)",
-  },
-  {
-    id: "library_chair_1",
-    zoneId: "library",
-    name: "Reading Armchair 1",
-    icon: "🪑",
-    type: "chair",
-    x: 980,
-    y: 220,
-    w: 36,
-    h: 36,
-    prompt: "Press [E] to Read in Armchair",
-  },
-  {
-    id: "library_chair_2",
-    zoneId: "library",
-    name: "Reading Armchair 2",
-    icon: "🪑",
-    type: "chair",
-    x: 1080,
-    y: 220,
-    w: 36,
-    h: 36,
-    prompt: "Press [E] to Read in Armchair",
-  },
-  {
-    id: "library_study_table",
-    zoneId: "library",
-    name: "Oak Study Table",
-    icon: "📖",
-    type: "chair",
-    x: 1320,
-    y: 300,
-    w: 80,
-    h: 40,
-    prompt: "Press [E] to Study at Table",
-  },
-
-  // 🎵 Music Academy & Jam Studio
+  // 🎵 Music Zone
   {
     id: "music_piano",
     zoneId: "music",
@@ -692,60 +433,7 @@ export const INTERACTIVE_OBJECTS: InteractiveObject[] = [
     h: 50,
     prompt: "Press [E] to Spin Jukebox Radio",
   },
-
-  // 🎤 Concert & Festival Hall
-  {
-    id: "concert_stage_mic",
-    zoneId: "concert",
-    name: "Center Stage Mic",
-    icon: "🎙️",
-    type: "podium",
-    x: 780,
-    y: 720,
-    w: 40,
-    h: 40,
-    prompt: "Press [E] to Take Stage Microphone (Hall-Wide Broadcast)",
-  },
-
-  // ⚖️ Town Hall Debate Arena
-  {
-    id: "debate_prop_podium",
-    zoneId: "debate",
-    name: "Proposition Podium",
-    icon: "🗣️",
-    type: "podium",
-    x: 1180,
-    y: 740,
-    w: 40,
-    h: 40,
-    prompt: "Press [E] to Speak for Proposition",
-  },
-  {
-    id: "debate_opp_podium",
-    zoneId: "debate",
-    name: "Opposition Podium",
-    icon: "🗣️",
-    type: "podium",
-    x: 1420,
-    y: 740,
-    w: 40,
-    h: 40,
-    prompt: "Press [E] to Speak for Opposition",
-  },
-  {
-    id: "debate_judge_gavel",
-    zoneId: "debate",
-    name: "Judge's Gavel Bench",
-    icon: "🔨",
-    type: "gavel",
-    x: 1300,
-    y: 700,
-    w: 60,
-    h: 40,
-    prompt: "Press [E] to Strike Gavel (ORDER IN COURT!)",
-  },
-
-  // ⛲ Central Courtyard
+  // ⛲ Courtyard
   {
     id: "courtyard_fountain",
     zoneId: "courtyard",
@@ -760,7 +448,7 @@ export const INTERACTIVE_OBJECTS: InteractiveObject[] = [
   },
 ];
 
-// ── ROOM DOORWAYS (Grand Archway Portals for Seamless Walk-In) ──
+// ── ROOM DOORWAYS ──
 export interface SpaceDoorway {
   zoneId: SpaceZoneId;
   name: string;
@@ -775,28 +463,6 @@ export interface SpaceDoorway {
 
 export const SPACE_DOORWAYS: SpaceDoorway[] = [
   {
-    zoneId: "office",
-    name: "Office Entrance",
-    x: 710,
-    y: 230,
-    w: 24,
-    h: 160,
-    orientation: "vertical",
-    spawnInside: { x: 650, y: 310 },
-    spawnOutside: { x: 760, y: 310 },
-  },
-  {
-    zoneId: "library",
-    name: "Library Sanctuary Entrance",
-    x: 866,
-    y: 230,
-    w: 24,
-    h: 160,
-    orientation: "vertical",
-    spawnInside: { x: 930, y: 310 },
-    spawnOutside: { x: 820, y: 310 },
-  },
-  {
     zoneId: "music",
     name: "Music Studio Entrance",
     x: 200,
@@ -807,31 +473,9 @@ export const SPACE_DOORWAYS: SpaceDoorway[] = [
     spawnInside: { x: 280, y: 720 },
     spawnOutside: { x: 280, y: 600 },
   },
-  {
-    zoneId: "concert",
-    name: "Concert Hall Grand Portal",
-    x: 720,
-    y: 646,
-    w: 160,
-    h: 24,
-    orientation: "horizontal",
-    spawnInside: { x: 800, y: 720 },
-    spawnOutside: { x: 800, y: 600 },
-  },
-  {
-    zoneId: "debate",
-    name: "Debate Arena Main Gate",
-    x: 1240,
-    y: 646,
-    w: 160,
-    h: 24,
-    orientation: "horizontal",
-    spawnInside: { x: 1320, y: 720 },
-    spawnOutside: { x: 1320, y: 600 },
-  },
 ];
 
-// ── COLLISION WALLS & ROOM PERIMETERS (With Wide 160px Doorway Gaps) ──
+// ── COLLISION WALLS (Outer Boundary + Music Room Only) ──
 export const COLLISION_BOXES: CollisionBox[] = [
   // Outer map boundary walls
   { x: 0, y: 0, w: WORLD_WIDTH, h: 40 },
@@ -839,40 +483,12 @@ export const COLLISION_BOXES: CollisionBox[] = [
   { x: 0, y: 0, w: 40, h: WORLD_HEIGHT },
   { x: WORLD_WIDTH - 40, y: 0, w: 40, h: WORLD_HEIGHT },
 
-  // Office Room Walls (Wide 160px Doorway at x: 714, y: 230-390)
-  { x: 50, y: 50, w: 680, h: 16 },
-  { x: 50, y: 50, w: 16, h: 480 },
-  { x: 50, y: 514, w: 680, h: 16 },
-  { x: 714, y: 50, w: 16, h: 180 },
-  { x: 714, y: 390, w: 16, h: 140 },
-
-  // Library Room Walls (Wide 160px Doorway at x: 870, y: 230-390)
-  { x: 870, y: 50, w: 680, h: 16 },
-  { x: 1534, y: 50, w: 16, h: 480 },
-  { x: 870, y: 514, w: 680, h: 16 },
-  { x: 870, y: 50, w: 16, h: 180 },
-  { x: 870, y: 390, w: 16, h: 140 },
-
   // Music Room Walls (Wide 160px Doorway at Top y: 650, x: 200-360)
   { x: 50, y: 650, w: 150, h: 16 },
   { x: 360, y: 650, w: 150, h: 16 },
   { x: 50, y: 650, w: 16, h: 500 },
   { x: 494, y: 650, w: 16, h: 500 },
   { x: 50, y: 1134, w: 460, h: 16 },
-
-  // Concert Hall Walls (Wide 160px Doorway at Top y: 650, x: 720-880)
-  { x: 550, y: 650, w: 170, h: 16 },
-  { x: 880, y: 650, w: 170, h: 16 },
-  { x: 550, y: 650, w: 16, h: 500 },
-  { x: 1034, y: 650, w: 16, h: 500 },
-  { x: 550, y: 1134, w: 500, h: 16 },
-
-  // Debate Arena Walls (Wide 160px Doorway at Top y: 650, x: 1240-1400)
-  { x: 1090, y: 650, w: 150, h: 16 },
-  { x: 1400, y: 650, w: 150, h: 16 },
-  { x: 1090, y: 650, w: 16, h: 500 },
-  { x: 1534, y: 650, w: 16, h: 500 },
-  { x: 1090, y: 1134, w: 460, h: 16 },
 ];
 
 export function getZoneAtCoordinates(x: number, y: number): SpaceZoneId {
@@ -954,36 +570,7 @@ const KNOWN_MOCK_SPACE_IDS = new Set([
 
 export function isUnusedOrMockSpace(s: Partial<SpaceDoc>): boolean {
   if (!s || !s.id) return true;
-  if (KNOWN_MOCK_SPACE_IDS.has(s.id)) return true;
-  const name = (s.name || "").toLowerCase();
-  const id = s.id.toLowerCase();
-  const desc = (s.description || "").toLowerCase();
-  if (
-    id.includes("concert") ||
-    id.includes("cowork") ||
-    id.includes("cospace") ||
-    id.includes("office") ||
-    id.includes("campus") ||
-    id.includes("library") ||
-    id.includes("debate") ||
-    name.includes("concert") ||
-    name.includes("co-space") ||
-    name.includes("cospace") ||
-    name.includes("cowork") ||
-    name.includes("virtual office") ||
-    name.includes("global campus") ||
-    name.includes("amphitheater") ||
-    name.includes("debate forum") ||
-    name.includes("polymath silent") ||
-    name.includes("team central hq") ||
-    name.includes("igniting creativity") ||
-    name.includes("fireside lodge") ||
-    name.includes("townhall") ||
-    desc.includes("keynote panel")
-  ) {
-    return true;
-  }
-  return false;
+  return KNOWN_MOCK_SPACE_IDS.has(s.id);
 }
 
 function getLocalSpacesCache(): SpaceDoc[] {
@@ -1051,17 +638,11 @@ export function subscribeToPublicSpaces(callback: (spaces: SpaceDoc[]) => void):
         const now = Date.now();
         const firestoreDocs = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as SpaceDoc[];
 
-        // Filter expired spaces, legacy mock spaces and unused preset rooms like concert / co-space
+        // Filter expired and mock spaces (read-only filtering, no destructive deletes)
         const valid = firestoreDocs.filter((s) => {
           if (!s.name) return false;
-          if (isUnusedOrMockSpace(s)) {
-            deleteDoc(doc(db, SPACES_COLLECTION, s.id)).catch(() => {});
-            return false;
-          }
-          if (s.expiresAt && s.expiresAt < now) {
-            deleteDoc(doc(db, SPACES_COLLECTION, s.id)).catch(() => {});
-            return false;
-          }
+          if (isUnusedOrMockSpace(s)) return false;
+          if (s.expiresAt && s.expiresAt < now) return false;
           return true;
         });
 

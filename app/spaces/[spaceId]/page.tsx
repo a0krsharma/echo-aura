@@ -19,7 +19,6 @@ import { useAuth } from "@/app/components/AuthProvider";
 import EchoSpacesWorld from "@/app/components/spaces/EchoSpacesWorld";
 import SpatialVoiceManager from "@/app/components/spaces/SpatialVoiceManager";
 import AvatarStudioModal from "@/app/components/spaces/AvatarStudioModal";
-import HostSettingsModal from "@/app/components/spaces/HostSettingsModal";
 import WhiteboardCanvasModal from "@/app/components/spaces/WhiteboardCanvasModal";
 import SpaceArcadeModal from "@/app/components/spaces/SpaceArcadeModal";
 import JukeboxModal from "@/app/components/spaces/JukeboxModal";
@@ -31,28 +30,20 @@ import GatherWaveToast, { WaveInvitation } from "@/app/components/spaces/GatherW
 import GatherDirectDock from "@/app/components/spaces/GatherDirectDock";
 import InviteFriendsModal from "@/app/components/spaces/InviteFriendsModal";
 import HostEventModal from "@/app/components/spaces/HostEventModal";
-import PartyToolsModal from "@/app/components/spaces/PartyToolsModal";
-import AutoSeatingModal from "@/app/components/spaces/AutoSeatingModal";
-import SpaceCateringModal from "@/app/components/spaces/SpaceCateringModal";
 import SpaceGiftingModal from "@/app/components/spaces/SpaceGiftingModal";
 import { UnoGameModal } from "@/app/components/spaces/UnoGameModal";
 import BirthdayCakeModal from "@/app/components/spaces/BirthdayCakeModal";
 import { PartyTableGamesModal, PartyGameTab } from "@/app/components/spaces/PartyTableGamesModal";
 import { GuestAuthModal } from "@/app/components/spaces/GuestAuthModal";
 import { StagePresentationBar } from "@/app/components/spaces/StagePresentationBar";
-import { EventSocialPanel, EventPanelTab } from "@/app/components/spaces/EventSocialPanel";
 import TelepartyWatchModal, { TelepartySyncState } from "@/app/components/spaces/TelepartyWatchModal";
-import HostRoomControlsModal from "@/app/components/spaces/HostRoomControlsModal";
 import { PartyMusicBar } from "@/app/components/spaces/PartyMusicBar";
 import {
   getWalletState,
-  canClaimDailyReward,
-  claimDailyReward,
   TableDish,
   ChairReservation,
-  BoutiqueOutfit,
 } from "@/lib/spacesEconomy";
-import { playNomEating, playCashRegister } from "@/lib/spacesSfx";
+import { playNomEating } from "@/lib/spacesSfx";
 import {
   SpaceDoc,
   SpaceZoneId,
@@ -60,10 +51,7 @@ import {
   AvatarConfig,
   InteractiveObject,
   CustomDecoration,
-  DEFAULT_SPACES,
-  DEFAULT_AMBIENT_BOTS,
   SPACES_ZONES,
-  getSpaceDoc,
   updateSpaceDoc,
   deleteSpaceDoc,
   subscribeToSpaceDoc,
@@ -73,7 +61,6 @@ import {
   subscribeToSpaceTableGame,
   updateSpaceTableGame,
   SpaceTableGameLiveState,
-  SpaceSpotifySyncState,
   getZoneAtCoordinates,
   getPrivateRugAtCoordinates,
 } from "@/lib/spaces";
@@ -84,35 +71,15 @@ import {
   ArrowLeft,
   Users,
   Settings,
-  Palette,
-  Edit3,
   Megaphone,
   Share2,
   Sparkles,
-  Lock,
-  Compass,
-  ArrowRight,
-  MapPin,
-  Check,
-  Laptop,
-  ChevronDown,
-  Volume2,
   Tv,
-  Edit2,
-  Wine,
   UtensilsCrossed,
   Gift,
-  Armchair,
-  Dices,
-  Coins,
-  Crown,
-  Bell,
-  HelpCircle,
   Trash2,
-  BarChart2,
   Radio,
   Music,
-  MoreHorizontal,
   MessageSquare,
 } from "lucide-react";
 
@@ -152,10 +119,7 @@ export default function DynamicSpaceWorldPage() {
       decorations: [],
     };
   });
-  const [loading, setLoading] = useState(true);
-
   // Direct frictionless entry into space (No blocking gate)
-  const [hasEntered, setHasEntered] = useState(true);
   const [welcomeToast, setWelcomeToast] = useState<string | null>(null);
   const [guestAuthModalOpen, setGuestAuthModalOpen] = useState(false);
   const [guestAuthAction, setGuestAuthAction] = useState<{
@@ -166,15 +130,7 @@ export default function DynamicSpaceWorldPage() {
     title: "Host Your Own Party Table",
     description: "Sign in with Google to host banquet events, customize space themes, and save persistent friend invites.",
   });
-  const [gatherDropdownOpen, setGatherDropdownOpen] = useState(false);
-  const [chosenSpawn, setChosenSpawn] = useState<{ name: string; x: number; y: number }>({
-    name: "Fountain Room",
-    x: 800,
-    y: 540,
-  });
-
   // Top Location Dropdown Menu State
-  const [roomDropdownOpen, setRoomDropdownOpen] = useState(false);
 
   // Active Floor (Elevator Simulation)
   const [currentFloor, setCurrentFloor] = useState<string>("1st");
@@ -187,15 +143,11 @@ export default function DynamicSpaceWorldPage() {
   const [chatMessages, setChatMessages] = useState<SpaceChatMessage[]>([]);
 
   // Consolidated Header Hub Dropdowns
-  const [activitiesDropdownOpen, setActivitiesDropdownOpen] = useState(false);
-  const [hospitalityDropdownOpen, setHospitalityDropdownOpen] = useState(false);
   const [hostHubDropdownOpen, setHostHubDropdownOpen] = useState(false);
   const [partyMusicOpen, setPartyMusicOpen] = useState(false);
-  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
 
   // Modals
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
-  const [hostModalOpen, setHostModalOpen] = useState(false);
   const [whiteboardModalOpen, setWhiteboardModalOpen] = useState(false);
   const [arcadeModalOpen, setArcadeModalOpen] = useState(false);
   const [jukeboxModalOpen, setJukeboxModalOpen] = useState(false);
@@ -206,11 +158,9 @@ export default function DynamicSpaceWorldPage() {
   const [speakingUids, setSpeakingUids] = useState<Set<string>>(new Set());
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [hostEventModalOpen, setHostEventModalOpen] = useState(false);
-  const [partyModalOpen, setPartyModalOpen] = useState(false);
   const [confettiBlastCount, setConfettiBlastCount] = useState(0);
   const [gatherToast, setGatherToast] = useState<{ text: string; x: number; y: number } | null>(null);
   const [activeScreenStream, setActiveScreenStream] = useState<MediaStream | null>(null);
-  const canvasElementRef = React.useRef<HTMLCanvasElement | null>(null);
 
   // Virtual Economy & Social Party States
   const [walletCash, setWalletCash] = useState<number>(() => {
@@ -219,9 +169,7 @@ export default function DynamicSpaceWorldPage() {
     }
     return 500;
   });
-  const [cateringModalOpen, setCateringModalOpen] = useState(false);
   const [giftingModalOpen, setGiftingModalOpen] = useState(false);
-  const [seatingModalOpen, setSeatingModalOpen] = useState(false);
   const [unoModalOpen, setUnoModalOpen] = useState(false);
   const [partyTableGamesOpen, setPartyTableGamesOpen] = useState(false);
   const [partyTableGameTab, setPartyTableGameTab] = useState<PartyGameTab>("ludo");
@@ -234,16 +182,13 @@ export default function DynamicSpaceWorldPage() {
   const [screenConfettiActive, setScreenConfettiActive] = useState(false);
   const [giftReceivedToast, setGiftReceivedToast] = useState<{ from: string; giftName: string; icon: string } | null>(null);
 
-  // Stage Presentation & Event Social Panel (Only auto-active on Webinars)
+  // Stage Presentation (Only auto-active on Webinars)
   const [isStageActive, setIsStageActive] = useState(() => Boolean(space?.category === "WEBINAR"));
   const [isPresentingOnStage, setIsPresentingOnStage] = useState(false);
-  const [eventSocialPanelOpen, setEventSocialPanelOpen] = useState(false);
-  const [eventSocialPanelTab, setEventSocialPanelTab] = useState<EventPanelTab>("qa");
 
-  // Teleparty YouTube Co-Watch & Host Room Controls Modal States
+  // Teleparty YouTube Co-Watch
   const [telepartyModalOpen, setTelepartyModalOpen] = useState(false);
   const [telepartySyncState, setTelepartySyncState] = useState<TelepartySyncState | undefined>(undefined);
-  const [hostRoomControlsOpen, setHostRoomControlsOpen] = useState(false);
 
   // Table dishes placed on Banquet Table
   const [tableDishes, setTableDishes] = useState<TableDish[]>([
@@ -306,37 +251,11 @@ export default function DynamicSpaceWorldPage() {
     });
   };
 
-  const handleClaimDailyAllowance = () => {
-    const success = claimDailyReward();
-    if (success) {
-      playCashRegister();
-      setWalletCash(getWalletState().cash);
-      handleSendSpeech("💵 Claimed daily +$100 Echo Cash reward!");
-    }
-  };
 
   const refreshWalletCash = () => {
     setWalletCash(getWalletState().cash);
   };
 
-  const handleEquipOutfit = (outfit: BoutiqueOutfit) => {
-    const updated = {
-      ...avatarConfig,
-      outfit: outfit.outfitType as any,
-      outfitColor: outfit.color,
-      accessory: (outfit.accessory || avatarConfig.accessory) as any,
-    };
-    setAvatarConfig(updated);
-    setLocalAvatar((prev) => ({
-      ...prev,
-      avatarConfig: updated,
-      hoodieColor: outfit.color,
-    }));
-    try {
-      localStorage.setItem("echo_spaces_avatar", JSON.stringify(updated));
-    } catch {}
-    handleSendSpeech(`✨ Swapped into fresh boutique fit: ${outfit.name}!`);
-  };
 
   const handleSendGift = (recipient: string, giftName: string, icon: string) => {
     setGiftReceivedToast({ from: localAvatar.handle, giftName, icon });
@@ -466,7 +385,6 @@ export default function DynamicSpaceWorldPage() {
 
   // Remote Avatars (Real live users only - zero fake bots)
   const [remoteAvatars, setRemoteAvatars] = useState<SpatialAvatar[]>([]);
-  const [copiedLink, setCopiedLink] = useState(false);
 
   // Live Table Game State synced from Firestore
   const [liveTableGame, setLiveTableGame] = useState<SpaceTableGameLiveState | null>(null);
@@ -554,23 +472,13 @@ export default function DynamicSpaceWorldPage() {
           setPartyMusicOpen(true);
         }
       }
-      setLoading(false);
+
     });
     return () => {
       unsub();
     };
   }, [spaceId]);
 
-  // Ensure default spaces or newly visited spaces are seeded in Firestore for multi-user sync
-  useEffect(() => {
-    if (space && space.id) {
-      updateSpaceDoc(space.id, {
-        name: space.name,
-        category: space.category,
-        vibe: space.vibe,
-      });
-    }
-  }, [space?.id]);
 
   // ── 👥 REAL-TIME PARTICIPANT SPATIAL PRESENCE & HEARTBEAT ──────
   // 1. Subscribe to live participants in this space
@@ -698,10 +606,7 @@ export default function DynamicSpaceWorldPage() {
       handleTeleport(1200, 440);
       setWelcomeToast("🫓 Welcome to the Dinner Feast! Grab a chair at the banquet table.");
       setTimeout(() => setWelcomeToast(null), 5000);
-    } else if (partyParam === "study") {
-      handleTeleport(1200, 260);
-      setWelcomeToast("📚 Welcome to the Silent Library! 25/5 Pomodoro focus active.");
-      setTimeout(() => setWelcomeToast(null), 5000);
+
     } else {
       setWelcomeToast(`👋 Welcome to ${space.name}! Walk with WASD or click anywhere.`);
       setTimeout(() => setWelcomeToast(null), 4000);
@@ -755,7 +660,7 @@ export default function DynamicSpaceWorldPage() {
       isMoving: false,
       lastUpdated: Date.now(),
     }));
-    setRoomDropdownOpen(false);
+
   };
 
   // High-Intent Action Auth Gate (Sign-up prompt when hosting, ordering, or gifting)
@@ -773,29 +678,7 @@ export default function DynamicSpaceWorldPage() {
     }
   };
 
-  // Walk to Desk Shortcut (Authentic Gather button from photo!)
-  const handleWalkToDesk = () => {
-    spacesSfx.playFootstep();
-    // Desk in Strategy&Ops zone
-    handleTeleport(270, 280);
-    handleSit(true, "strategy_desk");
-    handleSendSpeech("🪑 Arrived and seated at my desk in Strategy&Ops!");
-  };
 
-  // Elevator Floor Switcher
-  const handleElevatorFloor = (floor: string) => {
-    spacesSfx.playFocusBell();
-    setCurrentFloor(floor);
-    handleTeleport(800, 70);
-    handleSendSpeech(`🛗 Took elevator to ${floor} Floor!`);
-  };
-
-  // Confirm Enter Space from Check-In Gate
-  const handleEnterSpaceNow = () => {
-    spacesSfx.playZoneChime();
-    setHasEntered(true);
-    handleTeleport(chosenSpawn.x, chosenSpawn.y);
-  };
 
   // Handle Movement
   const handleMove = (x: number, y: number, dir: "down" | "up" | "left" | "right", isMoving: boolean) => {
@@ -945,23 +828,18 @@ export default function DynamicSpaceWorldPage() {
     if (obj.type === "whiteboard") {
       setWhiteboardModalOpen(true);
       spacesSfx.playSitPop();
-    } else if (obj.type === "arcade" || obj.id === "office_arcade_cabinet") {
+    } else if (obj.type === "arcade") {
       setArcadeModalOpen(true);
       spacesSfx.playKeyNote(4);
     } else if (obj.type === "jukebox" || obj.id === "music_jukebox") {
       setJukeboxModalOpen(true);
       spacesSfx.playKeyNote(3);
-    } else if (obj.type === "coffee" || obj.id === "office_coffee_bar") {
+    } else if (obj.type === "coffee") {
       handleToggleCoffee();
     } else if (obj.type === "fountain") {
       spacesSfx.playFountainSplash();
       handleSendSpeech("🪙 Tossed a coin into the Echo Fountain!");
-    } else if (obj.type === "gavel") {
-      spacesSfx.playGavelStrike();
-      handleSendSpeech("🔨 Order in the court!");
-    } else if (obj.type === "pomodoro") {
-      spacesSfx.playFocusBell();
-    } else if (obj.type === "podium" || obj.id === "concert_stage_mic" || obj.id === "debate_prop_podium" || obj.id === "debate_opp_podium") {
+    } else if (obj.type === "podium") {
       const nextStage = !isPresentingOnStage;
       setIsPresentingOnStage(nextStage);
       spacesSfx.playPartyFanfare();
@@ -1004,13 +882,6 @@ export default function DynamicSpaceWorldPage() {
     }
   };
 
-  // Share link
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
-    setCopiedLink(true);
-    spacesSfx.playKeyNote(5);
-    setTimeout(() => setCopiedLink(false), 2500);
-  };
 
   // Handle Custom Decorations Update & Firestore persistence
   const handleUpdateDecorations = async (decos: CustomDecoration[]) => {
@@ -1035,16 +906,6 @@ export default function DynamicSpaceWorldPage() {
     setConfettiBlastCount((prev) => prev + 1);
   };
 
-  // Capture Photo Booth image
-  const handleCapturePhoto = async (): Promise<string | null> => {
-    if (!canvasElementRef.current) return null;
-    try {
-      return canvasElementRef.current.toDataURL("image/png");
-    } catch (e) {
-      console.error(e);
-      return null;
-    }
-  };
 
   // Screen Share Handler
   const handleStartScreenShare = async () => {
@@ -1351,7 +1212,7 @@ export default function DynamicSpaceWorldPage() {
           spaceTitle={space.name}
           isHost={isHost}
           currentFloor={currentFloor}
-          onSelectFloor={handleElevatorFloor}
+          onSelectFloor={() => {}}
           speakers={space.activeStageSpeakers}
           isPresenting={isPresentingOnStage}
           onTogglePresenting={() => {
@@ -1450,13 +1311,10 @@ export default function DynamicSpaceWorldPage() {
           onOpenArcade={() => setArcadeModalOpen(true)}
           onOpenJukebox={() => setJukeboxModalOpen(true)}
           onOpenWhiteboard={() => setWhiteboardModalOpen(true)}
-          onTeleport={handleTeleport}
           onOpenAvatarStudio={() => setAvatarModalOpen(true)}
           onUpdateDecorations={handleUpdateDecorations}
           confettiTrigger={confettiBlastCount}
-          onGetCanvasRef={(canvas) => {
-            canvasElementRef.current = canvas;
-          }}
+
           tableDishes={tableDishes}
           chairReservations={chairReservations}
           onBiteDish={handleBiteDish}
@@ -1531,12 +1389,7 @@ export default function DynamicSpaceWorldPage() {
         onSave={handleSaveAvatar}
       />
 
-      <HostSettingsModal
-        isOpen={hostModalOpen}
-        onClose={() => setHostModalOpen(false)}
-        space={space}
-        onSpaceUpdated={(updates) => setSpace((prev) => ({ ...prev, ...updates }))}
-      />
+
 
       <WhiteboardCanvasModal
         isOpen={whiteboardModalOpen}
@@ -1676,41 +1529,7 @@ export default function DynamicSpaceWorldPage() {
         </div>
       )}
 
-      {/* Virtual Friend Hosting & Party Suite Modal */}
-      <PartyToolsModal
-        isOpen={partyModalOpen}
-        onClose={() => setPartyModalOpen(false)}
-        spaceName={space.name}
-        localAvatar={localAvatar}
-        remoteAvatars={remoteAvatars}
-        onTriggerConfetti={handleTriggerConfetti}
-        onSendSpeech={handleSendSpeech}
-        onCapturePhoto={handleCapturePhoto}
-        onStartScreenShare={handleStartScreenShare}
-        onServeCake={handleServeCake}
-        onDressBirthday={handleDressBirthday}
-        onOpenCatering={() => {
-          setPartyModalOpen(false);
-          setCateringModalOpen(true);
-        }}
-        onOpenSeating={() => {
-          setPartyModalOpen(false);
-          setSeatingModalOpen(true);
-        }}
-        onOpenUno={() => {
-          setPartyModalOpen(false);
-          setUnoModalOpen(true);
-        }}
-        onOpenGifting={() => {
-          setPartyModalOpen(false);
-          setGiftingModalOpen(true);
-        }}
-        onOpenPartyTableGames={(tab) => {
-          setPartyModalOpen(false);
-          if (tab) setPartyTableGameTab(tab);
-          setPartyTableGamesOpen(true);
-        }}
-      />
+
 
       {/* Interactive Birthday Cake Ceremony Modal (Blow Candles, Cut Cake, Pop Champagne, Hand Out Slices) */}
       <BirthdayCakeModal
@@ -1736,29 +1555,7 @@ export default function DynamicSpaceWorldPage() {
         }}
       />
 
-      {/* Dinner Party Catering & Table Food Menu (Butter Naan, Pasta, Cake, Champagne, Chinese, Chills) */}
-      <SpaceCateringModal
-        isOpen={cateringModalOpen}
-        onClose={() => {
-          setCateringModalOpen(false);
-          refreshWalletCash();
-        }}
-        userHandle={localAvatar.handle}
-        activeDishes={tableDishes}
-        onOrderDish={(dish) => {
-          handleProtectedAction(
-            "Order Banquet Food & Drinks",
-            "Sign in with Google to order catering feasts, customize party dishes, and charge your table tab.",
-            <UtensilsCrossed className="w-7 h-7" />,
-            () => {
-              setTableDishes((prev) => [...prev, dish]);
-              refreshWalletCash();
-            }
-          );
-        }}
-        onEatBite={handleBiteDish}
-        onBroadcastSpeech={handleSendSpeech}
-      />
+
 
       {/* Boutique Wardrobe & Virtual Gifting to Friends */}
       <SpaceGiftingModal
@@ -1798,18 +1595,7 @@ export default function DynamicSpaceWorldPage() {
         }}
       />
 
-      {/* Smart Banquet Chair Auto-Seating (2 to 16 guests) */}
-      <AutoSeatingModal
-        isOpen={seatingModalOpen}
-        onClose={() => setSeatingModalOpen(false)}
-        localAvatar={localAvatar}
-        remoteAvatars={remoteAvatars}
-        onApplySeating={(reservations) => {
-          setChairReservations(reservations);
-        }}
-        onTeleportToSeat={(x, y) => handleTeleport(x, y)}
-        onBroadcastSpeech={handleSendSpeech}
-      />
+
 
       {/* Multiplayer Uno Card Table (You, Left, Across, Right) */}
       <UnoGameModal
@@ -1893,34 +1679,7 @@ export default function DynamicSpaceWorldPage() {
         spaceId={space.id}
       />
 
-      {/* Full Host Room Controls Modal (16-Seat Chairs, Cake Designer & Table Decor) */}
-      <HostRoomControlsModal
-        isOpen={hostRoomControlsOpen}
-        onClose={() => setHostRoomControlsOpen(false)}
-        space={space}
-        onUpdateSpace={async (updates) => {
-          setSpace((prev) => ({ ...prev, ...updates }));
-          try {
-            await updateSpaceDoc(space.id, updates);
-          } catch (e) {
-            console.error("Failed to update space doc:", e);
-          }
-        }}
-        localAvatar={localAvatar}
-        remoteAvatars={remoteAvatars}
-        chairReservations={chairReservations}
-        onUpdateChairReservations={(res) => setChairReservations(res)}
-        tableDishes={tableDishes}
-        onPlaceCakeOnTable={(cakeDish) => {
-          setTableDishes((prev) => {
-            const filtered = prev.filter((d) => !d.itemId.includes("cake"));
-            return [...filtered, cakeDish];
-          });
-        }}
-        onTeleportToSeat={(x, y) => handleTeleport(x, y)}
-        onBroadcastSpeech={(text) => handleSendSpeech(text)}
-        onTriggerConfetti={handleTriggerConfetti}
-      />
+
 
       {/* Floating Gift Received Toast */}
       {giftReceivedToast && (
@@ -1933,17 +1692,7 @@ export default function DynamicSpaceWorldPage() {
         </div>
       )}
 
-      {/* Interactive Social Side Panel (Image 1 Fidelity: Q&A with Upvoting, Polls, Chat, Attendees) */}
-      <EventSocialPanel
-        isOpen={eventSocialPanelOpen}
-        onClose={() => setEventSocialPanelOpen(false)}
-        currentTab={eventSocialPanelTab}
-        onTabChange={(t) => setEventSocialPanelTab(t)}
-        localAvatar={localAvatar}
-        remoteAvatars={remoteAvatars}
-        isHost={isHost}
-        onSendChat={(msg) => handleSendSpeech(msg)}
-      />
+
     </div>
   );
 }

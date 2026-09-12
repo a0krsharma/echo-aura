@@ -4,13 +4,13 @@ import React, { useEffect, useState, useRef } from "react";
 import AgoraRTC, {
   type IAgoraRTCClient,
   type IMicrophoneAudioTrack,
-  type IRemoteAudioTrack,
   type ILocalAudioTrack,
+  type IRemoteAudioTrack,
 } from "agora-rtc-sdk-ng";
 import { useAuth } from "@/app/components/AuthProvider";
 import { AGORA_APP_ID } from "@/lib/agora";
-import { Mic, MicOff, Volume2, VolumeX, Radio, Sparkles } from "lucide-react";
-import { SpatialAvatar, SPACES_ZONES, SpaceZoneId } from "@/lib/spaces";
+import { Mic, MicOff, Radio } from "lucide-react";
+import { SpatialAvatar } from "@/lib/spaces";
 
 interface SpatialVoiceManagerProps {
   spaceId: string;
@@ -204,37 +204,18 @@ export default function SpatialVoiceManager({
 
       const dist = Math.hypot(localAvatar.x - remote.x, localAvatar.y - remote.y);
 
-      // Check if speaker is on a broadcast stage (Concert or Debate)
-      const isConcertStage =
-        remote.activeZone === "concert" &&
-        remote.y < 760 &&
-        localAvatar.activeZone === "concert";
-
-      const isDebatePodium =
-        remote.activeZone === "debate" &&
-        remote.y < 780 &&
-        localAvatar.activeZone === "debate";
-
       let volume = 100;
 
-      if (isConcertStage || isDebatePodium) {
-        // Full room broadcast!
+      // Proximity falloff: 100% at <= 120px, drops to 0 at 360px
+      const maxDist = 360;
+      const minDist = 120;
+      if (dist <= minDist) {
         volume = 100;
-      } else if (localAvatar.activeZone !== remote.activeZone) {
-        // Walls isolate different rooms!
+      } else if (dist >= maxDist) {
         volume = 0;
       } else {
-        // Proximity falloff: 100% at <= 120px, drops to 0 at 360px
-        const maxDist = 360;
-        const minDist = 120;
-        if (dist <= minDist) {
-          volume = 100;
-        } else if (dist >= maxDist) {
-          volume = 0;
-        } else {
-          const ratio = 1 - (dist - minDist) / (maxDist - minDist);
-          volume = Math.round(ratio * 100);
-        }
+        const ratio = 1 - (dist - minDist) / (maxDist - minDist);
+        volume = Math.round(ratio * 100);
       }
 
       try {

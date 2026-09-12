@@ -8,10 +8,6 @@ import {
   SPACES_ZONES,
   INTERACTIVE_OBJECTS,
   InteractiveObject,
-  PRIVATE_RUGS,
-  PrivateRug,
-  SPACE_DOORWAYS,
-  SpaceDoorway,
   CustomDecoration,
   DecorationItemDef,
   DECORATION_CATALOG,
@@ -40,7 +36,6 @@ import {
   Trash2,
   Smile,
   X,
-  Check,
   Plus,
   Minus,
   Hand,
@@ -69,7 +64,6 @@ interface EchoSpacesWorldProps {
   onOpenArcade?: () => void;
   onOpenJukebox?: () => void;
   onOpenWhiteboard?: () => void;
-  onTeleport?: (x: number, y: number) => void;
   onOpenAvatarStudio?: () => void;
   onUpdateDecorations?: (decorations: CustomDecoration[]) => void;
   confettiTrigger?: number;
@@ -164,8 +158,6 @@ export const ROUND_TABLE_CHAIRS: TableChairDef[] = NUMBERED_TABLES.flatMap((tbl)
   })
 );
 
-// 🎭 Concert seats removed — single cohesive party room
-export const CONCERT_CHAIRS: TableChairDef[] = [];
 
 // 🎵 7 Music Studio Jam & Instrument Seating
 export const MUSIC_JAM_CHAIRS: TableChairDef[] = [
@@ -228,8 +220,6 @@ export const MUSIC_JAM_CHAIRS: TableChairDef[] = [
   },
 ];
 
-// 💼 Office seats removed — single cohesive party room
-export const OFFICE_SEATS: TableChairDef[] = [];
 
 // ⛲ 4 Echo Marble Fountain Garden Benches
 export const COURTYARD_BENCHES: TableChairDef[] = [
@@ -293,7 +283,6 @@ export default function EchoSpacesWorld({
   onOpenArcade,
   onOpenJukebox,
   onOpenWhiteboard,
-  onTeleport,
   onOpenAvatarStudio,
   onUpdateDecorations,
   confettiTrigger = 0,
@@ -681,7 +670,7 @@ export default function EchoSpacesWorld({
       }
     }
 
-    // Check if clicked directly on any chair across all zones (Concert, Music, Office, Courtyard, Tables)
+    // Check if clicked directly on any chair across all active zones (Music, Courtyard, Tables)
     for (const chair of ALL_WORLD_SEATS) {
       if (Math.hypot(worldClickX - chair.x, worldClickY - chair.y) <= 24) {
         clickTargetRef.current = { x: chair.x, y: chair.y, time: Date.now() };
@@ -729,20 +718,6 @@ export default function EchoSpacesWorld({
           onBiteDish(dish.id);
           return;
         }
-      }
-    }
-
-    // Check if clicked directly on a doorway
-    for (const d of SPACE_DOORWAYS) {
-      if (
-        worldClickX >= d.x - 20 &&
-        worldClickX <= d.x + d.w + 20 &&
-        worldClickY >= d.y - 20 &&
-        worldClickY <= d.y + d.h + 20
-      ) {
-        spacesSfx.playZoneChime();
-        clickTargetRef.current = { x: d.spawnInside.x, y: d.spawnInside.y, time: Date.now() };
-        return;
       }
     }
 
@@ -982,86 +957,6 @@ export default function EchoSpacesWorld({
           ctx.stroke();
         }
       }
-
-      // Thematic Zone Floors
-      Object.values(SPACES_ZONES).forEach((zone) => {
-        const { bounds, id, color } = zone;
-        ctx.save();
-        if (id === "office") {
-          ctx.fillStyle = vibe === "SUNNY_DAYLIGHT" ? "#3f3c39" : "#24201e";
-          ctx.fillRect(bounds.x, bounds.y, bounds.w, bounds.h);
-        } else if (id === "library") {
-          ctx.fillStyle = "#16133a";
-          ctx.fillRect(bounds.x, bounds.y, bounds.w, bounds.h);
-          ctx.fillStyle = "rgba(168, 85, 247, 0.09)";
-          ctx.fillRect(bounds.x + 24, bounds.y + 24, bounds.w - 48, bounds.h - 48);
-        } else if (id === "music") {
-          ctx.fillStyle = "#18181b";
-          ctx.fillRect(bounds.x, bounds.y, bounds.w, bounds.h);
-        } else if (id === "concert") {
-          ctx.fillStyle = "#0b1329";
-          ctx.fillRect(bounds.x, bounds.y, bounds.w, bounds.h);
-          const stageH = 140;
-          ctx.fillStyle = "#0369a1";
-          ctx.fillRect(bounds.x + 36, bounds.y + 36, bounds.w - 72, stageH);
-        } else if (id === "debate") {
-          ctx.fillStyle = "#111d17";
-          ctx.fillRect(bounds.x, bounds.y, bounds.w, bounds.h);
-        }
-
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 3;
-        ctx.strokeRect(bounds.x, bounds.y, bounds.w, bounds.h);
-        ctx.restore();
-      });
-
-      // Archway Doorway Portals
-      SPACE_DOORWAYS.forEach((door) => {
-        ctx.save();
-        ctx.fillStyle = "#18181b";
-        ctx.fillRect(door.x - 4, door.y - 4, door.w + 8, door.h + 8);
-
-        const pulse = Math.sin(performance.now() * 0.005) * 0.15 + 0.35;
-        ctx.fillStyle = `rgba(56, 189, 248, ${pulse})`;
-        ctx.beginPath();
-        ctx.roundRect(door.x, door.y, door.w, door.h, 6);
-        ctx.fill();
-
-        ctx.strokeStyle = "#38bdf8";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        ctx.fillStyle = "#ffffff";
-        ctx.font = "900 10px monospace";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        if (door.orientation === "vertical") {
-          ctx.fillText("ENTER ➔", door.x + door.w / 2, door.y + door.h / 2);
-        } else {
-          ctx.fillText("▼ ENTER ▼", door.x + door.w / 2, door.y + door.h / 2);
-        }
-        ctx.restore();
-      });
-
-      // Private Rugs
-      PRIVATE_RUGS.forEach((rug) => {
-        ctx.save();
-        const isPlayerOnRug = currentRugId === rug.id;
-        ctx.fillStyle = isPlayerOnRug ? "rgba(56, 189, 248, 0.24)" : "rgba(30, 41, 59, 0.7)";
-        ctx.beginPath();
-        ctx.roundRect(rug.x, rug.y, rug.w, rug.h, 14);
-        ctx.fill();
-
-        ctx.strokeStyle = isPlayerOnRug ? "#38bdf8" : rug.color;
-        ctx.lineWidth = isPlayerOnRug ? 3 : 2;
-        ctx.setLineDash([8, 5]);
-        ctx.stroke();
-
-        ctx.fillStyle = isPlayerOnRug ? "#38bdf8" : rug.color;
-        ctx.font = "bold 9px monospace";
-        ctx.fillText(`🔒 ${rug.name.toUpperCase()} (${rug.capacity}P)`, rug.x + 16, rug.y + 24);
-        ctx.restore();
-      });
 
       // ═════════════════════════════════════════════════════════════════════
       // ── AUTHENTIC GATHER.TOWN MAP GRAPHICS (Matching reference photos) ──
@@ -1408,121 +1303,6 @@ export default function EchoSpacesWorld({
       });
       ctx.restore();
 
-      // ── 2. ELEVATOR CORRIDOR WALL (x: 50 to 865, y: 220 to 268) ──
-      ctx.save();
-      // Dark oak corridor floor & wall divider
-      ctx.fillStyle = "#1c1917";
-      ctx.fillRect(50, 220, 815, 48);
-      ctx.strokeStyle = "#44403c";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(50, 220, 815, 48);
-
-      // 4 Elevators in recessed black bay (1st, 3rd, 4th, ROOF)
-      const elevBayX = 95;
-      const elevBayY = 226;
-      ctx.fillStyle = "#09090b";
-      ctx.fillRect(elevBayX, elevBayY, 300, 36);
-      ctx.strokeStyle = "#71717a";
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(elevBayX, elevBayY, 300, 36);
-
-      const ELEV_FLOORS = ["1st", "3rd", "4th", "ROOF"];
-      ELEV_FLOORS.forEach((floor, idx) => {
-        const doorX = elevBayX + 8 + idx * 72;
-        ctx.fillStyle = "#18181b";
-        ctx.fillRect(doorX, elevBayY + 4, 64, 28);
-        ctx.strokeStyle = "#a1a1aa";
-        ctx.lineWidth = 1.2;
-        ctx.strokeRect(doorX, elevBayY + 4, 64, 28);
-
-        // Center split door line
-        ctx.strokeStyle = "#3f3f46";
-        ctx.beginPath();
-        ctx.moveTo(doorX + 32, elevBayY + 4);
-        ctx.lineTo(doorX + 32, elevBayY + 32);
-        ctx.stroke();
-
-        // Floor label tag
-        ctx.fillStyle = floor === "ROOF" ? "#f59e0b" : "#38bdf8";
-        ctx.font = "bold 9px monospace";
-        ctx.textAlign = "center";
-        ctx.fillText(`▲ ${floor}`, doorX + 32, elevBayY + 18);
-      });
-
-      // Barista Espresso Machine Counter (x: 430, y: 228)
-      ctx.fillStyle = "#78350f";
-      ctx.fillRect(430, 228, 64, 32);
-      ctx.strokeStyle = "#92400e";
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(430, 228, 64, 32);
-
-      // Chrome Espresso Machine & Steam
-      ctx.fillStyle = "#cbd5e1";
-      ctx.fillRect(436, 230, 28, 16);
-      ctx.fillStyle = "#334155";
-      ctx.fillRect(440, 234, 20, 6);
-      // Ceramic white cups
-      ctx.fillStyle = "#f8fafc";
-      ctx.fillRect(470, 234, 6, 6);
-      ctx.fillRect(480, 234, 6, 6);
-      // Rising steam curls
-      const steamPhase = timeMs * 0.005;
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(444, 230);
-      ctx.quadraticCurveTo(442, 224, 444 + Math.sin(steamPhase) * 3, 218);
-      ctx.stroke();
-
-      // Japanese Folding Shoji Screen (x: 535, y: 226)
-      for (let p = 0; p < 3; p++) {
-        const pX = 535 + p * 24;
-        const pSkew = p % 2 === 0 ? 0 : 3;
-        ctx.fillStyle = "#fafaf9";
-        ctx.fillRect(pX, 226 + pSkew, 22, 34);
-        ctx.strokeStyle = "#1c1917";
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(pX, 226 + pSkew, 22, 34);
-        // Shoji wooden lattice
-        ctx.strokeStyle = "#78716c";
-        ctx.lineWidth = 0.8;
-        ctx.beginPath();
-        ctx.moveTo(pX + 11, 226 + pSkew);
-        ctx.lineTo(pX + 11, 260 + pSkew);
-        ctx.moveTo(pX, 237 + pSkew);
-        ctx.lineTo(pX + 22, 237 + pSkew);
-        ctx.moveTo(pX, 248 + pSkew);
-        ctx.lineTo(pX + 22, 248 + pSkew);
-        ctx.stroke();
-      }
-
-      // Cork Bulletin Board (x: 645, y: 226)
-      ctx.fillStyle = "#b45309";
-      ctx.fillRect(645, 226, 70, 34);
-      ctx.strokeStyle = "#78350f";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(645, 226, 70, 34);
-      // Sticky notes
-      ctx.fillStyle = "#fde047";
-      ctx.fillRect(652, 232, 10, 10);
-      ctx.fillStyle = "#f472b6";
-      ctx.fillRect(668, 234, 10, 10);
-      ctx.fillStyle = "#38bdf8";
-      ctx.fillRect(684, 231, 10, 10);
-      ctx.fillStyle = "#4ade80";
-      ctx.fillRect(698, 236, 9, 9);
-
-      // Walkway Doorway connecting into Fountain Room (x: 825, y: 222)
-      ctx.fillStyle = "#ca8a04";
-      ctx.fillRect(825, 222, 40, 44);
-      ctx.strokeStyle = "#eab308";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(825, 222, 40, 44);
-      ctx.fillStyle = "#000000";
-      ctx.font = "900 10px monospace";
-      ctx.textAlign = "center";
-      ctx.fillText("FOUNTAIN ➔", 845, 246);
-      ctx.restore();
 
       // ── 3. FOUNTAIN ROOM (RIGHT WING, x: 875 to 1545, y: 50 to 520) ──
       ctx.save();
@@ -1630,7 +1410,7 @@ export default function EchoSpacesWorld({
         ctx.fillRect(n + 1, 357, 12, 5);
       }
 
-      // 16 Executive Leather Office Chairs (7 along top, 7 along bottom, 1 left, 1 right)
+      // 16 Banquet Chairs (7 along top, 7 along bottom, 1 left, 1 right)
       // Top row chairs (y: 298)
       for (let c = 1060; c <= 1340; c += 44) {
         const i = Math.round((c - 1060) / 44);
@@ -2989,64 +2769,6 @@ export default function EchoSpacesWorld({
         className="w-full h-full cursor-crosshair touch-none"
       />
 
-      {/* 📱 MOBILE SMARTPHONE VIRTUAL D-PAD & SIT CONTROLS */}
-      <div className="md:hidden absolute bottom-20 left-3 z-40 pointer-events-auto select-none">
-        <div className="grid grid-cols-3 gap-1 w-28 h-28 bg-black/75 backdrop-blur-md p-1.5 rounded-2xl border border-white/20 shadow-2xl">
-          <div />
-          <button
-            type="button"
-            onClick={() => handleMobileDpadStep("up")}
-            className="flex items-center justify-center rounded-xl bg-neutral-800/90 active:bg-cyan-500 active:text-black text-white font-black text-xs transition-colors shadow"
-            aria-label="Walk Up"
-          >
-            ▲
-          </button>
-          <div />
-
-          <button
-            type="button"
-            onClick={() => handleMobileDpadStep("left")}
-            className="flex items-center justify-center rounded-xl bg-neutral-800/90 active:bg-cyan-500 active:text-black text-white font-black text-xs transition-colors shadow"
-            aria-label="Walk Left"
-          >
-            ◀
-          </button>
-
-          <button
-            type="button"
-            onClick={handleMobileSitToggle}
-            className={`flex items-center justify-center rounded-xl text-xs font-bold transition-all shadow ${
-              localAvatar.isSitting
-                ? "bg-amber-500 text-black animate-pulse"
-                : "bg-neutral-900 border border-white/25 text-neutral-200"
-            }`}
-            title={localAvatar.isSitting ? "Stand Up" : "Sit on Nearby Chair"}
-            aria-label="Sit or Stand"
-          >
-            🪑
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleMobileDpadStep("right")}
-            className="flex items-center justify-center rounded-xl bg-neutral-800/90 active:bg-cyan-500 active:text-black text-white font-black text-xs transition-colors shadow"
-            aria-label="Walk Right"
-          >
-            ▶
-          </button>
-
-          <div />
-          <button
-            type="button"
-            onClick={() => handleMobileDpadStep("down")}
-            className="flex items-center justify-center rounded-xl bg-neutral-800/90 active:bg-cyan-500 active:text-black text-white font-black text-xs transition-colors shadow"
-            aria-label="Walk Down"
-          >
-            ▼
-          </button>
-          <div />
-        </div>
-      </div>
 
       {/* TOP CENTER: Gather Proximity Attendees Floating Bar */}
       <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 max-w-md w-full px-2 pointer-events-none flex justify-center">
