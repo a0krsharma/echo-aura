@@ -460,7 +460,7 @@ export default function DynamicSpaceWorldPage() {
       if (loaded) {
         setSpace(loaded);
         if (loaded.spotifySyncState && loaded.spotifySyncState.isPlaying && loaded.spotifySyncState.trackId) {
-          // Play matching song for all room participants
+          // Play matching song for all room participants in background without interrupting games
           partyMusicEngine.playSpotifyTrack({
             id: loaded.spotifySyncState.trackId,
             title: loaded.spotifySyncState.trackName,
@@ -468,8 +468,6 @@ export default function DynamicSpaceWorldPage() {
             coverArt: loaded.spotifySyncState.albumArt || "🟢",
             bpm: 128,
           });
-          // Auto-reveal the party music bar so all participants see the live Spotify player and hear the song!
-          setPartyMusicOpen(true);
         }
       }
 
@@ -1248,24 +1246,40 @@ export default function DynamicSpaceWorldPage() {
               setSpace((prev) => ({ ...prev, spotifySyncState: sync }));
             }}
             onOpenTeleparty={() => setTelepartyModalOpen(true)}
+            onMinimize={() => setPartyMusicOpen(false)}
           />
         </div>
       )}
 
-      {/* Floating Spotify Mini-Pill when music is minimized */}
+      {/* Floating Spotify Mini-Pill when music is minimized (Never blocks gameplay) */}
       {space.spotifySyncState?.isPlaying && space.spotifySyncState?.trackId && !partyMusicOpen && (
-        <div
-          onClick={() => setPartyMusicOpen(true)}
-          className="fixed top-14 left-1/2 -translate-x-1/2 z-30 px-3.5 py-1.5 rounded-full bg-neutral-950/90 border border-emerald-500/50 text-emerald-300 font-mono text-xs shadow-xl flex items-center gap-2 cursor-pointer hover:bg-neutral-900 transition backdrop-blur-md animate-in slide-in-from-top-2 max-w-[92vw]"
-        >
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-          <span className="font-bold text-white shrink-0">DJ @{space.spotifySyncState.djHandle || "Host"}:</span>
-          <span className="truncate text-emerald-200">
-            {space.spotifySyncState.trackName} - {space.spotifySyncState.artistName}
-          </span>
-          <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30 font-bold shrink-0">
-            Open Player
-          </span>
+        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 animate-in slide-in-from-top-2 max-w-[92vw]">
+          <div
+            onClick={() => setPartyMusicOpen(true)}
+            className="px-3.5 py-1.5 rounded-full bg-neutral-950/95 border border-emerald-500/60 text-emerald-300 font-mono text-xs shadow-2xl flex items-center gap-2 cursor-pointer hover:bg-neutral-900 transition backdrop-blur-xl"
+            title="Click to expand Spotify controls"
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+            <span className="font-bold text-white shrink-0">DJ @{space.spotifySyncState.djHandle || "Host"}:</span>
+            <span className="truncate max-w-[140px] sm:max-w-[240px] text-emerald-200">
+              {space.spotifySyncState.trackName} - {space.spotifySyncState.artistName}
+            </span>
+            <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30 font-bold shrink-0">
+              Controls ▲
+            </span>
+          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              updateSpaceDoc(spaceId, { spotifySyncState: null });
+              setSpace((prev) => ({ ...prev, spotifySyncState: null }));
+              partyMusicEngine.setExternalAudio(false);
+            }}
+            className="p-1.5 rounded-full bg-neutral-900/90 border border-neutral-800 text-neutral-400 hover:text-rose-400 transition cursor-pointer shadow-lg"
+            title="Exit Spotify"
+          >
+            ✕
+          </button>
         </div>
       )}
 

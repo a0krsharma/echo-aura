@@ -41,120 +41,9 @@ export interface PartyMusicBarProps {
   onOpenTeleparty?: () => void;
   spotifySyncState?: SpaceSpotifySyncState | null;
   onUpdateSpotifySync?: (sync: SpaceSpotifySyncState | null) => void;
+  onMinimize?: () => void;
   className?: string;
 }
-
-// ── Top Curated Spotify Party Presets (Valid 22-character Spotify Track IDs) ──
-const SPOTIFY_PARTY_PRESETS = [
-  {
-    id: "4HlFJV71xXKIGcU3kRyttv",
-    title: "O Sanam",
-    artist: "Lucky Ali",
-    uri: "spotify:track:4HlFJV71xXKIGcU3kRyttv",
-    coverArt: "✨",
-    bpm: 104,
-    genre: "lofi" as const,
-  },
-  {
-    id: "5fqGgYV8XbXvT8Z8L6Qv2I",
-    title: "Apna Bana Le",
-    artist: "Arijit Singh & Sachin-Jigar",
-    uri: "spotify:track:5fqGgYV8XbXvT8Z8L6Qv2I",
-    coverArt: "🌸",
-    bpm: 92,
-    genre: "lofi" as const,
-  },
-  {
-    id: "0VjIjW4GlUZAMYd2vXMi3b",
-    title: "Blinding Lights",
-    artist: "The Weeknd",
-    uri: "spotify:track:0VjIjW4GlUZAMYd2vXMi3b",
-    coverArt: "⚡",
-    bpm: 171,
-    genre: "edm" as const,
-  },
-  {
-    id: "2qpmMpWLR9EKRsiQm9q3V2",
-    title: "Lover",
-    artist: "Diljit Dosanjh",
-    uri: "spotify:track:2qpmMpWLR9EKRsiQm9q3V2",
-    coverArt: "🔥",
-    bpm: 122,
-    genre: "punjabi" as const,
-  },
-  {
-    id: "1BxfuPKGuaTgP7aM0XbdCe",
-    title: "Hona Tha Pyar",
-    artist: "Atif Aslam & Hadiqa Kiani",
-    uri: "spotify:track:1BxfuPKGuaTgP7aM0XbdCe",
-    coverArt: "🌙",
-    bpm: 95,
-    genre: "lofi" as const,
-  },
-  {
-    id: "6dgUZaU8gCclVv6mUeBkg4",
-    title: "Kesariya",
-    artist: "Arijit Singh & Pritam",
-    uri: "spotify:track:6dgUZaU8gCclVv6mUeBkg4",
-    coverArt: "🌸",
-    bpm: 90,
-    genre: "lofi" as const,
-  },
-  {
-    id: "6i0VGEFzgVHGk5n5Qcce1S",
-    title: "Tauba Tauba",
-    artist: "Karan Aujla",
-    uri: "spotify:track:6i0VGEFzgVHGk5n5Qcce1S",
-    coverArt: "🕺",
-    bpm: 132,
-    genre: "punjabi" as const,
-  },
-  {
-    id: "76QZzVz4C9c5zPq68z1yR1",
-    title: "Brown Munde",
-    artist: "AP Dhillon & Gurinder Gill",
-    uri: "spotify:track:76QZzVz4C9c5zPq68z1yR1",
-    coverArt: "⚡",
-    bpm: 135,
-    genre: "punjabi" as const,
-  },
-  {
-    id: "6Gz3q3Qf6qY44nZ5h6GkIu",
-    title: "Pasoori",
-    artist: "Ali Sethi & Shae Gill",
-    uri: "spotify:track:6Gz3q3Qf6qY44nZ5h6GkIu",
-    coverArt: "💃",
-    bpm: 122,
-    genre: "bollywood" as const,
-  },
-  {
-    id: "7MXV0PtteFYTl0P0K2aGRF",
-    title: "Starboy",
-    artist: "The Weeknd & Daft Punk",
-    uri: "spotify:track:7MXV0PtteFYTl0P0K2aGRF",
-    coverArt: "⚡",
-    bpm: 186,
-    genre: "edm" as const,
-  },
-  {
-    id: "7qiZfU4dY1lWllzX7mPBI3",
-    title: "Shape of You",
-    artist: "Ed Sheeran",
-    uri: "spotify:track:7qiZfU4dY1lWllzX7mPBI3",
-    coverArt: "🔥",
-    bpm: 96,
-    genre: "edm" as const,
-  },
-  {
-    id: "463CkQjx2Zk1yXoBuRxM9i",
-    title: "Levitating",
-    artist: "Dua Lipa",
-    uri: "spotify:track:463CkQjx2Zk1yXoBuRxM9i",
-    coverArt: "✨",
-    bpm: 103,
-    genre: "edm" as const,
-  },
-];
 
 function extractSpotifyTrackId(input: string): string {
   if (!input) return "";
@@ -174,6 +63,7 @@ export function PartyMusicBar({
   onOpenTeleparty,
   spotifySyncState,
   onUpdateSpotifySync,
+  onMinimize,
   className = "",
 }: PartyMusicBarProps) {
   const [musicState, setMusicState] = useState(partyMusicEngine.getState());
@@ -192,6 +82,8 @@ export function PartyMusicBar({
   const [customSpotifyUrl, setCustomSpotifyUrl] = useState("");
   const [spotifyStatusMsg, setSpotifyStatusMsg] = useState<string | null>(null);
   const [inSpaceBeatsActive, setInSpaceBeatsActive] = useState(false);
+  const [spotifyPlayerCollapsed, setSpotifyPlayerCollapsed] = useState(false);
+  const [showSpotifyTip, setShowSpotifyTip] = useState(true);
 
   useEffect(() => {
     setSpotifyToken(getSpotifyToken());
@@ -296,29 +188,26 @@ export function PartyMusicBar({
     const query = spotifySearchQuery.trim();
     if (!query) return;
 
+    // Check if user entered or pasted a Spotify track link or ID directly
+    const maybeId = extractSpotifyTrackId(query);
+    if (maybeId && maybeId.length >= 15 && !query.includes(" ")) {
+      handleSelectSpotifyTrack({
+        id: maybeId,
+        title: `Spotify Track (${maybeId.slice(0, 6)}...)`,
+        artist: "Spotify Live Selection",
+        uri: `spotify:track:${maybeId}`,
+        coverArt: "🟢",
+        bpm: 126,
+      });
+      return;
+    }
+
     setIsSearchingSpotify(true);
     try {
       let results: any[] = [];
       if (spotifyToken) {
         results = await searchSpotifyTracks(query);
       }
-
-      // If Spotify API returned no results or user is not logged in, search curated presets
-      if (results.length === 0) {
-        const qLower = query.toLowerCase();
-        results = SPOTIFY_PARTY_PRESETS.filter(
-          (p) =>
-            p.title.toLowerCase().includes(qLower) ||
-            p.artist.toLowerCase().includes(qLower)
-        ).map((p) => ({
-          id: p.id,
-          name: p.title,
-          artists: [{ name: p.artist }],
-          uri: p.uri,
-          album: { images: [{ url: "" }] },
-        }));
-      }
-
       setSpotifyResults(results);
     } catch {
       setSpotifyResults([]);
@@ -369,10 +258,7 @@ export function PartyMusicBar({
 
   const handleNext = () => {
     if (spotifySyncState?.trackId) {
-      // Pick next curated hit
-      const curIdx = SPOTIFY_PARTY_PRESETS.findIndex((p) => p.id === spotifySyncState.trackId);
-      const nextIdx = (curIdx + 1) % SPOTIFY_PARTY_PRESETS.length;
-      handleSelectSpotifyTrack(SPOTIFY_PARTY_PRESETS[nextIdx]);
+      setSpotifyModalOpen(true);
     } else {
       const res = partyMusicEngine.voteToSkip(userHandle);
       if (res.skipped) {
@@ -385,9 +271,7 @@ export function PartyMusicBar({
 
   const handlePrev = () => {
     if (spotifySyncState?.trackId) {
-      const curIdx = SPOTIFY_PARTY_PRESETS.findIndex((p) => p.id === spotifySyncState.trackId);
-      const prevIdx = (curIdx - 1 + SPOTIFY_PARTY_PRESETS.length) % SPOTIFY_PARTY_PRESETS.length;
-      handleSelectSpotifyTrack(SPOTIFY_PARTY_PRESETS[prevIdx]);
+      setSpotifyModalOpen(true);
     } else {
       partyMusicEngine.previousTrack();
       onSongChanged?.(partyMusicEngine.getState().track);
@@ -648,44 +532,58 @@ export function PartyMusicBar({
           </button>
         </div>
 
-        {/* Right: Volume Slider */}
+        {/* Right: Volume Slider & Minimize */}
         {!compact && (
-          <div className="hidden lg:flex items-center gap-2 pl-2 border-l border-neutral-800">
-            <button
-              onClick={handleToggleMute}
-              className="text-neutral-400 hover:text-white transition-colors cursor-pointer"
-              title={isMuted ? "Unmute" : "Mute"}
-            >
-              {isMuted || musicState.volume === 0 ? (
-                <VolumeX className="w-4 h-4 text-rose-400" />
-              ) : (
-                <Volume2 className="w-4 h-4 text-emerald-400" />
-              )}
-            </button>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.05"
-              value={isMuted ? 0 : musicState.volume}
-              onChange={handleVolumeChange}
-              className="w-16 h-1.5 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
-              title={`Volume: ${Math.round(musicState.volume * 100)}%`}
-            />
+          <div className="flex items-center gap-2 pl-2 border-l border-neutral-800 shrink-0">
+            <div className="hidden lg:flex items-center gap-1.5">
+              <button
+                onClick={handleToggleMute}
+                className="text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                title={isMuted ? "Unmute" : "Mute"}
+              >
+                {isMuted || musicState.volume === 0 ? (
+                  <VolumeX className="w-4 h-4 text-rose-400" />
+                ) : (
+                  <Volume2 className="w-4 h-4 text-emerald-400" />
+                )}
+              </button>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={isMuted ? 0 : musicState.volume}
+                onChange={handleVolumeChange}
+                className="w-16 h-1.5 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                title={`Volume: ${Math.round(musicState.volume * 100)}%`}
+              />
+            </div>
+
+            {/* Minimize / Hide Bar Button */}
+            {onMinimize && (
+              <button
+                onClick={onMinimize}
+                className="px-2.5 py-1.5 rounded-xl border border-neutral-800 bg-neutral-900/90 hover:bg-neutral-800 text-neutral-300 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-mono font-bold shrink-0 shadow-sm"
+                title="Minimize music player to floating pill"
+              >
+                <ChevronUp className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Minimize</span>
+              </button>
+            )}
           </div>
         )}
       </div>
 
-      {/* 🟢 Live Spotify Embedded Player (Plays Authentic Audio from Spotify) */}
+      {/* 🟢 Live Spotify Embedded Player (Collapsible so it doesn't block gameplay) */}
       {isSpotifyActive && (
-        <div className="mt-2.5 rounded-xl overflow-hidden border border-emerald-500/40 bg-black/90 shadow-md">
-          <div className="px-2.5 py-1 bg-emerald-950/70 border-b border-emerald-500/20 flex items-center justify-between text-[10px] font-mono text-emerald-300">
-            <span className="flex items-center gap-1.5 font-bold">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-              <span>LIVE SPOTIFY CO-LISTENING</span>
+        <div className="mt-2 rounded-xl overflow-hidden border border-emerald-500/40 bg-black/90 shadow-md">
+          <div className="px-2.5 py-1.5 bg-emerald-950/70 border-b border-emerald-500/20 flex items-center justify-between text-[10px] font-mono text-emerald-300">
+            <span className="flex items-center gap-1.5 font-bold truncate">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
+              <span className="truncate">SPOTIFY CO-LISTENING: {activeTrackTitle}</span>
             </span>
-            <div className="flex items-center gap-2">
-              <span className="text-neutral-400">DJ: @{spotifySyncState?.djHandle || "Host"}</span>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-neutral-400 hidden sm:inline">DJ: @{spotifySyncState?.djHandle || "Host"}</span>
               <a
                 href={`https://open.spotify.com/track/${spotifySyncState?.trackId}`}
                 target="_blank"
@@ -697,6 +595,14 @@ export function PartyMusicBar({
               </a>
               <button
                 type="button"
+                onClick={() => setSpotifyPlayerCollapsed(!spotifyPlayerCollapsed)}
+                className="text-[9px] text-emerald-300 hover:text-white px-2 py-0.5 rounded border border-emerald-500/30 bg-emerald-950/40 transition cursor-pointer font-bold"
+                title={spotifyPlayerCollapsed ? "Expand Spotify Player" : "Collapse Spotify Player"}
+              >
+                {spotifyPlayerCollapsed ? "Show Player ▼" : "Collapse ▲"}
+              </button>
+              <button
+                type="button"
                 onClick={handleBackToEchoRadio}
                 className="text-[9px] text-neutral-400 hover:text-white px-1.5 py-0.5 rounded border border-neutral-800 transition cursor-pointer"
                 title="Exit Spotify and return to Echo procedural party beats"
@@ -705,65 +611,62 @@ export function PartyMusicBar({
               </button>
             </div>
           </div>
-          <iframe
-            src={`https://open.spotify.com/embed/track/${spotifySyncState?.trackId}?utm_source=generator&theme=0`}
-            width="100%"
-            height="80"
-            frameBorder="0"
-            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-            loading="lazy"
-            className="w-full bg-black block"
-          />
 
-          {/* Guidance Banner & In-Space Audio Fallback */}
-          <div className="px-3 py-2 bg-neutral-900/95 border-t border-neutral-800 flex flex-col gap-2">
-            <div className="flex items-start gap-2 text-[11px] text-amber-300">
-              <span className="text-xs">💡</span>
-              <div className="flex-1">
-                <span className="font-semibold text-neutral-200">
-                  {spotifyStatusMsg || "Click ▶️ Play on the player above to start Spotify audio in your browser."}
-                </span>
-                <div className="text-[10px] text-neutral-400 mt-0.5">
-                  Spotify API requires Spotify Premium to start audio automatically on other apps. You can also listen via In-Space Beats below!
+          {!spotifyPlayerCollapsed && (
+            <>
+              <iframe
+                src={`https://open.spotify.com/embed/track/${spotifySyncState?.trackId}?utm_source=generator&theme=0`}
+                width="100%"
+                height="80"
+                frameBorder="0"
+                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                loading="lazy"
+                className="w-full bg-black block"
+              />
+
+              {/* Guidance Banner & In-Space Audio Fallback (Dismissible) */}
+              {showSpotifyTip && (
+                <div className="px-3 py-1.5 bg-neutral-900/95 border-t border-neutral-800 flex items-center justify-between gap-2 text-[11px]">
+                  <div className="flex items-center gap-1.5 text-amber-300 truncate">
+                    <span className="text-xs">💡</span>
+                    <span className="text-neutral-300 truncate">
+                      {spotifyStatusMsg || "Click ▶ Play on player to listen, or use In-Space Beats below."}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = !inSpaceBeatsActive;
+                        setInSpaceBeatsActive(next);
+                        partyMusicEngine.setExternalAudio(!next);
+                        setSkipToast(
+                          next
+                            ? "🔊 In-Space Beats Active! Playing procedural audio in sync for all guests."
+                            : "🔇 In-Space Beats Muted. Listening via Spotify player only."
+                        );
+                        setTimeout(() => setSkipToast(null), 3500);
+                      }}
+                      className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold transition flex items-center gap-1 cursor-pointer ${
+                        inSpaceBeatsActive
+                          ? "bg-emerald-500 text-neutral-950"
+                          : "bg-emerald-950/70 hover:bg-emerald-900/90 text-emerald-300 border border-emerald-500/40"
+                      }`}
+                    >
+                      <span>{inSpaceBeatsActive ? "🔊 Beats: ON" : "🎧 In-Space Beats"}</span>
+                    </button>
+                    <button
+                      onClick={() => setShowSpotifyTip(false)}
+                      className="text-neutral-500 hover:text-neutral-300 text-xs px-1"
+                      title="Dismiss tip"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between gap-2 pt-1 border-t border-neutral-800/80">
-              <button
-                type="button"
-                onClick={() => {
-                  const next = !inSpaceBeatsActive;
-                  setInSpaceBeatsActive(next);
-                  partyMusicEngine.setExternalAudio(!next);
-                  setSkipToast(
-                    next
-                      ? "🔊 In-Space Beats Active! Playing procedural audio in sync for all guests."
-                      : "🔇 In-Space Beats Muted. Listening via Spotify player only."
-                  );
-                  setTimeout(() => setSkipToast(null), 3500);
-                }}
-                className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                  inSpaceBeatsActive
-                    ? "bg-emerald-500 text-neutral-950 shadow-sm"
-                    : "bg-emerald-950/70 hover:bg-emerald-900/90 text-emerald-300 border border-emerald-500/40"
-                }`}
-              >
-                <span>{inSpaceBeatsActive ? "🔊 In-Space Beats: ON" : "🎧 Play In-Space Beats (All Hear)"}</span>
-              </button>
-
-              <div className="flex items-center gap-1.5">
-                <a
-                  href={`spotify:track:${spotifySyncState?.trackId}`}
-                  className="px-2 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-[11px] font-mono transition flex items-center gap-1"
-                  title="Open in Spotify Desktop / Mobile App"
-                >
-                  <span>Open Spotify App</span>
-                  <ExternalLink className="w-2.5 h-2.5 text-neutral-400" />
-                </a>
-              </div>
-            </div>
-          </div>
+              )}
+            </>
+          )}
         </div>
       )}
 
@@ -991,35 +894,17 @@ export function PartyMusicBar({
               </div>
             )}
 
-            {/* 1-Tap Curated Spotify Party Hits */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-[11px] font-mono font-bold uppercase text-neutral-400">
-                <span>1-Tap Spotify Party Hits</span>
-                <span className="text-[10px] text-emerald-400">Instant Co-Listening</span>
+            {/* Dynamic Song Selection Guide */}
+            {spotifyResults.length === 0 && !isSearchingSpotify && (
+              <div className="py-4 px-3 rounded-2xl bg-neutral-900/60 border border-neutral-800 text-center space-y-1">
+                <div className="text-xs font-mono font-bold text-neutral-300">
+                  🎵 Play Any Track with Friends
+                </div>
+                <div className="text-[11px] text-neutral-400 font-sans">
+                  Type any song name above to search Spotify, or paste a track link from the Spotify app below!
+                </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {SPOTIFY_PARTY_PRESETS.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => handleSelectSpotifyTrack(p)}
-                    className="p-2.5 rounded-2xl bg-neutral-900 border border-neutral-800 hover:border-emerald-400/50 hover:bg-emerald-950/20 text-left transition flex items-center gap-2.5 cursor-pointer group"
-                  >
-                    <span className="text-xl shrink-0 group-hover:scale-110 transition-transform">
-                      {p.coverArt}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-xs font-bold text-white truncate group-hover:text-emerald-300">
-                        {p.title}
-                      </div>
-                      <div className="text-[10px] text-neutral-400 truncate">{p.artist}</div>
-                    </div>
-                    <span className="text-[9px] font-mono text-emerald-400 shrink-0">
-                      {p.bpm} BPM
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
+            )}
 
             {/* Paste Custom Spotify Link */}
             <div className="pt-2 border-t border-neutral-800 space-y-1.5">
