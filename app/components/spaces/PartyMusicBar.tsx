@@ -674,29 +674,33 @@ export function PartyMusicBar({
 
       {/* ── SPOTIFY SEARCH & ROOM SYNC MODAL ── */}
       {spotifyModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/85 backdrop-blur-md animate-in fade-in">
-          <div className="relative w-full max-w-lg bg-neutral-950 border border-emerald-500/40 rounded-3xl shadow-2xl p-4 sm:p-5 space-y-4 max-h-[90dvh] overflow-y-auto custom-scrollbar">
+        <div className="fixed inset-0 z-[9999] flex items-start sm:items-center justify-center p-3 sm:p-4 pt-16 sm:pt-6 bg-black/90 backdrop-blur-xl animate-in fade-in overflow-y-auto">
+          <div className="relative w-full max-w-lg bg-neutral-950 border border-emerald-500/50 rounded-3xl shadow-2xl p-4 sm:p-5 space-y-4 max-h-[88vh] overflow-y-auto custom-scrollbar my-auto">
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-neutral-800">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-black font-black text-base shadow-md shadow-emerald-500/30">
+            <div className="sticky -top-4 sm:-top-5 -mx-4 sm:-mx-5 -mt-4 sm:-mt-5 p-4 sm:p-5 bg-neutral-900/95 border-b border-neutral-800 rounded-t-3xl backdrop-blur-md z-10 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-full bg-[#1DB954] flex items-center justify-center text-black font-black text-sm shrink-0 shadow-lg shadow-[#1DB954]/30">
                   🟢
                 </div>
-                <div>
-                  <h3 className="text-sm font-mono font-bold text-white flex items-center gap-1.5">
-                    <span>Spotify Room Live Co-Listening</span>
-                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-500/30">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-sm font-mono font-bold text-white truncate">
+                      Spotify Room Live Co-Listening
+                    </h3>
+                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-mono font-bold px-2 py-0.5 rounded-full border border-emerald-500/40">
                       HEARD BY ALL
                     </span>
-                  </h3>
-                  <p className="text-[11px] font-mono text-neutral-400">
+                  </div>
+                  <p className="text-[11px] font-mono text-neutral-300 truncate mt-0.5">
                     Queue a song from Spotify for all participants in the space to hear together
                   </p>
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setSpotifyModalOpen(false)}
-                className="p-1.5 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition cursor-pointer"
+                className="p-2 rounded-xl text-neutral-400 hover:text-white bg-neutral-800/80 hover:bg-neutral-800 transition cursor-pointer shrink-0"
+                title="Close"
               >
                 <X className="w-4 h-4" />
               </button>
