@@ -607,17 +607,17 @@ export default function SpaceArcadeModal({
                 className="p-1.5 rounded-xl border border-neutral-800 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white flex items-center gap-1 text-xs font-mono transition-all cursor-pointer"
               >
                 <ArrowLeft className="w-4 h-4" />
-                <span className="hidden sm:inline">ARCADE LOBBY</span>
+                <span className="hidden sm:inline">GAME ZONE LOBBY</span>
               </button>
             ) : (
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-cyan-500/20 border border-cyan-500/40 text-cyan-400 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-xl bg-purple-500/20 border border-purple-500/40 text-purple-400 flex items-center justify-center">
                   <Gamepad2 className="w-5 h-5 animate-pulse" />
                 </div>
                 <div>
                   <h2 className="text-sm sm:text-base font-bold font-mono tracking-tight text-white flex items-center gap-1.5">
-                    <span>ECHO ARCADE LOUNGE</span>
-                    <span className="px-2 py-0.5 rounded-md bg-cyan-950 text-cyan-300 border border-cyan-800/60 text-[10px]">
+                    <span>GAME ZONE & RETRO LOUNGE</span>
+                    <span className="px-2 py-0.5 rounded-md bg-purple-950 text-purple-300 border border-purple-800/60 text-[10px]">
                       24 GAMES
                     </span>
                   </h2>

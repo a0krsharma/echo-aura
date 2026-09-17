@@ -170,15 +170,15 @@ export default function GatherBottomDock({
 
       {/* 4. Action Launchers */}
       <div className="flex items-center gap-1 sm:gap-1.5 pl-1 border-l border-neutral-800 shrink-0">
-        {/* 🎲 Table Games (Ludo, UNO, Bottle, RPS) */}
+        {/* 🕹️ Game Zone (Ludo, UNO, 24 Games) */}
         <button
           type="button"
           onClick={handleLaunchGames}
-          className="px-2.5 sm:px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-neutral-950 font-mono font-black text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 active:scale-95 transition-all cursor-pointer shrink-0"
-          title="Play Table Games (Ludo, UNO, Spin the Bottle, RPS)"
+          className="px-2.5 sm:px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-400 hover:to-indigo-400 text-white font-mono font-black text-xs flex items-center gap-1.5 shadow-md shadow-purple-500/20 active:scale-95 transition-all cursor-pointer shrink-0"
+          title="Open Game Zone (Ludo, UNO, 24 Retro Games, RPS & Table Games)"
         >
           <Dices className="w-3.5 h-3.5 shrink-0" />
-          <span className="hidden sm:inline">Table Games</span>
+          <span className="hidden sm:inline">Game Zone</span>
           <span className="sm:hidden">Games</span>
         </button>
 

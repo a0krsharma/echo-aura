@@ -38,6 +38,7 @@ import { GuestAuthModal } from "@/app/components/spaces/GuestAuthModal";
 import { StagePresentationBar } from "@/app/components/spaces/StagePresentationBar";
 import TelepartyWatchModal, { TelepartySyncState } from "@/app/components/spaces/TelepartyWatchModal";
 import { PartyMusicBar } from "@/app/components/spaces/PartyMusicBar";
+import SpaceWorldNavigator from "@/app/components/spaces/SpaceWorldNavigator";
 import {
   getWalletState,
   TableDish,
@@ -839,6 +840,17 @@ export default function DynamicSpaceWorldPage() {
     } else if (obj.type === "fountain") {
       spacesSfx.playFountainSplash();
       handleSendSpeech("🪙 Tossed a coin into the Echo Fountain!");
+    } else if (obj.type === "gym") {
+      spacesSfx.playKeyNote(5);
+      handleSendEmote("💪");
+      handleSendSpeech("🏋️‍♂️ Pumping reps at the Olympic Bench Press! (+15 Aura) 💪🔥");
+    } else if (obj.type === "water") {
+      spacesSfx.playSitPop();
+      handleSendEmote("🥤");
+      handleSendSpeech("🥤 Ahh cold water from the cooler! Stay hydrated! (+5 Aura) 💧");
+    } else if (obj.type === "pomodoro") {
+      spacesSfx.playKeyNote(3);
+      handleSendSpeech("📚 Starting focus session at the Study Desk! 🧠✨");
     } else if (obj.type === "podium") {
       const nextStage = !isPresentingOnStage;
       setIsPresentingOnStage(nextStage);
@@ -1205,6 +1217,23 @@ export default function DynamicSpaceWorldPage() {
           </div>
         </div>
       </header>
+
+      {/* 2.5 World-Class 5-Zone Quick Travel & Retention Bar */}
+      <SpaceWorldNavigator
+        currentZone={localAvatar.activeZone}
+        remoteAvatars={remoteAvatars}
+        onTeleport={handleTeleport}
+        onSendSpeech={handleSendSpeech}
+        onSendEmote={handleSendEmote}
+        onTriggerConfetti={handleTriggerConfetti}
+        onOpenPartyGames={() => {
+          setPartyTableGameTab("ludo");
+          setPartyTableGamesOpen(true);
+        }}
+        onOpenArcade={() => setArcadeModalOpen(true)}
+        onOpenWhiteboard={() => setWhiteboardModalOpen(true)}
+        onOpenMusic={() => setPartyMusicOpen((v) => !v)}
+      />
 
       {/* Live Stage Presentation Bar (Image 1 & 3 Fidelity) */}
       {(space?.category === "WEBINAR" || isStageActive) && (

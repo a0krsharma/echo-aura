@@ -1319,32 +1319,40 @@ export default function EchoSpacesWorld({
       ctx.restore();
 
 
-      // ── 3. FOUNTAIN ROOM (RIGHT WING, x: 875 to 1545, y: 50 to 520) ──
+      // ── 3. STUDY ROOM & LIBRARY (RIGHT WING, x: 875 to 1545, y: 50 to 520) ──
       ctx.save();
-      // Checkered Sand / Beige Tile Floor
+      // Warm Parquet Wood Floor for Study
       for (let tx = 875; tx < 1545; tx += 40) {
         for (let ty = 50; ty < 520; ty += 40) {
           const isAlt = ((tx - 875) / 40 + (ty - 50) / 40) % 2 === 0;
-          ctx.fillStyle = isAlt ? "#ded0b3" : "#ece2cc";
+          ctx.fillStyle = isAlt ? "#261d1a" : "#2d221f";
           ctx.fillRect(tx, ty, 40, 40);
-          ctx.strokeStyle = "rgba(180, 160, 130, 0.3)";
+          ctx.strokeStyle = "rgba(180, 140, 100, 0.15)";
           ctx.lineWidth = 0.5;
           ctx.strokeRect(tx, ty, 40, 40);
         }
       }
 
+      // Library Bookshelves Along Wall (x: 885 to 1535, y: 52)
+      ctx.fillStyle = "#451a03";
+      ctx.fillRect(885, 50, 650, 14);
+      for (let bx = 890; bx < 1530; bx += 14) {
+        ctx.fillStyle = ["#10b981", "#3b82f6", "#f59e0b", "#ec4899", "#8b5cf6"][(bx / 14) % 5];
+        ctx.fillRect(bx, 52, 10, 10);
+      }
+
       // Room Header Tag
-      ctx.fillStyle = "#0f172a";
+      ctx.fillStyle = "#064e3b";
       ctx.beginPath();
-      ctx.roundRect(1110, 60, 200, 26, 8);
+      ctx.roundRect(1090, 70, 240, 26, 8);
       ctx.fill();
-      ctx.strokeStyle = "#38bdf8";
+      ctx.strokeStyle = "#10b981";
       ctx.lineWidth = 1.5;
       ctx.stroke();
-      ctx.fillStyle = "#38bdf8";
+      ctx.fillStyle = "#34d399";
       ctx.font = "900 12px monospace";
       ctx.textAlign = "center";
-      ctx.fillText("📍 Fountain Room", 1210, 77);
+      ctx.fillText("📚 Study Room & Library", 1210, 87);
 
       // 3 Bubbling Water Fountains (in a row at x: 1060, 1200, 1340, y: 170)
       const fountainXs = [1060, 1200, 1340];
@@ -1604,19 +1612,115 @@ export default function EchoSpacesWorld({
       ctx.fillRect(50, 275, 815, 245);
       ctx.restore();
 
-      // ── 5. RETRO ARCADE LOUNGE FLOOR TAG (x: 320, y: 360) ──
+      // ── 5. GAME ZONE (x: 50 to 460, y: 50 to 550) ──
       ctx.save();
-      ctx.fillStyle = "rgba(244, 63, 94, 0.15)";
+      ctx.fillStyle = "rgba(139, 92, 246, 0.15)";
       ctx.beginPath();
-      ctx.roundRect(310, 360, 200, 110, 10);
+      ctx.roundRect(290, 360, 240, 110, 10);
       ctx.fill();
-      ctx.strokeStyle = "rgba(244, 63, 94, 0.5)";
+      ctx.strokeStyle = "rgba(139, 92, 246, 0.5)";
       ctx.lineWidth = 1.5;
       ctx.stroke();
-      ctx.fillStyle = "#f43f5e";
+      ctx.fillStyle = "#c084fc";
       ctx.font = "900 11px monospace";
       ctx.textAlign = "center";
-      ctx.fillText("🕹️ Retro Arcade Lounge", 410, 460);
+      ctx.fillText("🕹️ Game Zone (Ludo, UNO & Arcade)", 410, 460);
+      ctx.restore();
+
+      // ── 6. GYM & FITNESS ARENA (BOTTOM-RIGHT, x: 1040 to 1540, y: 650 to 1150) ──
+      ctx.save();
+      // Rubber Gym Floor Matting
+      ctx.fillStyle = "#1e293b";
+      ctx.fillRect(1040, 650, 500, 490);
+
+      // Yellow/Amber Safety Perimeter Lines
+      ctx.strokeStyle = "rgba(245, 158, 11, 0.35)";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(1042, 652, 496, 486);
+
+      // Gym Zone Header Tag
+      ctx.fillStyle = "#451a03";
+      ctx.beginPath();
+      ctx.roundRect(1170, 660, 240, 28, 8);
+      ctx.fill();
+      ctx.strokeStyle = "#f59e0b";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = "#fbbf24";
+      ctx.font = "900 12px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("🏋️‍♂️ Gym & Fitness Arena", 1290, 678);
+
+      // Cardio Treadmills (x: 1380, 1445, y: 730)
+      [1380, 1445].forEach((tx) => {
+        ctx.fillStyle = "#0f172a";
+        ctx.beginPath();
+        ctx.roundRect(tx, 730, 40, 70, 6);
+        ctx.fill();
+        ctx.strokeStyle = "#38bdf8";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        // Belt
+        ctx.fillStyle = "#334155";
+        ctx.fillRect(tx + 6, 742, 28, 48);
+        // Display console
+        ctx.fillStyle = "#38bdf8";
+        ctx.fillRect(tx + 12, 734, 16, 5);
+      });
+
+      // Olympic Barbell Bench Press (x: 1100, 1220, y: 740)
+      [1100, 1220].forEach((bx) => {
+        // Bench pad
+        ctx.fillStyle = "#0f172a";
+        ctx.beginPath();
+        ctx.roundRect(bx, 740, 70, 30, 4);
+        ctx.fill();
+        ctx.strokeStyle = "#f59e0b";
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+        // Barbell bar
+        ctx.strokeStyle = "#cbd5e1";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(bx - 10, 755);
+        ctx.lineTo(bx + 80, 755);
+        ctx.stroke();
+        // Barbell plates
+        ctx.fillStyle = "#ef4444";
+        ctx.fillRect(bx - 12, 746, 5, 18);
+        ctx.fillRect(bx + 77, 746, 5, 18);
+      });
+
+      // Dumbbell Rack (x: 1080, y: 860, w: 180, h: 26)
+      ctx.fillStyle = "#334155";
+      ctx.fillRect(1080, 860, 180, 26);
+      ctx.strokeStyle = "#64748b";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(1080, 860, 180, 26);
+      for (let dx = 1090; dx < 1250; dx += 28) {
+        ctx.fillStyle = "#09090b";
+        ctx.fillRect(dx, 864, 18, 18);
+        ctx.fillStyle = "#f59e0b";
+        ctx.fillRect(dx + 6, 868, 6, 10);
+      }
+
+      // Water Cooler & Hydration Station (x: 1420, y: 860)
+      ctx.fillStyle = "#0284c7";
+      ctx.beginPath();
+      ctx.roundRect(1420, 860, 32, 45, 6);
+      ctx.fill();
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = "#e0f2fe";
+      ctx.beginPath();
+      ctx.arc(1436, 856, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#0369a1";
+      ctx.font = "900 9px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("H2O", 1436, 888);
+
       ctx.restore();
 
       // Interactive Station Objects

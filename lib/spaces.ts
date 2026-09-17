@@ -165,7 +165,7 @@ export const SPACE_VIBES: Record<SpaceVibe, SpaceVibeDef> = {
   },
 };
 
-export type SpaceZoneId = "music" | "courtyard";
+export type SpaceZoneId = "party" | "games" | "gym" | "library" | "courtyard" | "music";
 
 export interface SpaceZoneDef {
   id: SpaceZoneId;
@@ -196,7 +196,7 @@ export interface InteractiveObject {
   zoneId: SpaceZoneId;
   name: string;
   icon: string;
-  type: "chair" | "whiteboard" | "piano" | "drums" | "gavel" | "pomodoro" | "podium" | "jukebox" | "fountain" | "coffee" | "arcade";
+  type: "chair" | "whiteboard" | "piano" | "drums" | "gavel" | "pomodoro" | "podium" | "jukebox" | "fountain" | "coffee" | "arcade" | "gym" | "water";
   x: number;
   y: number;
   w: number;
@@ -357,25 +357,61 @@ export interface SpaceSpotifySyncState {
 export const WORLD_WIDTH = 1600;
 export const WORLD_HEIGHT = 1200;
 
-// ── SPACE ZONES (Open Unified Floor) ──
+// ── SPACE ZONES (World-Class 4-Zone Layout + Central Plaza) ──
 export const SPACES_ZONES: Record<SpaceZoneId, SpaceZoneDef> = {
-  music: {
-    id: "music",
-    name: "Music & DJ Stage",
-    category: "CREATIVE & AUDIO",
-    icon: "🎵",
-    color: "#f43f5e",
+  party: {
+    id: "party",
+    name: "Party Area & DJ Stage",
+    category: "ENTERTAINMENT & MUSIC",
+    icon: "🪩",
+    color: "#ec4899",
     bounds: { x: 50, y: 650, w: 460, h: 500 },
-    description: "Live piano synthesizer, drum machine & DJ stage.",
+    description: "Live DJ stage, dance floor, confetti cannon & synchronized party beats.",
+  },
+  games: {
+    id: "games",
+    name: "Game Zone",
+    category: "GAMES & RETRO",
+    icon: "🕹️",
+    color: "#8b5cf6",
+    bounds: { x: 50, y: 50, w: 460, h: 550 },
+    description: "Multiplayer table games (Ludo & UNO), spin the bottle, RPS, chess & retro arcade machines.",
+  },
+  gym: {
+    id: "gym",
+    name: "Gym & Fitness Arena",
+    category: "FITNESS & HEALTH",
+    icon: "🏋️‍♂️",
+    color: "#f59e0b",
+    bounds: { x: 1040, y: 650, w: 510, h: 500 },
+    description: "Cardio treadmills, Olympic bench press, push-up challenges & daily Aura fitness boosts.",
+  },
+  library: {
+    id: "library",
+    name: "Study Room & Library",
+    category: "FOCUS & KNOWLEDGE",
+    icon: "📚",
+    color: "#10b981",
+    bounds: { x: 1040, y: 50, w: 510, h: 550 },
+    description: "25-min Pomodoro focus timer, ambient lo-fi rain, study desks & whiteboard collaboration.",
   },
   courtyard: {
     id: "courtyard",
-    name: "Main Party Floor",
+    name: "Central Plaza & Fountain",
     category: "COMMUNITY LOUNGE",
     icon: "⛲",
-    color: "#14b8a6",
-    bounds: { x: 40, y: 40, w: 1520, h: 1120 },
-    description: "Open party floor with tables, games, fountain & park.",
+    color: "#06b6d4",
+    bounds: { x: 520, y: 50, w: 510, h: 1100 },
+    description: "Central gathering plaza connecting all 4 zones with banquet tables and fountain.",
+  },
+  music: {
+    id: "music",
+    name: "Party Area & DJ Stage",
+    category: "ENTERTAINMENT & MUSIC",
+    icon: "🪩",
+    color: "#ec4899",
+    bounds: { x: 50, y: 650, w: 460, h: 500 },
+    description: "Live DJ stage, dance floor, confetti cannon & synchronized party beats.",
   },
 };
 
@@ -396,10 +432,10 @@ export const PRIVATE_RUGS: PrivateRug[] = [
 
 // ── INTERACTIVE OBJECTS ──
 export const INTERACTIVE_OBJECTS: InteractiveObject[] = [
-  // 🎵 Music Zone
+  // 🪩 Party Area / Music Zone
   {
     id: "music_piano",
-    zoneId: "music",
+    zoneId: "party",
     name: "Grand Synthesizer Piano",
     icon: "🎹",
     type: "piano",
@@ -411,7 +447,7 @@ export const INTERACTIVE_OBJECTS: InteractiveObject[] = [
   },
   {
     id: "music_drums",
-    zoneId: "music",
+    zoneId: "party",
     name: "4-Pad Drum Machine",
     icon: "🥁",
     type: "drums",
@@ -423,7 +459,7 @@ export const INTERACTIVE_OBJECTS: InteractiveObject[] = [
   },
   {
     id: "music_jukebox",
-    zoneId: "music",
+    zoneId: "party",
     name: "Vintage Vinyl Jukebox",
     icon: "📻",
     type: "jukebox",
@@ -433,7 +469,70 @@ export const INTERACTIVE_OBJECTS: InteractiveObject[] = [
     h: 50,
     prompt: "Press [E] to Spin Jukebox Radio",
   },
-  // ⛲ Courtyard
+  // 🕹️ Game Zone
+  {
+    id: "arcade_games_cabinet",
+    zoneId: "games",
+    name: "Game Zone Arcade Machine",
+    icon: "🕹️",
+    type: "arcade",
+    x: 350,
+    y: 380,
+    w: 60,
+    h: 60,
+    prompt: "Press [E] to Launch 24 Games & Table Games",
+  },
+  // 🏋️‍♂️ Gym & Fitness Arena
+  {
+    id: "gym_bench_press",
+    zoneId: "gym",
+    name: "Olympic Bench Press",
+    icon: "🏋️‍♂️",
+    type: "gym",
+    x: 1100,
+    y: 740,
+    w: 80,
+    h: 50,
+    prompt: "Press [E] to Pump 10 Reps (+15 Aura)",
+  },
+  {
+    id: "gym_water_cooler",
+    zoneId: "gym",
+    name: "Hydro Pure Water Cooler",
+    icon: "🥤",
+    type: "water",
+    x: 1420,
+    y: 860,
+    w: 40,
+    h: 50,
+    prompt: "Press [E] to Hydrate (+5 Aura)",
+  },
+  // 📚 Study Room & Library
+  {
+    id: "library_pomodoro_desk",
+    zoneId: "library",
+    name: "25-Min Pomodoro Desk",
+    icon: "⏱️",
+    type: "pomodoro",
+    x: 1100,
+    y: 320,
+    w: 80,
+    h: 50,
+    prompt: "Press [E] to Start 25-Min Focus Study Session",
+  },
+  {
+    id: "library_whiteboard",
+    zoneId: "library",
+    name: "Collaborative Focus Whiteboard",
+    icon: "📝",
+    type: "whiteboard",
+    x: 1250,
+    y: 180,
+    w: 90,
+    h: 50,
+    prompt: "Press [E] to Open Collaborative Whiteboard",
+  },
+  // ⛲ Central Plaza
   {
     id: "courtyard_fountain",
     zoneId: "courtyard",
@@ -492,7 +591,10 @@ export const COLLISION_BOXES: CollisionBox[] = [
 ];
 
 export function getZoneAtCoordinates(x: number, y: number): SpaceZoneId {
-  for (const [id, zone] of Object.entries(SPACES_ZONES)) {
+  const priorityZones: SpaceZoneId[] = ["games", "library", "party", "gym", "music"];
+  for (const id of priorityZones) {
+    const zone = SPACES_ZONES[id];
+    if (!zone) continue;
     const { bounds } = zone;
     if (
       x >= bounds.x &&
@@ -500,7 +602,7 @@ export function getZoneAtCoordinates(x: number, y: number): SpaceZoneId {
       y >= bounds.y &&
       y <= bounds.y + bounds.h
     ) {
-      return id as SpaceZoneId;
+      return id;
     }
   }
   return "courtyard";
