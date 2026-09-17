@@ -43,49 +43,7 @@ interface SpotifySyncDockProps {
   currentUserUid: string;
 }
 
-// ── Quick Party Presets for Instant 1-Tap DJ Queueing ──────────────────────────
-const QUICK_PARTY_PRESETS = [
-  {
-    id: "4HlFJV71xXKIGcU3kRyttv",
-    uri: "spotify:track:4HlFJV71xXKIGcU3kRyttv",
-    name: "O Sanam",
-    artist: "Lucky Ali",
-    albumArt: "https://i.scdn.co/image/ab67616d0000b27341e97d195a6ad5dbe888c3a1",
-    durationMs: 226000,
-  },
-  {
-    id: "5fqGgYV8XbXvT8Z8L6Qv2I",
-    uri: "spotify:track:5fqGgYV8XbXvT8Z8L6Qv2I",
-    name: "Apna Bana Le",
-    artist: "Arijit Singh, Sachin-Jigar",
-    albumArt: "https://i.scdn.co/image/ab67616d0000b273d2a7bc7e954efb5ef60d5b5b",
-    durationMs: 261000,
-  },
-  {
-    id: "0VjIjW4GlUZAMYd2vXMi3b",
-    uri: "spotify:track:0VjIjW4GlUZAMYd2vXMi3b",
-    name: "Blinding Lights",
-    artist: "The Weeknd",
-    albumArt: "https://i.scdn.co/image/ab67616d0000b2738863bc11d2aa12b54f5aeb36",
-    durationMs: 200000,
-  },
-  {
-    id: "2qpmMpWLR9EKRsiQm9q3V2",
-    uri: "spotify:track:2qpmMpWLR9EKRsiQm9q3V2",
-    name: "Lover",
-    artist: "Diljit Dosanjh",
-    albumArt: "https://i.scdn.co/image/ab67616d0000b27301bcfeae3a2be1fc64b4c730",
-    durationMs: 191000,
-  },
-  {
-    id: "1BxfuPKGuaTgP7aM0XbdCe",
-    uri: "spotify:track:1BxfuPKGuaTgP7aM0XbdCe",
-    name: "Hona Tha Pyar",
-    artist: "Atif Aslam, Hadiqa Kiani",
-    albumArt: "https://i.scdn.co/image/ab67616d0000b273b4d24177bcf7bba1ebff2f44",
-    durationMs: 220000,
-  },
-];
+
 
 function extractTrackId(uriOrUrl: string): string {
   if (!uriOrUrl) return "";
@@ -189,16 +147,7 @@ export default function SpotifySyncDock({ room, isHost, currentUserUid }: Spotif
 
     setIsSearching(true);
     const results = await searchSpotifyTracks(searchQuery.trim());
-    if (results.length > 0) {
-      setSearchResults(results);
-    } else {
-      // Fallback search over presets
-      const q = searchQuery.toLowerCase();
-      const fallback = QUICK_PARTY_PRESETS.filter(
-        p => p.name.toLowerCase().includes(q) || p.artist.toLowerCase().includes(q)
-      );
-      setSearchResults(fallback);
-    }
+    setSearchResults(results);
     setIsSearching(false);
   };
 
@@ -592,7 +541,7 @@ export default function SpotifySyncDock({ room, isHost, currentUserUid }: Spotif
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search song title or artist (e.g. Lucky Ali, Arijit, Atif Aslam)..."
+                  placeholder="Search song title or artist on Spotify..."
                   className="flex-1 bg-neutral-950 border border-neutral-800 focus:border-[#1DB954] text-xs p-2.5 text-white outline-none uppercase"
                 />
                 <button
@@ -605,12 +554,14 @@ export default function SpotifySyncDock({ room, isHost, currentUserUid }: Spotif
               </form>
             </div>
 
-            {/* Quick Presets / Results */}
+            {/* Search Results */}
             <div className="flex-1 overflow-y-auto space-y-1.5 divide-y divide-neutral-900 pr-1 max-h-60">
-              <span className="text-[9px] text-neutral-500 uppercase tracking-widest block pt-1">
-                {searchResults.length > 0 ? "SEARCH RESULTS:" : "POPULAR PARTY PRESETS:"}
-              </span>
-              {(searchResults.length > 0 ? searchResults : QUICK_PARTY_PRESETS).map((t) => (
+              {searchResults.length > 0 ? (
+                <>
+                  <span className="text-[9px] text-neutral-500 uppercase tracking-widest block pt-1">
+                    SEARCH RESULTS:
+                  </span>
+                  {searchResults.map((t) => (
                 <div
                   key={t.id}
                   onClick={() => handlePlayOrQueueTrack(t)}
@@ -635,10 +586,17 @@ export default function SpotifySyncDock({ room, isHost, currentUserUid }: Spotif
                     type="button"
                     className="border border-[#1DB954] bg-[#1DB954] text-black font-bold text-[10px] px-2.5 py-1 uppercase tracking-wider shrink-0 hover:bg-[#1ed760]"
                   >
-                    PLAY
+                  PLAY
                   </button>
                 </div>
               ))}
+                </>
+              ) : (
+                <div className="text-center py-6 text-neutral-500 text-xs uppercase tracking-wider space-y-2">
+                  <Search className="w-5 h-5 mx-auto text-neutral-600" />
+                  <p>Search for a song above to get started</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

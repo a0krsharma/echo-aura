@@ -44,117 +44,7 @@ export interface PartyMusicBarProps {
   className?: string;
 }
 
-// ── Top Curated Spotify Party Presets (Valid 22-character Spotify Track IDs) ──
-const SPOTIFY_PARTY_PRESETS = [
-  {
-    id: "4HlFJV71xXKIGcU3kRyttv",
-    title: "O Sanam",
-    artist: "Lucky Ali",
-    uri: "spotify:track:4HlFJV71xXKIGcU3kRyttv",
-    coverArt: "✨",
-    bpm: 104,
-    genre: "lofi" as const,
-  },
-  {
-    id: "5fqGgYV8XbXvT8Z8L6Qv2I",
-    title: "Apna Bana Le",
-    artist: "Arijit Singh & Sachin-Jigar",
-    uri: "spotify:track:5fqGgYV8XbXvT8Z8L6Qv2I",
-    coverArt: "🌸",
-    bpm: 92,
-    genre: "lofi" as const,
-  },
-  {
-    id: "0VjIjW4GlUZAMYd2vXMi3b",
-    title: "Blinding Lights",
-    artist: "The Weeknd",
-    uri: "spotify:track:0VjIjW4GlUZAMYd2vXMi3b",
-    coverArt: "⚡",
-    bpm: 171,
-    genre: "edm" as const,
-  },
-  {
-    id: "2qpmMpWLR9EKRsiQm9q3V2",
-    title: "Lover",
-    artist: "Diljit Dosanjh",
-    uri: "spotify:track:2qpmMpWLR9EKRsiQm9q3V2",
-    coverArt: "🔥",
-    bpm: 122,
-    genre: "punjabi" as const,
-  },
-  {
-    id: "1BxfuPKGuaTgP7aM0XbdCe",
-    title: "Hona Tha Pyar",
-    artist: "Atif Aslam & Hadiqa Kiani",
-    uri: "spotify:track:1BxfuPKGuaTgP7aM0XbdCe",
-    coverArt: "🌙",
-    bpm: 95,
-    genre: "lofi" as const,
-  },
-  {
-    id: "6dgUZaU8gCclVv6mUeBkg4",
-    title: "Kesariya",
-    artist: "Arijit Singh & Pritam",
-    uri: "spotify:track:6dgUZaU8gCclVv6mUeBkg4",
-    coverArt: "🌸",
-    bpm: 90,
-    genre: "lofi" as const,
-  },
-  {
-    id: "6i0VGEFzgVHGk5n5Qcce1S",
-    title: "Tauba Tauba",
-    artist: "Karan Aujla",
-    uri: "spotify:track:6i0VGEFzgVHGk5n5Qcce1S",
-    coverArt: "🕺",
-    bpm: 132,
-    genre: "punjabi" as const,
-  },
-  {
-    id: "76QZzVz4C9c5zPq68z1yR1",
-    title: "Brown Munde",
-    artist: "AP Dhillon & Gurinder Gill",
-    uri: "spotify:track:76QZzVz4C9c5zPq68z1yR1",
-    coverArt: "⚡",
-    bpm: 135,
-    genre: "punjabi" as const,
-  },
-  {
-    id: "6Gz3q3Qf6qY44nZ5h6GkIu",
-    title: "Pasoori",
-    artist: "Ali Sethi & Shae Gill",
-    uri: "spotify:track:6Gz3q3Qf6qY44nZ5h6GkIu",
-    coverArt: "💃",
-    bpm: 122,
-    genre: "bollywood" as const,
-  },
-  {
-    id: "7MXV0PtteFYTl0P0K2aGRF",
-    title: "Starboy",
-    artist: "The Weeknd & Daft Punk",
-    uri: "spotify:track:7MXV0PtteFYTl0P0K2aGRF",
-    coverArt: "⚡",
-    bpm: 186,
-    genre: "edm" as const,
-  },
-  {
-    id: "7qiZfU4dY1lWllzX7mPBI3",
-    title: "Shape of You",
-    artist: "Ed Sheeran",
-    uri: "spotify:track:7qiZfU4dY1lWllzX7mPBI3",
-    coverArt: "🔥",
-    bpm: 96,
-    genre: "edm" as const,
-  },
-  {
-    id: "463CkQjx2Zk1yXoBuRxM9i",
-    title: "Levitating",
-    artist: "Dua Lipa",
-    uri: "spotify:track:463CkQjx2Zk1yXoBuRxM9i",
-    coverArt: "✨",
-    bpm: 103,
-    genre: "edm" as const,
-  },
-];
+
 
 function extractSpotifyTrackId(input: string): string {
   if (!input) return "";
@@ -303,22 +193,7 @@ export function PartyMusicBar({
         results = await searchSpotifyTracks(query);
       }
 
-      // If Spotify API returned no results or user is not logged in, search curated presets
-      if (results.length === 0) {
-        const qLower = query.toLowerCase();
-        results = SPOTIFY_PARTY_PRESETS.filter(
-          (p) =>
-            p.title.toLowerCase().includes(qLower) ||
-            p.artist.toLowerCase().includes(qLower)
-        ).map((p) => ({
-          id: p.id,
-          name: p.title,
-          artists: [{ name: p.artist }],
-          uri: p.uri,
-          album: { images: [{ url: "" }] },
-        }));
-      }
-
+      // If Spotify API returned no results, show empty
       setSpotifyResults(results);
     } catch {
       setSpotifyResults([]);
@@ -368,30 +243,17 @@ export function PartyMusicBar({
   };
 
   const handleNext = () => {
-    if (spotifySyncState?.trackId) {
-      // Pick next curated hit
-      const curIdx = SPOTIFY_PARTY_PRESETS.findIndex((p) => p.id === spotifySyncState.trackId);
-      const nextIdx = (curIdx + 1) % SPOTIFY_PARTY_PRESETS.length;
-      handleSelectSpotifyTrack(SPOTIFY_PARTY_PRESETS[nextIdx]);
-    } else {
-      const res = partyMusicEngine.voteToSkip(userHandle);
-      if (res.skipped) {
-        setSkipToast(res.message);
-        setTimeout(() => setSkipToast(null), 3000);
-        onSongChanged?.(partyMusicEngine.getState().track);
-      }
+    const res = partyMusicEngine.voteToSkip(userHandle);
+    if (res.skipped) {
+      setSkipToast(res.message);
+      setTimeout(() => setSkipToast(null), 3000);
+      onSongChanged?.(partyMusicEngine.getState().track);
     }
   };
 
   const handlePrev = () => {
-    if (spotifySyncState?.trackId) {
-      const curIdx = SPOTIFY_PARTY_PRESETS.findIndex((p) => p.id === spotifySyncState.trackId);
-      const prevIdx = (curIdx - 1 + SPOTIFY_PARTY_PRESETS.length) % SPOTIFY_PARTY_PRESETS.length;
-      handleSelectSpotifyTrack(SPOTIFY_PARTY_PRESETS[prevIdx]);
-    } else {
-      partyMusicEngine.previousTrack();
-      onSongChanged?.(partyMusicEngine.getState().track);
-    }
+    partyMusicEngine.previousTrack();
+    onSongChanged?.(partyMusicEngine.getState().track);
   };
 
   const handleSelectTrack = (index: number) => {
@@ -884,7 +746,7 @@ export function PartyMusicBar({
             <form onSubmit={handleSearchSpotify} className="relative">
               <input
                 type="text"
-                placeholder="Search songs or artists (e.g. Arijit, Diljit, Lucky Ali, Weeknd)..."
+                placeholder="Search any song or artist on Spotify..."
                 value={spotifySearchQuery}
                 onChange={(e) => setSpotifySearchQuery(e.target.value)}
                 className="w-full px-3.5 py-2.5 pl-9 rounded-2xl bg-neutral-900 border border-neutral-800 focus:border-emerald-400 text-xs font-mono text-white outline-none placeholder:text-neutral-500"
@@ -936,35 +798,7 @@ export function PartyMusicBar({
               </div>
             )}
 
-            {/* 1-Tap Curated Spotify Party Hits */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-[11px] font-mono font-bold uppercase text-neutral-400">
-                <span>1-Tap Spotify Party Hits</span>
-                <span className="text-[10px] text-emerald-400">Instant Co-Listening</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {SPOTIFY_PARTY_PRESETS.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => handleSelectSpotifyTrack(p)}
-                    className="p-2.5 rounded-2xl bg-neutral-900 border border-neutral-800 hover:border-emerald-400/50 hover:bg-emerald-950/20 text-left transition flex items-center gap-2.5 cursor-pointer group"
-                  >
-                    <span className="text-xl shrink-0 group-hover:scale-110 transition-transform">
-                      {p.coverArt}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-xs font-bold text-white truncate group-hover:text-emerald-300">
-                        {p.title}
-                      </div>
-                      <div className="text-[10px] text-neutral-400 truncate">{p.artist}</div>
-                    </div>
-                    <span className="text-[9px] font-mono text-emerald-400 shrink-0">
-                      {p.bpm} BPM
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
+
 
             {/* Paste Custom Spotify Link */}
             <div className="pt-2 border-t border-neutral-800 space-y-1.5">
