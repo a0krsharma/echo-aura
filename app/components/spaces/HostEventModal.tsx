@@ -157,7 +157,7 @@ export default function HostEventModal({
           )}
 
           {/* 1. Rename Space */}
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
               <Edit2 className="w-3.5 h-3.5 text-cyan-400" />
               <span>Rename Space:</span>
@@ -168,13 +168,13 @@ export default function HostEventModal({
                 value={spaceName}
                 onChange={(e) => setSpaceName(e.target.value)}
                 maxLength={45}
-                placeholder="Space Name (e.g. Midnight Chill Cafe, Party Lounge)"
-                className="flex-1 bg-neutral-900/80 border border-neutral-700 focus:border-cyan-400 rounded-2xl px-4 py-2.5 text-sm font-mono text-white outline-none transition-colors"
+                placeholder="Space Name"
+                className="flex-1 bg-neutral-900/80 border border-neutral-700 focus:border-cyan-400 rounded-xl px-3 py-2 text-xs font-mono text-white outline-none transition-colors"
               />
               <button
                 type="button"
                 onClick={() => handleSaveSettings()}
-                className="px-4 py-2.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-black font-mono font-bold text-xs transition-all cursor-pointer shadow-md"
+                className="px-3.5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-mono font-bold text-xs transition cursor-pointer shadow-sm shrink-0"
               >
                 Save
               </button>
@@ -182,220 +182,104 @@ export default function HostEventModal({
           </div>
 
           {/* 2. 1-Click Event Hosting Presets */}
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between">
-              <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-rose-400" />
-                <span>Host an Event Now (1-Click Presets):</span>
-              </label>
-            </div>
+          <div className="space-y-2">
+            <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-rose-400" />
+              <span>Host an Event Now (1-Click Presets):</span>
+            </label>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {/* Preset 0: Virtual Birthday Party */}
-              <button
-                type="button"
-                onClick={() =>
-                  handleHostPreset(
-                    "Virtual Birthday Party",
-                    "PARTY_CLUB",
-                    "🎂 Happy Birthday Celebration is LIVE! Meet at the Fountain Room for cake cutting, champagne & dinner!",
-                    { x: 1200, y: 350 }
-                  )
-                }
-                className="p-3 rounded-2xl border border-rose-500/40 bg-gradient-to-r from-rose-500/20 to-amber-500/20 hover:from-rose-500/30 hover:to-amber-500/30 text-left transition-all cursor-pointer group col-span-1 sm:col-span-2 shadow-md"
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-2xl animate-bounce">🎂</span>
-                  <span className="text-xs font-mono font-bold text-amber-300 group-hover:text-white">
-                    Host Virtual Birthday Party
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[
+                {
+                  icon: "🎂",
+                  title: "Birthday Party",
+                  name: "Virtual Birthday Party",
+                  vibe: "PARTY_CLUB" as const,
+                  announcement: "🎂 Birthday Party is LIVE! Cake cutting & celebration at the Fountain Room!",
+                  coords: { x: 1200, y: 350 },
+                },
+                {
+                  icon: "🍷",
+                  title: "Dinner Gala",
+                  name: "Candlelight Dinner Gala",
+                  vibe: "DINNER_GALA" as const,
+                  announcement: "🍷 Candlelight Dinner Gala is now open! Take your seat at the banquet table.",
+                  coords: { x: 1200, y: 340 },
+                },
+                {
+                  icon: "🪩",
+                  title: "Club Party",
+                  name: "Epic Club Party",
+                  vibe: "PARTY_CLUB" as const,
+                  announcement: "🪩 Party is LIVE! Meet at the DJ dance floor for drinks & music.",
+                  coords: { x: 760, y: 140 },
+                },
+                {
+                  icon: "👻",
+                  title: "Ghost Dating",
+                  name: "Ghost Dating & Mystery Blind Meetup",
+                  vibe: "HORROR_NIGHT" as const,
+                  announcement: "👻 Ghost Dating / Mystery Meetup is LIVE! Discover connections.",
+                  coords: { x: 430, y: 140 },
+                },
+                {
+                  icon: "💼",
+                  title: "Co-Work",
+                  name: "Co-Work & Strategy Sprint",
+                  vibe: "SUNNY_DAYLIGHT" as const,
+                  announcement: "💼 Co-Work Sprint in progress! Grab your desk & collaborate.",
+                  coords: { x: 270, y: 280 },
+                },
+                {
+                  icon: "📚",
+                  title: "Study Session",
+                  name: "Deep Focus Study",
+                  vibe: "COZY_RAINY" as const,
+                  announcement: "📚 25/5 Pomodoro study sprint active in the Silent Sanctuary.",
+                  coords: { x: 1200, y: 260 },
+                },
+                {
+                  icon: "🍃",
+                  title: "Sukoon / Zen",
+                  name: "Sukoon Zen Sanctuary",
+                  vibe: "SUKOON_ZEN" as const,
+                  announcement: "🍃 Welcome to Sukoon Sanctuary. Relaxation, tranquility & peace.",
+                  coords: { x: 800, y: 560 },
+                },
+                {
+                  icon: "🕹️",
+                  title: "Arcade Games",
+                  name: "Arcade & Games Championship",
+                  vibe: "MIDNIGHT_NEON" as const,
+                  announcement: "🕹️ Table games championship starting now at the Arcade!",
+                  coords: { x: 410, y: 420 },
+                },
+              ].map((p) => (
+                <button
+                  key={p.title}
+                  type="button"
+                  onClick={() => handleHostPreset(p.name, p.vibe, p.announcement, p.coords)}
+                  className="p-2.5 rounded-xl border border-neutral-800 bg-neutral-900/70 hover:border-cyan-400/50 hover:bg-neutral-850 text-left transition cursor-pointer flex items-center gap-2 group"
+                >
+                  <span className="text-xl shrink-0 group-hover:scale-110 transition-transform">
+                    {p.icon}
                   </span>
-                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-400 text-black uppercase font-mono">
-                    Cake + Dinner + Games
+                  <span className="text-xs font-mono font-bold text-white group-hover:text-cyan-300 truncate">
+                    {p.title}
                   </span>
-                </div>
-                <p className="text-[10px] font-mono text-neutral-300 leading-tight">
-                  Grand celebratory cake cutting, champagne toast, banquet dining table, party games & fanfare.
-                </p>
-              </button>
-
-              {/* Preset 1: Candlelight Dinner Gala */}
-              <button
-                type="button"
-                onClick={() =>
-                  handleHostPreset(
-                    "Candlelight Dinner Gala",
-                    "DINNER_GALA",
-                    "🍷 Candlelight Dinner Gala is now open! Take your seat at the banquet table.",
-                    { x: 1200, y: 340 }
-                  )
-                }
-                className="p-3 rounded-2xl border border-amber-500/30 bg-amber-950/20 hover:bg-amber-950/40 text-left transition-all cursor-pointer group"
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xl">🍷</span>
-                  <span className="text-xs font-mono font-bold text-amber-300 group-hover:text-white">
-                    Host Dinner Gala
-                  </span>
-                </div>
-                <p className="text-[10px] font-mono text-neutral-400 leading-tight">
-                  Golden chandelier lighting, candlelight banquet & jazz atmosphere.
-                </p>
-              </button>
-
-              {/* Preset 2: Nightclub Party & Rave */}
-              <button
-                type="button"
-                onClick={() =>
-                  handleHostPreset(
-                    "Epic Club Party",
-                    "PARTY_CLUB",
-                    "🪩 Party is LIVE! Meet at the DJ dance floor for drinks & music.",
-                    { x: 760, y: 140 }
-                  )
-                }
-                className="p-3 rounded-2xl border border-pink-500/30 bg-pink-950/20 hover:bg-pink-950/40 text-left transition-all cursor-pointer group"
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xl">🪩</span>
-                  <span className="text-xs font-mono font-bold text-pink-300 group-hover:text-white">
-                    Host Club Party
-                  </span>
-                </div>
-                <p className="text-[10px] font-mono text-neutral-400 leading-tight">
-                  Sweeping laser light beams, neon strobes & dance floor energy.
-                </p>
-              </button>
-
-              {/* Preset 3: Ghost Dating & Mystery Blind Meetup */}
-              <button
-                type="button"
-                onClick={() =>
-                  handleHostPreset(
-                    "Ghost Dating & Mystery Blind Meetup",
-                    "HORROR_NIGHT",
-                    "👻 Ghost Dating & Blind Mystery Meetup is LIVE! Cloak on, step onto private rugs & discover connections.",
-                    { x: 430, y: 140 }
-                  )
-                }
-                className="p-3 rounded-2xl border border-purple-500/30 bg-purple-950/20 hover:bg-purple-950/40 text-left transition-all cursor-pointer group"
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xl">👻</span>
-                  <span className="text-xs font-mono font-bold text-purple-300 group-hover:text-white">
-                    Ghost Dating / Mystery
-                  </span>
-                </div>
-                <p className="text-[10px] font-mono text-neutral-400 leading-tight">
-                  Ghost cloaking mode, private isolation rugs & candlelight icebreakers.
-                </p>
-              </button>
-
-              {/* Preset 4: Co-Work & Strategy Sprint */}
-              <button
-                type="button"
-                onClick={() =>
-                  handleHostPreset(
-                    "Co-Work & Strategy Sprint",
-                    "SUNNY_DAYLIGHT",
-                    "💼 Co-Work Sprint in progress! Grab your desk, share screens & collaborate.",
-                    { x: 270, y: 280 }
-                  )
-                }
-                className="p-3 rounded-2xl border border-cyan-500/30 bg-cyan-950/20 hover:bg-cyan-950/40 text-left transition-all cursor-pointer group"
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xl">💼</span>
-                  <span className="text-xs font-mono font-bold text-cyan-300 group-hover:text-white">
-                    Co-Work & Strategy
-                  </span>
-                </div>
-                <p className="text-[10px] font-mono text-neutral-400 leading-tight">
-                  Sunny daylight atrium, designated desks, live screen share & whiteboard.
-                </p>
-              </button>
-
-              {/* Preset 5: Focus Study Session */}
-              <button
-                type="button"
-                onClick={() =>
-                  handleHostPreset(
-                    "Deep Focus Study",
-                    "COZY_RAINY",
-                    "📚 25/5 Pomodoro study sprint active in the Silent Sanctuary.",
-                    { x: 1200, y: 260 }
-                  )
-                }
-                className="p-3 rounded-2xl border border-sky-500/30 bg-sky-950/20 hover:bg-sky-950/40 text-left transition-all cursor-pointer group"
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xl">📚</span>
-                  <span className="text-xs font-mono font-bold text-sky-300 group-hover:text-white">
-                    Host Study Session
-                  </span>
-                </div>
-                <p className="text-[10px] font-mono text-neutral-400 leading-tight">
-                  25-min Pomodoro timer, ambient lofi rain & whiteboard collaboration.
-                </p>
-              </button>
-
-              {/* Preset 6: Sukoon Zen Sanctuary */}
-              <button
-                type="button"
-                onClick={() =>
-                  handleHostPreset(
-                    "Sukoon Zen Sanctuary",
-                    "SUKOON_ZEN",
-                    "🍃 Welcome to Sukoon Sanctuary. Relaxation, tranquility & peace.",
-                    { x: 800, y: 560 }
-                  )
-                }
-                className="p-3 rounded-2xl border border-emerald-500/30 bg-emerald-950/20 hover:bg-emerald-950/40 text-left transition-all cursor-pointer group"
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xl">🍃</span>
-                  <span className="text-xs font-mono font-bold text-emerald-300 group-hover:text-white">
-                    Host Sukoon / Zen
-                  </span>
-                </div>
-                <p className="text-[10px] font-mono text-neutral-400 leading-tight">
-                  Tranquil koi pond, floating lotus petals & soothing ambiance.
-                </p>
-              </button>
-
-              {/* Preset 7: Arcade & Table Games Championship */}
-              <button
-                type="button"
-                onClick={() =>
-                  handleHostPreset(
-                    "Arcade & Games Championship",
-                    "MIDNIGHT_NEON",
-                    "🕹️ Super Mario, Ludo & Uno Championship starting now at the Arcade!",
-                    { x: 410, y: 420 }
-                  )
-                }
-                className="p-3 rounded-2xl border border-indigo-500/30 bg-indigo-950/20 hover:bg-indigo-950/40 text-left transition-all cursor-pointer group"
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xl">🕹️</span>
-                  <span className="text-xs font-mono font-bold text-indigo-300 group-hover:text-white">
-                    Arcade & Table Games
-                  </span>
-                </div>
-                <p className="text-[10px] font-mono text-neutral-400 leading-tight">
-                  Ludo, UNO, Spin the Bottle, RPS, Mario & rhythm battles.
-                </p>
-              </button>
+                </button>
+              ))}
             </div>
           </div>
 
           {/* 3. Theme & Atmosphere Selector */}
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
               <Palette className="w-3.5 h-3.5 text-amber-400" />
               <span>Choose Theme & Atmosphere:</span>
             </label>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5">
               {Object.values(SPACE_VIBES).map((vibeDef) => {
                 const isSelected = selectedVibe === vibeDef.id;
                 return (
@@ -407,15 +291,16 @@ export default function HostEventModal({
                       onUpdateSpace({ vibe: vibeDef.id });
                       spacesSfx.playKeyNote(2);
                     }}
-                    className={`p-2.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col items-center text-center gap-1.5 ${
+                    className={`p-2 rounded-xl border transition-all cursor-pointer flex flex-col items-center gap-1 ${
                       isSelected
-                        ? "border-cyan-400 bg-cyan-950/60 shadow-lg scale-105"
+                        ? "border-cyan-400 bg-cyan-950/60 shadow-md scale-105"
                         : "border-neutral-800 bg-neutral-900/60 hover:bg-neutral-900 hover:border-neutral-700"
                     }`}
+                    title={vibeDef.name}
                   >
-                    <span className="text-2xl">{vibeDef.icon}</span>
+                    <span className="text-lg">{vibeDef.icon}</span>
                     <span
-                      className={`text-xs font-mono font-bold ${
+                      className={`text-[10px] font-mono font-bold truncate ${
                         isSelected ? "text-cyan-300" : "text-neutral-300"
                       }`}
                     >
@@ -428,7 +313,7 @@ export default function HostEventModal({
           </div>
 
           {/* 4. Broadcast Space Announcement */}
-          <form onSubmit={handlePublishAnnouncement} className="space-y-2">
+          <form onSubmit={handlePublishAnnouncement} className="space-y-1.5">
             <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
               <Megaphone className="w-3.5 h-3.5 text-amber-400" />
               <span>Broadcast Live Announcement:</span>
@@ -440,12 +325,12 @@ export default function HostEventModal({
                 onChange={(e) => setAnnouncementText(e.target.value)}
                 maxLength={90}
                 placeholder="Type banner message for all participants..."
-                className="flex-1 bg-neutral-900/80 border border-neutral-700 focus:border-amber-400 rounded-2xl px-4 py-2.5 text-sm font-mono text-white outline-none transition-colors"
+                className="flex-1 bg-neutral-900/80 border border-neutral-700 focus:border-amber-400 rounded-xl px-3 py-2 text-xs font-mono text-white outline-none transition-colors"
               />
               <button
                 type="submit"
                 disabled={!announcementText.trim()}
-                className="px-4 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-black font-mono font-bold text-xs transition-all cursor-pointer shadow-md flex items-center gap-1"
+                className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-black font-mono font-bold text-xs transition cursor-pointer shadow-sm flex items-center gap-1 shrink-0"
               >
                 <Send className="w-3.5 h-3.5" />
                 <span>Post</span>
@@ -454,8 +339,7 @@ export default function HostEventModal({
                 <button
                   type="button"
                   onClick={handleClearAnnouncement}
-                  className="px-3 py-2.5 rounded-2xl bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white font-mono text-xs transition-colors cursor-pointer"
-                  title="Clear Announcement"
+                  className="px-2.5 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white font-mono text-xs transition cursor-pointer shrink-0"
                 >
                   Clear
                 </button>
@@ -465,11 +349,11 @@ export default function HostEventModal({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-neutral-800 bg-neutral-900/40 flex justify-end">
+        <div className="p-3.5 border-t border-neutral-800 bg-neutral-900/40 flex justify-end">
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-mono text-xs font-bold transition-colors cursor-pointer"
+            className="px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-mono text-xs font-bold transition cursor-pointer"
           >
             Done
           </button>

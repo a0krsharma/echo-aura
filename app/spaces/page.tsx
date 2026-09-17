@@ -38,6 +38,14 @@ export default function SpacesLobbyPage() {
 
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
   const [quickHosting, setQuickHosting] = useState<string | null>(null);
+  const [showNameModal, setShowNameModal] = useState(false);
+  const [customSpaceName, setCustomSpaceName] = useState("");
+
+  const handleOpenStartSpace = () => {
+    const defaultName = `${user?.handle || "@HOST"}'s Lounge`;
+    setCustomSpaceName(defaultName);
+    setShowNameModal(true);
+  };
 
   const [deletingSpaceId, setDeletingSpaceId] = useState<string | null>(null);
   const [copiedSpaceId, setCopiedSpaceId] = useState<string | null>(null);
@@ -225,7 +233,7 @@ export default function SpacesLobbyPage() {
             </div>
 
             <button
-              onClick={() => handle1ClickInstantHost()}
+              onClick={handleOpenStartSpace}
               disabled={!!quickHosting}
               className="self-start md:self-center px-5 py-3 rounded-2xl bg-gradient-to-r from-cyan-400 via-sky-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-black font-mono font-black text-xs sm:text-sm flex items-center gap-2 shadow-xl shadow-cyan-500/25 active:scale-95 transition-all cursor-pointer shrink-0 disabled:opacity-50"
             >
@@ -433,6 +441,67 @@ export default function SpacesLobbyPage() {
         currentConfig={avatarConfig}
         onSave={handleSaveAvatar}
       />
+
+      {/* Quick Rename & Start Space Modal */}
+      {showNameModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-150">
+          <div className="w-full max-w-sm bg-neutral-950 border border-neutral-800 p-5 rounded-3xl shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-neutral-800/80 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🚀</span>
+                <span className="font-mono font-bold text-sm text-white">START MY SPACE</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowNameModal(false)}
+                className="p-1 rounded-lg text-neutral-400 hover:text-white transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                setShowNameModal(false);
+                handle1ClickInstantHost(customSpaceName.trim() || undefined);
+              }}
+              className="space-y-3.5"
+            >
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-neutral-400">
+                  Rename Space:
+                </label>
+                <input
+                  type="text"
+                  value={customSpaceName}
+                  onChange={(e) => setCustomSpaceName(e.target.value)}
+                  placeholder={`${user?.handle || "@abhishek"}'s Space`}
+                  className="w-full bg-neutral-900 border border-neutral-700 focus:border-cyan-400 rounded-xl px-3.5 py-2.5 text-xs font-mono text-white outline-none"
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="submit"
+                  disabled={!!quickHosting}
+                  className="flex-1 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 text-black font-mono font-bold text-xs transition cursor-pointer shadow-md"
+                >
+                  {quickHosting ? "Launching..." : "Save & Launch"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowNameModal(false)}
+                  className="px-4 py-2.5 rounded-xl border border-neutral-800 text-neutral-400 hover:text-white font-mono text-xs transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
