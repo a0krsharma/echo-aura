@@ -20,7 +20,7 @@ export function getSpotifyClientId(): string {
     const custom = window.localStorage.getItem(STORAGE_KEYS.CLIENT_ID);
     if (custom && custom.trim().length > 10) return custom.trim();
   }
-  return process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID || "3a2f1ee29fd047eba7144916c2c42291";
+  return process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID || "";
 }
 
 export function setCustomSpotifyClientId(clientId: string) {
@@ -41,7 +41,7 @@ export function getSpotifyRedirectUri(): string {
   if (typeof window !== "undefined") {
     return `${window.location.origin}/rooms`;
   }
-  return "https://echo-aura.vercel.app/rooms";
+  return process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL}/rooms` : "https://echo-aura.vercel.app/rooms";
 }
 
 const SPOTIFY_SCOPES = [
@@ -157,12 +157,22 @@ export function getSpotifyToken(): string | null {
 
   if (!token || !expiresAt) return null;
   if (Date.now() > Number(expiresAt)) {
-    // Token expired - attempt refresh if available
-    refreshSpotifyToken();
     return null;
   }
 
   return token;
+}
+
+export async function getOrRefreshSpotifyToken(): Promise<string | null> {
+  if (typeof window === "undefined") return null;
+  const token = getSpotifyToken();
+  if (token) return token;
+
+  const refreshToken = window.localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
+  if (refreshToken) {
+    return await refreshSpotifyToken();
+  }
+  return null;
 }
 
 export async function refreshSpotifyToken(): Promise<string | null> {
@@ -212,7 +222,7 @@ export function disconnectSpotify(): void {
 
 // ── Search Spotify Tracks ──────────────────────────────────────────────────
 export async function searchSpotifyTracks(query: string): Promise<any[]> {
-  const token = getSpotifyToken();
+  const token = await getOrRefreshSpotifyToken();
   if (!token || !query.trim()) return [];
 
   try {
@@ -241,7 +251,7 @@ export interface SpotifyPlaybackResult {
 
 // ── Spotify Web API Playback Controls ──────────────────────────────────────
 export async function playSpotifyTrack(trackUri: string, positionMs = 0): Promise<SpotifyPlaybackResult> {
-  const token = getSpotifyToken();
+  const token = await getOrRefreshSpotifyToken();
   if (!token) {
     return { success: false, reason: "AUTH_EXPIRED", message: "Spotify token missing or expired" };
   }
@@ -323,7 +333,7 @@ export async function playSpotifyTrack(trackUri: string, positionMs = 0): Promis
 }
 
 export async function pauseSpotifyPlayback(): Promise<boolean> {
-  const token = getSpotifyToken();
+  const token = await getOrRefreshSpotifyToken();
   if (!token) return false;
 
   try {
@@ -339,7 +349,7 @@ export async function pauseSpotifyPlayback(): Promise<boolean> {
 }
 
 export async function seekSpotifyPlayback(positionMs: number): Promise<boolean> {
-  const token = getSpotifyToken();
+  const token = await getOrRefreshSpotifyToken();
   if (!token) return false;
 
   try {

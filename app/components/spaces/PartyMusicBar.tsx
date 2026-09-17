@@ -460,41 +460,6 @@ export function PartyMusicBar({
     <div
       className={`relative z-40 bg-neutral-950/95 backdrop-blur-xl border border-emerald-500/30 shadow-2xl shadow-emerald-950/40 rounded-2xl p-3 transition-all ${className}`}
     >
-      {/* 🟢 SPOTIFY LIVE SYNC BANNER */}
-      {isSpotifyActive && (
-        <div className="mb-2 px-3 py-1.5 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-[11px] font-mono flex items-center justify-between shadow-sm animate-in fade-in flex-wrap gap-2">
-          <div className="flex items-center gap-2 overflow-hidden min-w-0">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
-            <span className="font-black text-white shrink-0 flex items-center gap-1">
-              <span>🟢</span>
-              <span>SPOTIFY CO-LISTENING:</span>
-            </span>
-            <span className="truncate text-white font-bold">
-              {activeTrackTitle} - {activeTrackArtist}
-            </span>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="text-[10px] text-emerald-400/90 font-bold">DJ: @{spotifySyncState?.djHandle || "Host"}</span>
-            <a
-              href={`https://open.spotify.com/track/${spotifySyncState?.trackId}`}
-              target="_blank"
-              rel="noreferrer"
-              className="text-[10px] bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-200 px-2 py-0.5 rounded-lg border border-emerald-500/30 flex items-center gap-1 transition"
-              title="Open full track in native Spotify App"
-            >
-              <span>App</span>
-              <ExternalLink className="w-2.5 h-2.5" />
-            </a>
-            <button
-              type="button"
-              onClick={handleBackToEchoRadio}
-              className="text-[10px] bg-neutral-900 hover:bg-neutral-800 text-neutral-400 hover:text-white px-2 py-0.5 rounded-lg border border-neutral-800 transition cursor-pointer"
-            >
-              Echo Radio
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Skip feedback toast */}
       {skipToast && (
@@ -676,29 +641,29 @@ export function PartyMusicBar({
         )}
       </div>
 
-      {/* 🟢 Live Spotify Embedded Player (Plays Authentic Audio from Spotify) */}
+      {/* 🟢 Live Spotify Embedded Player */}
       {isSpotifyActive && (
-        <div className="mt-2.5 rounded-xl overflow-hidden border border-emerald-500/40 bg-black/90 shadow-md">
-          <div className="px-2.5 py-1 bg-emerald-950/70 border-b border-emerald-500/20 flex items-center justify-between text-[10px] font-mono text-emerald-300">
-            <span className="flex items-center gap-1.5 font-bold">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-              <span>LIVE SPOTIFY CO-LISTENING</span>
+        <div className="mt-2.5 rounded-xl overflow-hidden border border-emerald-500/30 bg-black/90 shadow-md">
+          <div className="px-3 py-1.5 bg-emerald-950/50 border-b border-emerald-500/20 flex items-center justify-between text-[11px] font-mono text-emerald-300">
+            <span className="flex items-center gap-1.5 font-bold text-white">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>SPOTIFY CO-LISTENING</span>
             </span>
             <div className="flex items-center gap-2">
-              <span className="text-neutral-400">DJ: @{spotifySyncState?.djHandle || "Host"}</span>
               <a
                 href={`https://open.spotify.com/track/${spotifySyncState?.trackId}`}
                 target="_blank"
                 rel="noreferrer"
-                className="text-[9px] bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-200 px-1.5 py-0.5 rounded border border-emerald-500/30 flex items-center gap-0.5 transition"
+                className="text-[10px] bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-200 px-2 py-0.5 rounded border border-emerald-500/30 flex items-center gap-1 transition"
+                title="Open full track in native Spotify App"
               >
-                <span>App</span>
+                <span>Open in App</span>
                 <ExternalLink className="w-2.5 h-2.5" />
               </a>
               <button
                 type="button"
                 onClick={handleBackToEchoRadio}
-                className="text-[9px] text-neutral-400 hover:text-white px-1.5 py-0.5 rounded border border-neutral-800 transition cursor-pointer"
+                className="text-[10px] text-neutral-400 hover:text-white px-2 py-0.5 rounded border border-neutral-800 transition cursor-pointer"
                 title="Exit Spotify and return to Echo procedural party beats"
               >
                 Exit Spotify
@@ -715,21 +680,12 @@ export function PartyMusicBar({
             className="w-full bg-black block"
           />
 
-          {/* Guidance Banner & In-Space Audio Fallback */}
-          <div className="px-3 py-2 bg-neutral-900/95 border-t border-neutral-800 flex flex-col gap-2">
-            <div className="flex items-start gap-2 text-[11px] text-amber-300">
-              <span className="text-xs">💡</span>
-              <div className="flex-1">
-                <span className="font-semibold text-neutral-200">
-                  {spotifyStatusMsg || "Click ▶️ Play on the player above to start Spotify audio in your browser."}
-                </span>
-                <div className="text-[10px] text-neutral-400 mt-0.5">
-                  Spotify API requires Spotify Premium to start audio automatically on other apps. You can also listen via In-Space Beats below!
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between gap-2 pt-1 border-t border-neutral-800/80">
+          {/* Clean Guidance & Audio Mode Selection */}
+          <div className="px-3 py-2 bg-neutral-900/80 border-t border-neutral-800 flex items-center justify-between text-[11px] text-neutral-400 flex-wrap gap-2">
+            <span className="text-neutral-300">
+              💡 {spotifyStatusMsg || "Tap ▶️ on player above to start Spotify audio."}
+            </span>
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => {
@@ -739,29 +695,18 @@ export function PartyMusicBar({
                   setSkipToast(
                     next
                       ? "🔊 In-Space Beats Active! Playing procedural audio in sync for all guests."
-                      : "🔇 In-Space Beats Muted. Listening via Spotify player only."
+                      : "🔇 Listening via Spotify player."
                   );
-                  setTimeout(() => setSkipToast(null), 3500);
+                  setTimeout(() => setSkipToast(null), 3000);
                 }}
                 className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition flex items-center gap-1.5 cursor-pointer ${
                   inSpaceBeatsActive
                     ? "bg-emerald-500 text-neutral-950 shadow-sm"
-                    : "bg-emerald-950/70 hover:bg-emerald-900/90 text-emerald-300 border border-emerald-500/40"
+                    : "bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border border-neutral-700"
                 }`}
               >
-                <span>{inSpaceBeatsActive ? "🔊 In-Space Beats: ON" : "🎧 Play In-Space Beats (All Hear)"}</span>
+                <span>{inSpaceBeatsActive ? "🔊 In-Space Beats: ON" : "🎧 In-Space Beats (All Hear)"}</span>
               </button>
-
-              <div className="flex items-center gap-1.5">
-                <a
-                  href={`spotify:track:${spotifySyncState?.trackId}`}
-                  className="px-2 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-[11px] font-mono transition flex items-center gap-1"
-                  title="Open in Spotify Desktop / Mobile App"
-                >
-                  <span>Open Spotify App</span>
-                  <ExternalLink className="w-2.5 h-2.5 text-neutral-400" />
-                </a>
-              </div>
             </div>
           </div>
         </div>
