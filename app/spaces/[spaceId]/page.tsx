@@ -38,7 +38,6 @@ import { GuestAuthModal } from "@/app/components/spaces/GuestAuthModal";
 import { StagePresentationBar } from "@/app/components/spaces/StagePresentationBar";
 import TelepartyWatchModal, { TelepartySyncState } from "@/app/components/spaces/TelepartyWatchModal";
 import { PartyMusicBar } from "@/app/components/spaces/PartyMusicBar";
-import SpaceWorldNavigator from "@/app/components/spaces/SpaceWorldNavigator";
 import {
   getWalletState,
   TableDish,
@@ -840,17 +839,6 @@ export default function DynamicSpaceWorldPage() {
     } else if (obj.type === "fountain") {
       spacesSfx.playFountainSplash();
       handleSendSpeech("🪙 Tossed a coin into the Echo Fountain!");
-    } else if (obj.type === "gym") {
-      spacesSfx.playKeyNote(5);
-      handleSendEmote("💪");
-      handleSendSpeech("🏋️‍♂️ Pumping reps at the Olympic Bench Press! (+15 Aura) 💪🔥");
-    } else if (obj.type === "water") {
-      spacesSfx.playSitPop();
-      handleSendEmote("🥤");
-      handleSendSpeech("🥤 Ahh cold water from the cooler! Stay hydrated! (+5 Aura) 💧");
-    } else if (obj.type === "pomodoro") {
-      spacesSfx.playKeyNote(3);
-      handleSendSpeech("📚 Starting focus session at the Study Desk! 🧠✨");
     } else if (obj.type === "podium") {
       const nextStage = !isPresentingOnStage;
       setIsPresentingOnStage(nextStage);
@@ -1218,23 +1206,6 @@ export default function DynamicSpaceWorldPage() {
         </div>
       </header>
 
-      {/* 2.5 World-Class 5-Zone Quick Travel & Retention Bar */}
-      <SpaceWorldNavigator
-        currentZone={localAvatar.activeZone}
-        remoteAvatars={remoteAvatars}
-        onTeleport={handleTeleport}
-        onSendSpeech={handleSendSpeech}
-        onSendEmote={handleSendEmote}
-        onTriggerConfetti={handleTriggerConfetti}
-        onOpenPartyGames={() => {
-          setPartyTableGameTab("ludo");
-          setPartyTableGamesOpen(true);
-        }}
-        onOpenArcade={() => setArcadeModalOpen(true)}
-        onOpenWhiteboard={() => setWhiteboardModalOpen(true)}
-        onOpenMusic={() => setPartyMusicOpen((v) => !v)}
-      />
-
       {/* Live Stage Presentation Bar (Image 1 & 3 Fidelity) */}
       {(space?.category === "WEBINAR" || isStageActive) && (
         <StagePresentationBar
@@ -1342,7 +1313,7 @@ export default function DynamicSpaceWorldPage() {
           onOpenWhiteboard={() => setWhiteboardModalOpen(true)}
           onOpenAvatarStudio={() => setAvatarModalOpen(true)}
           onUpdateDecorations={handleUpdateDecorations}
-          confettiTrigger={confettiBlastCount}
+        confettiTrigger={confettiBlastCount}
 
           tableDishes={tableDishes}
           chairReservations={chairReservations}
@@ -1350,6 +1321,68 @@ export default function DynamicSpaceWorldPage() {
           onOpenUno={() => setUnoModalOpen(true)}
           onOpenPartyGames={() => setPartyTableGamesOpen(true)}
         />
+
+        {/* Zone HUD Pill + Quick Actions */}
+        {(() => {
+          const zone = localAvatar.activeZone;
+          const zoneDef = SPACES_ZONES[zone];
+          type ZoneAction = { label: string; emoji: string; onClick: () => void; color: string };
+          const zoneActions: Record<string, ZoneAction[]> = {
+            study: [
+              { label: "Pomodoro", emoji: "⏱️", color: "bg-amber-500 hover:bg-amber-400 text-black", onClick: () => { spacesSfx.playFocusBell(); handleSendSpeech("⏱️ Started 25-min Pomodoro focus session!"); } },
+              { label: "Whiteboard", emoji: "📋", color: "bg-amber-700 hover:bg-amber-600 text-white", onClick: () => setWhiteboardModalOpen(true) },
+            ],
+            gamehub: [
+              { label: "Ludo / UNO", emoji: "🎲", color: "bg-cyan-500 hover:bg-cyan-400 text-black", onClick: () => { setPartyTableGameTab("ludo"); setPartyTableGamesOpen(true); } },
+              { label: "Arcade", emoji: "🕹️", color: "bg-cyan-700 hover:bg-cyan-600 text-white", onClick: () => setArcadeModalOpen(true) },
+            ],
+            party: [
+              { label: "Music", emoji: "🎵", color: "bg-pink-500 hover:bg-pink-400 text-white", onClick: () => { spacesSfx.playKeyNote(2); setPartyMusicOpen((v) => !v); } },
+              { label: "Dance 🕺", emoji: "💃", color: "bg-rose-600 hover:bg-rose-500 text-white", onClick: () => { handleSendEmote("💃"); handleSendSpeech("🕺 Breaking into a dance on the party floor!"); } },
+            ],
+            gym: [
+              { label: "Workout!", emoji: "💪", color: "bg-emerald-500 hover:bg-emerald-400 text-black", onClick: () => handleSendSpeech("🏋️ Starting a 30-second workout challenge! Join me! 💪🔥") },
+              { label: "Leaderboard", emoji: "🏆", color: "bg-green-700 hover:bg-green-600 text-white", onClick: () => handleSendSpeech("🏆 Today's top workout: 3 rounds, 50 reps!") },
+            ],
+            cafe: [
+              { label: "Brew Coffee", emoji: "☕", color: "bg-purple-500 hover:bg-purple-400 text-white", onClick: () => { handleToggleCoffee(); spacesSfx.playCoffeeBrew(); } },
+              { label: "Lo-fi Chill", emoji: "🎶", color: "bg-violet-700 hover:bg-violet-600 text-white", onClick: () => { spacesSfx.playKeyNote(1); setPartyMusicOpen(true); handleSendSpeech("🎶 Putting on lo-fi chill vibes ☕"); } },
+            ],
+            music: [
+              { label: "Piano 🎹", emoji: "🎹", color: "bg-rose-500 hover:bg-rose-400 text-white", onClick: () => { handleSit(!localAvatar.isSitting, "music_piano_stool"); spacesSfx.playKeyNote(1); } },
+              { label: "Drums 🥁", emoji: "🥁", color: "bg-red-700 hover:bg-red-600 text-white", onClick: () => { spacesSfx.playDrumPad("kick"); handleSendSpeech("🥁 Jamming on the drum kit!"); } },
+            ],
+          };
+          const actions = zoneActions[zone] || [];
+          return (
+            <div className="absolute bottom-20 left-3 z-20 flex flex-col gap-2 pointer-events-auto">
+              {/* Zone HUD Pill */}
+              {zoneDef && (
+                <div
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono font-bold shadow-xl border border-white/10 backdrop-blur-md"
+                  style={{ backgroundColor: `${zoneDef.color}22`, borderColor: `${zoneDef.color}55`, color: zoneDef.color }}
+                >
+                  <span className="text-sm">{zoneDef.icon}</span>
+                  <span>{zoneDef.name}</span>
+                </div>
+              )}
+              {/* Zone Quick Actions */}
+              {actions.length > 0 && (
+                <div className="flex gap-1.5">
+                  {actions.map((a) => (
+                    <button
+                      key={a.label}
+                      onClick={a.onClick}
+                      className={`px-2.5 py-1.5 rounded-xl text-xs font-mono font-bold shadow-lg active:scale-95 transition-all cursor-pointer ${a.color}`}
+                    >
+                      {a.emoji} {a.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </main>
 
       {/* 4. Gather Bottom-Left Pill & Bottom-Right Toolbar */}

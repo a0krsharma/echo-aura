@@ -248,10 +248,10 @@ export default function HostEventModal({
                 },
                 {
                   icon: "🕹️",
-                  title: "Arcade Games",
-                  name: "Arcade & Games Championship",
+                  title: "Game Hub",
+                  name: "Game Hub Championship",
                   vibe: "MIDNIGHT_NEON" as const,
-                  announcement: "🕹️ Table games championship starting now at the Arcade!",
+                  announcement: "🕹️ Game Hub championship starting now! Join tables for Ludo & UNO!",
                   coords: { x: 410, y: 420 },
                 },
               ].map((p) => (

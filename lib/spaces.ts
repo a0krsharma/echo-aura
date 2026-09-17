@@ -165,7 +165,7 @@ export const SPACE_VIBES: Record<SpaceVibe, SpaceVibeDef> = {
   },
 };
 
-export type SpaceZoneId = "party" | "games" | "gym" | "library" | "courtyard" | "music";
+export type SpaceZoneId = "party" | "gamehub" | "study" | "gym" | "cafe" | "music" | "courtyard";
 
 export interface SpaceZoneDef {
   id: SpaceZoneId;
@@ -196,7 +196,7 @@ export interface InteractiveObject {
   zoneId: SpaceZoneId;
   name: string;
   icon: string;
-  type: "chair" | "whiteboard" | "piano" | "drums" | "gavel" | "pomodoro" | "podium" | "jukebox" | "fountain" | "coffee" | "arcade" | "gym" | "water";
+  type: "chair" | "whiteboard" | "piano" | "drums" | "gavel" | "pomodoro" | "podium" | "jukebox" | "fountain" | "coffee" | "arcade" | "treadmill" | "weights" | "coffeemachine" | "dj_deck" | "dance_floor" | "game_cab" | "bookshelf" | "zen_pond";
   x: number;
   y: number;
   w: number;
@@ -357,63 +357,73 @@ export interface SpaceSpotifySyncState {
 export const WORLD_WIDTH = 1600;
 export const WORLD_HEIGHT = 1200;
 
-// ── SPACE ZONES (World-Class 4-Zone Layout + Central Plaza) ──
+// ── SPACE ZONES (World-Class Themed Zones) ──
 export const SPACES_ZONES: Record<SpaceZoneId, SpaceZoneDef> = {
+  courtyard: {
+    id: "courtyard",
+    name: "Central Plaza",
+    category: "COMMUNITY",
+    icon: "⛲",
+    color: "#14b8a6",
+    bounds: { x: 0, y: 0, w: 1600, h: 1200 },
+    description: "Open plaza with fountain, tables & general hangout.",
+  },
   party: {
     id: "party",
-    name: "Party Area & DJ Stage",
-    category: "ENTERTAINMENT & MUSIC",
+    name: "🪩 Party Floor",
+    category: "PARTY & MUSIC",
     icon: "🪩",
     color: "#ec4899",
-    bounds: { x: 50, y: 650, w: 460, h: 500 },
-    description: "Live DJ stage, dance floor, confetti cannon & synchronized party beats.",
+    bounds: { x: 50, y: 50, w: 500, h: 380 },
+    description: "DJ booth, laser lights, dance floor & Spotify co-listen.",
   },
-  games: {
-    id: "games",
-    name: "Game Zone",
-    category: "GAMES & RETRO",
-    icon: "🕹️",
-    color: "#8b5cf6",
-    bounds: { x: 50, y: 50, w: 460, h: 550 },
-    description: "Multiplayer table games (Ludo & UNO), spin the bottle, RPS, chess & retro arcade machines.",
+  gamehub: {
+    id: "gamehub",
+    name: "🎮 Game Hub",
+    category: "GAMES & ARCADE",
+    icon: "🎮",
+    color: "#06b6d4",
+    bounds: { x: 600, y: 50, w: 450, h: 380 },
+    description: "Ludo, UNO, Spin the Bottle, RPS & retro arcade cabs.",
+  },
+  study: {
+    id: "study",
+    name: "📚 Study Library",
+    category: "FOCUS & LEARNING",
+    icon: "📚",
+    color: "#f59e0b",
+    bounds: { x: 1100, y: 50, w: 460, h: 380 },
+    description: "Pomodoro timer, whiteboard, quiet focus & book nooks.",
   },
   gym: {
     id: "gym",
-    name: "Gym & Fitness Arena",
-    category: "FITNESS & HEALTH",
-    icon: "🏋️‍♂️",
-    color: "#f59e0b",
-    bounds: { x: 1040, y: 650, w: 510, h: 500 },
-    description: "Cardio treadmills, Olympic bench press, push-up challenges & daily Aura fitness boosts.",
-  },
-  library: {
-    id: "library",
-    name: "Study Room & Library",
-    category: "FOCUS & KNOWLEDGE",
-    icon: "📚",
+    name: "🏋️ Gym & Fitness",
+    category: "FITNESS",
+    icon: "🏋️",
     color: "#10b981",
-    bounds: { x: 1040, y: 50, w: 510, h: 550 },
-    description: "25-min Pomodoro focus timer, ambient lo-fi rain, study desks & whiteboard collaboration.",
+    bounds: { x: 50, y: 490, w: 450, h: 360 },
+    description: "Workout challenges, treadmill, weights & leaderboard.",
   },
-  courtyard: {
-    id: "courtyard",
-    name: "Central Plaza & Fountain",
-    category: "COMMUNITY LOUNGE",
-    icon: "⛲",
-    color: "#06b6d4",
-    bounds: { x: 520, y: 50, w: 510, h: 1100 },
-    description: "Central gathering plaza connecting all 4 zones with banquet tables and fountain.",
+  cafe: {
+    id: "cafe",
+    name: "☕ Sukoon Café",
+    category: "CHILL & LOUNGE",
+    icon: "☕",
+    color: "#8b5cf6",
+    bounds: { x: 560, y: 490, w: 480, h: 360 },
+    description: "Lofi music, slow chat, barista coffee & cozy vibes.",
   },
   music: {
     id: "music",
-    name: "Party Area & DJ Stage",
-    category: "ENTERTAINMENT & MUSIC",
-    icon: "🪩",
-    color: "#ec4899",
-    bounds: { x: 50, y: 650, w: 460, h: 500 },
-    description: "Live DJ stage, dance floor, confetti cannon & synchronized party beats.",
+    name: "🎵 Music Studio",
+    category: "CREATIVE & AUDIO",
+    icon: "🎵",
+    color: "#f43f5e",
+    bounds: { x: 1100, y: 490, w: 460, h: 360 },
+    description: "Live piano synth, drum machine & vinyl jukebox.",
   },
 };
+
 
 // ── PRIVATE CONVERSATION RUGS ──
 export const PRIVATE_RUGS: PrivateRug[] = [
@@ -421,118 +431,225 @@ export const PRIVATE_RUGS: PrivateRug[] = [
     id: "rug_music_greenroom",
     name: "Backstage Band Lounge",
     zoneId: "music",
-    x: 100,
-    y: 900,
+    x: 1130,
+    y: 730,
+    w: 130,
+    h: 100,
+    color: "#be123c",
+    capacity: 4,
+  },
+  {
+    id: "rug_study_quiet",
+    name: "Silent Study Corner",
+    zoneId: "study",
+    x: 1120,
+    y: 70,
     w: 140,
     h: 110,
-    color: "#be123c",
+    color: "#d97706",
+    capacity: 4,
+  },
+  {
+    id: "rug_cafe_lounge",
+    name: "Café Lounge Corner",
+    zoneId: "cafe",
+    x: 580,
+    y: 510,
+    w: 130,
+    h: 100,
+    color: "#7c3aed",
+    capacity: 6,
+  },
+  {
+    id: "rug_gym_cooldown",
+    name: "Cooldown Stretch Zone",
+    zoneId: "gym",
+    x: 70,
+    y: 700,
+    w: 120,
+    h: 100,
+    color: "#059669",
     capacity: 4,
   },
 ];
 
 // ── INTERACTIVE OBJECTS ──
 export const INTERACTIVE_OBJECTS: InteractiveObject[] = [
-  // 🪩 Party Area / Music Zone
+  // 🪩 Party Floor
+  {
+    id: "party_dj",
+    zoneId: "party",
+    name: "DJ Booth",
+    icon: "🎛️",
+    type: "dj_deck",
+    x: 80,
+    y: 80,
+    w: 90,
+    h: 60,
+    prompt: "Press [E] to Open Party Music & Spotify",
+  },
+  {
+    id: "party_dance",
+    zoneId: "party",
+    name: "Dance Floor",
+    icon: "💃",
+    type: "dance_floor",
+    x: 240,
+    y: 200,
+    w: 120,
+    h: 120,
+    prompt: "Press [E] to Dance! 🕺",
+  },
+  // 🎮 Game Hub
+  {
+    id: "gamehub_cab1",
+    zoneId: "gamehub",
+    name: "Ludo & UNO Table",
+    icon: "🎲",
+    type: "game_cab",
+    x: 640,
+    y: 100,
+    w: 80,
+    h: 70,
+    prompt: "Press [E] to Open Game Hub",
+  },
+  {
+    id: "gamehub_cab2",
+    zoneId: "gamehub",
+    name: "Retro Arcade Cab",
+    icon: "🕹️",
+    type: "arcade",
+    x: 780,
+    y: 100,
+    w: 70,
+    h: 70,
+    prompt: "Press [E] to Play Arcade Games",
+  },
+  // 📚 Study Library
+  {
+    id: "study_whiteboard",
+    zoneId: "study",
+    name: "Collaboration Whiteboard",
+    icon: "📋",
+    type: "whiteboard",
+    x: 1140,
+    y: 80,
+    w: 80,
+    h: 60,
+    prompt: "Press [E] to Open Whiteboard",
+  },
+  {
+    id: "study_pomodoro",
+    zoneId: "study",
+    name: "Pomodoro Focus Timer",
+    icon: "⏱️",
+    type: "pomodoro",
+    x: 1280,
+    y: 80,
+    w: 60,
+    h: 60,
+    prompt: "Press [E] to Start 25-min Focus Session",
+  },
+  {
+    id: "study_bookshelf",
+    zoneId: "study",
+    name: "Reading Nook",
+    icon: "📚",
+    type: "bookshelf",
+    x: 1420,
+    y: 100,
+    w: 60,
+    h: 70,
+    prompt: "Press [E] to Browse Reading List",
+  },
+  // 🏋️ Gym
+  {
+    id: "gym_treadmill",
+    zoneId: "gym",
+    name: "Treadmill Challenge",
+    icon: "🏃",
+    type: "treadmill",
+    x: 100,
+    y: 560,
+    w: 80,
+    h: 60,
+    prompt: "Press [E] to Start Workout Challenge",
+  },
+  {
+    id: "gym_weights",
+    zoneId: "gym",
+    name: "Weight Station",
+    icon: "🏋️",
+    type: "weights",
+    x: 260,
+    y: 560,
+    w: 80,
+    h: 60,
+    prompt: "Press [E] to Start Strength Challenge",
+  },
+  // ☕ Sukoon Café
+  {
+    id: "cafe_coffee",
+    zoneId: "cafe",
+    name: "Barista Coffee Bar",
+    icon: "☕",
+    type: "coffeemachine",
+    x: 620,
+    y: 550,
+    w: 70,
+    h: 60,
+    prompt: "Press [E] to Brew Coffee ☕",
+  },
+  {
+    id: "cafe_zen",
+    zoneId: "cafe",
+    name: "Zen Koi Pond",
+    icon: "🐟",
+    type: "zen_pond",
+    x: 780,
+    y: 560,
+    w: 80,
+    h: 80,
+    prompt: "Press [E] to Relax at the Koi Pond",
+  },
+  // 🎵 Music Studio
   {
     id: "music_piano",
-    zoneId: "party",
+    zoneId: "music",
     name: "Grand Synthesizer Piano",
     icon: "🎹",
     type: "piano",
-    x: 200,
-    y: 760,
+    x: 1160,
+    y: 560,
     w: 90,
     h: 56,
     prompt: "Press [E] to Play Grand Piano (Keys 1-8)",
   },
   {
     id: "music_drums",
-    zoneId: "party",
+    zoneId: "music",
     name: "4-Pad Drum Machine",
     icon: "🥁",
     type: "drums",
-    x: 340,
-    y: 760,
+    x: 1310,
+    y: 560,
     w: 70,
     h: 50,
     prompt: "Press [E] to Jam on Drum Machine",
   },
   {
     id: "music_jukebox",
-    zoneId: "party",
+    zoneId: "music",
     name: "Vintage Vinyl Jukebox",
     icon: "📻",
     type: "jukebox",
-    x: 130,
-    y: 920,
+    x: 1430,
+    y: 570,
     w: 50,
     h: 50,
     prompt: "Press [E] to Spin Jukebox Radio",
   },
-  // 🕹️ Game Zone
-  {
-    id: "arcade_games_cabinet",
-    zoneId: "games",
-    name: "Game Zone Arcade Machine",
-    icon: "🕹️",
-    type: "arcade",
-    x: 350,
-    y: 380,
-    w: 60,
-    h: 60,
-    prompt: "Press [E] to Launch 24 Games & Table Games",
-  },
-  // 🏋️‍♂️ Gym & Fitness Arena
-  {
-    id: "gym_bench_press",
-    zoneId: "gym",
-    name: "Olympic Bench Press",
-    icon: "🏋️‍♂️",
-    type: "gym",
-    x: 1100,
-    y: 740,
-    w: 80,
-    h: 50,
-    prompt: "Press [E] to Pump 10 Reps (+15 Aura)",
-  },
-  {
-    id: "gym_water_cooler",
-    zoneId: "gym",
-    name: "Hydro Pure Water Cooler",
-    icon: "🥤",
-    type: "water",
-    x: 1420,
-    y: 860,
-    w: 40,
-    h: 50,
-    prompt: "Press [E] to Hydrate (+5 Aura)",
-  },
-  // 📚 Study Room & Library
-  {
-    id: "library_pomodoro_desk",
-    zoneId: "library",
-    name: "25-Min Pomodoro Desk",
-    icon: "⏱️",
-    type: "pomodoro",
-    x: 1100,
-    y: 320,
-    w: 80,
-    h: 50,
-    prompt: "Press [E] to Start 25-Min Focus Study Session",
-  },
-  {
-    id: "library_whiteboard",
-    zoneId: "library",
-    name: "Collaborative Focus Whiteboard",
-    icon: "📝",
-    type: "whiteboard",
-    x: 1250,
-    y: 180,
-    w: 90,
-    h: 50,
-    prompt: "Press [E] to Open Collaborative Whiteboard",
-  },
-  // ⛲ Central Plaza
+  // ⛲ Central Plaza Fountain
   {
     id: "courtyard_fountain",
     zoneId: "courtyard",
@@ -540,7 +657,7 @@ export const INTERACTIVE_OBJECTS: InteractiveObject[] = [
     icon: "⛲",
     type: "fountain",
     x: 770,
-    y: 560,
+    y: 920,
     w: 60,
     h: 60,
     prompt: "Press [E] to Toss Aura Coin (+5 Aura)",
@@ -560,39 +677,23 @@ export interface SpaceDoorway {
   spawnOutside: { x: number; y: number };
 }
 
-export const SPACE_DOORWAYS: SpaceDoorway[] = [
-  {
-    zoneId: "music",
-    name: "Music Studio Entrance",
-    x: 200,
-    y: 646,
-    w: 160,
-    h: 24,
-    orientation: "horizontal",
-    spawnInside: { x: 280, y: 720 },
-    spawnOutside: { x: 280, y: 600 },
-  },
-];
+export const SPACE_DOORWAYS: SpaceDoorway[] = [];
 
-// ── COLLISION WALLS (Outer Boundary + Music Room Only) ──
+// ── COLLISION WALLS (Outer Boundary Only — zones are open floor) ──
 export const COLLISION_BOXES: CollisionBox[] = [
   // Outer map boundary walls
-  { x: 0, y: 0, w: WORLD_WIDTH, h: 40 },
-  { x: 0, y: WORLD_HEIGHT - 40, w: WORLD_WIDTH, h: 40 },
-  { x: 0, y: 0, w: 40, h: WORLD_HEIGHT },
-  { x: WORLD_WIDTH - 40, y: 0, w: 40, h: WORLD_HEIGHT },
-
-  // Music Room Walls (Wide 160px Doorway at Top y: 650, x: 200-360)
-  { x: 50, y: 650, w: 150, h: 16 },
-  { x: 360, y: 650, w: 150, h: 16 },
-  { x: 50, y: 650, w: 16, h: 500 },
-  { x: 494, y: 650, w: 16, h: 500 },
-  { x: 50, y: 1134, w: 460, h: 16 },
+  { x: 0, y: 0, w: WORLD_WIDTH, h: 20 },
+  { x: 0, y: WORLD_HEIGHT - 20, w: WORLD_WIDTH, h: 20 },
+  { x: 0, y: 0, w: 20, h: WORLD_HEIGHT },
+  { x: WORLD_WIDTH - 20, y: 0, w: 20, h: WORLD_HEIGHT },
 ];
 
+
+// Zone check order: specific zones first, courtyard (catch-all) last
+const ZONE_CHECK_ORDER: SpaceZoneId[] = ["party", "gamehub", "study", "gym", "cafe", "music", "courtyard"];
+
 export function getZoneAtCoordinates(x: number, y: number): SpaceZoneId {
-  const priorityZones: SpaceZoneId[] = ["games", "library", "party", "gym", "music"];
-  for (const id of priorityZones) {
+  for (const id of ZONE_CHECK_ORDER) {
     const zone = SPACES_ZONES[id];
     if (!zone) continue;
     const { bounds } = zone;

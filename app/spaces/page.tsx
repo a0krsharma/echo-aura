@@ -40,6 +40,7 @@ export default function SpacesLobbyPage() {
   const [quickHosting, setQuickHosting] = useState<string | null>(null);
   const [showNameModal, setShowNameModal] = useState(false);
   const [customSpaceName, setCustomSpaceName] = useState("");
+  const [zoneFilter, setZoneFilter] = useState<string | null>(null);
 
   const handleOpenStartSpace = () => {
     const defaultName = `${user?.handle || "@HOST"}'s Lounge`;
@@ -157,7 +158,17 @@ export default function SpacesLobbyPage() {
   };
 
   // Filter spaces
+  const ZONE_CHIPS = [
+    { id: "ARCADE",  label: "Game Hub",      emoji: "🎮", color: "cyan" },
+    { id: "CAMPUS",  label: "Study Library", emoji: "📚", color: "amber" },
+    { id: "CONCERT", label: "Party Floor",   emoji: "🪩", color: "pink" },
+    { id: "MUSIC",   label: "Music Studio",  emoji: "🎵", color: "rose" },
+    { id: "CAFE",    label: "Sukoon Café",   emoji: "☕", color: "violet" },
+    { id: "OFFICE",  label: "Gym & Fitness", emoji: "🏋️", color: "emerald" },
+  ] as const;
+
   const filteredSpaces = spaces.filter((s) => {
+    if (zoneFilter && s.category !== zoneFilter) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       const matchName = s.name?.toLowerCase().includes(q);
@@ -277,7 +288,8 @@ export default function SpacesLobbyPage() {
 
       {/* 3. Live Active Spaces Directory */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
-        <div className="space-y-4">
+        {/* Search + Zone Filters */}
+        <div className="space-y-3">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
             {/* Search Input */}
             <div className="relative flex-1 max-w-md">
@@ -290,7 +302,43 @@ export default function SpacesLobbyPage() {
                 className="w-full pl-10 pr-4 py-2.5 bg-neutral-950 border border-neutral-800 rounded-2xl text-xs font-mono text-white placeholder-neutral-500 outline-none focus:border-cyan-500 transition-all"
               />
             </div>
+          </div>
 
+          {/* Zone Filter Chips */}
+          <div className="flex flex-wrap gap-1.5">
+            {ZONE_CHIPS.map((chip) => {
+              const isActive = zoneFilter === chip.id;
+              const colorMap: Record<string, string> = {
+                cyan:    "border-cyan-400/60 bg-cyan-950/60 text-cyan-300",
+                amber:   "border-amber-400/60 bg-amber-950/60 text-amber-300",
+                pink:    "border-pink-400/60 bg-pink-950/60 text-pink-300",
+                rose:    "border-rose-400/60 bg-rose-950/60 text-rose-300",
+                violet:  "border-violet-400/60 bg-violet-950/60 text-violet-300",
+                emerald: "border-emerald-400/60 bg-emerald-950/60 text-emerald-300",
+              };
+              return (
+                <button
+                  key={chip.id}
+                  onClick={() => { spacesSfx.playKeyNote(3); setZoneFilter(isActive ? null : chip.id); }}
+                  className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    isActive
+                      ? colorMap[chip.color]
+                      : "border-neutral-800 bg-neutral-900/60 text-neutral-400 hover:text-white hover:border-neutral-700"
+                  }`}
+                >
+                  <span>{chip.emoji}</span>
+                  <span>{chip.label}</span>
+                </button>
+              );
+            })}
+            {zoneFilter && (
+              <button
+                onClick={() => setZoneFilter(null)}
+                className="px-2.5 py-1.5 rounded-xl border border-neutral-700 bg-neutral-800 text-neutral-400 hover:text-white text-xs font-mono cursor-pointer transition-all"
+              >
+                ✕ Clear
+              </button>
+            )}
           </div>
         </div>
 
