@@ -1238,7 +1238,7 @@ export default function DynamicSpaceWorldPage() {
 
       {/* 🎵 Synchronized Space Party Music Bar */}
       {partyMusicOpen && (
-        <div className="relative z-40 px-2 sm:px-4 py-1.5 bg-neutral-950/95 border-b border-pink-500/30 shadow-2xl backdrop-blur-xl animate-in slide-in-from-top-2">
+        <div className="relative z-40 px-2 sm:px-4 py-1.5 bg-neutral-950 border-b border-pink-500/30 shadow-2xl">
           <PartyMusicBar
             userHandle={localAvatar.handle}
             compact={false}

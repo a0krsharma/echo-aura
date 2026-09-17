@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Play,
   Pause,
@@ -82,8 +83,10 @@ export function PartyMusicBar({
   const [customSpotifyUrl, setCustomSpotifyUrl] = useState("");
   const [spotifyStatusMsg, setSpotifyStatusMsg] = useState<string | null>(null);
   const [inSpaceBeatsActive, setInSpaceBeatsActive] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     setSpotifyToken(getSpotifyToken());
     const unsub = partyMusicEngine.subscribe((state) => {
       setMusicState(state);
@@ -673,9 +676,15 @@ export function PartyMusicBar({
       )}
 
       {/* ── SPOTIFY SEARCH & ROOM SYNC MODAL ── */}
-      {spotifyModalOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-start sm:items-center justify-center p-3 sm:p-4 pt-16 sm:pt-6 bg-black/90 backdrop-blur-xl animate-in fade-in overflow-y-auto">
-          <div className="relative w-full max-w-lg bg-neutral-950 border border-emerald-500/50 rounded-3xl shadow-2xl p-4 sm:p-5 space-y-4 max-h-[88vh] overflow-y-auto custom-scrollbar my-auto">
+      {mounted && spotifyModalOpen && typeof document !== "undefined" && createPortal(
+        <div
+          className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in"
+          onClick={() => setSpotifyModalOpen(false)}
+        >
+          <div
+            className="relative w-full max-w-lg bg-neutral-950 border border-emerald-500/50 rounded-3xl shadow-2xl p-4 sm:p-5 space-y-4 max-h-[88vh] overflow-y-auto custom-scrollbar my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Modal Header */}
             <div className="sticky -top-4 sm:-top-5 -mx-4 sm:-mx-5 -mt-4 sm:-mt-5 p-4 sm:p-5 bg-neutral-900/95 border-b border-neutral-800 rounded-t-3xl backdrop-blur-md z-10 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5 min-w-0">
@@ -802,8 +811,6 @@ export function PartyMusicBar({
               </div>
             )}
 
-
-
             {/* Paste Custom Spotify Link */}
             <div className="pt-2 border-t border-neutral-800 space-y-1.5">
               <div className="text-[11px] font-mono font-bold text-neutral-400">
@@ -828,7 +835,8 @@ export function PartyMusicBar({
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
