@@ -320,8 +320,6 @@ function RoomsPageContent() {
   const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const spotifyCode = searchParams.get("code");
-
   const [rooms, setRooms] = useState<Room[]>([]);
   const [clashes, setClashes] = useState<ClashItem[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -332,19 +330,44 @@ function RoomsPageContent() {
 
   // Handle Spotify OAuth Callback
   useEffect(() => {
-    if (spotifyCode) {
-      handleSpotifyCallback(spotifyCode).then((success) => {
+    const code = searchParams.get("code");
+    const error = searchParams.get("error");
+
+    if (error) {
+      // Spotify returned an error (e.g. user denied access)
+      setSpotifyStatus(`⚠️ Spotify login cancelled or denied: ${error}`);
+      // Clean URL without reloading
+      const cleanUrl = window.location.origin + window.location.pathname;
+      window.history.replaceState({}, "", cleanUrl);
+      return;
+    }
+
+    if (code) {
+      setSpotifyStatus("🔄 Connecting your Spotify account...");
+      handleSpotifyCallback(code).then((success) => {
         if (success) {
-          setSpotifyStatus("SPOTIFY CO-LISTENING AUTHENTICATED! REDIRECTING...");
+          setSpotifyStatus("✅ Spotify Connected! Returning to your space...");
           const returnUrl = window.localStorage.getItem("echo_spotify_return_url");
-          if (returnUrl) {
-            window.localStorage.removeItem("echo_spotify_return_url");
-            window.location.replace(returnUrl);
-          }
+          window.localStorage.removeItem("echo_spotify_return_url");
+          setTimeout(() => {
+            if (returnUrl && returnUrl.startsWith("http")) {
+              window.location.replace(returnUrl);
+            } else {
+              // No stored return URL — go to spaces
+              window.location.replace("/spaces");
+            }
+          }, 1200);
+        } else {
+          setSpotifyStatus("❌ Spotify login failed. Check your Client ID in Spotify Dev Dashboard and ensure the redirect URI https://echo-aura.vercel.app/rooms is registered.");
+          // Clean the ?code= from URL
+          const cleanUrl = window.location.origin + window.location.pathname;
+          window.history.replaceState({}, "", cleanUrl);
         }
+      }).catch(() => {
+        setSpotifyStatus("❌ Spotify auth error. Please try again.");
       });
     }
-  }, [spotifyCode]);
+  }, [searchParams]);
 
   useEffect(() => {
     const unsubClashes = subscribeToClashes((list) => setClashes(list));
