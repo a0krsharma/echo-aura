@@ -132,17 +132,24 @@ export function PartyMusicBar({
     }
   }, [spotifySyncState, spotifyToken]);
 
+  // Returns true if ID is a real Spotify Base62 ID (not a numeric iTunes preview ID)
+  const isValidSpotifyId = (id: string) => /^[a-zA-Z0-9]{18,26}$/.test(id) && !/^\d+$/.test(id);
+
   const handleSelectSpotifyTrack = (track: {
     id: string;
     title: string;
     artist: string;
-    uri?: string;
+    uri?: string | null;
     coverArt?: string;
     bpm?: number;
     durationMs?: number;
+    isCatalogSearch?: boolean;
+    previewUrl?: string;
   }) => {
     const cleanId = extractSpotifyTrackId(track.id) || track.id;
-    const trackUri = track.uri || `spotify:track:${cleanId}`;
+    // Only build a real Spotify URI if the ID is valid Base62 (not a numeric/iTunes ID)
+    const hasRealId = isValidSpotifyId(cleanId);
+    const trackUri = hasRealId ? (track.uri || `spotify:track:${cleanId}`) : null;
 
     // 1. Update partyMusicEngine metadata and pause procedural synth
     partyMusicEngine.playSpotifyTrack({
@@ -156,8 +163,8 @@ export function PartyMusicBar({
 
     // 2. Broadcast Spotify Live Sync state to all users in the Space
     const syncData: SpaceSpotifySyncState = {
-      trackId: cleanId,
-      trackUri: trackUri,
+      trackId: hasRealId ? cleanId : "",
+      trackUri: trackUri || "",
       trackName: track.title,
       artistName: track.artist,
       albumArt: track.coverArt || "🟢",
@@ -169,8 +176,8 @@ export function PartyMusicBar({
     };
     onUpdateSpotifySync?.(syncData);
 
-    // 3. Control user's native Spotify player if connected
-    if (spotifyToken) {
+    // 3. Control native Spotify player only when we have a valid Base62 URI
+    if (spotifyToken && trackUri) {
       playSpotifyTrack(trackUri, 0)
         .then((res) => {
           if (!res.success) {
@@ -180,6 +187,9 @@ export function PartyMusicBar({
           }
         })
         .catch(() => {});
+    } else if (!trackUri) {
+      // Catalog result (iTunes/preview) — no valid Spotify URI, embed won't show, just display info
+      setSpotifyStatusMsg("⚡ Preview result. Paste a Spotify link or connect your account for full room sync.");
     } else {
       setSpotifyStatusMsg("Connect your Spotify account to auto-control playback across devices.");
     }
@@ -200,22 +210,23 @@ export function PartyMusicBar({
       if (spotifyToken) {
         results = await searchSpotifyTracks(query);
       } else {
-        // Fallback to /api/spotify/resolve?q=... for instant song search without login
+        // Unauthenticated: iTunes catalog fallback — marks results as catalog-only
         const res = await fetch(`/api/spotify/resolve?q=${encodeURIComponent(query)}`);
         if (res.ok) {
           const data = await res.json();
           if (data.success && Array.isArray(data.results)) {
             results = data.results.map((r: any) => ({
-              id: r.id,
+              id: r.id, // "preview_<numericId>" — won't pass isValidSpotifyId check
               name: r.title,
               artists: [{ name: r.artist }],
               album: {
                 name: r.album,
                 images: [{ url: r.coverArt }],
               },
-              uri: `spotify:track:${r.id.replace("preview_", "")}`,
+              uri: null, // explicitly null — no fake Spotify URI generated
               coverArt: r.coverArt,
               durationMs: r.durationMs,
+              previewUrl: r.previewUrl,
               isCatalogSearch: true,
             }));
           }
@@ -274,7 +285,8 @@ export function PartyMusicBar({
   };
 
   const handleTogglePlay = () => {
-    if (spotifySyncState?.trackId) {
+    // Use trackName as guard (works for both full Spotify + catalog preview mode)
+    if (spotifySyncState?.trackName) {
       const nextPlaying = !spotifySyncState.isPlaying;
       const progress = Math.max(0, Date.now() - (spotifySyncState.startedAt || Date.now()));
       const updatedSync: SpaceSpotifySyncState = {
@@ -285,6 +297,7 @@ export function PartyMusicBar({
       };
       onUpdateSpotifySync?.(updatedSync);
 
+      // Only call native Spotify API if we have a valid trackUri (not catalog preview)
       if (spotifyToken && spotifySyncState.trackUri) {
         if (nextPlaying) {
           playSpotifyTrack(spotifySyncState.trackUri, progress).catch(() => {});
@@ -315,7 +328,7 @@ export function PartyMusicBar({
   };
 
   const handleNext = async () => {
-    if (isSpotifyActive) {
+    if (isSpotifyMode) {
       // 1. Check if we have items in our spotifyQueue
       if (spotifyQueue.length > 0) {
         const nextTrack = spotifyQueue[0];
@@ -339,14 +352,17 @@ export function PartyMusicBar({
           if (data.success && Array.isArray(data.results) && data.results.length > 0) {
             const nextOne =
               data.results.find((r: any) => r.title !== activeTrackTitle) || data.results[0];
+            // Catalog results (iTunes) have preview_ prefix — pass null URI to avoid Spotify 400
+            const nextId = nextOne.id.startsWith("preview_") ? nextOne.id : nextOne.id;
             handleSelectSpotifyTrack({
-              id: nextOne.id.replace("preview_", ""),
+              id: nextId,
               title: nextOne.title,
               artist: nextOne.artist,
-              uri: nextOne.uri || `spotify:track:${nextOne.id.replace("preview_", "")}`,
+              uri: nextOne.uri || null, // null for catalog results (no valid Spotify ID)
               coverArt: nextOne.coverArt,
               durationMs: nextOne.durationMs,
               bpm: 128,
+              isCatalogSearch: nextOne.id.startsWith("preview_"),
             });
             setSkipToast(`⏭️ NEXT SONG: "${nextOne.title}"`);
             setTimeout(() => setSkipToast(null), 3500);
@@ -367,7 +383,7 @@ export function PartyMusicBar({
   };
 
   const handlePrev = () => {
-    if (isSpotifyActive) {
+    if (isSpotifyMode) {
       setSkipToast("⏮️ Replaying track from start");
       setTimeout(() => setSkipToast(null), 2500);
       return;
@@ -432,11 +448,14 @@ export function PartyMusicBar({
     return `${m}:${s < 10 ? "0" : ""}${s}`;
   };
 
+  // isSpotifyActive: true only when we have a valid Spotify ID (embed player will show)
   const isSpotifyActive = Boolean(spotifySyncState?.trackId);
-  const activeTrackTitle = isSpotifyActive ? (spotifySyncState!.trackName || "Spotify Track") : musicState.track.title;
-  const activeTrackArtist = isSpotifyActive ? (spotifySyncState!.artistName || "Spotify Artist") : musicState.track.artist;
-  const activeCoverArt = isSpotifyActive ? (spotifySyncState!.albumArt || "🟢") : musicState.track.coverArt;
-  const isPlayingActive = isSpotifyActive ? Boolean(spotifySyncState?.isPlaying) : musicState.isPlaying;
+  // isSpotifyMode: true when any Spotify/catalog sync state is set (track info shows)
+  const isSpotifyMode = Boolean(spotifySyncState?.trackName);
+  const activeTrackTitle = isSpotifyMode ? (spotifySyncState!.trackName || "Spotify Track") : musicState.track.title;
+  const activeTrackArtist = isSpotifyMode ? (spotifySyncState!.artistName || "Spotify Artist") : musicState.track.artist;
+  const activeCoverArt = isSpotifyMode ? (spotifySyncState!.albumArt || "🟢") : musicState.track.coverArt;
+  const isPlayingActive = isSpotifyMode ? Boolean(spotifySyncState?.isPlaying) : musicState.isPlaying;
 
   return (
     <div
@@ -488,19 +507,19 @@ export function PartyMusicBar({
               </span>
               <span
                 className={`text-[9px] font-mono px-1.5 py-0.5 rounded border uppercase font-semibold shrink-0 ${
-                  isSpotifyActive
+                  isSpotifyMode
                     ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
                     : "bg-purple-500/20 text-purple-300 border-purple-500/30"
                 }`}
               >
-                {isSpotifyActive ? "SPOTIFY" : musicState.track.genre}
+                {isSpotifyMode ? "SPOTIFY" : musicState.track.genre}
               </span>
             </div>
             <div className="flex items-center gap-2 text-[11px] text-neutral-400 truncate">
               <span>{activeTrackArtist}</span>
               <span className="text-neutral-600">•</span>
               <span className="text-emerald-400 font-mono text-[10px]">
-                {isSpotifyActive ? "REAL-TIME SYNC" : `${musicState.track.bpm} BPM`}
+                {isSpotifyActive ? "REAL-TIME SYNC" : isSpotifyMode ? "PREVIEW" : `${musicState.track.bpm} BPM`}
               </span>
             </div>
           </div>
@@ -569,7 +588,7 @@ export function PartyMusicBar({
             type="button"
             onClick={() => setSpotifyModalOpen(true)}
             className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm group ${
-              isSpotifyActive
+              isSpotifyMode
                 ? "border-emerald-400 bg-emerald-500/30 text-white shadow-emerald-500/30"
                 : "border-emerald-400/50 bg-emerald-500/20 hover:bg-emerald-500/35 text-emerald-300 hover:text-white shadow-emerald-500/20"
             }`}
