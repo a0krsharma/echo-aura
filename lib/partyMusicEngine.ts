@@ -20,52 +20,7 @@ export interface PartyTrack {
   vibe: string;
 }
 
-export const PARTY_PLAYLIST: PartyTrack[] = [
-  {
-    id: "echo_lofi",
-    title: "Nocturne Chill",
-    artist: "Echo Synthesizer",
-    album: "Procedural Beats",
-    genre: "lofi",
-    coverArt: "🌙",
-    bpm: 88,
-    durationSeconds: 180,
-    vibe: "Ambient Lo-Fi",
-  },
-  {
-    id: "echo_synthwave",
-    title: "Neon Horizon",
-    artist: "Echo Synthesizer",
-    album: "Procedural Beats",
-    genre: "edm",
-    coverArt: "⚡",
-    bpm: 120,
-    durationSeconds: 190,
-    vibe: "Synthwave Groove",
-  },
-  {
-    id: "echo_deep_ambient",
-    title: "Velvet Waves",
-    artist: "Echo Synthesizer",
-    album: "Procedural Beats",
-    genre: "lofi",
-    coverArt: "🌊",
-    bpm: 92,
-    durationSeconds: 200,
-    vibe: "Relaxed Ambient",
-  },
-  {
-    id: "echo_cyber_groove",
-    title: "Cyber Pulse",
-    artist: "Echo Synthesizer",
-    album: "Procedural Beats",
-    genre: "edm",
-    coverArt: "🔥",
-    bpm: 128,
-    durationSeconds: 185,
-    vibe: "Electronic Pulse",
-  },
-];
+export const PARTY_PLAYLIST: PartyTrack[] = [];
 
 class PartyMusicEngine {
   private audioCtx: AudioContext | null = null;
@@ -105,8 +60,18 @@ class PartyMusicEngine {
   }
 
   public getState() {
-    const track = PARTY_PLAYLIST[this.currentTrackIndex];
-    const progress = Math.min(100, Math.floor((this.elapsedSeconds / track.durationSeconds) * 100));
+    const track = PARTY_PLAYLIST[this.currentTrackIndex] || {
+      id: "echo_space_music",
+      title: "Queue Any Song from Spotify",
+      artist: "Echo Co-Listening",
+      album: "Spotify Co-Listening",
+      genre: "spotify" as const,
+      coverArt: "🟢",
+      bpm: 120,
+      durationSeconds: 210,
+      vibe: "Live Audio",
+    };
+    const progress = track.durationSeconds > 0 ? Math.min(100, Math.floor((this.elapsedSeconds / track.durationSeconds) * 100)) : 0;
     return {
       track,
       trackIndex: this.currentTrackIndex,
@@ -156,8 +121,7 @@ class PartyMusicEngine {
       this.currentTrackIndex = index;
       this.elapsedSeconds = 0;
       this.skipVotes.clear();
-      // If user manually selects a non-Spotify party track, resume internal audio
-      if (!PARTY_PLAYLIST[index].album.includes("Spotify Live")) {
+      if (!PARTY_PLAYLIST[index].album.includes("Spotify")) {
         this.isExternalAudio = false;
       }
     }
@@ -172,6 +136,7 @@ class PartyMusicEngine {
     if (this.trackTimer) clearInterval(this.trackTimer);
     this.trackTimer = setInterval(() => {
       const cur = PARTY_PLAYLIST[this.currentTrackIndex];
+      if (!cur) return;
       this.elapsedSeconds++;
       if (this.elapsedSeconds >= cur.durationSeconds) {
         this.nextTrack();
@@ -194,6 +159,7 @@ class PartyMusicEngine {
   }
 
   public nextTrack() {
+    if (PARTY_PLAYLIST.length === 0) return;
     this.currentTrackIndex = (this.currentTrackIndex + 1) % PARTY_PLAYLIST.length;
     this.elapsedSeconds = 0;
     this.skipVotes.clear();
@@ -206,6 +172,7 @@ class PartyMusicEngine {
   }
 
   public previousTrack() {
+    if (PARTY_PLAYLIST.length === 0) return;
     this.currentTrackIndex = (this.currentTrackIndex - 1 + PARTY_PLAYLIST.length) % PARTY_PLAYLIST.length;
     this.elapsedSeconds = 0;
     this.skipVotes.clear();

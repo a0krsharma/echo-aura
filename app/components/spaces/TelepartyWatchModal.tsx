@@ -13,6 +13,9 @@ import {
   Share2,
   Sparkles,
   Search,
+  SkipForward,
+  SkipBack,
+  Loader2,
 } from "lucide-react";
 import { spacesSfx } from "@/lib/spacesSfx";
 
@@ -37,42 +40,13 @@ interface TelepartyWatchModalProps {
   spaceId?: string;
 }
 
-const PRESET_CHANNELS = [
-  {
-    id: "jfKfPfyJRdk",
-    title: "Lofi Hip Hop Radio — Beats to Relax/Study",
-    category: "Lofi & Chill",
-    icon: "☕",
-    badge: "24/7 LIVE",
-  },
-  {
-    id: "5qap5aO4i9A",
-    title: "Boiler Room & Club Rave Party Hits",
-    category: "Club & Dance",
-    icon: "🪩",
-    badge: "PARTY BASS",
-  },
-  {
-    id: "yJg-Y5byMMw",
-    title: "Bollywood Party Dance Anthems 2026",
-    category: "Party Bangers",
-    icon: "💃",
-    badge: "VIRAL",
-  },
-  {
-    id: "nl62hhiBMOM",
-    title: "Grand Happy Birthday Celebration Beats",
-    category: "Birthday Special",
-    icon: "🎂",
-    badge: "CELEBRATION",
-  },
-  {
-    id: "4xDzrJKXOOY",
-    title: "Synthwave Cyberpunk Midnight Ride",
-    category: "Chill Vibe",
-    icon: "🪐",
-    badge: "RETRO",
-  },
+const DYNAMIC_VIBES = [
+  { label: "🔥 Party Hits", query: "party dance songs" },
+  { label: "☕ 24/7 Lofi", query: "lofi hip hop radio live" },
+  { label: "🪩 Club EDM", query: "club party dance edm mix" },
+  { label: "💃 Bollywood Dance", query: "bollywood party dance songs" },
+  { label: "🎂 Birthday Special", query: "happy birthday celebration songs" },
+  { label: "🪐 Synthwave", query: "synthwave cyberpunk mix" },
 ];
 
 export function extractYoutubeId(url: string): string | null {
@@ -106,6 +80,9 @@ export default function TelepartyWatchModal({
   const [reactions, setReactions] = useState<Array<{ id: string; emoji: string; x: number }>>([]);
   const [isMiniMode, setIsMiniMode] = useState(false);
   const [inviteToast, setInviteToast] = useState<string | null>(null);
+  const [searchResults, setSearchResults] = useState<Array<{ id: string; title: string; channelTitle: string; thumbnail: string }>>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [activeVibe, setActiveVibe] = useState<string | null>(null);
 
   const [embedOrigin, setEmbedOrigin] = useState("");
 
@@ -165,14 +142,76 @@ export default function TelepartyWatchModal({
     onBroadcastSpeech?.(`📺 @${userHandle} started Watch Party: "${resolvedTitle}"! Gather round to watch! 🍿`);
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleSearch = async (query: string) => {
+    if (!query.trim()) return;
+    setIsSearching(true);
+    try {
+      const res = await fetch(`/api/youtube/search?q=${encodeURIComponent(query.trim())}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.results)) {
+          setSearchResults(data.results);
+        }
+      }
+    } catch (err) {
+      console.error("YouTube search error:", err);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleNextVideo = async () => {
+    spacesSfx.playKeyNote(6);
+    if (searchResults.length > 0) {
+      const curIdx = searchResults.findIndex((v) => v.id === currentVideoId);
+      const nextIdx = (curIdx + 1) % searchResults.length;
+      const nextVid = searchResults[nextIdx];
+      handleLoadVideo(nextVid.id, nextVid.title);
+      setInviteToast(`⏭️ NEXT VIDEO: "${nextVid.title}"`);
+      setTimeout(() => setInviteToast(null), 3000);
+      return;
+    }
+
+    // If no search results in memory, search dynamically for next party track
+    try {
+      setIsSearching(true);
+      const res = await fetch(`/api/youtube/search?q=${encodeURIComponent(videoTitle || "party bangers live")}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.results) && data.results.length > 0) {
+          setSearchResults(data.results);
+          const nextVid = data.results.find((v: any) => v.id !== currentVideoId) || data.results[0];
+          handleLoadVideo(nextVid.id, nextVid.title);
+          setInviteToast(`⏭️ NEXT VIDEO: "${nextVid.title}"`);
+          setTimeout(() => setInviteToast(null), 3000);
+          return;
+        }
+      }
+    } catch {} finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handlePrevVideo = () => {
+    spacesSfx.playKeyNote(3);
+    if (searchResults.length > 0) {
+      const curIdx = searchResults.findIndex((v) => v.id === currentVideoId);
+      const prevIdx = (curIdx - 1 + searchResults.length) % searchResults.length;
+      const prevVid = searchResults[prevIdx];
+      handleLoadVideo(prevVid.id, prevVid.title);
+      setInviteToast(`⏮️ PREVIOUS VIDEO: "${prevVid.title}"`);
+      setTimeout(() => setInviteToast(null), 3000);
+    }
+  };
+
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const id = extractYoutubeId(inputUrl);
     if (id) {
       handleLoadVideo(id, `Custom Stream (${id})`);
       setInputUrl("");
-    } else {
-      alert("Please enter a valid YouTube link or 11-character video ID!");
+    } else if (inputUrl.trim()) {
+      await handleSearch(inputUrl.trim());
     }
   };
 
@@ -237,6 +276,24 @@ export default function TelepartyWatchModal({
           </div>
 
           <div className="flex items-center gap-1.5">
+            {/* Prev Video Button */}
+            <button
+              onClick={handlePrevVideo}
+              className="p-1.5 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition cursor-pointer"
+              title="Previous Video"
+            >
+              <SkipBack className="w-4 h-4" />
+            </button>
+
+            {/* Next Video Button */}
+            <button
+              onClick={handleNextVideo}
+              className="p-1.5 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition cursor-pointer"
+              title="Next Video"
+            >
+              <SkipForward className="w-4 h-4" />
+            </button>
+
             {/* PiP Mini Mode Toggle */}
             <button
               onClick={() => setIsMiniMode(!isMiniMode)}
@@ -274,6 +331,23 @@ export default function TelepartyWatchModal({
         <div className="p-3 sm:p-4 bg-neutral-900/60 border-t border-neutral-800/80 flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-1.5">
             <button
+              onClick={handlePrevVideo}
+              className="p-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition cursor-pointer"
+              title="Previous Video"
+            >
+              <SkipBack className="w-4 h-4" />
+            </button>
+
+            <button
+              onClick={handleNextVideo}
+              className="px-3 py-2 rounded-xl bg-red-600/30 hover:bg-red-600/50 border border-red-500/40 text-red-200 text-xs font-mono font-bold flex items-center gap-1.5 transition cursor-pointer"
+              title="Skip to Next YouTube Video"
+            >
+              <SkipForward className="w-4 h-4 text-red-400" />
+              <span>Next Song / Video</span>
+            </button>
+
+            <button
               onClick={() => setIsMuted(!isMuted)}
               className="p-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition cursor-pointer"
               title={isMuted ? "Unmute Video" : "Mute Video"}
@@ -301,7 +375,7 @@ export default function TelepartyWatchModal({
               title="Copy Watch Party Link & Invite Friends"
             >
               <Share2 className="w-3.5 h-3.5" />
-              <span>Invite Friends & Space</span>
+              <span>Invite Friends</span>
             </button>
           </div>
 
@@ -327,16 +401,16 @@ export default function TelepartyWatchModal({
           </div>
         </div>
 
-        {/* Input & Presets Section (Hidden in Mini Mode) */}
+        {/* Input & Search Section (Hidden in Mini Mode) */}
         {!isMiniMode && (
           <div className="p-4 sm:p-5 overflow-y-auto space-y-4 bg-neutral-950">
-            {/* Custom YouTube URL Loader */}
+            {/* Custom YouTube URL & Live Search Loader */}
             <form onSubmit={handleFormSubmit} className="flex gap-2">
               <div className="relative flex-1">
                 <Search className="w-4 h-4 text-neutral-500 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  placeholder="Paste YouTube Link or Video ID (e.g., https://youtu.be/...)"
+                  placeholder="Search any YouTube song/artist, or paste link (e.g., https://youtu.be/...)"
                   value={inputUrl}
                   onChange={(e) => setInputUrl(e.target.value)}
                   className="w-full pl-9 pr-4 py-2.5 bg-neutral-900 border border-neutral-800 rounded-xl text-xs font-mono text-white placeholder-neutral-500 focus:outline-none focus:border-red-500 transition"
@@ -344,50 +418,76 @@ export default function TelepartyWatchModal({
               </div>
               <button
                 type="submit"
-                className="px-4 py-2.5 bg-red-600 hover:bg-red-500 text-white font-mono text-xs font-black rounded-xl transition cursor-pointer active:scale-95 shrink-0 shadow-lg shadow-red-600/30"
+                disabled={isSearching}
+                className="px-4 py-2.5 bg-red-600 hover:bg-red-500 text-white font-mono text-xs font-black rounded-xl transition cursor-pointer active:scale-95 shrink-0 shadow-lg shadow-red-600/30 flex items-center gap-1.5"
               >
-                Play & Sync
+                {isSearching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                <span>Search / Play</span>
               </button>
             </form>
 
-            {/* Curated Party Streams */}
-            <div>
-              <div className="text-[11px] font-mono font-bold uppercase text-neutral-400 mb-2.5 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>Curated Party Stations & Playlists</span>
-              </div>
+            {/* Dynamic Vibe Search Chips */}
+            <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1">
+              {DYNAMIC_VIBES.map((vibe) => (
+                <button
+                  key={vibe.query}
+                  type="button"
+                  onClick={() => {
+                    setActiveVibe(vibe.label);
+                    setInputUrl(vibe.query);
+                    handleSearch(vibe.query);
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-[11px] font-mono font-bold whitespace-nowrap transition cursor-pointer border ${
+                    activeVibe === vibe.label
+                      ? "bg-red-600 text-white border-red-500 shadow-sm"
+                      : "bg-neutral-900 hover:bg-neutral-800 text-neutral-300 border-neutral-800"
+                  }`}
+                >
+                  {vibe.label}
+                </button>
+              ))}
+            </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {PRESET_CHANNELS.map((ch) => (
-                  <button
-                    key={ch.id}
-                    onClick={() => handleLoadVideo(ch.id, ch.title)}
-                    className={`p-2.5 rounded-2xl border text-left flex items-center justify-between transition cursor-pointer group ${
-                      currentVideoId === ch.id
-                        ? "border-red-500 bg-red-950/30 text-white shadow-md"
-                        : "border-neutral-800 bg-neutral-900/60 hover:bg-neutral-900 hover:border-neutral-700 text-neutral-300"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="text-xl p-1.5 rounded-xl bg-black/40 border border-neutral-800 group-hover:scale-110 transition">
-                        {ch.icon}
-                      </span>
-                      <div className="min-w-0">
+            {/* Dynamic Search Results */}
+            {searchResults.length > 0 && (
+              <div className="space-y-2">
+                <div className="text-[11px] font-mono font-bold uppercase text-neutral-400 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-red-400" />
+                    <span>Search Results ({searchResults.length} videos)</span>
+                  </span>
+                  <span className="text-[10px] text-neutral-500">Tap to play & sync for room</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto custom-scrollbar pr-1">
+                  {searchResults.map((vid) => (
+                    <button
+                      key={vid.id}
+                      onClick={() => handleLoadVideo(vid.id, vid.title)}
+                      className={`p-2 rounded-2xl border text-left flex items-center gap-2.5 transition cursor-pointer group ${
+                        currentVideoId === vid.id
+                          ? "border-red-500 bg-red-950/30 text-white shadow-md"
+                          : "border-neutral-800 bg-neutral-900/60 hover:bg-neutral-900 hover:border-neutral-700 text-neutral-300"
+                      }`}
+                    >
+                      <img
+                        src={vid.thumbnail}
+                        alt={vid.title}
+                        className="w-16 h-12 rounded-xl object-cover shrink-0 border border-neutral-800 group-hover:scale-105 transition"
+                      />
+                      <div className="min-w-0 flex-1">
                         <div className="font-mono text-xs font-bold truncate group-hover:text-white">
-                          {ch.title}
+                          {vid.title}
                         </div>
-                        <div className="text-[10px] text-neutral-500 font-mono">
-                          {ch.category}
+                        <div className="text-[10px] text-neutral-500 font-mono truncate">
+                          {vid.channelTitle}
                         </div>
                       </div>
-                    </div>
-                    <span className="text-[9px] font-mono font-bold bg-neutral-800 px-2 py-0.5 rounded-full text-neutral-400 shrink-0 ml-2">
-                      {ch.badge}
-                    </span>
-                  </button>
-                ))}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
       </div>

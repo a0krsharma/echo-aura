@@ -967,7 +967,9 @@ export function subscribeToSpaceDoc(
         }
       },
       (err) => {
-        console.warn("[subscribeToSpaceDoc] Live snapshot fallback to cache:", err);
+        if (err?.code !== "permission-denied") {
+          console.warn("[subscribeToSpaceDoc] Live snapshot fallback to cache:", err);
+        }
         callback(getFallback());
       }
     );
@@ -1003,7 +1005,9 @@ export function subscribeToSpaceParticipants(
         callback(active);
       },
       (err) => {
-        console.warn("[subscribeToSpaceParticipants] Snapshot error:", err);
+        if (err?.code !== "permission-denied") {
+          console.warn("[subscribeToSpaceParticipants] Snapshot error:", err);
+        }
       }
     );
     return unsub;
@@ -1093,7 +1097,9 @@ export function subscribeToSpaceTableGame(
         }
       },
       (err) => {
-        console.warn("[subscribeToSpaceTableGame] Error:", err);
+        if (err?.code !== "permission-denied") {
+          console.warn("[subscribeToSpaceTableGame] Error:", err);
+        }
       }
     );
     return unsub;
