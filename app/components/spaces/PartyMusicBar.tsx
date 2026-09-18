@@ -404,12 +404,19 @@ export function PartyMusicBar({
   const handleBackToEchoRadio = () => {
     onUpdateSpotifySync?.(null);
     partyMusicEngine.setExternalAudio(false);
-    partyMusicEngine.play();
-    setSkipToast("📻 Switched back to Echo Party Radio!");
+    if (PARTY_PLAYLIST.length > 0) {
+      partyMusicEngine.play();
+    }
+    setSkipToast("📻 Switched to Echo Party Radio!");
     setTimeout(() => setSkipToast(null), 3000);
   };
 
   const handlePlayFastParty = () => {
+    if (PARTY_PLAYLIST.length === 0) {
+      setSkipToast("⚡ No party tracks loaded. Add songs from Spotify!");
+      setTimeout(() => setSkipToast(null), 3000);
+      return;
+    }
     onUpdateSpotifySync?.(null);
     partyMusicEngine.setExternalAudio(false);
     const fastItems = PARTY_PLAYLIST.map((t, idx) => ({ t, idx })).filter(
@@ -422,6 +429,9 @@ export function PartyMusicBar({
       setSkipToast(`⚡ ${nextFast.t.bpm} BPM FAST PARTY: "${nextFast.t.title}"! 🔥`);
       setTimeout(() => setSkipToast(null), 3500);
       onSongChanged?.(nextFast.t);
+    } else {
+      setSkipToast("⚡ No fast-tempo tracks in playlist. Add EDM tracks from Spotify!");
+      setTimeout(() => setSkipToast(null), 3000);
     }
   };
 

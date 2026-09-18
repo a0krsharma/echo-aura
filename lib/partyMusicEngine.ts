@@ -20,7 +20,21 @@ export interface PartyTrack {
   vibe: string;
 }
 
+// Static playlist is empty — all music comes via Spotify/YouTube sync
 export const PARTY_PLAYLIST: PartyTrack[] = [];
+
+// Fallback placeholder when no playlist tracks exist
+const PLACEHOLDER_TRACK: PartyTrack = {
+  id: "echo_space_music",
+  title: "Queue Any Song from Spotify",
+  artist: "Echo Co-Listening",
+  album: "Spotify Co-Listening",
+  genre: "spotify",
+  coverArt: "🟢",
+  bpm: 120,
+  durationSeconds: 210,
+  vibe: "Live Audio",
+};
 
 class PartyMusicEngine {
   private audioCtx: AudioContext | null = null;
@@ -34,9 +48,11 @@ class PartyMusicEngine {
   private isExternalAudio = false;
   private listeners = new Set<(state: any) => void>();
 
+  // Active Spotify track stored separately — doesn't pollute PARTY_PLAYLIST
+  private activeSpotifyTrack: PartyTrack | null = null;
+
   constructor() {
     if (typeof window !== "undefined") {
-      // Load saved volume
       try {
         const savedVol = localStorage.getItem("echo_party_volume");
         if (savedVol) this.volume = parseFloat(savedVol);
@@ -59,19 +75,21 @@ class PartyMusicEngine {
     return this.audioCtx;
   }
 
+  private getCurrentTrack(): PartyTrack {
+    // If Spotify is active, use the Spotify track
+    if (this.isExternalAudio && this.activeSpotifyTrack) {
+      return this.activeSpotifyTrack;
+    }
+    // Otherwise use the playlist or fallback
+    return PARTY_PLAYLIST[this.currentTrackIndex] ?? PLACEHOLDER_TRACK;
+  }
+
   public getState() {
-    const track = PARTY_PLAYLIST[this.currentTrackIndex] || {
-      id: "echo_space_music",
-      title: "Queue Any Song from Spotify",
-      artist: "Echo Co-Listening",
-      album: "Spotify Co-Listening",
-      genre: "spotify" as const,
-      coverArt: "🟢",
-      bpm: 120,
-      durationSeconds: 210,
-      vibe: "Live Audio",
-    };
-    const progress = track.durationSeconds > 0 ? Math.min(100, Math.floor((this.elapsedSeconds / track.durationSeconds) * 100)) : 0;
+    const track = this.getCurrentTrack();
+    const progress =
+      track.durationSeconds > 0
+        ? Math.min(100, Math.floor((this.elapsedSeconds / track.durationSeconds) * 100))
+        : 0;
     return {
       track,
       trackIndex: this.currentTrackIndex,
@@ -121,12 +139,13 @@ class PartyMusicEngine {
       this.currentTrackIndex = index;
       this.elapsedSeconds = 0;
       this.skipVotes.clear();
-      if (!PARTY_PLAYLIST[index].album.includes("Spotify")) {
-        this.isExternalAudio = false;
-      }
+      // Switching to internal track — clear Spotify
+      this.isExternalAudio = false;
+      this.activeSpotifyTrack = null;
     }
 
     this.isPlaying = true;
+
     if (!this.isExternalAudio) {
       this.startAudioSynthesis();
     } else {
@@ -135,11 +154,17 @@ class PartyMusicEngine {
 
     if (this.trackTimer) clearInterval(this.trackTimer);
     this.trackTimer = setInterval(() => {
-      const cur = PARTY_PLAYLIST[this.currentTrackIndex];
-      if (!cur) return;
+      const cur = this.getCurrentTrack();
+      if (!cur || cur.durationSeconds <= 0) return;
       this.elapsedSeconds++;
       if (this.elapsedSeconds >= cur.durationSeconds) {
-        this.nextTrack();
+        if (this.isExternalAudio) {
+          // Spotify track ended — just stop the timer, don't auto-advance
+          this.elapsedSeconds = cur.durationSeconds;
+          this.notify();
+        } else {
+          this.nextTrack();
+        }
       } else {
         this.notify();
       }
@@ -159,11 +184,17 @@ class PartyMusicEngine {
   }
 
   public nextTrack() {
-    if (PARTY_PLAYLIST.length === 0) return;
+    if (PARTY_PLAYLIST.length === 0) {
+      // No internal tracks — just reset elapsed if in external mode
+      this.elapsedSeconds = 0;
+      this.notify();
+      return;
+    }
     this.currentTrackIndex = (this.currentTrackIndex + 1) % PARTY_PLAYLIST.length;
     this.elapsedSeconds = 0;
     this.skipVotes.clear();
     this.isExternalAudio = false;
+    this.activeSpotifyTrack = null;
     if (this.isPlaying) {
       this.play();
     } else {
@@ -172,11 +203,17 @@ class PartyMusicEngine {
   }
 
   public previousTrack() {
-    if (PARTY_PLAYLIST.length === 0) return;
-    this.currentTrackIndex = (this.currentTrackIndex - 1 + PARTY_PLAYLIST.length) % PARTY_PLAYLIST.length;
+    if (PARTY_PLAYLIST.length === 0) {
+      this.elapsedSeconds = 0;
+      this.notify();
+      return;
+    }
+    this.currentTrackIndex =
+      (this.currentTrackIndex - 1 + PARTY_PLAYLIST.length) % PARTY_PLAYLIST.length;
     this.elapsedSeconds = 0;
     this.skipVotes.clear();
     this.isExternalAudio = false;
+    this.activeSpotifyTrack = null;
     if (this.isPlaying) {
       this.play();
     } else {
@@ -192,44 +229,56 @@ class PartyMusicEngine {
     durationSeconds?: number;
     coverArt?: string;
   }) {
+    // Store the Spotify track in a dedicated slot, NOT in PARTY_PLAYLIST
+    this.activeSpotifyTrack = {
+      id: track.id,
+      title: track.title,
+      artist: track.artist,
+      album: "Spotify Co-Listening",
+      genre: "spotify",
+      coverArt: track.coverArt || "🟢",
+      bpm: track.bpm || 128,
+      durationSeconds: track.durationSeconds || 195,
+      vibe: "Spotify Co-Listening",
+    };
+
     this.isExternalAudio = true;
     this.stopAudioSynthesis();
+    this.elapsedSeconds = 0;
+    this.isPlaying = true;
 
-    const existingIdx = PARTY_PLAYLIST.findIndex(
-      (t) => t.id === track.id || t.title.toLowerCase() === track.title.toLowerCase()
-    );
-    if (existingIdx !== -1) {
-      this.currentTrackIndex = existingIdx;
-      this.elapsedSeconds = 0;
-      this.isPlaying = true;
+    // Start the progress timer
+    if (this.trackTimer) clearInterval(this.trackTimer);
+    this.trackTimer = setInterval(() => {
+      const cur = this.activeSpotifyTrack;
+      if (!cur || !this.isExternalAudio) return;
+      this.elapsedSeconds++;
       this.notify();
-    } else {
-      const newTrack: PartyTrack = {
-        id: track.id,
-        title: track.title,
-        artist: track.artist,
-        album: "Spotify Co-Listening",
-        genre: "spotify",
-        coverArt: track.coverArt || "🟢",
-        bpm: track.bpm || 128,
-        durationSeconds: track.durationSeconds || 195,
-        vibe: "Spotify Co-Listening",
-      };
-      PARTY_PLAYLIST.unshift(newTrack);
-      this.currentTrackIndex = 0;
-      this.elapsedSeconds = 0;
-      this.isPlaying = true;
-      this.notify();
-    }
+    }, 1000);
+
+    this.notify();
   }
 
   public voteToSkip(userHandle: string): { skipped: boolean; message: string } {
     this.skipVotes.add(userHandle);
-    // Instant skip for party flow or 2 votes
+
+    if (PARTY_PLAYLIST.length === 0) {
+      // No tracks to skip to — just reset state
+      return {
+        skipped: false,
+        message: "No songs in the party queue. Add songs from Spotify!",
+      };
+    }
+
+    const prevIdx = this.currentTrackIndex;
     this.nextTrack();
+    const newTrack = PARTY_PLAYLIST[this.currentTrackIndex];
+
     return {
       skipped: true,
-      message: `⏭️ @${userHandle} changed the song to "${PARTY_PLAYLIST[this.currentTrackIndex].title}"!`,
+      message: newTrack
+        ? `⏭️ @${userHandle} changed the song to "${newTrack.title}"!`
+        : `⏭️ @${userHandle} skipped the song.`,
     };
   }
 
@@ -247,7 +296,10 @@ class PartyMusicEngine {
     const ctx = this.getContext();
     if (!ctx) return;
 
-    const track = PARTY_PLAYLIST[this.currentTrackIndex];
+    const track = this.getCurrentTrack();
+    // Safety guard — skip synthesis if track has no bpm (shouldn't happen with PLACEHOLDER_TRACK)
+    if (!track || typeof track.bpm !== "number") return;
+
     const bpm = track.bpm || 120;
     const beatIntervalMs = (60 / bpm) * 1000;
 
@@ -256,20 +308,20 @@ class PartyMusicEngine {
     // Musical scale notes based on genre
     const scales: Record<PartyTrack["genre"], number[]> = {
       bollywood: [130.81, 155.56, 174.61, 196.0, 233.08, 261.63], // D minor dance
-      punjabi: [146.83, 174.61, 196.0, 220.0, 261.63, 293.66],   // D Bhangra groove
-      lofi: [174.61, 220.0, 261.63, 329.63, 392.0, 440.0],       // F major 7th chill
-      edm: [110.0, 130.81, 146.83, 164.81, 196.0, 220.0],        // A minor punch
+      punjabi: [146.83, 174.61, 196.0, 220.0, 261.63, 293.66],    // D Bhangra groove
+      lofi: [174.61, 220.0, 261.63, 329.63, 392.0, 440.0],        // F major 7th chill
+      edm: [110.0, 130.81, 146.83, 164.81, 196.0, 220.0],         // A minor punch
       antakshari: [164.81, 196.0, 220.0, 246.94, 293.66, 329.63], // E minor Desi pop
-      spotify: [110.0, 130.81, 146.83, 164.81, 196.0, 220.0],    // Co-listening groove
+      spotify: [110.0, 130.81, 146.83, 164.81, 196.0, 220.0],     // Co-listening groove
     };
 
-    const curScale = scales[track.genre] || scales.bollywood;
+    const curScale = scales[track.genre] ?? scales.bollywood;
 
     this.beatInterval = setInterval(() => {
       if (!this.isPlaying || !this.audioCtx) return;
       const t = this.audioCtx.currentTime;
 
-      // 1. Kick Drum / Dhol Bass (On beats 0 and 2 of 4)
+      // 1. Kick Drum / Dhol Bass
       if (step % 4 === 0 || (track.genre === "punjabi" && step % 2 === 0)) {
         const osc = this.audioCtx.createOscillator();
         const gain = this.audioCtx.createGain();
@@ -285,7 +337,7 @@ class PartyMusicEngine {
         osc.stop(t + 0.14);
       }
 
-      // 2. Snare / Clapping off-beat (On beats 1 and 3 of 4)
+      // 2. Snare / Clapping off-beat
       if (step % 2 === 1) {
         const osc = this.audioCtx.createOscillator();
         const gain = this.audioCtx.createGain();
@@ -303,7 +355,8 @@ class PartyMusicEngine {
       const noteFreq = curScale[step % curScale.length];
       const melOsc = this.audioCtx.createOscillator();
       const melGain = this.audioCtx.createGain();
-      melOsc.type = track.genre === "lofi" ? "sine" : track.genre === "edm" ? "sawtooth" : "triangle";
+      melOsc.type =
+        track.genre === "lofi" ? "sine" : track.genre === "edm" ? "sawtooth" : "triangle";
       melOsc.frequency.setValueAtTime(noteFreq * (step % 2 === 0 ? 1 : 1.5), t);
       melGain.gain.setValueAtTime(0.18 * this.volume, t);
       melGain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
