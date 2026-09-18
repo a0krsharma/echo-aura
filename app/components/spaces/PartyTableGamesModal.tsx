@@ -167,7 +167,7 @@ export function PartyTableGamesModal({
       },
       {
         id: others[0]?.uid || "p_left",
-        name: others[0]?.displayName || "Aarav (Left)",
+        name: others[0]?.displayName || "Aarav (AI Bot)",
         avatar: others[0]?.photoURL || "😎",
         isBot: !others[0],
         position: "left",
@@ -175,7 +175,7 @@ export function PartyTableGamesModal({
       },
       {
         id: others[1]?.uid || "p_across",
-        name: others[1]?.displayName || "Simran (Across)",
+        name: others[1]?.displayName || "Simran (AI Bot)",
         avatar: others[1]?.photoURL || "🌸",
         isBot: !others[1],
         position: "across",
@@ -183,7 +183,7 @@ export function PartyTableGamesModal({
       },
       {
         id: others[2]?.uid || "p_right",
-        name: others[2]?.displayName || "Kabir (Right)",
+        name: others[2]?.displayName || "Kabir (AI Bot)",
         avatar: others[2]?.photoURL || "⚡",
         isBot: !others[2],
         position: "right",
@@ -284,6 +284,17 @@ export function PartyTableGamesModal({
       lastActionText: `@${localUserName} opened the ${tab.toUpperCase()} Table!`,
     });
   };
+
+  // Broadcast table game status to room when opened so friends receive instant join prompt
+  useEffect(() => {
+    if (isOpen) {
+      onUpdateTableGame?.({
+        activeTab,
+        isOpen: true,
+        lastActionText: `@${localUserName} is at the ${activeTab.toUpperCase()} Table! Gather round!`,
+      });
+    }
+  }, [isOpen, activeTab, localUserName]);
 
   // Keep music synced
   useEffect(() => {

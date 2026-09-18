@@ -542,7 +542,7 @@ export default function DynamicSpaceWorldPage() {
 
     const interval = setInterval(() => {
       broadcastLocalAvatar(true);
-    }, 4000);
+    }, 2500);
 
     const handleBeforeUnload = () => {
       removeSpaceParticipant(spaceId, effectiveUid);

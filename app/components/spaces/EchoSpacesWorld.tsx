@@ -1430,7 +1430,9 @@ export default function EchoSpacesWorld({
       for (let c = 1060; c <= 1340; c += 44) {
         const i = Math.round((c - 1060) / 44);
         const chairId = `banquet_chair_top_${i + 1}`;
-        const isSeatedHere = localAvatar.isSitting && localAvatar.sittingObjectId === chairId;
+        const isSeatedHere =
+          (localAvatar.isSitting && localAvatar.sittingObjectId === chairId) ||
+          remoteAvatars.some((r) => r.isSitting && r.sittingObjectId === chairId);
         ctx.fillStyle = isSeatedHere ? "#0f766e" : "#1e293b";
         ctx.beginPath();
         ctx.roundRect(c, 298, 22, 18, 5);
@@ -1443,7 +1445,9 @@ export default function EchoSpacesWorld({
       for (let c = 1060; c <= 1340; c += 44) {
         const i = Math.round((c - 1060) / 44);
         const chairId = `banquet_chair_bottom_${i + 8}`;
-        const isSeatedHere = localAvatar.isSitting && localAvatar.sittingObjectId === chairId;
+        const isSeatedHere =
+          (localAvatar.isSitting && localAvatar.sittingObjectId === chairId) ||
+          remoteAvatars.some((r) => r.isSitting && r.sittingObjectId === chairId);
         ctx.fillStyle = isSeatedHere ? "#0f766e" : "#1e293b";
         ctx.beginPath();
         ctx.roundRect(c, 392, 22, 18, 5);
@@ -1453,7 +1457,9 @@ export default function EchoSpacesWorld({
         ctx.stroke();
       }
       // Left head chair
-      const leftSeated = localAvatar.isSitting && localAvatar.sittingObjectId === "banquet_chair_head_left";
+      const leftSeated =
+        (localAvatar.isSitting && localAvatar.sittingObjectId === "banquet_chair_head_left") ||
+        remoteAvatars.some((r) => r.isSitting && r.sittingObjectId === "banquet_chair_head_left");
       ctx.fillStyle = leftSeated ? "#0f766e" : "#1e293b";
       ctx.beginPath();
       ctx.roundRect(1016, 344, 18, 22, 5);
@@ -1463,7 +1469,9 @@ export default function EchoSpacesWorld({
       ctx.stroke();
 
       // Right head chair
-      const rightSeated = localAvatar.isSitting && localAvatar.sittingObjectId === "banquet_chair_head_right";
+      const rightSeated =
+        (localAvatar.isSitting && localAvatar.sittingObjectId === "banquet_chair_head_right") ||
+        remoteAvatars.some((r) => r.isSitting && r.sittingObjectId === "banquet_chair_head_right");
       ctx.fillStyle = rightSeated ? "#0f766e" : "#1e293b";
       ctx.beginPath();
       ctx.roundRect(1376, 344, 18, 22, 5);
@@ -1775,7 +1783,9 @@ export default function EchoSpacesWorld({
           const chairX = tbl.x + Math.cos(angle) * (tbl.r + 14);
           const chairY = tbl.y + Math.sin(angle) * (tbl.r + 14);
           const chairId = `${tbl.id}_chair_${i + 1}`;
-          const isSeatedHere = localAvatar.isSitting && localAvatar.sittingObjectId === chairId;
+          const isSeatedHere =
+            (localAvatar.isSitting && localAvatar.sittingObjectId === chairId) ||
+            remoteAvatars.some((r) => r.isSitting && r.sittingObjectId === chairId);
 
           // Chair seat
           ctx.fillStyle = isSeatedHere ? "#0f766e" : "#1e293b";

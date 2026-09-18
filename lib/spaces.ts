@@ -987,34 +987,84 @@ export function subscribeToSpaceParticipants(
   callback: (participants: SpatialAvatar[]) => void
 ): () => void {
   if (!spaceId) return () => {};
+
+  let activeFirestore: SpatialAvatar[] = [];
+  let activeApi: SpatialAvatar[] = [];
+  let isMounted = true;
+
+  const emitMerged = () => {
+    if (!isMounted) return;
+    const now = Date.now();
+    const map = new Map<string, SpatialAvatar>();
+
+    // Merge API participants
+    activeApi.forEach((p) => {
+      if (p.uid && (!p.lastUpdated || now - p.lastUpdated < 30000)) {
+        map.set(p.uid, p);
+      }
+    });
+
+    // Merge Firestore participants (prefer fresher lastUpdated)
+    activeFirestore.forEach((p) => {
+      if (p.uid && (!p.lastUpdated || now - p.lastUpdated < 30000)) {
+        const existing = map.get(p.uid);
+        if (!existing || (p.lastUpdated || 0) >= (existing.lastUpdated || 0)) {
+          map.set(p.uid, p);
+        }
+      }
+    });
+
+    callback(Array.from(map.values()));
+  };
+
+  // 1. Live Firestore Snapshot Channel
+  let unsubFirestore = () => {};
   try {
     const db = getFirebaseDb();
     const participantsCol = collection(db, SPACES_COLLECTION, spaceId, "participants");
-    const unsub = onSnapshot(
+    unsubFirestore = onSnapshot(
       participantsCol,
       (snap) => {
         const now = Date.now();
         const active: SpatialAvatar[] = [];
         snap.docs.forEach((d) => {
           const data = d.data() as SpatialAvatar;
-          // Disregard heartbeats older than 30s (user closed tab / disconnected)
           if (data && (!data.lastUpdated || now - data.lastUpdated < 30000)) {
             active.push({ ...data, uid: d.id });
           }
         });
-        callback(active);
+        activeFirestore = active;
+        emitMerged();
       },
-      (err) => {
-        if (err?.code !== "permission-denied") {
-          console.warn("[subscribeToSpaceParticipants] Snapshot error:", err);
-        }
+      () => {
+        // Fallback gracefully to API channel
       }
     );
-    return unsub;
-  } catch (err) {
-    console.warn("[subscribeToSpaceParticipants] Setup error:", err);
-    return () => {};
-  }
+  } catch {}
+
+  // 2. High-speed Resilient API Heartbeat Channel (2s interval)
+  const pollApi = async () => {
+    if (!isMounted) return;
+    try {
+      const res = await fetch(`/api/spaces/${encodeURIComponent(spaceId)}/presence`);
+      if (res.ok && isMounted) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.participants)) {
+          activeApi = data.participants;
+          emitMerged();
+        }
+      }
+    } catch {}
+  };
+
+  pollApi();
+  const pollInterval = setInterval(pollApi, 2500);
+
+  return () => {
+    isMounted = false;
+    clearInterval(pollInterval);
+    unsubFirestore();
+  };
 }
 
 export async function updateSpaceParticipant(
@@ -1022,15 +1072,23 @@ export async function updateSpaceParticipant(
   avatar: SpatialAvatar
 ): Promise<void> {
   if (!spaceId || !avatar?.uid) return;
+  const cleanAvatar = JSON.parse(JSON.stringify(avatar));
+
+  // 1. Direct API channel (guaranteed immediate delivery)
+  try {
+    fetch(`/api/spaces/${encodeURIComponent(spaceId)}/presence`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ avatar: cleanAvatar }),
+    }).catch(() => {});
+  } catch {}
+
+  // 2. Cloud Firestore channel
   try {
     const db = getFirebaseDb();
     const partRef = doc(db, SPACES_COLLECTION, spaceId, "participants", avatar.uid);
-    // Strip undefined fields to ensure clean Firestore serialization
-    const cleanAvatar = JSON.parse(JSON.stringify(avatar));
     await setDoc(partRef, cleanAvatar, { merge: true });
-  } catch (err) {
-    // Silent fallback
-  }
+  } catch {}
 }
 
 export async function removeSpaceParticipant(
@@ -1038,13 +1096,22 @@ export async function removeSpaceParticipant(
   uid: string
 ): Promise<void> {
   if (!spaceId || !uid) return;
+
+  // 1. Direct API channel
+  try {
+    fetch(`/api/spaces/${encodeURIComponent(spaceId)}/presence`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "leave", avatar: { uid } }),
+    }).catch(() => {});
+  } catch {}
+
+  // 2. Cloud Firestore channel
   try {
     const db = getFirebaseDb();
     const partRef = doc(db, SPACES_COLLECTION, spaceId, "participants", uid);
     await deleteDoc(partRef);
-  } catch (err) {
-    // Silent fallback
-  }
+  } catch {}
 }
 
 // ── REAL-TIME PARTY TABLE GAME SYNC ──────────────────────────
@@ -1084,28 +1151,57 @@ export function subscribeToSpaceTableGame(
   callback: (gameState: SpaceTableGameLiveState | null) => void
 ): () => void {
   if (!spaceId) return () => {};
+
+  let isMounted = true;
+  let latestState: SpaceTableGameLiveState | null = null;
+
+  // 1. Live Firestore Snapshot Channel
+  let unsubFirestore = () => {};
   try {
     const db = getFirebaseDb();
     const gameDocRef = doc(db, SPACES_COLLECTION, spaceId, "tableGame", "live");
-    const unsub = onSnapshot(
+    unsubFirestore = onSnapshot(
       gameDocRef,
       (snap) => {
+        if (!isMounted) return;
         if (snap.exists()) {
-          callback(snap.data() as SpaceTableGameLiveState);
-        } else {
-          callback(null);
+          const fsData = snap.data() as SpaceTableGameLiveState;
+          if (!latestState || (fsData.updatedAt || 0) >= (latestState.updatedAt || 0)) {
+            latestState = fsData;
+            callback(fsData);
+          }
         }
       },
-      (err) => {
-        if (err?.code !== "permission-denied") {
-          console.warn("[subscribeToSpaceTableGame] Error:", err);
+      () => {}
+    );
+  } catch {}
+
+  // 2. High-speed API Polling Channel (1.5s for table games)
+  const pollGame = async () => {
+    if (!isMounted) return;
+    try {
+      const res = await fetch(`/api/spaces/${encodeURIComponent(spaceId)}/presence`);
+      if (res.ok && isMounted) {
+        const data = await res.json();
+        if (data.success && data.tableGame) {
+          const apiData = data.tableGame as SpaceTableGameLiveState;
+          if (!latestState || (apiData.updatedAt || 0) >= (latestState.updatedAt || 0)) {
+            latestState = apiData;
+            callback(apiData);
+          }
         }
       }
-    );
-    return unsub;
-  } catch (err) {
-    return () => {};
-  }
+    } catch {}
+  };
+
+  pollGame();
+  const gameInterval = setInterval(pollGame, 2000);
+
+  return () => {
+    isMounted = false;
+    clearInterval(gameInterval);
+    unsubFirestore();
+  };
 }
 
 export async function updateSpaceTableGame(
@@ -1113,16 +1209,27 @@ export async function updateSpaceTableGame(
   updates: Partial<SpaceTableGameLiveState>
 ): Promise<void> {
   if (!spaceId) return;
+  const cleanUpdates = JSON.parse(
+    JSON.stringify({
+      ...updates,
+      updatedAt: Date.now(),
+    })
+  );
+
+  // 1. Direct API channel (guaranteed immediate broadcast)
+  try {
+    fetch(`/api/spaces/${encodeURIComponent(spaceId)}/presence`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tableGame: cleanUpdates }),
+    }).catch(() => {});
+  } catch {}
+
+  // 2. Cloud Firestore channel
   try {
     const db = getFirebaseDb();
     const gameDocRef = doc(db, SPACES_COLLECTION, spaceId, "tableGame", "live");
-    const cleanUpdates = JSON.parse(JSON.stringify({
-      ...updates,
-      updatedAt: Date.now(),
-    }));
     await setDoc(gameDocRef, cleanUpdates, { merge: true });
-  } catch (err) {
-    // Silent fallback
-  }
+  } catch {}
 }
 
