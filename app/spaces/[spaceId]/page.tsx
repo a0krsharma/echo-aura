@@ -463,10 +463,11 @@ export default function DynamicSpaceWorldPage() {
           // Play matching song for all room participants
           partyMusicEngine.playSpotifyTrack({
             id: loaded.spotifySyncState.trackId,
-            title: loaded.spotifySyncState.trackName,
-            artist: loaded.spotifySyncState.artistName,
+            title: loaded.spotifySyncState.trackName || "Spotify Track",
+            artist: loaded.spotifySyncState.artistName || "Spotify Artist",
             coverArt: loaded.spotifySyncState.albumArt || "🟢",
             bpm: 128,
+            durationSeconds: loaded.spotifySyncState.durationMs ? Math.round(loaded.spotifySyncState.durationMs / 1000) : 210,
           });
           // Auto-reveal the party music bar so all participants see the live Spotify player and hear the song!
           setPartyMusicOpen(true);

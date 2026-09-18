@@ -335,11 +335,11 @@ function RoomsPageContent() {
     if (spotifyCode) {
       handleSpotifyCallback(spotifyCode).then((success) => {
         if (success) {
-          setSpotifyStatus("SPOTIFY CO-LISTENING AUTHENTICATED!");
+          setSpotifyStatus("SPOTIFY CO-LISTENING AUTHENTICATED! REDIRECTING...");
           const returnUrl = window.localStorage.getItem("echo_spotify_return_url");
           if (returnUrl) {
             window.localStorage.removeItem("echo_spotify_return_url");
-            router.push(returnUrl);
+            window.location.replace(returnUrl);
           }
         }
       });

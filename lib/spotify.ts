@@ -6,6 +6,8 @@
  * and playback coordination for Echo Party Mode ($0 server overhead).
  */
 
+const DEFAULT_CLIENT_ID = "3a2f1ee29fd047eba7144916c2c42291";
+
 export const STORAGE_KEYS = {
   CLIENT_ID: "echo_custom_spotify_client_id",
   ACCESS_TOKEN: "echo_spotify_access_token",
@@ -13,14 +15,35 @@ export const STORAGE_KEYS = {
   EXPIRES_AT: "echo_spotify_expires_at",
   CODE_VERIFIER: "echo_spotify_code_verifier",
   RETURN_URL: "echo_spotify_return_url",
+  REDIRECT_URI: "echo_spotify_redirect_uri",
 };
+
+export function extractSpotifyTrackId(input: string): string | null {
+  if (!input) return null;
+  const trimmed = input.trim();
+
+  // 1. Direct Spotify URI: spotify:track:4cOdK2wGLETKBW3PvgPWqT
+  const uriMatch = trimmed.match(/spotify:track:([a-zA-Z0-9]{15,30})/);
+  if (uriMatch) return uriMatch[1];
+
+  // 2. Full HTTP(S) URL (including /intl-xx/ and query parameters)
+  const urlMatch = trimmed.match(/(?:track\/|track%2F)([a-zA-Z0-9]{15,30})/i);
+  if (urlMatch) return urlMatch[1];
+
+  // 3. Raw 20-25 character alphanumeric Spotify Base62 ID
+  if (/^[a-zA-Z0-9]{20,25}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  return null;
+}
 
 export function getSpotifyClientId(): string {
   if (typeof window !== "undefined") {
     const custom = window.localStorage.getItem(STORAGE_KEYS.CLIENT_ID);
     if (custom && custom.trim().length > 10) return custom.trim();
   }
-  return process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID || "";
+  return process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID || DEFAULT_CLIENT_ID;
 }
 
 export function setCustomSpotifyClientId(clientId: string) {
@@ -88,6 +111,7 @@ export async function initiateSpotifyLogin(returnUrl?: string): Promise<{ succes
   }
 
   const redirectUri = getSpotifyRedirectUri();
+  window.localStorage.setItem(STORAGE_KEYS.REDIRECT_URI, redirectUri);
 
   const params = new URLSearchParams({
     response_type: "code",
@@ -110,7 +134,7 @@ export async function handleSpotifyCallback(code: string): Promise<boolean> {
   const codeVerifier = window.localStorage.getItem(STORAGE_KEYS.CODE_VERIFIER);
   if (!clientId || !codeVerifier) return false;
 
-  const redirectUri = getSpotifyRedirectUri();
+  const redirectUri = window.localStorage.getItem(STORAGE_KEYS.REDIRECT_URI) || getSpotifyRedirectUri();
 
   try {
     const payload = new URLSearchParams({
@@ -141,6 +165,7 @@ export async function handleSpotifyCallback(code: string): Promise<boolean> {
     }
     window.localStorage.setItem(STORAGE_KEYS.EXPIRES_AT, String(expiresAt));
     window.localStorage.removeItem(STORAGE_KEYS.CODE_VERIFIER);
+    window.localStorage.removeItem(STORAGE_KEYS.REDIRECT_URI);
 
     return true;
   } catch (error) {

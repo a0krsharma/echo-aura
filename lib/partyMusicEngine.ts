@@ -13,7 +13,7 @@ export interface PartyTrack {
   title: string;
   artist: string;
   album: string;
-  genre: "bollywood" | "punjabi" | "lofi" | "edm" | "antakshari";
+  genre: "bollywood" | "punjabi" | "lofi" | "edm" | "antakshari" | "spotify";
   coverArt: string;
   bpm: number;
   durationSeconds: number;
@@ -241,12 +241,12 @@ class PartyMusicEngine {
         id: track.id,
         title: track.title,
         artist: track.artist,
-        album: "Spotify Live Room Sync",
-        genre: "edm",
+        album: "Spotify Co-Listening",
+        genre: "spotify",
         coverArt: track.coverArt || "🟢",
         bpm: track.bpm || 128,
         durationSeconds: track.durationSeconds || 195,
-        vibe: "Spotify Live Room Sync",
+        vibe: "Spotify Co-Listening",
       };
       PARTY_PLAYLIST.unshift(newTrack);
       this.currentTrackIndex = 0;
@@ -293,6 +293,7 @@ class PartyMusicEngine {
       lofi: [174.61, 220.0, 261.63, 329.63, 392.0, 440.0],       // F major 7th chill
       edm: [110.0, 130.81, 146.83, 164.81, 196.0, 220.0],        // A minor punch
       antakshari: [164.81, 196.0, 220.0, 246.94, 293.66, 329.63], // E minor Desi pop
+      spotify: [110.0, 130.81, 146.83, 164.81, 196.0, 220.0],    // Co-listening groove
     };
 
     const curScale = scales[track.genre] || scales.bollywood;
