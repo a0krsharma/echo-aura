@@ -70,7 +70,7 @@ export function PartyMusicBar({
   const [musicState, setMusicState] = useState(partyMusicEngine.getState());
   const [isMuted, setIsMuted] = useState(false);
   const [playlistOpen, setPlaylistOpen] = useState(false);
-  const [playlistFilter, setPlaylistFilter] = useState<"all" | "fast" | "punjabi" | "bollywood" | "lofi">("all");
+  const [playlistFilter, setPlaylistFilter] = useState<"all" | "fast" | "edm" | "lofi">("all");
   const [prevVolume, setPrevVolume] = useState(0.35);
   const [skipToast, setSkipToast] = useState<string | null>(null);
 
@@ -607,10 +607,9 @@ export function PartyMusicBar({
             {(
               [
                 { id: "all", label: "All Tracks" },
-                { id: "fast", label: "⚡ Fast Party (130+ BPM)" },
-                { id: "punjabi", label: "🔥 Punjabi" },
-                { id: "bollywood", label: "💃 Bollywood" },
-                { id: "lofi", label: "🌙 Lo-Fi" },
+                { id: "fast", label: "⚡ Fast Party (120+ BPM)" },
+                { id: "edm", label: "⚡ EDM / Synthwave" },
+                { id: "lofi", label: "🌙 Ambient Lo-Fi" },
               ] as const
             ).map((flt) => (
               <button
@@ -631,9 +630,8 @@ export function PartyMusicBar({
           <div className="space-y-1">
             {PARTY_PLAYLIST.map((t, idx) => {
               const isCur = idx === musicState.trackIndex && !isSpotifyActive;
-              if (playlistFilter === "fast" && t.bpm < 130) return null;
-              if (playlistFilter === "punjabi" && t.genre !== "punjabi") return null;
-              if (playlistFilter === "bollywood" && t.genre !== "bollywood") return null;
+              if (playlistFilter === "fast" && t.bpm < 120) return null;
+              if (playlistFilter === "edm" && t.genre !== "edm") return null;
               if (playlistFilter === "lofi" && t.genre !== "lofi") return null;
 
               return (
@@ -682,11 +680,11 @@ export function PartyMusicBar({
           onClick={() => setSpotifyModalOpen(false)}
         >
           <div
-            className="relative w-full max-w-lg bg-neutral-950 border border-emerald-500/50 rounded-3xl shadow-2xl p-4 sm:p-5 space-y-4 max-h-[88vh] overflow-y-auto custom-scrollbar my-auto"
+            className="relative w-full max-w-lg bg-neutral-950 border border-emerald-500/50 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[88vh] my-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header */}
-            <div className="sticky -top-4 sm:-top-5 -mx-4 sm:-mx-5 -mt-4 sm:-mt-5 p-4 sm:p-5 bg-neutral-900/95 border-b border-neutral-800 rounded-t-3xl backdrop-blur-md z-10 flex items-center justify-between gap-3">
+            {/* Modal Header — Clean, always fully visible with non-negative padding */}
+            <div className="p-4 sm:p-5 bg-neutral-900 border-b border-neutral-800 flex items-center justify-between gap-3 shrink-0">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-8 h-8 rounded-full bg-[#1DB954] flex items-center justify-center text-black font-black text-sm shrink-0 shadow-lg shadow-[#1DB954]/30">
                   🟢
@@ -708,12 +706,15 @@ export function PartyMusicBar({
               <button
                 type="button"
                 onClick={() => setSpotifyModalOpen(false)}
-                className="p-2 rounded-xl text-neutral-400 hover:text-white bg-neutral-800/80 hover:bg-neutral-800 transition cursor-pointer shrink-0"
+                className="p-2 rounded-xl text-neutral-400 hover:text-white bg-neutral-800 hover:bg-neutral-700 transition cursor-pointer shrink-0"
                 title="Close"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
+
+            {/* Modal Scrollable Body */}
+            <div className="p-4 sm:p-5 space-y-4 overflow-y-auto custom-scrollbar flex-1">
 
             {/* Spotify Account Status & Connect Button */}
             {spotifyToken ? (
@@ -835,9 +836,10 @@ export function PartyMusicBar({
               </div>
             </div>
           </div>
-        </div>,
-        document.body
-      )}
+        </div>
+      </div>,
+      document.body
+    )}
     </div>
   );
 }

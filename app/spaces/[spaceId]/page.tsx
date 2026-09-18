@@ -1256,7 +1256,7 @@ export default function DynamicSpaceWorldPage() {
       {space.spotifySyncState?.isPlaying && space.spotifySyncState?.trackId && !partyMusicOpen && (
         <div
           onClick={() => setPartyMusicOpen(true)}
-          className="fixed top-14 left-1/2 -translate-x-1/2 z-30 px-3.5 py-1.5 rounded-full bg-neutral-950/90 border border-emerald-500/50 text-emerald-300 font-mono text-xs shadow-xl flex items-center gap-2 cursor-pointer hover:bg-neutral-900 transition backdrop-blur-md animate-in slide-in-from-top-2 max-w-[92vw]"
+          className="fixed top-16 left-1/2 -translate-x-1/2 z-40 px-3.5 py-1.5 rounded-full bg-neutral-950/95 border border-emerald-500/60 text-emerald-300 font-mono text-xs shadow-2xl flex items-center gap-2 cursor-pointer hover:bg-neutral-900 transition backdrop-blur-md animate-in slide-in-from-top-2 max-w-[92vw]"
         >
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
           <span className="font-bold text-white shrink-0">DJ @{space.spotifySyncState.djHandle || "Host"}:</span>
@@ -1355,7 +1355,7 @@ export default function DynamicSpaceWorldPage() {
           };
           const actions = zoneActions[zone] || [];
           return (
-            <div className="absolute bottom-20 left-3 z-20 flex flex-col gap-2 pointer-events-auto">
+            <div className="absolute bottom-24 left-3 sm:left-4 z-20 flex flex-col gap-2 pointer-events-auto max-w-[90vw]">
               {/* Zone HUD Pill */}
               {zoneDef && (
                 <div
